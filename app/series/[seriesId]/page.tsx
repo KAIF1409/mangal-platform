@@ -1,0 +1,783 @@
+'use client';
+
+import { useState, useEffect, use } from 'react';
+import { supabase } from '../../lib/supabase';
+import ProfileMenu from '../../components/ProfileMenu';
+import ReportButton from '../../components/ReportButton';
+import ShareButton from '../../components/ShareButton';
+import { canManageSeries, isDeveloperRole } from '../../lib/roles';
+import { estimateReadTime } from '../../lib/novelEditor';
+
+interface Series {
+  id: string;
+  title: string;
+  synopsis: string;
+  genre: string | null;
+  language: string | null;
+  cover_url: string | null;
+  reading_mode: 'scroll' | 'page';
+  creator_id: string;
+  status: string;
+  views: number;
+  // Step 12 — Series Status & Completion Badge. Optional so this page still
+  // works before the migration runs; defaults to 'ongoing' once it does.
+  completion_status?: 'ongoing' | 'completed' | 'hiatus';
+  // Step 21 — Dual Content Mode: mangal (comic) or novel
+  content_type: 'mangal' | 'novel';
+}
+
+interface Chapter {
+  id: string;
+  chapter_number: number;
+  title: string;
+  created_at: string;
+  // Step 21 — populated for novel chapters only; null/undefined for manga
+  word_count?: number | null;
+}
+
+interface Progress {
+  chapter_id: string;
+  page_number: number;
+}
+
+function SeriesDetailPage({ seriesId }: { seriesId: string }) {
+  const [series, setSeries] = useState<Series | null>(null);
+  const [creatorUsername, setCreatorUsername] = useState<string | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [isCreator, setIsCreator] = useState(false);
+  const [isDeveloper, setIsDeveloper] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followCount, setFollowCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const [viewCount, setViewCount] = useState(0);
+
+  // Step 6 — Star Rating
+  const [myRating, setMyRating] = useState<number | null>(null);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [ratingCount, setRatingCount] = useState(0);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: s } = await supabase.from('series').select('*').eq('id', seriesId).single();
+      if (s) {
+        setSeries(s);
+        setViewCount(s.views ?? 0);
+
+        // Step 13 — Public Creator Profile: fetch the creator's username so the
+        // hero can link to /creator/[username]. Separate query since series has
+        // no username column itself, same pattern as the search page.
+        const { data: creatorRow } = await supabase
+          .from('creator_profiles')
+          .select('username')
+          .eq('user_id', s.creator_id)
+          .single();
+        if (creatorRow) setCreatorUsername(creatorRow.username);
+      }
+
+      // Step 7 — view count: once per visitor per series per day (industry-standard
+      // anti-spam pattern, same idea as YouTube/Webtoon). Guarded via localStorage so
+      // refreshes, re-renders, and repeat same-day visits don't inflate the number.
+      try {
+        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        const storageKey = `viewed:${seriesId}:${today}`;
+        if (!localStorage.getItem(storageKey)) {
+          localStorage.setItem(storageKey, '1');
+          const { error: viewError } = await supabase.rpc('increment_series_views', { series_id_input: seriesId });
+          if (!viewError) {
+            setViewCount(c => c + 1);
+          }
+        }
+      } catch {
+        // localStorage unavailable (private browsing, etc.) — skip incrementing silently
+      }
+
+      const { data: u } = await supabase.auth.getUser();
+      if (u.user) {
+        setUser(u.user);
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', u.user.id)
+          .single();
+
+        const owns = !!(s && u.user.id === s.creator_id);
+        setIsCreator(canManageSeries(profile?.role, owns));
+        setIsDeveloper(isDeveloperRole(profile?.role));
+
+        const { data: existingFollow } = await supabase
+          .from('follows')
+          .select('id')
+          .eq('reader_id', u.user.id)
+          .eq('series_id', seriesId)
+          .maybeSingle();
+        setIsFollowing(!!existingFollow);
+
+        const { data: prog } = await supabase
+          .from('reading_progress')
+          .select('chapter_id, page_number')
+          .eq('reader_id', u.user.id)
+          .eq('series_id', seriesId)
+          .maybeSingle();
+        if (prog) setProgress(prog);
+
+        const { data: myR } = await supabase
+          .from('ratings')
+          .select('stars')
+          .eq('series_id', seriesId)
+          .eq('reader_id', u.user.id)
+          .maybeSingle();
+        if (myR) setMyRating(myR.stars);
+      }
+
+      const { count } = await supabase
+        .from('follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('series_id', seriesId);
+      setFollowCount(count ?? 0);
+
+      const { data: allRatings } = await supabase
+        .from('ratings')
+        .select('stars')
+        .eq('series_id', seriesId);
+      if (allRatings && allRatings.length > 0) {
+        setRatingCount(allRatings.length);
+        const avg = allRatings.reduce((sum, r) => sum + r.stars, 0) / allRatings.length;
+        setAvgRating(Math.round(avg * 10) / 10);
+      }
+
+      const c = await fetchChapters();
+      if (c) setChapters(c);
+      setLoading(false);
+    };
+    load();
+  }, [seriesId]);
+
+  // Pulled out of the main load() above so it can also be called on its own
+  // whenever the tab/page becomes visible again (see effect below) — we only
+  // want to refresh the chapter list itself in that case, not redo the view
+  // count increment, follow status, or rating fetch every time someone tabs
+  // back in.
+  const fetchChapters = async () => {
+    const { data: c } = await supabase
+      .from('chapters').select('id, chapter_number, title, created_at, word_count')
+      .eq('series_id', seriesId).order('chapter_number', { ascending: true });
+    return c;
+  };
+
+  // Bug fix — creators editing a chapter (title, pages, etc.) from this same
+  // browser, then navigating back here via the browser's back button or a
+  // new tab, were seeing stale chapter data because this page only fetched
+  // once on mount. Refetch the chapter list whenever the tab regains focus
+  // or becomes visible again, so edits made elsewhere actually show up
+  // without requiring a manual hard refresh.
+  useEffect(() => {
+    const refresh = async () => {
+      const c = await fetchChapters();
+      if (c) setChapters(c);
+    };
+    const handleVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', refresh);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [seriesId]);
+
+  const toggleFollow = async () => {
+    if (!user) { window.location.href = '/login'; return; }
+    if (followLoading) return;
+    setFollowLoading(true);
+    if (isFollowing) {
+      await supabase.from('follows').delete().eq('reader_id', user.id).eq('series_id', seriesId);
+      setIsFollowing(false);
+      setFollowCount(c => Math.max(0, c - 1));
+    } else {
+      await supabase.from('follows').insert({ reader_id: user.id, series_id: seriesId });
+      setIsFollowing(true);
+      setFollowCount(c => c + 1);
+    }
+    setFollowLoading(false);
+  };
+
+  const handleRate = async (stars: number) => {
+    if (!user) { window.location.href = '/login'; return; }
+    if (ratingLoading) return;
+    setRatingLoading(true);
+    const prev = myRating;
+    setMyRating(stars);
+    const { error } = await supabase
+      .from('ratings')
+      .upsert({ series_id: seriesId, reader_id: user.id, stars }, { onConflict: 'series_id,reader_id' });
+    if (error) {
+      setMyRating(prev);
+    } else {
+      const { data: allRatings } = await supabase.from('ratings').select('stars').eq('series_id', seriesId);
+      if (allRatings && allRatings.length > 0) {
+        setRatingCount(allRatings.length);
+        setAvgRating(Math.round((allRatings.reduce((s, r) => s + r.stars, 0) / allRatings.length) * 10) / 10);
+      }
+    }
+    setRatingLoading(false);
+  };
+
+  const [sortDesc, setSortDesc] = useState(true);
+  const displayedChapters = sortDesc ? [...chapters].reverse() : chapters;
+
+  // Creator-only: delete a chapter (and its child rows) from the series.
+  // Explicit child-table deletes first, since we don't know for certain
+  // whether ON DELETE CASCADE is configured in Supabase for these — safe
+  // either way: if cascade IS set up, these deletes just no-op on an
+  // already-empty set before the chapter delete runs.
+  const handleDeleteChapter = async (chapterId: string) => {
+    // pages (manga) — also remove the actual files from storage so they
+    // don't sit around as orphaned objects in the manga-pages bucket
+    const { data: pageRows } = await supabase
+      .from('pages')
+      .select('id, image_url')
+      .eq('chapter_id', chapterId);
+
+    if (pageRows && pageRows.length > 0) {
+      const paths = pageRows
+        .map(p => {
+          // image_url is a public URL like .../object/public/manga-pages/<path>
+          const marker = '/manga-pages/';
+          const idx = p.image_url.indexOf(marker);
+          return idx === -1 ? null : p.image_url.slice(idx + marker.length);
+        })
+        .filter((p): p is string => !!p);
+      if (paths.length > 0) {
+        await supabase.storage.from('manga-pages').remove(paths);
+      }
+      await supabase.from('pages').delete().eq('chapter_id', chapterId);
+    }
+
+    // reading_progress, reactions, comments — comments first (replies
+    // reference parent comments via parent_id within the same table, so
+    // deleting all rows for the chapter at once handles both levels together)
+    await supabase.from('reading_progress').delete().eq('chapter_id', chapterId);
+    await supabase.from('reactions').delete().eq('chapter_id', chapterId);
+    await supabase.from('comments').delete().eq('chapter_id', chapterId);
+
+    const { error } = await supabase.from('chapters').delete().eq('id', chapterId);
+    if (error) {
+      alert(`Could not delete chapter: ${error.message}`);
+      return;
+    }
+
+    setChapters(prev => prev.filter(c => c.id !== chapterId));
+  };
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
+        <div>Loading series...</div>
+      </div>
+    </div>
+  );
+
+  if (!series) return (
+    <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '32px', marginBottom: '12px' }}>😔</div>
+        <div>Series not found.</div>
+        <a href="/" style={{ color: '#d97706', textDecoration: 'none', fontSize: '13px', marginTop: '8px', display: 'block' }}>← Back to Browse</a>
+      </div>
+    </div>
+  );
+
+  const firstChapter = chapters[0];
+  const latestChapter = chapters[chapters.length - 1];
+  const progressChapter = progress ? chapters.find(c => c.id === progress.chapter_id) : null;
+  const displayStars = hoverRating ?? myRating ?? 0;
+  // Step 21 — Dual Content Mode: novels don't have a scroll/page reading mode
+  const isNovel = series.content_type === 'novel';
+
+  // Step 7 — format large view numbers nicely
+  const formatViews = (n: number) => {
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+    return n.toString();
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+
+      {/* ── NAV ── */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(7,7,10,0.97)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid #1a1a26',
+        padding: '0 24px', height: '60px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+            <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
+            <span style={{ fontWeight: 900, fontSize: '17px', color: '#fff' }}>MANGAL</span>
+          </a>
+          <span style={{ color: '#374151' }}>›</span>
+          <span style={{ fontSize: '13px', color: '#6b7280', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{series.title}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <a href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: '#6b7280', textDecoration: 'none', border: '1px solid #1a1a26' }}>Browse</a>
+          {isCreator && (
+            <a href={`/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none' }}>
+              + Add Chapter
+            </a>
+          )}
+          {user ? (
+            <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
+          ) : (
+            <a href="/login" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none' }}>Log in</a>
+          )}
+        </div>
+      </nav>
+
+      {/* ── HERO BANNER ── */}
+      <div style={{ position: 'relative', overflow: 'hidden' }}>
+        {series.cover_url && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: `url(${series.cover_url})`,
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            filter: 'blur(40px) brightness(0.15)',
+            transform: 'scale(1.1)',
+          }} />
+        )}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(7,7,10,0.4), #07070a)' }} />
+
+        <div style={{ position: 'relative', maxWidth: '1000px', margin: '0 auto', padding: '48px 24px 40px', display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+          {/* Cover */}
+          <div style={{
+            width: '200px', flexShrink: 0, borderRadius: '14px', overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6)', border: '1px solid #1a1a26', aspectRatio: '3/4',
+            background: '#1a0a0a',
+          }}>
+            {series.cover_url ? (
+              <img src={series.cover_url} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            ) : (
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>📜</div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div style={{ flex: '1 1 320px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+              {series.genre && (
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#d97706', background: 'rgba(120,53,15,0.25)', border: '1px solid rgba(180,83,9,0.4)', padding: '4px 12px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {series.genre}
+                </span>
+              )}
+              {series.language && (
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', background: '#0d0d14', border: '1px solid #1a1a26', padding: '4px 12px', borderRadius: '20px' }}>
+                  {series.language}
+                </span>
+              )}
+              <span style={{
+                fontSize: '10px', fontWeight: 700, padding: '4px 12px', borderRadius: '20px',
+                border: isNovel ? '1px solid rgba(124,58,237,0.4)' : '1px solid #1a1a26',
+                background: isNovel ? 'rgba(124,58,237,0.15)' : '#0d0d14',
+                color: isNovel ? '#a78bfa' : '#9ca3af',
+              }}>
+                {isNovel ? '📕 Novel' : (series.reading_mode === 'scroll' ? '📜 Webtoon' : '📖 Mangal')}
+              </span>
+              {/* Step 12 — Series Status & Completion Badge (read-only here; creators
+                  change it from the Dashboard). Hidden until the migration runs and
+                  the column exists on real data. */}
+              {series.completion_status && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  fontSize: '10px', fontWeight: 700, padding: '4px 12px', borderRadius: '20px',
+                  border: `1px solid ${
+                    series.completion_status === 'completed' ? 'rgba(16,185,129,0.4)' :
+                    series.completion_status === 'hiatus' ? 'rgba(107,114,128,0.4)' : 'rgba(217,119,6,0.4)'
+                  }`,
+                  background:
+                    series.completion_status === 'completed' ? 'rgba(16,185,129,0.15)' :
+                    series.completion_status === 'hiatus' ? 'rgba(107,114,128,0.15)' : 'rgba(217,119,6,0.15)',
+                  color:
+                    series.completion_status === 'completed' ? '#10b981' :
+                    series.completion_status === 'hiatus' ? '#9ca3af' : '#d97706',
+                }}>
+                  {series.completion_status === 'completed' && '✓ Completed'}
+                  {series.completion_status === 'hiatus' && '⏸ On Hiatus'}
+                  {series.completion_status === 'ongoing' && '● Ongoing'}
+                </span>
+              )}
+            </div>
+
+            <h1 style={{ fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 6px', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+              {series.title}
+            </h1>
+            {/* Step 13 — Public Creator Profile: links to /creator/[username] */}
+            {creatorUsername && (
+              <a href={`/creator/${creatorUsername}`} style={{
+                fontSize: '13px', color: '#6b7280', textDecoration: 'none',
+                display: 'inline-block', marginBottom: '14px',
+              }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = '#d97706'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#6b7280'; }}
+              >
+                by @{creatorUsername}
+              </a>
+            )}
+            <p style={{ fontSize: '14px', color: '#9ca3af', lineHeight: 1.7, margin: '0 0 24px', maxWidth: '540px' }}>
+              {series.synopsis}
+            </p>
+
+            {/* Stats row */}
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>{chapters.length}</div>
+                <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Chapters</div>
+              </div>
+              {latestChapter && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>Ch.{latestChapter.chapter_number}</div>
+                  <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Latest</div>
+                </div>
+              )}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>{followCount}</div>
+                <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Followers</div>
+              </div>
+
+              {/* Step 7 — View count */}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>{formatViews(viewCount)}</div>
+                <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Views</div>
+              </div>
+
+              {/* Step 6 — Star Rating */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                      key={star}
+                      onClick={() => handleRate(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(null)}
+                      disabled={ratingLoading}
+                      title={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                      style={{
+                        background: 'none', border: 'none', cursor: ratingLoading ? 'wait' : 'pointer',
+                        fontSize: '20px', padding: '2px', lineHeight: 1,
+                        color: star <= displayStars ? '#d97706' : '#2a2a3a',
+                        transition: 'color 0.1s, transform 0.1s',
+                        transform: star <= displayStars ? 'scale(1.15)' : 'scale(1)',
+                        opacity: ratingLoading ? 0.5 : 1,
+                      }}
+                    >★</button>
+                  ))}
+                </div>
+                <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>
+                  {avgRating !== null
+                    ? <span><span style={{ color: '#d97706', fontWeight: 700 }}>{avgRating}</span> / 5 ({ratingCount})</span>
+                    : 'Rate this'}
+                </div>
+              </div>
+            </div>
+
+            {/* CTA buttons */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {progressChapter ? (
+                <a href={`/read/${progressChapter.id}`} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  padding: '12px 24px', borderRadius: '10px', fontWeight: 800, fontSize: '14px',
+                  background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
+                  color: '#fff', textDecoration: 'none',
+                  boxShadow: '0 4px 20px rgba(217,119,6,0.3)',
+                }}>
+                  ▶ Continue Reading → Ch.{progressChapter.chapter_number}
+                </a>
+              ) : firstChapter && (
+                <a href={`/read/${firstChapter.id}`} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  padding: '12px 24px', borderRadius: '10px', fontWeight: 800, fontSize: '14px',
+                  background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
+                  color: '#fff', textDecoration: 'none',
+                  boxShadow: '0 4px 20px rgba(217,119,6,0.3)',
+                }}>
+                  ▶ Start Reading
+                </a>
+              )}
+              {progressChapter && firstChapter && (
+                <a href={`/read/${firstChapter.id}`} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
+                  background: '#0d0d14', border: '1px solid #2a2a3a',
+                  color: '#9ca3af', textDecoration: 'none',
+                }}>
+                  ↺ Start From Beginning
+                </a>
+              )}
+              {latestChapter && latestChapter.id !== firstChapter?.id && latestChapter.id !== progressChapter?.id && (
+                <a href={`/read/${latestChapter.id}`} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
+                  background: '#0d0d14', border: '1px solid #2a2a3a',
+                  color: '#9ca3af', textDecoration: 'none',
+                }}>
+                  ⚡ Latest Chapter
+                </a>
+              )}
+              {!isCreator && (
+                <button
+                  onClick={toggleFollow}
+                  disabled={followLoading}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
+                    cursor: followLoading ? 'wait' : 'pointer',
+                    border: isFollowing ? '1px solid rgba(217,119,6,0.5)' : '1px solid #2a2a3a',
+                    background: isFollowing ? 'rgba(217,119,6,0.12)' : '#0d0d14',
+                    color: isFollowing ? '#d97706' : '#9ca3af',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {followLoading ? '...' : isFollowing ? '🔔 Following' : '🔔 Follow'}
+                </button>
+              )}
+              {isCreator && (
+                <a href={`/upload?seriesId=${series.id}`} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
+                  background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)',
+                  color: '#d97706', textDecoration: 'none',
+                }}>
+                  + Add Chapter
+                </a>
+              )}
+              {/* Step 11 — WhatsApp Share */}
+              <ShareButton title={series.title} url={typeof window !== 'undefined' ? window.location.href : ''} />
+            </div>
+
+            {/* Step 8 — Report button (legal requirement) */}
+            <div style={{ marginTop: '12px' }}>
+              <ReportButton targetType="series" targetId={series.id} variant="text" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── CHAPTER LIST ── */}
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>
+            📚 {chapters.length} Chapter{chapters.length !== 1 ? 's' : ''}
+          </h2>
+          <button
+            onClick={() => setSortDesc(d => !d)}
+            style={{
+              padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+              background: '#0d0d14', border: '1px solid #1a1a26', color: '#9ca3af', cursor: 'pointer',
+            }}
+          >
+            {sortDesc ? '↓ Newest First' : '↑ Oldest First'}
+          </button>
+        </div>
+
+        {chapters.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px', background: '#0d0d14', borderRadius: '14px', border: '1px solid #1a1a26' }}>
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
+            <p style={{ color: '#4b5563', fontSize: '14px', margin: 0 }}>No chapters published yet. Check back soon!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {displayedChapters.map((ch, idx) => (
+              <ChapterRow
+                key={ch.id}
+                chapter={ch}
+                isNew={idx === 0 && sortDesc}
+                isNovel={isNovel}
+                isCreator={isCreator}
+                seriesId={series.id}
+                onDelete={handleDeleteChapter}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── FOOTER ── */}
+      <footer style={{ borderTop: '1px solid #1a1a26', padding: '32px 24px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🔥</div>
+          <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff' }}>MANGAL</span>
+        </div>
+        <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 14px' }}>Made with ❤️ in India · Free to read, forever.</p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          {[
+            { label: 'Privacy Policy', href: '/privacy' },
+            { label: 'Terms of Service', href: '/terms' },
+            { label: 'Grievance Officer', href: '/grievance' },
+          ].map(link => (
+            <a key={link.href} href={link.href} style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}>
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function ChapterRow({
+  chapter, isNew, isNovel, isCreator, seriesId, onDelete,
+}: {
+  chapter: Chapter;
+  isNew: boolean;
+  isNovel: boolean;
+  isCreator: boolean;
+  seriesId: string;
+  onDelete: (chapterId: string) => Promise<void>;
+}) {
+  const [hovered, setHovered] = useState(false);
+  // Two-click confirm delete — same pattern as admin/reports' Remove
+  // Content / Ban User actions (Step 20): first click shows a "Confirm"
+  // button, second click actually deletes; a Cancel button is always
+  // available to back out without deleting anything.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirmDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeleting(true);
+    await onDelete(chapter.id);
+    // No need to reset deleting/confirmingDelete — this row unmounts once
+    // the parent removes the chapter from its list.
+  };
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 20px',
+        background: hovered ? '#111118' : '#0d0d14',
+        border: `1px solid ${hovered ? '#2a2a3a' : '#1a1a26'}`,
+        borderRadius: '10px',
+        transition: 'all 0.15s',
+        gap: '12px',
+      }}
+    >
+      <a
+        href={`/read/${chapter.id}`}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '14px',
+          textDecoration: 'none', color: 'inherit', flex: 1, minWidth: 0,
+        }}
+      >
+        <span style={{
+          width: '42px', height: '42px', borderRadius: '10px', flexShrink: 0,
+          background: hovered ? 'rgba(217,119,6,0.15)' : '#08080c',
+          border: `1px solid ${hovered ? 'rgba(217,119,6,0.3)' : '#1a1a26'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '12px', fontWeight: 800,
+          color: hovered ? '#d97706' : '#4b5563',
+          transition: 'all 0.15s',
+        }}>
+          {chapter.chapter_number}
+        </span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>
+              Chapter {chapter.chapter_number}{chapter.title ? ` — ${chapter.title}` : ''}
+            </span>
+            {isNew && (
+              <span style={{ fontSize: '9px', fontWeight: 700, background: 'rgba(239,68,68,0.2)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                NEW
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: '11px', color: '#4b5563', marginTop: '2px' }}>
+            {new Date(chapter.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {/* Step 21 — word count + estimated read time, novel chapters only */}
+            {isNovel && chapter.word_count != null && chapter.word_count > 0 && (
+              <span> · {chapter.word_count.toLocaleString()} words · {estimateReadTime(chapter.word_count)}</span>
+            )}
+          </div>
+        </div>
+      </a>
+
+      {/* Creator-only controls — Edit routes into the upload page in edit
+          mode (chapterId present); Delete is a two-click confirm. Readers
+          and non-owning creators never see this column at all. */}
+      {isCreator && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          {!confirmingDelete ? (
+            <>
+              <a
+                href={`/upload?seriesId=${seriesId}&chapterId=${chapter.id}`}
+                onClick={e => e.stopPropagation()}
+                title="Edit chapter"
+                style={{
+                  width: '32px', height: '32px', borderRadius: '8px',
+                  border: '1px solid #1a1a26', background: '#08080c',
+                  color: '#9ca3af', fontSize: '13px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  textDecoration: 'none', flexShrink: 0,
+                }}
+              >✏️</a>
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmingDelete(true); }}
+                title="Delete chapter"
+                style={{
+                  width: '32px', height: '32px', borderRadius: '8px',
+                  border: '1px solid #1a1a26', background: '#08080c',
+                  color: '#ef4444', fontSize: '13px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >🗑️</button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                style={{
+                  padding: '7px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
+                  border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.15)',
+                  color: '#ef4444', cursor: deleting ? 'wait' : 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                {deleting ? 'Deleting...' : '⚠️ Confirm Delete'}
+              </button>
+              {!deleting && (
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmingDelete(false); }}
+                  style={{
+                    padding: '7px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 600,
+                    border: '1px solid #1a1a26', background: '#08080c',
+                    color: '#9ca3af', cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  Cancel
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Arrow indicator — purely visual, points into the chapter link */}
+      <span style={{ color: hovered ? '#d97706' : '#374151', fontSize: '18px', transition: 'color 0.15s', flexShrink: 0 }}>→</span>
+    </div>
+  );
+}
+
+export default function Page({ params }: { params: Promise<{ seriesId: string }> }) {
+  const { seriesId } = use(params);
+  return <SeriesDetailPage seriesId={seriesId} />;
+}
