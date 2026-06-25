@@ -24,6 +24,8 @@ interface Story {
   completion_status: 'ongoing' | 'completed' | 'hiatus';
   // Step 21 — Dual Content Mode: mangal (comic) or novel
   content_type: 'mangal' | 'novel';
+  // Step 24 — RTL Reader: reading direction set per series by creator
+  reading_direction: 'ltr' | 'rtl' | null;
 }
 
 // Step 16 — chapter summary stored per-series for the expandable list
