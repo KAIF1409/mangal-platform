@@ -113,12 +113,14 @@ export default function LandingPage() {
       }}>
         {/* Logo */}
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '10px',
-            background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-            boxShadow: '0 0 20px rgba(217,119,6,0.3)',
-          }}>🔥</div>
+          <img
+            src="/logo-icon.png"
+            alt="MANGAL"
+            style={{
+              width: '36px', height: '36px', borderRadius: '10px',
+              boxShadow: '0 0 20px rgba(217,119,6,0.3)', display: 'block',
+            }}
+          />
           <span style={{ fontWeight: 900, fontSize: '20px', color: '#fff', letterSpacing: '-0.03em' }}>MANGAL</span>
         </a>
 
@@ -311,7 +313,11 @@ export default function LandingPage() {
             {/* Brand */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '9px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🔥</div>
+                <img
+                  src="/logo-icon.png"
+                  alt="MANGAL"
+                  style={{ width: '32px', height: '32px', borderRadius: '9px', display: 'block' }}
+                />
                 <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff' }}>MANGAL</span>
               </div>
               <p style={{ fontSize: '12px', color: '#4b5563', maxWidth: '200px', lineHeight: 1.6, margin: 0 }}>
