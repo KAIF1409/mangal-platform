@@ -1,4 +1,10 @@
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+
+
+
 'use client';
+
 
 // Step 18 — Terms of Service Page
 //
@@ -9,7 +15,7 @@
 // app/grievance/page.tsx. If those ever change, update both files.
 
 const PLATFORM_NAME = 'MANGAL';
-const CONTACT_EMAIL = 'kaifmohammed.work@gmail.com';
+const CONTACT_EMAIL = 'mangal.indiaplatform@gmail.com';
 const LAST_UPDATED = '21 June 2026';
 const MIN_AGE = 13;
 
