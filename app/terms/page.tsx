@@ -1,10 +1,7 @@
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-
-
-
 'use client';
 
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 // Step 18 — Terms of Service Page
 //
@@ -16,6 +13,7 @@ import Footer from '../components/Footer';
 
 const PLATFORM_NAME = 'MANGAL';
 const CONTACT_EMAIL = 'mangal.indiaplatform@gmail.com';
+const PLATFORM_ADDRESS = 'PES UNIVERSITY, Bangalore, Karnataka, India';
 const LAST_UPDATED = '21 June 2026';
 const MIN_AGE = 13;
 
@@ -80,45 +78,8 @@ export default function TermsOfServicePage() {
         fontFamily: 'Arial, Helvetica, sans-serif',
       }}
     >
-      {/* NAV */}
-      <nav
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          background: 'rgba(7,7,10,0.92)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid #1a1a26',
-          padding: '0 24px',
-          height: '60px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px',
-            }}
-          >
-            🔥
-          </div>
-          <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
-            {PLATFORM_NAME}
-          </span>
-        </a>
-        <a href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>
-          ← Back to Home
-        </a>
-      </nav>
+      {/* NAVBAR COMPONENT */}
+      <Navbar />
 
       <div
         style={{
@@ -201,18 +162,38 @@ export default function TermsOfServicePage() {
               You may sign up as a Reader or a Creator. Readers can upgrade to Creator at any time
               through the &ldquo;Become a Creator&rdquo; flow.
             </Bullet>
-            <Bullet>One person should not operate multiple accounts to manipulate views, ratings, reactions, or follower counts.</Bullet>
+            <Bullet>
+              You may not create an account using false information, a name or email that is not
+              yours, or an account that impersonates another person or entity.
+            </Bullet>
+            <Bullet>
+              We reserve the right to refuse or suspend any account that violates these Terms or
+              that we believe is being used for illegal or harmful purposes.
+            </Bullet>
           </Section>
 
           <Section id="conduct" title="User Conduct">
-            <p style={{ margin: '0 0 12px' }}>When using {PLATFORM_NAME}, you agree not to:</p>
-            <Bullet>Upload or post content that is illegal under Indian law.</Bullet>
-            <Bullet>Upload or post content that infringes someone else&apos;s copyright or other intellectual property.</Bullet>
-            <Bullet>Harass, threaten, or hatefully target other users in comments or elsewhere on the platform.</Bullet>
-            <Bullet>Impersonate another person, creator, or the platform itself.</Bullet>
-            <Bullet>Post spam, scams, or misleading information.</Bullet>
-            <Bullet>Attempt to circumvent content protection (e.g. scraping or mass-downloading pages) or interfere with the platform&apos;s normal operation.</Bullet>
-            <Bullet>Use the platform to distribute content sexualizing minors, in any form. This is reported directly and may be escalated to law enforcement.</Bullet>
+            <p style={{ margin: '0 0 12px' }}>You agree not to use {PLATFORM_NAME} to:</p>
+            <Bullet>
+              Upload or distribute any illegal content (child sexual abuse material, materials that
+              violate copyright, etc.).
+            </Bullet>
+            <Bullet>
+              Harass, bully, threaten, or impersonate anyone else. This includes in comments, replies,
+              and user-generated reactions.
+            </Bullet>
+            <Bullet>
+              Spam, use bots to inflate view counts or artificially boost follow counts, or engage
+              in other deceptive practices.
+            </Bullet>
+            <Bullet>
+              Exploit or abuse our service to harm others, including accessing systems without
+              authorization, DoS attacks, or using the platform for phishing.
+            </Bullet>
+            <Bullet>
+              Distribute malware, viruses, or other harmful code via chapters, comments, or share
+              links.
+            </Bullet>
             <p style={{ margin: '12px 0 0' }}>
               Violations can be reported using the Report button on any chapter or comment, or
               through our{' '}
@@ -384,36 +365,8 @@ export default function TermsOfServicePage() {
         }
       `}</style>
 
-      {/* Footer */}
-      <div
-        style={{
-          borderTop: '1px solid #1a1a26',
-          padding: '20px 24px',
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '24px',
-          flexWrap: 'wrap',
-        }}
-      >
-        {[
-          { label: 'Home', href: '/' },
-          { label: 'Privacy Policy', href: '/privacy' },
-          { label: 'Terms of Service', href: '/terms' },
-          { label: 'Grievance Officer', href: '/grievance' },
-        ].map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            style={{
-              fontSize: '11px',
-              color: '#4b5563',
-              textDecoration: 'none',
-            }}
-          >
-            {link.label}
-          </a>
-        ))}
-      </div>
+      {/* FOOTER COMPONENT */}
+      <Footer showBrandBlock={false} />
     </div>
   );
 }
