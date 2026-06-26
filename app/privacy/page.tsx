@@ -24,8 +24,8 @@ import { useState } from 'react';
 // ── CONFIGURE THESE ─────────────────────────────────────────────────────────
 const PLATFORM_NAME = 'MANGAL';
 const GRIEVANCE_OFFICER_NAME = 'Mohammed Kaif';
-const GRIEVANCE_OFFICER_EMAIL = 'kaifmohammed.work@gmail.com';
-const PLATFORM_ADDRESS = 'Police Colony, Raichur, Karnataka, India';
+const GRIEVANCE_OFFICER_EMAIL = 'mangal.indiaplatform@gmail.com';
+const PLATFORM_ADDRESS = 'PES UNIVERSITY, Bangalore, Karnataka, India';
 const LAST_UPDATED = '21 June 2026';
 // ─────────────────────────────────────────────────────────────────────────────
 
