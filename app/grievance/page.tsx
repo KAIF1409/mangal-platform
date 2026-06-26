@@ -25,7 +25,7 @@ import { useState } from 'react';
 
 // ── CONFIGURE THESE BEFORE GOING LIVE ────────────────────────────────────────
 const GRIEVANCE_OFFICER_NAME = 'Mohammed Kaif';
-const GRIEVANCE_OFFICER_EMAIL = 'kaifmohammed.work@gmail.com';
+const GRIEVANCE_OFFICER_EMAIL = 'mangal.indiaplatform@gmail.com';
 const PLATFORM_NAME = 'MANGAL';
 const PLATFORM_ADDRESS = 'PES UNIVERSITY, BENGALURU, Karnataka, India'; // Full address if you have one
 const FORMSPREE_FORM_ID = 'maqgwdvo'; // e.g. "xpzgkqab"
