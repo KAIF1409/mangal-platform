@@ -7,6 +7,8 @@ import EditSeriesModal from '../components/EditSeriesModal';
 import ManagePagesModal from '../components/ManagePagesModal';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 interface Story {
   id: string;
