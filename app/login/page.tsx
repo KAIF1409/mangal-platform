@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { isMinor, isPlausibleDateOfBirth, PARENT_CONSENT_PENDING_COPY } from '../lib/dpdp';
 
+
 // 'dob'     = Google OAuth new users — skipped register form so no DOB yet
 // 'pending' = minor whose parent hasn't confirmed yet
 type Mode = 'landing' | 'login' | 'register' | 'dob' | 'role' | 'pending';
