@@ -41,7 +41,7 @@ const DATA_ITEMS: DataItem[] = [
   {
     what: 'Email address & password (via Supabase Auth, encrypted)',
     why: 'To create and secure your account, log you in, and send essential account emails',
-    retention: 'Until you delete your account; registration log retained 180 days after that (see “What Happens When You Delete Your Account”)',
+    retention: 'Until you delete your account; registration log retained 180 days after that (see "What Happens When You Delete Your Account")',
   },
   {
     what: 'Username, display name, avatar, creator bio',
@@ -50,7 +50,7 @@ const DATA_ITEMS: DataItem[] = [
   },
   {
     what: 'Reading progress (series, chapter, page)',
-    why: 'To power “Continue Reading” so you don’t lose your place',
+    why: 'To power "Continue Reading" so you don\'t lose your place',
     retention: 'Until you delete your account, or anytime from your library settings',
   },
   {
@@ -71,14 +71,31 @@ const DATA_ITEMS: DataItem[] = [
 ];
 
 const YOUR_RIGHTS = [
-  { title: 'Right to Access', body: 'Request a copy of the personal data we hold about you.' },
-  { title: 'Right to Correction', body: 'Fix inaccurate or outdated personal data (e.g. via your profile settings).' },
-  { title: 'Right to Erasure', body: 'Request deletion of your personal data once it\u2019s no longer needed for the purpose it was collected, or if you withdraw consent.' },
-  { title: 'Right to Withdraw Consent', body: 'Withdraw any consent you\u2019ve given, as easily as you gave it. Withdrawal does not affect processing already carried out.' },
-  { title: 'Right to Grievance Redressal', body: 'Raise a complaint with our Grievance Officer, and escalate to the Data Protection Board of India if unresolved.' },
-  { title: 'Right to Nominate', body: 'Nominate another individual to exercise these rights on your behalf in the event of your death or incapacity.' },
+  {
+    title: 'Right to Access',
+    body: 'Request a copy of the personal data we hold about you.'
+  },
+  {
+    title: 'Right to Correction',
+    body: 'Fix inaccurate or outdated personal data (e.g. via your profile settings).'
+  },
+  {
+    title: 'Right to Erasure',
+    body: "Request deletion of your personal data once it's no longer needed for the purpose it was collected, or if you withdraw consent."
+  },
+  {
+    title: 'Right to Withdraw Consent',
+    body: "Withdraw any consent you've given, as easily as you gave it. Withdrawal does not affect processing already carried out."
+  },
+  {
+    title: 'Right to Grievance Redressal',
+    body: 'Raise a complaint with our Grievance Officer, and escalate to the Data Protection Board of India if unresolved.'
+  },
+  {
+    title: 'Right to Nominate',
+    body: 'Nominate another individual to exercise these rights on your behalf in the event of your death or incapacity.'
+  },
 ];
-
 export default function PrivacyPolicyPage() {
   const [langNotice, setLangNotice] = useState(true);
 
@@ -99,28 +116,8 @@ export default function PrivacyPolicyPage() {
       minHeight: '100vh', backgroundColor: '#07070a',
       color: '#f9fafb', fontFamily: 'Arial, Helvetica, sans-serif',
     }}>
-      {/* NAV */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(7,7,10,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #1a1a26',
-        padding: '0 24px', height: '60px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-          <div style={{
-            width: '32px', height: '32px', borderRadius: '8px',
-            background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
-          }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
-            {PLATFORM_NAME}
-          </span>
-        </a>
-        <a href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>
-          ← Back to Home
-        </a>
-      </nav>
+      
+     <Navbar />
 
       <div style={{ maxWidth: '760px', margin: '0 auto', padding: '48px 24px 80px' }}>
 
@@ -182,25 +179,24 @@ export default function PrivacyPolicyPage() {
 
         {/* What We Collect — itemized, not bundled (DPDP requirement) */}
         <div style={sectionCard}>
-          <h2 style={sectionTitle}>📋 What We Collect, Why, and For How Long</h2>
+          <h2 style={sectionTitle}>📊 What We Collect (Itemized)</h2>
           <p style={bodyText}>
-            Under the DPDP Rules, we are required to give you this as an itemized
-            list rather than one bundled paragraph — so here it is, one row per
-            type of data:
+            Under the DPDP Act, we must itemize, not lump. Here&apos;s exactly what we
+            collect, why, and how long we keep it. No surprises.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
-            {DATA_ITEMS.map((item) => (
-              <div key={item.what} style={{
+          <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+            {DATA_ITEMS.map((item, idx) => (
+              <div key={idx} style={{
                 background: '#08080c', border: '1px solid #14141e',
                 borderRadius: '10px', padding: '14px 16px',
               }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#d97706', marginBottom: '6px' }}>
                   {item.what}
                 </div>
                 <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>
                   <span style={{ color: '#d97706', fontWeight: 700 }}>Why: </span>{item.why}
                 </div>
-                <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
                   <span style={{ color: '#d97706', fontWeight: 700 }}>Kept: </span>{item.retention}
                 </div>
               </div>
@@ -362,24 +358,7 @@ export default function PrivacyPolicyPage() {
 
       </div>
 
-      {/* Footer */}
-      <div style={{
-        borderTop: '1px solid #1a1a26', padding: '20px 24px',
-        display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap',
-      }}>
-        {[
-          { label: 'Home', href: '/' },
-          { label: 'Privacy Policy', href: '/privacy' },
-          { label: 'Terms of Service', href: '/terms' },
-          { label: 'Grievance Officer', href: '/grievance' },
-        ].map((link) => (
-          <a key={link.href} href={link.href} style={{
-            fontSize: '11px', color: '#4b5563', textDecoration: 'none',
-          }}>
-            {link.label}
-          </a>
-        ))}
-      </div>
+      <Footer showBrandBlock={false} />
     </div>
   );
 }
