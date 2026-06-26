@@ -27,7 +27,7 @@ import { useState } from 'react';
 const GRIEVANCE_OFFICER_NAME = 'Mohammed Kaif';
 const GRIEVANCE_OFFICER_EMAIL = 'mangal.indiaplatform@gmail.com';
 const PLATFORM_NAME = 'MANGAL';
-const PLATFORM_ADDRESS = 'PES UNIVERSITY, BENGALURU, Karnataka, India'; // Full address if you have one
+const PLATFORM_ADDRESS = 'PES UNIVERSITY, Bangalore, Karnataka, India'; // Full address if you have one
 const FORMSPREE_FORM_ID = 'maqgwdvo'; // e.g. "xpzgkqab"
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,7 @@ const ISSUE_TYPES = [
   'Impersonation or Fake Profile',
   'Harassment or Hate Speech',
   'Misinformation',
+  'Deepfake / Synthetic Generated Content',
   'Child Safety Concern',
   'Other',
 ];
@@ -120,11 +121,11 @@ export default function GrievancePage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-          <div style={{
-            width: '32px', height: '32px', borderRadius: '8px',
-            background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
-          }}>🔥</div>
+          <img
+            src="/logo-icon.png"
+            alt={PLATFORM_NAME}
+            style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'block' }}
+          />
           <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
             {PLATFORM_NAME}
           </span>
@@ -184,80 +185,43 @@ export default function GrievancePage() {
             <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', marginBottom: '12px' }}>
               {GRIEVANCE_OFFICER_NAME}
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '13px', color: '#6b7280', width: '60px', flexShrink: 0 }}>Email</span>
-                <a href={`mailto:${GRIEVANCE_OFFICER_EMAIL}`} style={{
-                  fontSize: '13px', color: '#d97706', textDecoration: 'none', fontWeight: 600,
-                }}>
+            <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.6 }}>
+              <p style={{ margin: '0 0 8px' }}>
+                <a href={`mailto:${GRIEVANCE_OFFICER_EMAIL}`}
+                  style={{ color: '#d97706', textDecoration: 'none' }}>
                   {GRIEVANCE_OFFICER_EMAIL}
                 </a>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '13px', color: '#6b7280', width: '60px', flexShrink: 0 }}>Address</span>
-                <span style={{ fontSize: '13px', color: '#9ca3af' }}>{PLATFORM_ADDRESS}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '13px', color: '#6b7280', width: '60px', flexShrink: 0 }}>Platform</span>
-                <span style={{ fontSize: '13px', color: '#9ca3af' }}>{PLATFORM_NAME}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SLA badges */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
-            <div style={{
-              padding: '8px 14px', borderRadius: '10px',
-              background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
-              textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: 900, color: '#10b981' }}>24h</div>
-              <div style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600 }}>Acknowledgement</div>
-            </div>
-            <div style={{
-              padding: '8px 14px', borderRadius: '10px',
-              background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.2)',
-              textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: 900, color: '#d97706' }}>15d</div>
-              <div style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600 }}>Resolution</div>
+              </p>
+              <p style={{ margin: '0' }}>
+                {PLATFORM_ADDRESS}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* What we handle section */}
+        {/* Compliance Card - Updated Timelines */}
         <div style={{
-          background: '#0d0d14', border: '1px solid #1a1a26',
-          borderRadius: '16px', padding: '24px 28px', marginBottom: '32px',
+          background: 'rgba(217,119,6,0.05)', border: '1px solid rgba(217,119,6,0.2)',
+          borderRadius: '12px', padding: '16px 20px', marginBottom: '32px',
         }}>
-          <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#fff', margin: '0 0 16px' }}>
-            📋 What This Form Handles
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' }}>
-            {ISSUE_TYPES.map((type) => (
-              <div key={type} style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '8px 12px', borderRadius: '8px',
-                background: '#08080c', border: '1px solid #14141e',
-                fontSize: '12px', color: '#9ca3af',
-              }}>
-                <span style={{ color: '#d97706', fontSize: '10px' }}>▸</span>
-                {type}
-              </div>
-            ))}
+          <div style={{ fontSize: '12px', color: '#f9fafb', lineHeight: 1.7 }}>
+            <strong style={{ color: '#d97706', display: 'block', marginBottom: '8px' }}>
+              ⏱️ Response & Appeal Timeline (IT Rules 2021 as amended)
+            </strong>
+            <ul style={{ margin: '0', paddingLeft: '20px' }}>
+              <li>Acknowledgement: <strong>24 hours</strong></li>
+              <li>Standard Resolution: <strong>15 days</strong></li>
+              <li>Prohibited Content (specified): <strong>72 hours</strong> (Amendment 2025)</li>
+              <li>Appeal to Grievance Appellate Committee: <strong>30 days</strong> from officer's decision (Amendment 2022)</li>
+              <li>GAC Decision: <strong>30 days</strong> from appeal receipt</li>
+            </ul>
+            <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>
+              Users dissatisfied with the grievance officer's decision may appeal to the centrally-appointed Grievance Appellate Committee.
+            </p>
           </div>
-          <p style={{ fontSize: '12px', color: '#4b5563', margin: '16px 0 0', lineHeight: 1.6 }}>
-            For urgent matters involving child safety or illegal content, please also
-            report directly to{' '}
-            <a href="https://cybercrime.gov.in" target="_blank" rel="noopener noreferrer"
-              style={{ color: '#d97706', textDecoration: 'none' }}>
-              cybercrime.gov.in
-            </a>.
-          </p>
         </div>
 
-        {/* The Form */}
+        {/* Grievance Form */}
         <div style={{
           background: '#0d0d14', border: '1px solid #1a1a26',
           borderRadius: '16px', padding: '28px', marginBottom: '32px',
@@ -405,20 +369,31 @@ export default function GrievancePage() {
           )}
         </div>
 
-        {/* Legal notice */}
+        {/* Legal notice - Updated with 2025/2026 amendments */}
         <div style={{
           border: '1px dashed #1f1f2e', borderRadius: '12px',
           padding: '20px 24px', color: '#4b5563', fontSize: '12px', lineHeight: 1.7,
         }}>
-          <strong style={{ color: '#6b7280', display: 'block', marginBottom: '6px' }}>
-            Legal Reference
+          <strong style={{ color: '#6b7280', display: 'block', marginBottom: '8px' }}>
+            Legal Reference & Latest Amendments
           </strong>
-          This page is maintained in accordance with the Information Technology
-          (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021,
-          notified under Section 87(2) of the Information Technology Act, 2000.
-          {' '}{PLATFORM_NAME} acts as an intermediary platform under this Act.
-          Users may also approach the relevant appellate authority or court of
-          competent jurisdiction if unsatisfied with the resolution.
+          <p style={{ margin: '0 0 10px' }}>
+            This page is maintained in accordance with the Information Technology
+            (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021,
+            notified under Section 87(2) of the Information Technology Act, 2000.
+            {' '}{PLATFORM_NAME} acts as an intermediary platform under this Act.
+          </p>
+          <p style={{ margin: '0 0 10px', fontSize: '11px', color: '#6b7280' }}>
+            <strong>Latest Amendments (2022-2026):</strong>
+            <br />• Grievance Appellate Committee (GAC) mechanism established for appeals within 30 days
+            <br />• 72-hour response requirement for specified prohibited content (Amendment 2025)
+            <br />• Synthetic Generated Information (SGI) and deepfake regulation (Amendment 2025/2026)
+            <br />• Monthly compliance review requirements for intermediaries
+          </p>
+          <p style={{ margin: '0', fontSize: '11px' }}>
+            Users may also approach the relevant Grievance Appellate Committee, appellate authority, 
+            or court of competent jurisdiction if unsatisfied with the resolution.
+          </p>
         </div>
 
       </div>
