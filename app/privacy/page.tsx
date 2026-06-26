@@ -20,6 +20,8 @@
 // production and call DPDP compliance "done" until those items ship.
 
 import { useState } from 'react';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 // ── CONFIGURE THESE ─────────────────────────────────────────────────────────
 const PLATFORM_NAME = 'MANGAL';
