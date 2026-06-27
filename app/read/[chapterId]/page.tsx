@@ -29,7 +29,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const [allChapters, setAllChapters] = useState<ChapterNav[]>([]);
   const [showUI, setShowUI] = useState(true);
   const [showSidebar, setShowSidebar] = useState(false);
-  const [bgColor, setBgColor] = useState('#000000');
+  const [bgColor, setBgColor] = useState('#000000'); // manga default; overridden to sepia for novels on first load
   const [showSettings, setShowSettings] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -150,8 +150,9 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         if (saved.fitMode) setFitMode(saved.fitMode);
         if (typeof saved.tapZonesEnabled === 'boolean') setTapZonesEnabled(saved.tapZonesEnabled);
         if (typeof saved.dataSaver === 'boolean') setDataSaver(saved.dataSaver);
-        if (saved.bgColor) setBgColor(saved.bgColor);
         if (saved.fontSize && saved.fontSize >= 14 && saved.fontSize <= 24) setFontSize(saved.fontSize);
+        // Novel and manga have separate bgColor prefs so they don't bleed into each other.
+        // Applied below in the series-load effect once content_type is known.
       }
     } catch {
       // localStorage unavailable or corrupted — just use defaults
@@ -159,12 +160,32 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     setPrefsLoaded(true);
   }, []);
 
+  // Once series loads we know content_type. Apply per-type bgColor default:
+  // sepia for novels (easy on eyes at night), black for manga.
+  useEffect(() => {
+    if (!series) return;
+    try {
+      const raw = localStorage.getItem('mangal_reader_prefs');
+      const saved = raw ? JSON.parse(raw) : {};
+      if (series.content_type === 'novel') {
+        setBgColor(saved.novelBgColor ?? '#f5f0e0');
+      } else {
+        setBgColor(saved.mangaBgColor ?? '#000000');
+      }
+    } catch {
+      setBgColor(series.content_type === 'novel' ? '#f5f0e0' : '#000000');
+    }
+  }, [series?.content_type]);
+
   // Persist whenever a preference changes (skip the very first render so we
   // don't immediately overwrite saved prefs with defaults before they load)
   useEffect(() => {
     if (!prefsLoaded) return;
     try {
-      localStorage.setItem('mangal_reader_prefs', JSON.stringify({ modeOverride, fitMode, tapZonesEnabled, dataSaver, bgColor, fontSize }));
+      // Save bgColor under a type-specific key so novel and manga prefs don't overwrite each other.
+      const existing = (() => { try { return JSON.parse(localStorage.getItem('mangal_reader_prefs') || '{}'); } catch { return {}; } })();
+      const bgKey = isNovel ? 'novelBgColor' : 'mangaBgColor';
+      localStorage.setItem('mangal_reader_prefs', JSON.stringify({ ...existing, modeOverride, fitMode, tapZonesEnabled, dataSaver, [bgKey]: bgColor, fontSize }));
     } catch {
       // ignore storage errors (private browsing, quota, etc.)
     }
@@ -1102,13 +1123,19 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         {/* Theme */}
         <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Theme</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
-          {[
+          {(isNovel ? [
+            { c: '#f5f0e0', label: 'Sepia' },
+            { c: '#ffffff', label: 'Light' },
+            { c: '#1a1a1a', label: 'Dim' },
+            { c: '#0d0d0d', label: 'Dark' },
+            { c: '#000000', label: 'Black' },
+          ] : [
             { c: '#000000', label: 'Black' },
             { c: '#0d0d0d', label: 'Dark' },
             { c: '#1a1a1a', label: 'Dim' },
             { c: '#ffffff', label: 'Light' },
             { c: '#f5f0e0', label: 'Sepia' },
-          ].map(({ c, label }) => (
+          ]).map(({ c, label }) => (
             <button key={c} onClick={() => setBgColor(c)} style={{
               display: 'flex', alignItems: 'center', gap: '8px',
               padding: '6px 8px', borderRadius: '8px', textAlign: 'left',
@@ -1188,9 +1215,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         {/* NOVEL MODE — formatted text reader, always continuous scroll */}
         {isNovel && novelContent && (() => {
           const segments = parseChapterContent(novelContent);
-          const textColor = bgColor === '#ffffff' || bgColor === '#f5f0e0' ? '#1a1a1a' : '#d1d5db';
-          const headingColor = bgColor === '#ffffff' || bgColor === '#f5f0e0' ? '#111' : '#fff';
-          const mutedColor = bgColor === '#ffffff' || bgColor === '#f5f0e0' ? '#555' : '#6b7280';
+          const isLightBg = bgColor === '#ffffff' || bgColor === '#f5f0e0';
+          const isDimBg = bgColor === '#1a1a1a' || bgColor === '#0d0d0d';
+          const textColor = isLightBg ? '#1a1a1a' : isDimBg ? '#c9cdd5' : '#d1d5db';
+          const headingColor = isLightBg ? '#111111' : '#ffffff';
+          const mutedColor = isLightBg ? '#555555' : '#6b7280';
+          const isLight = isLightBg;
           return (
             <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div style={{
@@ -1216,7 +1246,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
                 {/* Author's Note — before chapter */}
                 {authorNoteBefore && (
-                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '14px 16px', marginBottom: '28px', lineHeight: 1.6 }}>
+                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: (isLight) ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)', border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '10px', padding: '14px 16px', marginBottom: '28px', lineHeight: 1.6 }}>
                     💬 {authorNoteBefore}
                   </div>
                 )}
@@ -1241,7 +1271,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
                 {/* Author's Note — after chapter */}
                 {authorNoteAfter && (
-                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '14px 16px', marginTop: '8px', lineHeight: 1.6 }}>
+                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: (isLight) ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)', border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '10px', padding: '14px 16px', marginTop: '8px', lineHeight: 1.6 }}>
                     💬 {authorNoteAfter}
                   </div>
                 )}
