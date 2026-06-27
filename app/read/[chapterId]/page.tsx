@@ -49,6 +49,18 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const [novelWordCount, setNovelWordCount] = useState(0);
   const [fontSize, setFontSize] = useState(16); // px, range 14–24
 
+  // Author's Note (before/after) + Tags — read-only display for readers.
+  // Needs chapters.author_note_before / author_note_after / tags.
+  const [authorNoteBefore, setAuthorNoteBefore] = useState<string | null>(null);
+  const [authorNoteAfter, setAuthorNoteAfter] = useState<string | null>(null);
+  const [chapterTags, setChapterTags] = useState<string[]>([]);
+
+  // Draft / scheduled gating — a chapter that's still a draft, or scheduled
+  // for a future time, should not be readable via direct link. Needs
+  // chapters.is_draft / chapters.scheduled_at.
+  const [chapterUnavailable, setChapterUnavailable] = useState<'draft' | 'scheduled' | null>(null);
+  const [unavailableUntil, setUnavailableUntil] = useState<string | null>(null);
+
   // Step 3 — Chapter Reactions (emoji)
   const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
   const [myReaction, setMyReaction] = useState<string | null>(null);
@@ -194,11 +206,23 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const loadChapter = async (silent = false) => {
       const { data: chapter } = await supabase
         .from('chapters')
-        .select('id, chapter_number, title, series_id, content, word_count, series(id, title, reading_mode, content_type, reading_direction)')
+        .select('id, chapter_number, title, series_id, content, word_count, author_note_before, author_note_after, tags, is_draft, scheduled_at, series(id, title, reading_mode, content_type, reading_direction)')
         .eq('id', chapterId)
         .single();
 
       if (chapter) {
+        // Gate: drafts and not-yet-due scheduled chapters aren't readable
+        // via direct link. (Creator preview-of-own-draft isn't wired here —
+        // tell me your series owner column name and I'll add that exception.)
+        const isFutureScheduled = !!chapter.scheduled_at && new Date(chapter.scheduled_at).getTime() > Date.now();
+        if (chapter.is_draft || isFutureScheduled) {
+          setChapterUnavailable(chapter.is_draft ? 'draft' : 'scheduled');
+          setUnavailableUntil(chapter.scheduled_at ?? null);
+          if (!silent) setLoading(false);
+          return;
+        }
+        setChapterUnavailable(null);
+
         // Step 26 — Read Gate: Check free tier limits (2 chapters/series, 3 series max)
         const seriesId = chapter.series_id;
         const alreadyRead = isChapterAlreadyRead(chapterId);
@@ -243,11 +267,20 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           setNovelContent(chapter.content);
           setNovelWordCount(chapter.word_count ?? 0);
         }
+        setAuthorNoteBefore(chapter.author_note_before || null);
+        setAuthorNoteAfter(chapter.author_note_after || null);
+        setChapterTags(Array.isArray(chapter.tags) ? chapter.tags : []);
 
+        // Exclude drafts and not-yet-due scheduled chapters from the sidebar
+        // chapter list / prev-next nav, so unpublished chapters never leak
+        // through navigation even though this single chapter is allowed.
+        const nowIso = new Date().toISOString();
         const { data: chaps } = await supabase
           .from('chapters')
           .select('id, chapter_number, title')
           .eq('series_id', chapter.series_id)
+          .eq('is_draft', false)
+          .or(`scheduled_at.is.null,scheduled_at.lte.${nowIso}`)
           .order('chapter_number', { ascending: true });
 
         if (chaps) {
@@ -713,6 +746,36 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     </div>
   );
 
+  // Draft / not-yet-due scheduled chapter — not readable via direct link.
+  if (chapterUnavailable) {
+    return (
+      <div style={{ width: '100vw', minHeight: '100vh', background: '#07070a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+        <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(217,119,6,0.05)', filter: 'blur(100px)' }} />
+        <div style={{ maxWidth: '480px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+          <div style={{ fontSize: '64px', marginBottom: '24px' }}>{chapterUnavailable === 'scheduled' ? '🗓️' : '📝'}</div>
+          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>
+            {chapterUnavailable === 'scheduled' ? 'Not Out Yet' : 'Still a Draft'}
+          </h1>
+          <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '32px', lineHeight: 1.6 }}>
+            {chapterUnavailable === 'scheduled' && unavailableUntil
+              ? `This chapter is scheduled to publish on ${new Date(unavailableUntil).toLocaleString()}.`
+              : "This chapter hasn't been published by its creator yet."}
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            style={{
+              padding: '14px 24px', borderRadius: '10px', border: '1px solid #1a1a26',
+              background: 'transparent', color: '#d97706', fontSize: '14px', fontWeight: 700,
+              cursor: 'pointer', width: '100%',
+            }}
+          >
+            ← Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Step 26 — Read Gate screen (appears when free tier limits are hit)
   if (readGate.gated && readGate.reason) {
     return (
@@ -1118,9 +1181,27 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 fontSize: `${fontSize}px`, lineHeight: 1.85, color: textColor,
               }}>
                 {/* Word count / read time header */}
-                <div style={{ fontSize: '11px', color: mutedColor, marginBottom: '28px', letterSpacing: '0.05em' }}>
+                <div style={{ fontSize: '11px', color: mutedColor, marginBottom: '12px', letterSpacing: '0.05em' }}>
                   {novelWordCount > 0 ? `${novelWordCount.toLocaleString()} words · ${estimateReadTime(novelWordCount)}` : ''}
                 </div>
+
+                {/* Tags / content warnings */}
+                {chapterTags.length > 0 && (
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                    {chapterTags.map((tag) => (
+                      <span key={tag} style={{ fontSize: '10px', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.25)', borderRadius: '999px', padding: '3px 10px' }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Author's Note — before chapter */}
+                {authorNoteBefore && (
+                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '14px 16px', marginBottom: '28px', lineHeight: 1.6 }}>
+                    💬 {authorNoteBefore}
+                  </div>
+                )}
 
                 {segments.map((seg, i) =>
                   seg.type === 'heading' ? (
@@ -1138,6 +1219,13 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                       })}
                     </p>
                   )
+                )}
+
+                {/* Author's Note — after chapter */}
+                {authorNoteAfter && (
+                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '14px 16px', marginTop: '8px', lineHeight: 1.6 }}>
+                    💬 {authorNoteAfter}
+                  </div>
                 )}
               </div>
 
