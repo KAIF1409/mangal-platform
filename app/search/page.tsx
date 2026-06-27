@@ -269,7 +269,7 @@ function SearchPageInner() {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
           {([
             { value: 'all' as ContentTypeFilter, label: '✨ All' },
-            { value: 'mangal' as ContentTypeFilter, label: '📖 Manga' },
+            { value: 'mangal' as ContentTypeFilter, label: '📖 Mangal' },
             { value: 'novel' as ContentTypeFilter, label: '📕 Novel' },
           ]).map(opt => (
             <button
