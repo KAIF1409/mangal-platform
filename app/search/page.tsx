@@ -37,6 +37,30 @@ const STATUS_OPTIONS: { value: NonNullable<Series['completion_status']>; label: 
 type ContentTypeFilter = 'all' | 'mangal' | 'novel';
 const CONTENT_TYPE_STORAGE_KEY = 'mangal_content_type';
 
+// ── FUZZY MATCH (trigram-style client-side) ──
+// Splits query into 3-char trigrams and checks how many appear in the target.
+// Falls back to simple includes() for short queries (< 3 chars).
+function fuzzyMatch(target: string, query: string, threshold = 0.3): boolean {
+  if (!query) return true;
+  const t = target.toLowerCase();
+  const q = query.toLowerCase().trim();
+  if (q.length < 3) return t.includes(q);
+  // exact substring first (fast path)
+  if (t.includes(q)) return true;
+  // trigram similarity
+  const trigramsOf = (s: string) => {
+    const tg = new Set<string>();
+    for (let i = 0; i <= s.length - 3; i++) tg.add(s.slice(i, i + 3));
+    return tg;
+  };
+  const tT = trigramsOf(t);
+  const tQ = trigramsOf(q);
+  if (tQ.size === 0) return false;
+  let matches = 0;
+  tQ.forEach(tg => { if (tT.has(tg)) matches++; });
+  return matches / tQ.size >= threshold;
+}
+
 function formatViews(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
@@ -145,9 +169,9 @@ function SearchPageInner() {
       r = r.filter(s => {
         const username = (creatorUsernames[s.creator_id] ?? '').toLowerCase();
         return (
-          s.title.toLowerCase().includes(q) ||
-          (s.synopsis ?? '').toLowerCase().includes(q) ||
-          (s.genre ?? '').toLowerCase().includes(q) ||
+          fuzzyMatch(s.title, q) ||
+          fuzzyMatch(s.synopsis ?? '', q) ||
+          fuzzyMatch(s.genre ?? '', q) ||
           username.includes(q)
         );
       });
