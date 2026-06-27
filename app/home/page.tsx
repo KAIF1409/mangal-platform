@@ -578,12 +578,24 @@ function FeaturedCard({ series }: { series: Series }) {
           )}
           <div style={{
             position: 'absolute', top: '6px', left: '6px',
-            background: series.content_type === 'novel' ? 'rgba(109,40,217,0.85)' : 'rgba(0,0,0,0.8)',
-            borderRadius: '4px', padding: '2px 6px',
-            fontSize: '9px', fontWeight: 700,
-            color: '#fff',
+            display: 'flex', alignItems: 'center', gap: '4px',
           }}>
-            {series.content_type === 'novel' ? '📕 NOVEL' : (series.reading_mode === 'scroll' ? 'SCROLL' : 'PAGE')}
+            <span style={{
+              background: series.content_type === 'novel' ? 'rgba(109,40,217,0.85)' : 'rgba(127,29,29,0.85)',
+              borderRadius: '4px', padding: '2px 6px',
+              fontSize: '9px', fontWeight: 700,
+              color: '#fff',
+            }}>
+              {series.content_type === 'novel' ? '📕 NOVEL' : '📖 MANGAL'}
+            </span>
+            {series.content_type !== 'novel' && (
+              <span style={{
+                background: 'rgba(0,0,0,0.7)', borderRadius: '4px', padding: '2px 6px',
+                fontSize: '9px', fontWeight: 700, color: '#9ca3af',
+              }}>
+                {series.reading_mode === 'scroll' ? 'SCROLL' : 'PAGE'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -634,14 +646,23 @@ function SeriesCard({ series }: { series: Series }) {
             position: 'absolute', bottom: 0, left: 0, right: 0,
             background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
             padding: '20px 8px 6px',
+            display: 'flex', alignItems: 'center', gap: '4px',
           }}>
             <span style={{
               fontSize: '9px', fontWeight: 700, color: '#fff',
               background: series.content_type === 'novel' ? 'rgba(109,40,217,0.9)' : 'rgba(127,29,29,0.9)',
               padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
             }}>
-              {series.content_type === 'novel' ? '📕 Novel' : (series.reading_mode === 'scroll' ? 'SCROLL' : 'PAGE')}
+              {series.content_type === 'novel' ? '📕 Novel' : '📖 Mangal'}
             </span>
+            {series.content_type !== 'novel' && (
+              <span style={{
+                fontSize: '9px', fontWeight: 700, color: '#d1d5db',
+                background: 'rgba(0,0,0,0.6)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
+              }}>
+                {series.reading_mode === 'scroll' ? 'Scroll' : 'Page'}
+              </span>
+            )}
           </div>
         </div>
         {/* Title + genre */}
