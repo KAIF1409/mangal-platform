@@ -29,48 +29,92 @@ export function estimateReadTime(wordCount: number): string {
 
 /**
  * MANGAL's own lightweight formatting syntax — intentionally tiny, only
- * three rules, so it never turns into a full markdown/WYSIWYG dependency:
+ * four rules, so it never turns into a full markdown/WYSIWYG dependency:
  *   **text**  -> bold
  *   *text*    -> italic
  *   # text    -> a soft in-chapter heading (own line only)
+ *   ***       -> scene break (renders as • • • in the reader)
  * Returns an array of typed segments the reader/preview can render with
  * plain React elements — no dangerouslySetInnerHTML, no HTML injection.
  */
 export type FormattedSegment =
   | { type: 'heading'; text: string }
+  | { type: 'scene_break' }
   | { type: 'paragraph'; runs: { text: string; bold?: boolean; italic?: boolean }[] };
 
+/**
+ * Parse a single plain-text run (no bold/italic markers) into inline runs.
+ * Handles bold (**), italic (*), and bold+italic (***) in one pass using
+ * a character-level state machine so markers never confuse each other.
+ */
+function parseInlineRuns(text: string): { text: string; bold?: boolean; italic?: boolean }[] {
+  const runs: { text: string; bold?: boolean; italic?: boolean }[] = [];
+  let i = 0;
+  let current = '';
+  let boldOpen = false;
+  let italicOpen = false;
+
+  const flush = (bold: boolean, italic: boolean) => {
+    if (current) {
+      const run: { text: string; bold?: boolean; italic?: boolean } = { text: current };
+      if (bold) run.bold = true;
+      if (italic) run.italic = true;
+      runs.push(run);
+      current = '';
+    }
+  };
+
+  while (i < text.length) {
+    // Peek ahead for ** (bold) or * (italic)
+    if (text[i] === '*') {
+      const isDouble = text[i + 1] === '*';
+      if (isDouble) {
+        // ** — toggle bold
+        flush(boldOpen, italicOpen);
+        boldOpen = !boldOpen;
+        i += 2;
+      } else {
+        // single * — toggle italic
+        flush(boldOpen, italicOpen);
+        italicOpen = !italicOpen;
+        i += 1;
+      }
+    } else {
+      current += text[i];
+      i += 1;
+    }
+  }
+
+  // Flush any remaining text (handles unclosed markers gracefully)
+  flush(boldOpen, italicOpen);
+  return runs.filter(r => r.text.length > 0);
+}
+
 export function parseChapterContent(raw: string): FormattedSegment[] {
-  const lines = raw.split('\n');
+  // Split on blank lines (two or more newlines) to group paragraphs
+  const blocks = raw.split(/\n{2,}/);
   const segments: FormattedSegment[] = [];
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+  for (const block of blocks) {
+    const trimmed = block.trim();
     if (!trimmed) continue;
 
+    // Scene break: *** alone on a block
+    if (trimmed === '***') {
+      segments.push({ type: 'scene_break' });
+      continue;
+    }
+
+    // Heading: line starting with # (only first line of block considered)
     if (trimmed.startsWith('# ')) {
       segments.push({ type: 'heading', text: trimmed.slice(2).trim() });
       continue;
     }
 
-    const runs: { text: string; bold?: boolean; italic?: boolean }[] = [];
-    // Split on **bold** first, then *italic* within remaining plain runs
-    const boldSplit = line.split(/(\*\*[^*]+\*\*)/g);
-    for (const chunk of boldSplit) {
-      if (chunk.startsWith('**') && chunk.endsWith('**')) {
-        runs.push({ text: chunk.slice(2, -2), bold: true });
-        continue;
-      }
-      const italicSplit = chunk.split(/(\*[^*]+\*)/g);
-      for (const sub of italicSplit) {
-        if (!sub) continue;
-        if (sub.startsWith('*') && sub.endsWith('*')) {
-          runs.push({ text: sub.slice(1, -1), italic: true });
-        } else {
-          runs.push({ text: sub });
-        }
-      }
-    }
+    // Paragraph: parse inline bold/italic formatting
+    // Each block (separated by blank lines) becomes one paragraph.
+    // Hard newlines within a block become a <br> by rendering \n in the text.
+    const runs = parseInlineRuns(trimmed.replace(/\n/g, ' '));
     segments.push({ type: 'paragraph', runs });
   }
 

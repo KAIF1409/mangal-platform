@@ -1212,83 +1212,112 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       )}
       <div style={{ paddingTop: lockScreen ? 0 : '56px' }}>
 
-        {/* NOVEL MODE — formatted text reader, always continuous scroll */}
+        {/* NOVEL MODE — freewebnovel-style clean reading experience */}
         {isNovel && novelContent && (() => {
           const segments = parseChapterContent(novelContent);
           const isLightBg = bgColor === '#ffffff' || bgColor === '#f5f0e0';
           const isDimBg = bgColor === '#1a1a1a' || bgColor === '#0d0d0d';
-          const textColor = isLightBg ? '#1a1a1a' : isDimBg ? '#c9cdd5' : '#d1d5db';
-          const headingColor = isLightBg ? '#111111' : '#ffffff';
-          const mutedColor = isLightBg ? '#555555' : '#6b7280';
-          const isLight = isLightBg;
+          // FIX: explicit textColor on every element so bold/italic never inherits
+          // browser-default black — that was making bold invisible on dark themes.
+          const textColor = isLightBg ? '#2d2d2d' : isDimBg ? '#c9cdd5' : '#d1d5db';
+          const headingColor = isLightBg ? '#111111' : '#f3f4f6';
+          const mutedColor = isLightBg ? '#6b7280' : '#6b7280';
+          const noteBg = isLightBg ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)';
+          const noteBorder = isLightBg ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
+          const dividerColor = isLightBg ? '#e5e7eb' : '#1f1f2e';
+          const navBg = isLightBg ? '#f3f4f6' : '#0d0d14';
+          const navBorder = isLightBg ? '#d1d5db' : '#1f1f2e';
+          const navColor = isLightBg ? '#374151' : '#9ca3af';
           return (
-            <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh' }}>
               <div style={{
-                width: '100%', maxWidth: '680px', padding: '32px 24px 0',
-                fontFamily: "'Georgia', 'Noto Serif', serif",
-                fontSize: `${fontSize}px`, lineHeight: 1.85, color: textColor,
+                width: '100%', maxWidth: '760px', padding: '40px 28px 60px',
+                fontFamily: "'Georgia', 'Noto Serif', 'Lora', serif",
+                fontSize: `${fontSize}px`, lineHeight: 2, color: textColor,
               }}>
-                {/* Word count / read time header */}
-                <div style={{ fontSize: '11px', color: mutedColor, marginBottom: '12px', letterSpacing: '0.05em' }}>
-                  {novelWordCount > 0 ? `${novelWordCount.toLocaleString()} words · ${estimateReadTime(novelWordCount)}` : ''}
-                </div>
 
-                {/* Tags / content warnings */}
-                {chapterTags.length > 0 && (
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                {/* Chapter title + meta row */}
+                <div style={{ borderBottom: `1px solid ${dividerColor}`, paddingBottom: '20px', marginBottom: '28px' }}>
+                  <h1 style={{ fontSize: `${Math.round(fontSize * 1.35)}px`, fontWeight: 700, color: headingColor, margin: '0 0 10px', lineHeight: 1.4, fontFamily: "'Georgia', serif" }}>
+                    {currentChapter?.title || `Chapter ${currentChapter?.chapter_number}`}
+                  </h1>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    {novelWordCount > 0 && (
+                      <span style={{ fontSize: '12px', color: mutedColor }}>
+                        {novelWordCount.toLocaleString()} words
+                      </span>
+                    )}
+                    {novelWordCount > 0 && (
+                      <span style={{ fontSize: '12px', color: mutedColor }}>· {estimateReadTime(novelWordCount)}</span>
+                    )}
                     {chapterTags.map((tag) => (
-                      <span key={tag} style={{ fontSize: '10px', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.25)', borderRadius: '999px', padding: '3px 10px' }}>
+                      <span key={tag} style={{ fontSize: '10px', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)', borderRadius: '999px', padding: '2px 10px' }}>
                         {tag}
                       </span>
                     ))}
                   </div>
-                )}
+                </div>
 
-                {/* Author's Note — before chapter */}
+                {/* Author's Note — before */}
                 {authorNoteBefore && (
-                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: (isLight) ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)', border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '10px', padding: '14px 16px', marginBottom: '28px', lineHeight: 1.6 }}>
-                    💬 {authorNoteBefore}
+                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: noteBg, border: `1px solid ${noteBorder}`, borderLeft: '3px solid #d97706', borderRadius: '0 8px 8px 0', padding: '12px 16px', marginBottom: '32px', lineHeight: 1.65 }}>
+                    <span style={{ fontWeight: 700, fontStyle: 'normal', color: '#d97706', marginRight: '6px' }}>Author's Note:</span>{authorNoteBefore}
                   </div>
                 )}
 
+                {/* Chapter body */}
                 {segments.map((seg, i) =>
                   seg.type === 'heading' ? (
                     <h2 key={i} style={{
-                      fontSize: `${Math.round(fontSize * 1.25)}px`, fontWeight: 700,
-                      color: headingColor, margin: '32px 0 16px', lineHeight: 1.3,
+                      fontSize: `${Math.round(fontSize * 1.2)}px`, fontWeight: 700,
+                      color: headingColor, margin: '2em 0 0.8em', lineHeight: 1.4,
+                      fontFamily: "'Georgia', serif",
                     }}>{seg.text}</h2>
+                  ) : seg.type === 'scene_break' ? (
+                    <div key={i} style={{ textAlign: 'center', color: mutedColor, margin: '2em 0', letterSpacing: '0.5em', fontSize: '14px' }}>• • •</div>
                   ) : (
-                    <p key={i} style={{ margin: '0 0 1.4em' }}>
+                    <p key={i} style={{ margin: '0 0 1.6em', textIndent: '2em', textAlign: 'justify', color: textColor }}>
                       {seg.runs.map((run, j) => {
-                        if (run.bold && run.italic) return <strong key={j}><em>{run.text}</em></strong>;
-                        if (run.bold) return <strong key={j}>{run.text}</strong>;
-                        if (run.italic) return <em key={j}>{run.text}</em>;
+                        // FIX: always pass explicit color so bold/italic don't go black on dark bg
+                        const style = { color: textColor };
+                        if (run.bold && run.italic) return <strong key={j} style={style}><em>{run.text}</em></strong>;
+                        if (run.bold) return <strong key={j} style={style}>{run.text}</strong>;
+                        if (run.italic) return <em key={j} style={style}>{run.text}</em>;
                         return <span key={j}>{run.text}</span>;
                       })}
                     </p>
                   )
                 )}
 
-                {/* Author's Note — after chapter */}
+                {/* Author's Note — after */}
                 {authorNoteAfter && (
-                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: (isLight) ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)', border: `1px solid ${isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '10px', padding: '14px 16px', marginTop: '8px', lineHeight: 1.6 }}>
-                    💬 {authorNoteAfter}
+                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: mutedColor, background: noteBg, border: `1px solid ${noteBorder}`, borderLeft: '3px solid #d97706', borderRadius: '0 8px 8px 0', padding: '12px 16px', marginTop: '32px', lineHeight: 1.65 }}>
+                    <span style={{ fontWeight: 700, fontStyle: 'normal', color: '#d97706', marginRight: '6px' }}>Author's Note:</span>{authorNoteAfter}
+                  </div>
+                )}
+
+                {/* Divider before nav */}
+                <div style={{ height: '1px', background: dividerColor, margin: '48px 0 32px' }} />
+
+                {/* Chapter nav — prev / all / next */}
+                {!lockScreen && (
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    {prevChapter ? (
+                      <a href={`/read/${prevChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+                        ← Ch.{prevChapter.chapter_number}
+                      </a>
+                    ) : <div />}
+                    <a href={series ? `/series/${series.id}` : '/'} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+                      📋 All Chapters
+                    </a>
+                    {nextChapter ? (
+                      <a href={`/read/${nextChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+                        Ch.{nextChapter.chapter_number} →
+                      </a>
+                    ) : <div />}
                   </div>
                 )}
               </div>
-
-              {/* Chapter nav bottom */}
-              {!lockScreen && (
-                <div style={{ padding: '48px 24px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {prevChapter && <a href={`/read/${prevChapter.id}`} style={navBtnStyle}>← Ch.{prevChapter.chapter_number}</a>}
-                  <a href={series ? `/series/${series.id}` : '/'} style={navBtnStyle}>📋 All Chapters</a>
-                  {nextChapter && (
-                    <a href={`/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff' }}>
-                      Ch.{nextChapter.chapter_number} →
-                    </a>
-                  )}
-                </div>
-              )}
             </div>
           );
         })()}
