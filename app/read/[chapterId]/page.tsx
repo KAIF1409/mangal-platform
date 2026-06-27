@@ -60,6 +60,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // chapters.is_draft / chapters.scheduled_at.
   const [chapterUnavailable, setChapterUnavailable] = useState<'draft' | 'scheduled' | null>(null);
   const [unavailableUntil, setUnavailableUntil] = useState<string | null>(null);
+  const [previewingOwnUnpublished, setPreviewingOwnUnpublished] = useState<'draft' | 'scheduled' | null>(null);
 
   // Step 3 — Chapter Reactions (emoji)
   const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({});
@@ -206,20 +207,30 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const loadChapter = async (silent = false) => {
       const { data: chapter } = await supabase
         .from('chapters')
-        .select('id, chapter_number, title, series_id, content, word_count, author_note_before, author_note_after, tags, is_draft, scheduled_at, series(id, title, reading_mode, content_type, reading_direction)')
+        .select('id, chapter_number, title, series_id, content, word_count, author_note_before, author_note_after, tags, is_draft, scheduled_at, series(id, title, reading_mode, content_type, reading_direction, creator_id)')
         .eq('id', chapterId)
         .single();
 
       if (chapter) {
         // Gate: drafts and not-yet-due scheduled chapters aren't readable
-        // via direct link. (Creator preview-of-own-draft isn't wired here —
-        // tell me your series owner column name and I'll add that exception.)
+        // via direct link — unless the viewer owns the series (creator
+        // preview). Fetched fresh here (not from outer userId state) to
+        // avoid a race where this runs before the auth-lookup effect finishes.
         const isFutureScheduled = !!chapter.scheduled_at && new Date(chapter.scheduled_at).getTime() > Date.now();
         if (chapter.is_draft || isFutureScheduled) {
-          setChapterUnavailable(chapter.is_draft ? 'draft' : 'scheduled');
+          const s0 = Array.isArray(chapter.series) ? chapter.series[0] : chapter.series;
+          const { data: authData } = await supabase.auth.getUser();
+          const isOwner = !!authData.user && s0 && (s0 as any).creator_id === authData.user.id;
+          if (!isOwner) {
+            setChapterUnavailable(chapter.is_draft ? 'draft' : 'scheduled');
+            setUnavailableUntil(chapter.scheduled_at ?? null);
+            if (!silent) setLoading(false);
+            return;
+          }
+          setPreviewingOwnUnpublished(chapter.is_draft ? 'draft' : 'scheduled');
           setUnavailableUntil(chapter.scheduled_at ?? null);
-          if (!silent) setLoading(false);
-          return;
+        } else {
+          setPreviewingOwnUnpublished(null);
         }
         setChapterUnavailable(null);
 
@@ -1165,6 +1176,13 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       )}
 
       {/* ── CONTENT ── */}
+      {previewingOwnUnpublished && (
+        <div style={{ position: 'fixed', top: '52px', left: 0, right: 0, zIndex: 90, textAlign: 'center', fontSize: '11px', fontWeight: 700, color: '#fff', background: previewingOwnUnpublished === 'draft' ? '#92400e' : '#1d4ed8', padding: '6px 12px' }}>
+          {previewingOwnUnpublished === 'draft'
+            ? '📝 PREVIEW — this chapter is still a draft. Readers can\'t see this.'
+            : `🗓️ PREVIEW — scheduled${unavailableUntil ? ` for ${new Date(unavailableUntil).toLocaleString()}` : ''}. Readers can't see this yet.`}
+        </div>
+      )}
       <div style={{ paddingTop: lockScreen ? 0 : '56px' }}>
 
         {/* NOVEL MODE — formatted text reader, always continuous scroll */}
