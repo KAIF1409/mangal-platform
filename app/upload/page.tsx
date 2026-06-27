@@ -710,37 +710,65 @@ function UploadFlow() {
 
   // ---- Novel editor toolbar helpers (client-side only) ----
 
-  // Wraps the current selection in the textarea with `mark` on both sides
-  // (e.g. ** for bold, * for italic). If nothing is selected, inserts a
-  // placeholder word wrapped in the mark, with the cursor left inside it.
+  // Directly mutates the textarea DOM value so the browser never loses the
+  // selection, then fires a synthetic input event so React onChange picks up
+  // the new value and keeps novelContent in sync.
+  const applyToTextarea = (nextValue: string, newSelStart: number, newSelEnd: number) => {
+    const el = novelTextareaRef.current;
+    if (!el) return;
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+    if (nativeInputValueSetter) {
+      nativeInputValueSetter.call(el, nextValue);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      setNovelContent(nextValue);
+    }
+    el.focus();
+    el.setSelectionRange(newSelStart, newSelEnd);
+  };
+
+  // Wraps selection with mark (** bold, * italic). Toggles off if already wrapped.
+  // If no selection, inserts placeholder text wrapped in mark.
   const wrapNovelSelection = (mark: string, placeholder: string) => {
     const el = novelTextareaRef.current;
     if (!el) return;
     const { selectionStart, selectionEnd, value } = el;
-    const selected = value.slice(selectionStart, selectionEnd) || placeholder;
-    const next = value.slice(0, selectionStart) + mark + selected + mark + value.slice(selectionEnd);
-    setNovelContent(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      const cursor = selectionStart + mark.length + selected.length + mark.length;
-      el.setSelectionRange(cursor, cursor);
-    });
+    const selected = value.slice(selectionStart, selectionEnd);
+    const ml = mark.length;
+
+    // Toggle OFF: selection itself is wrapped
+    if (selected.startsWith(mark) && selected.endsWith(mark) && selected.length > ml * 2) {
+      const inner = selected.slice(ml, selected.length - ml);
+      const next = value.slice(0, selectionStart) + inner + value.slice(selectionEnd);
+      applyToTextarea(next, selectionStart, selectionStart + inner.length);
+      return;
+    }
+    // Toggle OFF: marks are just outside the selection
+    if (selectionStart >= ml && value.slice(selectionStart - ml, selectionStart) === mark && value.slice(selectionEnd, selectionEnd + ml) === mark) {
+      const next = value.slice(0, selectionStart - ml) + selected + value.slice(selectionEnd + ml);
+      applyToTextarea(next, selectionStart - ml, selectionStart - ml + selected.length);
+      return;
+    }
+
+    const word = selected || placeholder;
+    const next = value.slice(0, selectionStart) + mark + word + mark + value.slice(selectionEnd);
+    applyToTextarea(next, selectionStart + ml + word.length + ml, selectionStart + ml + word.length + ml);
   };
 
-  // Inserts a line-level prefix (e.g. "# " for heading) at the start of the
-  // current line, or a standalone scene-break block on its own line.
-  const insertNovelLinePrefix = (prefix: string) => {
+  // Toggles "# " heading prefix on current line. Clicking H again removes it.
+  const toggleNovelHeading = () => {
     const el = novelTextareaRef.current;
     if (!el) return;
     const { selectionStart, value } = el;
     const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
-    const next = value.slice(0, lineStart) + prefix + value.slice(lineStart);
-    setNovelContent(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      const cursor = selectionStart + prefix.length;
-      el.setSelectionRange(cursor, cursor);
-    });
+    const prefix = '# ';
+    if (value.slice(lineStart, lineStart + prefix.length) === prefix) {
+      const next = value.slice(0, lineStart) + value.slice(lineStart + prefix.length);
+      applyToTextarea(next, Math.max(lineStart, selectionStart - prefix.length), Math.max(lineStart, selectionStart - prefix.length));
+    } else {
+      const next = value.slice(0, lineStart) + prefix + value.slice(lineStart);
+      applyToTextarea(next, selectionStart + prefix.length, selectionStart + prefix.length);
+    }
   };
 
   const insertNovelSceneBreak = () => {
@@ -750,19 +778,15 @@ function UploadFlow() {
     const needsLeadingBreak = selectionStart > 0 && value[selectionStart - 1] !== '\n';
     const block = `${needsLeadingBreak ? '\n\n' : ''}***\n\n`;
     const next = value.slice(0, selectionStart) + block + value.slice(selectionStart);
-    setNovelContent(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      const cursor = selectionStart + block.length;
-      el.setSelectionRange(cursor, cursor);
-    });
+    applyToTextarea(next, selectionStart + block.length, selectionStart + block.length);
   };
 
-  // Ctrl/Cmd+B and Ctrl/Cmd+I shortcuts inside the chapter textarea.
+  // Ctrl/Cmd+B / I / H shortcuts inside the chapter textarea.
   const handleNovelTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === 'b') { e.preventDefault(); wrapNovelSelection('**', 'bold text'); }
     if (mod && e.key.toLowerCase() === 'i') { e.preventDefault(); wrapNovelSelection('*', 'italic text'); }
+    if (mod && e.key.toLowerCase() === 'h') { e.preventDefault(); toggleNovelHeading(); }
   };
 
   // Tiny markdown-ish renderer for the live preview — mirrors the same
@@ -1065,10 +1089,10 @@ function UploadFlow() {
 
                     {!novelPreviewMode && (
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' as const }}>
-                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => wrapNovelSelection('**', 'bold text')} title="Bold (Ctrl+B)" style={toolbarBtnStyle}><strong>B</strong></button>
-                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => wrapNovelSelection('*', 'italic text')} title="Italic (Ctrl+I)" style={toolbarBtnStyle}><em>I</em></button>
-                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertNovelLinePrefix('# ')} title="Heading" style={toolbarBtnStyle}>H</button>
-                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertNovelSceneBreak} title="Scene break" style={toolbarBtnStyle}>⁘ Scene Break</button>
+                        <button type="button" onClick={() => wrapNovelSelection('**', 'bold text')} title="Bold (Ctrl+B)" style={toolbarBtnStyle}><strong>B</strong></button>
+                        <button type="button" onClick={() => wrapNovelSelection('*', 'italic text')} title="Italic (Ctrl+I)" style={toolbarBtnStyle}><em>I</em></button>
+                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={toggleNovelHeading} title="Heading (Ctrl+H)" style={toolbarBtnStyle}>H</button>
+                        <button type="button" onClick={insertNovelSceneBreak} title="Scene break" style={toolbarBtnStyle}>⁘ Scene Break</button>
                       </div>
                     )}
 
