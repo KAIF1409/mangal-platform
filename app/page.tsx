@@ -316,7 +316,7 @@ export default function LandingPage() {
               background: 'linear-gradient(135deg, #fff 0%, #d97706 60%, #7f1d1d 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
-              filter: 'drop-shadow(0 2px 24px rgba(0,0,0,0.8))',
+              filter: 'drop-shadow(-2px -2px 0px #000) drop-shadow(2px -2px 0px #000) drop-shadow(-2px 2px 0px #000) drop-shadow(2px 2px 0px #000) drop-shadow(0 4px 24px rgba(0,0,0,0.9))',
             }}>
               Bharat Ki Kahaniyan 🔥
             </h1>
@@ -391,65 +391,19 @@ export default function LandingPage() {
         {/* ── SHOWCASE ── */}
         <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ marginBottom: '48px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
-              <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: '#fff' }}>
-                🔥 Trending Now
-              </h2>
-              <a href="/search" style={{
-                fontSize: '13px', fontWeight: 600, color: '#d97706', textDecoration: 'none',
-                padding: '6px 16px', borderRadius: '20px',
-                border: '1px solid rgba(217,119,6,0.35)',
-                transition: 'all 0.15s',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(217,119,6,0.12)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-              >Browse All →</a>
-            </div>
-
+            <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: '#fff' }}>
+              🔥 Trending Now
+            </h2>
             {loading ? (
-              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                {[1,2,3,4,5,6].map(i => (
-                  <div key={i} style={{
-                    width: '180px', borderRadius: '12px', overflow: 'hidden',
-                    background: '#0d0d14', border: '1px solid #1a1a26',
-                  }}>
-                    <div style={{ aspectRatio: '3/4', background: '#1a1a26' }} />
-                    <div style={{ padding: '10px' }}>
-                      <div style={{ height: '12px', borderRadius: '6px', background: '#1a1a26', marginBottom: '8px' }} />
-                      <div style={{ height: '10px', borderRadius: '6px', background: '#1a1a26', width: '60%' }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#374151' }}>Loading stories...</div>
             ) : showcaseItems.length > 0 ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px' }}>
                 {showcaseItems.map(s => (
-                  <div key={s.id} style={{ width: '180px', flexShrink: 0 }}>
-                    <ShowcaseCard series={s} />
-                  </div>
+                  <ShowcaseCard key={s.id} series={s} />
                 ))}
               </div>
             ) : (
-              <div style={{
-                textAlign: 'center', padding: '60px 24px',
-                border: '1px dashed #1a1a26', borderRadius: '16px',
-                background: '#0a0a10',
-              }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📜</div>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>
-                  Stories are coming soon
-                </div>
-                <div style={{ fontSize: '14px', color: '#4b5563', marginBottom: '24px', lineHeight: 1.6 }}>
-                  Be the first creator to publish on MANGAL.<br />Your story could be right here.
-                </div>
-                <a href="/login?creator=1" style={{
-                  display: 'inline-block', padding: '10px 28px', borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-                  color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700,
-                }}>
-                  ✍️ Start Creating
-                </a>
-              </div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#374151' }}>No series yet</div>
             )}
           </div>
         </section>
