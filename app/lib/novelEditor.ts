@@ -142,6 +142,51 @@ export function parseChapterContent(raw: string): FormattedSegment[] {
   return segments;
 }
 
+/**
+ * Renders parsed chapter content to a small, safe HTML string for the
+ * Upload Writer's live preview pane. Built directly on top of
+ * parseChapterContent() above, so the preview a creator sees while
+ * writing is guaranteed to match what readers actually see — there is
+ * no separate/duplicate formatting logic to drift out of sync.
+ *
+ * Text is escaped BEFORE any HTML tags are added, so user-typed content
+ * can never inject markup — this only ever emits the few fixed tags
+ * below (p, strong, em, div).
+ */
+export function renderNovelPreviewHtml(raw: string): string {
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const segments = parseChapterContent(raw);
+  const html: string[] = [];
+
+  for (const segment of segments) {
+    if (segment.type === 'scene_break') {
+      html.push('<div style="text-align:center;color:#6b7280;margin:20px 0;letter-spacing:0.5em;font-size:13px;">• • •</div>');
+      continue;
+    }
+
+    if (segment.type === 'heading') {
+      html.push(`<strong style="font-size:18px;display:block;margin:16px 0 8px;">${escapeHtml(segment.text)}</strong>`);
+      continue;
+    }
+
+    // paragraph
+    const inner = segment.runs
+      .map((run) => {
+        const safe = escapeHtml(run.text);
+        if (run.bold && run.italic) return `<strong><em>${safe}</em></strong>`;
+        if (run.bold) return `<strong>${safe}</strong>`;
+        if (run.italic) return `<em>${safe}</em>`;
+        return safe;
+      })
+      .join('');
+    html.push(`<p style="margin:0 0 16px 0;">${inner || '&nbsp;'}</p>`);
+  }
+
+  return html.join('');
+}
+
 // ---- Local draft autosave (per chapter slot) ----
 // Keeps an in-progress chapter safe from accidental tab close / refresh.
 // Keyed by seriesId + chapterNumber so multiple in-progress chapters don't
