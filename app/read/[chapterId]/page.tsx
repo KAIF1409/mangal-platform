@@ -635,11 +635,81 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '40px', marginBottom: '16px' }}>📖</div>
-        <div style={{ fontSize: '14px', color: '#4b5563' }}>Loading chapter...</div>
+    <div style={{ minHeight: '100vh', background: '#07070a', fontFamily: "'Segoe UI', Arial, sans-serif", overflowX: 'hidden' }}>
+
+      {/* Fake top bar skeleton */}
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        height: '52px', background: 'rgba(7,7,10,0.98)',
+        borderBottom: '1px solid #1a1a26',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px', gap: '12px',
+      }}>
+        {/* left: back + title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#1a1a26' }} />
+          <div style={{ width: '120px', height: '14px', borderRadius: '6px', background: '#1a1a26' }} />
+        </div>
+        {/* right: icons */}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {[1,2,3].map(i => (
+            <div key={i} style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#1a1a26' }} />
+          ))}
+        </div>
       </div>
+
+      {/* Fake page content — shimmer strips simulating manga panels */}
+      <div style={{ paddingTop: '52px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+        {/* Big panel 1 */}
+        <div style={{
+          width: '100%', maxWidth: '720px',
+          height: '60vh',
+          background: 'linear-gradient(90deg, #0d0d14 0%, #1a1a26 50%, #0d0d14 100%)',
+          backgroundSize: '200% 100%',
+          animation: 'shimmer 1.4s infinite',
+        }} />
+        {/* Panel 2 */}
+        <div style={{
+          width: '100%', maxWidth: '720px',
+          height: '35vh',
+          background: 'linear-gradient(90deg, #0d0d14 0%, #1a1a26 50%, #0d0d14 100%)',
+          backgroundSize: '200% 100%',
+          animation: 'shimmer 1.4s infinite 0.2s',
+        }} />
+      </div>
+
+      {/* Fake bottom progress bar */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        height: '3px', background: '#1a1a26',
+      }}>
+        <div style={{
+          width: '0%', height: '100%',
+          background: 'linear-gradient(90deg, #7f1d1d, #d97706)',
+          animation: 'progressFill 1.5s ease-out forwards',
+        }} />
+      </div>
+
+      {/* Loading label */}
+      <div style={{
+        position: 'fixed', bottom: '18px', left: 0, right: 0,
+        textAlign: 'center', fontSize: '12px', color: '#374151',
+        letterSpacing: '0.08em',
+      }}>
+        Loading chapter...
+      </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes progressFill {
+          0%   { width: 0%; }
+          60%  { width: 70%; }
+          100% { width: 85%; }
+        }
+      `}</style>
     </div>
   );
 
