@@ -285,18 +285,40 @@ export default function LandingPage() {
           position: 'relative', overflow: 'hidden',
           padding: 'clamp(80px,12vw,140px) 24px clamp(60px,10vw,100px)',
           textAlign: 'center',
+          minHeight: '92vh',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {/* Background glows */}
-          <div style={{ position: 'absolute', top: '-50%', left: '-10%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(217,119,6,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', bottom: '-30%', right: '-5%', width: '350px', height: '350px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(127,29,29,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          {/* ── BG IMAGE ── */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 0,
+            backgroundImage: 'url(/hero-bg.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center top',
+            backgroundRepeat: 'no-repeat',
+          }} />
 
-          <div style={{ position: 'relative', zIndex: 1 }}>
+          {/* Dark overlay so text stays readable — heavier at top/bottom, lighter in center */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 1,
+            background: 'linear-gradient(to bottom, rgba(7,7,10,0.72) 0%, rgba(7,7,10,0.38) 35%, rgba(7,7,10,0.38) 65%, rgba(7,7,10,0.88) 100%)',
+            pointerEvents: 'none',
+          }} />
+
+          {/* Subtle amber glow in center to blend with existing palette */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 2,
+            background: 'radial-gradient(ellipse 60% 40% at 50% 55%, rgba(217,119,6,0.08) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+
+          <div style={{ position: 'relative', zIndex: 3 }}>
             <h1 style={{
               fontSize: 'clamp(32px, 6vw, 72px)', fontWeight: 900, margin: '0 0 12px',
               letterSpacing: '-0.04em',
               background: 'linear-gradient(135deg, #fff 0%, #d97706 60%, #7f1d1d 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
+              filter: 'drop-shadow(0 2px 24px rgba(0,0,0,0.8))',
             }}>
               Bharat Ki Kahaniyan 🔥
             </h1>

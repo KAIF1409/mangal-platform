@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
 
+
 interface Report {
   id: string;
   target_type: 'series' | 'chapter' | 'comment';

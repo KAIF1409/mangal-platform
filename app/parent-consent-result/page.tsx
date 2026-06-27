@@ -165,10 +165,10 @@ function ConsentResult() {
             <br />
             Questions? Write to{' '}
             <a
-              href="mailto:grievance@mangal.in"
+              href="mangal.indiaplatform@gmail.com"
               style={{ color: '#7f1d1d', textDecoration: 'none' }}
             >
-              grievance@mangal.in
+              mangal.indiaplatform@gmail.com
             </a>
           </p>
         </div>

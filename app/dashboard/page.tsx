@@ -431,55 +431,44 @@ export default function Dashboard() {
       `}</style>
 
       {/* NAV */}
-      <nav className="mangal-dash-nav" style={{
-        position: 'sticky' as const, top: 0, zIndex: 50,
-        background: 'rgba(7,7,10,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #1a1a26',
-        padding: '0 24px', height: '60px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: '12px',
-      }}>
-        <div className="mangal-dash-nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '32px', minWidth: 0 }}>
-          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
-            <div style={{
-              width: '32px', height: '32px', borderRadius: '8px',
-              background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
-              flexShrink: 0,
-            }}>🔥</div>
-            <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>MANGAL</span>
-          </a>
+      <Navbar
+        variant="custom"
+        navClassName="mangal-dash-nav"
+        brandWrapperClassName="mangal-dash-nav-brand"
+        rightSlot={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Step 22 — Hindi UI Toggle, left of ProfileMenu so the profile chip
+                stays the rightmost element, same placement as the homepage. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '8px', padding: '3px', flexShrink: 0 }}>
+              {LANGUAGES.map(({ code, label }) => (
+                <button
+                  key={code}
+                  onClick={() => setLang(code)}
+                  style={{
+                    padding: '5px 10px', borderRadius: '6px', border: 'none',
+                    background: lang === code ? '#1a1a26' : 'transparent',
+                    color: lang === code ? '#fff' : '#6b7280',
+                    fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
+          </div>
+        }
+        centerSlot={
           <div className="mangal-dash-nav-links">
             <a href="/" style={navLinkStyle(false)}>{t('readerView')}</a>
             <a href="/dashboard" style={navLinkStyle(true)}>{t('dashboard')}</a>
             <a href="/upload" style={navLinkStyle(false)}>{t('createNew')}</a>
           </div>
-        </div>
+        }
+      />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Step 22 — Hindi UI Toggle, left of ProfileMenu so the profile chip
-              stays the rightmost element, same placement as the homepage. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '8px', padding: '3px', flexShrink: 0 }}>
-            {LANGUAGES.map(({ code, label }) => (
-              <button
-                key={code}
-                onClick={() => setLang(code)}
-                style={{
-                  padding: '5px 10px', borderRadius: '6px', border: 'none',
-                  background: lang === code ? '#1a1a26' : 'transparent',
-                  color: lang === code ? '#fff' : '#6b7280',
-                  fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                  transition: 'background 0.15s, color 0.15s',
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
-        </div>
-      </nav>
 
       <div className="mangal-dash-container" style={{ maxWidth: '1000px', margin: '0 auto' }}>
 
@@ -861,24 +850,14 @@ export default function Dashboard() {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer style={{ borderTop: '1px solid #1a1a26', padding: '32px 24px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff' }}>MANGAL</span>
-        </div>
-        <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 14px' }}>{t('madeWithLove')}</p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          {[
-            { label: t('privacyPolicy'), href: '/privacy' },
-            { label: t('termsOfService'), href: '/terms' },
-            { label: t('grievanceOfficer'), href: '/grievance' },
-          ].map(link => (
-            <a key={link.href} href={link.href} style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}>
-              {link.label}
-            </a>
-          ))}
-        </div>
-      </footer>
+      <Footer
+        tagline={t('madeWithLove')}
+        links={[
+          { label: t('privacyPolicy'), href: '/privacy' },
+          { label: t('termsOfService'), href: '/terms' },
+          { label: t('grievanceOfficer'), href: '/grievance' },
+        ]}
+      />
 
       {editingStory && user && (
         <EditSeriesModal

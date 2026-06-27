@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, use } from 'react';
 import { supabase } from '../../lib/supabase';
 import { parseChapterContent, estimateReadTime } from '../../lib/novelEditor';
 
+
 type PageItem = { id: string; page_number: number; image_url: string };
 type SeriesInfo = { id: string; title: string; reading_mode: 'scroll' | 'page'; content_type: 'mangal' | 'novel'; reading_direction: 'ltr' | 'rtl' | null };
 type ChapterNav = { id: string; chapter_number: number; title: string };
