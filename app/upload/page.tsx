@@ -628,7 +628,7 @@ function UploadFlow() {
           Mangal Engine V1.0
         </span>
         <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#fff', margin: '16px 0 4px' }}>
-          {step === 'series' ? 'Start a New Story' : isEditMode ? 'Edit Chapter' : justPublishedChapterId ? 'Chapter Published' : 'Upload Pages'}
+          {step === 'series' ? 'Start a New Story' : isEditMode ? 'Edit Chapter' : justPublishedChapterId ? 'Chapter Published' : contentType === 'novel' ? 'Write Chapter' : 'Upload Pages'}
         </h1>
         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '32px' }}>
           {step === 'series'
@@ -738,7 +738,7 @@ function UploadFlow() {
               )}
 
               <button onClick={handleCreateSeries} disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', border: '1px solid #7f1d1d', borderRadius: '12px', color: loading ? '#6b7280' : '#fff', fontSize: '13px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px' }}>
-                {loading ? 'Creating...' : '➡️ Continue — Upload Pages'}
+                {loading ? 'Creating...' : contentType === 'novel' ? '➡️ Continue — Write Chapter' : '➡️ Continue — Upload Pages'}
               </button>
             </div>
           )}
