@@ -1065,10 +1065,10 @@ function UploadFlow() {
 
                     {!novelPreviewMode && (
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' as const }}>
-                        <button type="button" onClick={() => wrapNovelSelection('**', 'bold text')} title="Bold (Ctrl+B)" style={toolbarBtnStyle}><strong>B</strong></button>
-                        <button type="button" onClick={() => wrapNovelSelection('*', 'italic text')} title="Italic (Ctrl+I)" style={toolbarBtnStyle}><em>I</em></button>
-                        <button type="button" onClick={() => insertNovelLinePrefix('# ')} title="Heading" style={toolbarBtnStyle}>H</button>
-                        <button type="button" onClick={insertNovelSceneBreak} title="Scene break" style={toolbarBtnStyle}>⁘ Scene Break</button>
+                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => wrapNovelSelection('**', 'bold text')} title="Bold (Ctrl+B)" style={toolbarBtnStyle}><strong>B</strong></button>
+                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => wrapNovelSelection('*', 'italic text')} title="Italic (Ctrl+I)" style={toolbarBtnStyle}><em>I</em></button>
+                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertNovelLinePrefix('# ')} title="Heading" style={toolbarBtnStyle}>H</button>
+                        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertNovelSceneBreak} title="Scene break" style={toolbarBtnStyle}>⁘ Scene Break</button>
                       </div>
                     )}
 
