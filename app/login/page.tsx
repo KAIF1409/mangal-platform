@@ -432,7 +432,7 @@ export default function AuthPage() {
         setMode(profile.date_of_birth ? 'role' : 'dob');
         return;
       }
-      window.location.href = '/';
+      window.location.href = '/home';
     };
     checkSession();
   }, []);
@@ -513,7 +513,7 @@ export default function AuthPage() {
       return;
     }
     if (profile && !profile.onboarded) setMode('role');
-    else window.location.href = '/';
+    else window.location.href = '/home';
     setLoading(false);
   };
 
@@ -554,7 +554,7 @@ export default function AuthPage() {
   const finishOnboarding = async (choice: 'reader' | 'creator') => {
     const { data: u } = await supabase.auth.getUser();
     if (u.user) await supabase.from('profiles').update({ onboarded: true }).eq('id', u.user.id);
-    window.location.href = choice === 'creator' ? '/become-creator' : '/';
+    window.location.href = choice === 'creator' ? '/become-creator' : '/home';
   };
 
   // ── PENDING CONSENT SCREEN ────────────────────────────────────────────────
