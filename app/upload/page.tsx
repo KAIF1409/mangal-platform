@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 import { checkImageBatchQuality } from '../lib/imageQuality';
@@ -87,6 +87,26 @@ function UploadFlow() {
   const [novelContent, setNovelContent] = useState('');
   const [justPublishedChapterId, setJustPublishedChapterId] = useState<string | null>(null);
 
+  // Novel editor toolbar — formatting helpers, preview, and focus mode.
+  // All purely client-side; nothing here touches the DB schema.
+  const novelTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [novelPreviewMode, setNovelPreviewMode] = useState(false);
+  const [novelFocusMode, setNovelFocusMode] = useState(false);
+
+  // Feature: Author's Note (before/after chapter) — needs chapters.author_note_before / _after
+  const [authorNoteBefore, setAuthorNoteBefore] = useState('');
+  const [authorNoteAfter, setAuthorNoteAfter] = useState('');
+
+  // Feature: explicit server-side draft — needs chapters.is_draft
+  const [isDraftChapter, setIsDraftChapter] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+
+  // Feature: scheduled publish — needs chapters.scheduled_at
+  const [scheduledAt, setScheduledAt] = useState(''); // datetime-local input value, '' = no schedule
+
+  // Feature: tags / content warnings — needs chapters.tags (text[])
+  const [tagsInput, setTagsInput] = useState(''); // comma-separated, parsed to array on save
+
   const [loading, setLoading] = useState(false);
   const [checkingQuality, setCheckingQuality] = useState(false);
   const [error, setError] = useState('');
@@ -131,7 +151,7 @@ function UploadFlow() {
 
       const { data: chapter, error: chapterErr } = await supabase
         .from('chapters')
-        .select('id, chapter_number, title, content, word_count, series_id')
+        .select('id, chapter_number, title, content, word_count, series_id, author_note_before, author_note_after, is_draft, scheduled_at, tags')
         .eq('id', editChapterId)
         .single();
 
@@ -145,6 +165,13 @@ function UploadFlow() {
 
       setChapterNumber(chapter.chapter_number);
       setChapterTitle(chapter.title || '');
+      setAuthorNoteBefore(chapter.author_note_before || '');
+      setAuthorNoteAfter(chapter.author_note_after || '');
+      setIsDraftChapter(!!chapter.is_draft);
+      // scheduled_at comes back as an ISO string from Postgres — trim to the
+      // "YYYY-MM-DDTHH:mm" shape a <input type="datetime-local"> expects.
+      setScheduledAt(chapter.scheduled_at ? String(chapter.scheduled_at).slice(0, 16) : '');
+      setTagsInput(Array.isArray(chapter.tags) ? chapter.tags.join(', ') : '');
 
       if (chapter.content) {
         // Novel chapter — text lives on the chapter row itself
@@ -208,6 +235,15 @@ function UploadFlow() {
     display: 'block', fontSize: '10px', fontWeight: 700 as const,
     color: '#6b7280', letterSpacing: '0.12em', textTransform: 'uppercase' as const,
     marginBottom: '6px',
+  };
+  const toolbarBtnStyle = {
+    padding: '6px 10px', borderRadius: '6px',
+    background: '#08080c', border: '1px solid #1f1f2e',
+    color: '#9ca3af', fontSize: '11px', fontWeight: 700 as const,
+    cursor: 'pointer' as const,
+  };
+  const toolbarBtnActiveStyle = {
+    background: 'rgba(127,29,29,0.25)', border: '1px solid #7f1d1d', color: '#fff',
   };
 
   // ---- Cover photo selection ----
@@ -546,6 +582,54 @@ function UploadFlow() {
   // Separate from handlePublishChapter on purpose — manga path stays
   // completely untouched. No pages table, no manga-pages storage bucket;
   // the chapter row itself carries the text.
+  // Shared field-builder for novel chapter writes — keeps publish and
+  // draft-save from drifting out of sync on which columns they touch.
+  const buildNovelChapterFields = (wordCount: number, draftFlag: boolean) => ({
+    chapter_number: chapterNumber,
+    title: chapterTitle.trim() || `Chapter ${chapterNumber}`,
+    content: novelContent,
+    word_count: wordCount,
+    author_note_before: authorNoteBefore.trim() || null,
+    author_note_after: authorNoteAfter.trim() || null,
+    is_draft: draftFlag,
+    // datetime-local gives "YYYY-MM-DDTHH:mm" in the user's local time;
+    // Date() parses that as local time, then toISOString() converts to UTC
+    // for storage. Empty input -> no schedule.
+    scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+    tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
+  });
+
+  // Save without publishing — bypasses the word-count minimum since drafts
+  // are allowed to be unfinished. Needs chapters.is_draft.
+  const handleSaveNovelDraft = async () => {
+    if (!seriesId) { setError('Create the series first!'); return; }
+    setSavingDraft(true); setError(''); setMessage('');
+
+    const wordCount = countWords(novelContent);
+    const fields = buildNovelChapterFields(wordCount, true);
+
+    if (isEditMode && editChapterId) {
+      const { error: updateError } = await supabase.from('chapters').update(fields).eq('id', editChapterId);
+      if (updateError) { setError(updateError.message); setSavingDraft(false); return; }
+      setIsDraftChapter(true);
+      setMessage(`Draft saved — ${wordCount} words. Still unpublished.`);
+      setSavingDraft(false);
+      return;
+    }
+
+    const { data: chapter, error: chapterError } = await supabase
+      .from('chapters')
+      .insert({ series_id: seriesId, ...fields })
+      .select()
+      .single();
+
+    if (chapterError) { setError(chapterError.message); setSavingDraft(false); return; }
+
+    // Move into edit mode pointing at this draft row so the next Save Draft
+    // (or Publish) updates it instead of creating a duplicate chapter.
+    window.location.href = `/upload?seriesId=${seriesId}&chapterId=${chapter.id}`;
+  };
+
   const handlePublishNovelChapter = async () => {
     if (!seriesId) { setError('Create the series first!'); return; }
 
@@ -557,22 +641,27 @@ function UploadFlow() {
 
     setLoading(true); setError(''); setMessage('');
 
+    const isFutureSchedule = !!scheduledAt && new Date(scheduledAt).getTime() > Date.now();
+    const fields = buildNovelChapterFields(wordCount, isFutureSchedule);
+    // Note: scheduling relies on whatever query loads chapters for readers
+    // respecting `is_draft = false` (and, if you want strict scheduling,
+    // `scheduled_at IS NULL OR scheduled_at <= now()`). This file only
+    // writes the columns — wire that filter into your chapter-list/reader
+    // query separately if it isn't already there.
+
     // ---- EDIT MODE: update the existing chapter row instead of inserting a new one ----
     if (isEditMode && editChapterId) {
       const { error: updateError } = await supabase
         .from('chapters')
-        .update({
-          chapter_number: chapterNumber,
-          title: chapterTitle.trim() || `Chapter ${chapterNumber}`,
-          content: novelContent,
-          word_count: wordCount,
-        })
+        .update(fields)
         .eq('id', editChapterId);
 
       if (updateError) { setError(updateError.message); setLoading(false); return; }
 
       clearDraft(seriesId, chapterNumber);
-      setMessage(`Chapter ${chapterNumber} updated! 🎉 ${wordCount} words. Taking you back...`);
+      setMessage(isFutureSchedule
+        ? `Chapter ${chapterNumber} scheduled for ${new Date(scheduledAt).toLocaleString()}. Taking you back...`
+        : `Chapter ${chapterNumber} updated! 🎉 ${wordCount} words. Taking you back...`);
       setLoading(false);
       setTimeout(() => { window.location.href = `/series/${seriesId}`; }, 1200);
       return;
@@ -581,13 +670,7 @@ function UploadFlow() {
     // ---- CREATE MODE (original behavior, unchanged) ----
     const { data: chapter, error: chapterError } = await supabase
       .from('chapters')
-      .insert({
-        series_id: seriesId,
-        chapter_number: chapterNumber,
-        title: chapterTitle.trim() || `Chapter ${chapterNumber}`,
-        content: novelContent,
-        word_count: wordCount,
-      })
+      .insert({ series_id: seriesId, ...fields })
       .select()
       .single();
 
@@ -598,25 +681,109 @@ function UploadFlow() {
     clearDraft(seriesId, chapterNumber);
 
     // Step 25 — Notify followers (same fire-and-forget pattern as manga path above)
-    const { data: notifySessionData } = await supabase.auth.getSession();
-    fetch('/api/notify-followers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${notifySessionData.session?.access_token}`,
-      },
-      body: JSON.stringify({
-        seriesId,
-        chapterId: chapter.id,
-        chapterNumber,
-        chapterTitle: chapterTitle.trim() || `Chapter ${chapterNumber}`,
-      }),
-    }).catch((err) => console.warn('[upload] notify-followers failed silently:', err));
+    // Skipped for future-scheduled chapters — followers shouldn't be pinged
+    // about a chapter that isn't actually live yet.
+    if (!isFutureSchedule) {
+      const { data: notifySessionData } = await supabase.auth.getSession();
+      fetch('/api/notify-followers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${notifySessionData.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          seriesId,
+          chapterId: chapter.id,
+          chapterNumber,
+          chapterTitle: chapterTitle.trim() || `Chapter ${chapterNumber}`,
+        }),
+      }).catch((err) => console.warn('[upload] notify-followers failed silently:', err));
+    }
 
-    setMessage(`Chapter ${chapterNumber} is live! 🎉 ${wordCount} words published.`);
+    setMessage(isFutureSchedule
+      ? `Chapter ${chapterNumber} scheduled for ${new Date(scheduledAt).toLocaleString()}. 🗓️`
+      : `Chapter ${chapterNumber} is live! 🎉 ${wordCount} words published.`);
     setJustPublishedChapterId(chapter.id);
     setNovelContent('');
     setLoading(false);
+  };
+
+  // ---- Novel editor toolbar helpers (client-side only) ----
+
+  // Wraps the current selection in the textarea with `mark` on both sides
+  // (e.g. ** for bold, * for italic). If nothing is selected, inserts a
+  // placeholder word wrapped in the mark, with the cursor left inside it.
+  const wrapNovelSelection = (mark: string, placeholder: string) => {
+    const el = novelTextareaRef.current;
+    if (!el) return;
+    const { selectionStart, selectionEnd, value } = el;
+    const selected = value.slice(selectionStart, selectionEnd) || placeholder;
+    const next = value.slice(0, selectionStart) + mark + selected + mark + value.slice(selectionEnd);
+    setNovelContent(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const cursor = selectionStart + mark.length + selected.length + mark.length;
+      el.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  // Inserts a line-level prefix (e.g. "# " for heading) at the start of the
+  // current line, or a standalone scene-break block on its own line.
+  const insertNovelLinePrefix = (prefix: string) => {
+    const el = novelTextareaRef.current;
+    if (!el) return;
+    const { selectionStart, value } = el;
+    const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+    const next = value.slice(0, lineStart) + prefix + value.slice(lineStart);
+    setNovelContent(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const cursor = selectionStart + prefix.length;
+      el.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  const insertNovelSceneBreak = () => {
+    const el = novelTextareaRef.current;
+    if (!el) return;
+    const { selectionStart, value } = el;
+    const needsLeadingBreak = selectionStart > 0 && value[selectionStart - 1] !== '\n';
+    const block = `${needsLeadingBreak ? '\n\n' : ''}***\n\n`;
+    const next = value.slice(0, selectionStart) + block + value.slice(selectionStart);
+    setNovelContent(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const cursor = selectionStart + block.length;
+      el.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  // Ctrl/Cmd+B and Ctrl/Cmd+I shortcuts inside the chapter textarea.
+  const handleNovelTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 'b') { e.preventDefault(); wrapNovelSelection('**', 'bold text'); }
+    if (mod && e.key.toLowerCase() === 'i') { e.preventDefault(); wrapNovelSelection('*', 'italic text'); }
+  };
+
+  // Tiny markdown-ish renderer for the live preview — mirrors the same
+  // syntax already taught in the placeholder (# heading, **bold**, *italic*,
+  // *** scene break). Intentionally minimal; this is for the writer to
+  // proof-read formatting before publishing, not a full markdown engine.
+  const renderNovelPreviewHtml = (text: string) => {
+    const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return text
+      .split(/\n{2,}/)
+      .map((block) => {
+        const trimmed = block.trim();
+        if (trimmed === '***') return '<hr style="border-color:#1f1f2e;margin:20px 0;" />';
+        let html = escapeHtml(trimmed)
+          .replace(/^#\s+(.*)$/m, '<strong style="font-size:18px;display:block;margin-bottom:8px;">$1</strong>')
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+          .replace(/\n/g, '<br/>');
+        return `<p style="margin:0 0 16px 0;">${html}</p>`;
+      })
+      .join('');
   };
 
   return (
@@ -873,22 +1040,84 @@ function UploadFlow() {
               {/* Step 21 — MANGAL Novel Writer (replaces image uploader for novel chapters) */}
               {contentType === 'novel' && (
                 <>
+                  {/* Author's Note — before chapter. Optional; needs chapters.author_note_before */}
                   <div>
-                    <label style={labelStyle}>Chapter Text</label>
+                    <label style={labelStyle}>Author's Note — Before Chapter (optional)</label>
                     <textarea
-                      placeholder={'Likho yahan... # for a heading, **bold**, *italic*'}
-                      value={novelContent}
-                      onChange={(e) => setNovelContent(e.target.value)}
-                      rows={16}
-                      style={{
-                        ...inputStyle,
-                        resize: 'vertical' as const,
-                        lineHeight: 1.7,
-                        fontFamily: 'Georgia, "Noto Serif", serif',
-                        fontSize: '14px',
-                      }}
+                      placeholder="e.g. Sorry for the late update! Thanks for 1k reads 🙏"
+                      value={authorNoteBefore}
+                      onChange={(e) => setAuthorNoteBefore(e.target.value)}
+                      rows={2}
+                      style={{ ...inputStyle, resize: 'vertical' as const, fontSize: '12px' }}
                     />
                   </div>
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>Chapter Text</label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button type="button" onClick={() => setNovelFocusMode(true)} title="Focus mode — distraction-free full screen" style={toolbarBtnStyle}>⛶ Focus</button>
+                        <button type="button" onClick={() => setNovelPreviewMode((p) => !p)} title="Toggle live preview" style={{ ...toolbarBtnStyle, ...(novelPreviewMode ? toolbarBtnActiveStyle : {}) }}>
+                          {novelPreviewMode ? '✏️ Edit' : '👁️ Preview'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {!novelPreviewMode && (
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' as const }}>
+                        <button type="button" onClick={() => wrapNovelSelection('**', 'bold text')} title="Bold (Ctrl+B)" style={toolbarBtnStyle}><strong>B</strong></button>
+                        <button type="button" onClick={() => wrapNovelSelection('*', 'italic text')} title="Italic (Ctrl+I)" style={toolbarBtnStyle}><em>I</em></button>
+                        <button type="button" onClick={() => insertNovelLinePrefix('# ')} title="Heading" style={toolbarBtnStyle}>H</button>
+                        <button type="button" onClick={insertNovelSceneBreak} title="Scene break" style={toolbarBtnStyle}>⁘ Scene Break</button>
+                      </div>
+                    )}
+
+                    {novelPreviewMode ? (
+                      <div
+                        style={{ ...inputStyle, minHeight: '380px', lineHeight: 1.7, fontFamily: 'Georgia, "Noto Serif", serif', fontSize: '14px', overflowY: 'auto' as const }}
+                        dangerouslySetInnerHTML={{ __html: novelContent.trim() ? renderNovelPreviewHtml(novelContent) : '<p style="color:#4b5563;">Nothing to preview yet — start writing.</p>' }}
+                      />
+                    ) : (
+                      <textarea
+                        ref={novelTextareaRef}
+                        placeholder={'Likho yahan... # for a heading, **bold**, *italic*'}
+                        value={novelContent}
+                        onChange={(e) => setNovelContent(e.target.value)}
+                        onKeyDown={handleNovelTextareaKeyDown}
+                        rows={16}
+                        spellCheck
+                        style={{
+                          ...inputStyle,
+                          resize: 'vertical' as const,
+                          lineHeight: 1.7,
+                          fontFamily: 'Georgia, "Noto Serif", serif',
+                          fontSize: '14px',
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Focus mode — full-screen distraction-free overlay, same textarea state */}
+                  {novelFocusMode && (
+                    <div style={{ position: 'fixed' as const, inset: 0, background: '#07070a', zIndex: 1000, display: 'flex', flexDirection: 'column' as const, padding: '32px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '760px', margin: '0 auto 16px', width: '100%' }}>
+                        <span style={{ fontSize: '12px', color: '#6b7280' }}>{countWords(novelContent)} words · {estimateReadTime(countWords(novelContent))}</span>
+                        <button type="button" onClick={() => setNovelFocusMode(false)} style={toolbarBtnStyle}>✕ Exit Focus Mode</button>
+                      </div>
+                      <textarea
+                        autoFocus
+                        value={novelContent}
+                        onChange={(e) => setNovelContent(e.target.value)}
+                        onKeyDown={handleNovelTextareaKeyDown}
+                        spellCheck
+                        style={{
+                          flex: 1, width: '100%', maxWidth: '760px', margin: '0 auto',
+                          background: 'transparent', border: 'none', outline: 'none', resize: 'none' as const,
+                          color: '#e5e7eb', lineHeight: 1.9, fontFamily: 'Georgia, "Noto Serif", serif', fontSize: '17px',
+                        }}
+                      />
+                    </div>
+                  )}
 
                   {/* Live word count + estimated read time — feeds chapters.word_count on publish */}
                   <div style={{
@@ -911,26 +1140,85 @@ function UploadFlow() {
                     </p>
                   )}
 
-                  <button
-                    onClick={handlePublishNovelChapter}
-                    disabled={loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER}
-                    style={{
-                      width: '100%', padding: '14px',
-                      background: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                      border: '1px solid #7f1d1d', borderRadius: '12px',
-                      color: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? '#6b7280' : '#fff',
-                      fontSize: '13px', fontWeight: 700,
-                      cursor: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {loading
-                      ? (isEditMode ? 'Saving...' : 'Publishing...')
-                      : countWords(novelContent) < MIN_WORDS_PER_CHAPTER
-                      ? `🔒 Need ${MIN_WORDS_PER_CHAPTER - countWords(novelContent)} more word(s) to publish`
-                      : isEditMode
-                      ? `💾 Save Changes (${countWords(novelContent)} words)`
-                      : `🚀 Publish Live (${countWords(novelContent)} words)`}
-                  </button>
+                  {isDraftChapter && (
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', borderRadius: '8px', padding: '8px 12px' }}>
+                      📝 Saved as draft — not visible to readers yet. Publish when ready.
+                    </div>
+                  )}
+
+                  {/* Author's Note — after chapter. Optional; needs chapters.author_note_after */}
+                  <div>
+                    <label style={labelStyle}>Author's Note — After Chapter (optional)</label>
+                    <textarea
+                      placeholder="e.g. Next chapter drops Friday. Comment your theories!"
+                      value={authorNoteAfter}
+                      onChange={(e) => setAuthorNoteAfter(e.target.value)}
+                      rows={2}
+                      style={{ ...inputStyle, resize: 'vertical' as const, fontSize: '12px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    {/* Tags / content warnings. Optional; needs chapters.tags (text[]) */}
+                    <div style={{ flex: 1 }}>
+                      <label style={labelStyle}>Tags (comma separated)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. slow-burn, violence-warning"
+                        value={tagsInput}
+                        onChange={(e) => setTagsInput(e.target.value)}
+                        style={inputStyle}
+                      />
+                    </div>
+                    {/* Scheduled publish. Optional; needs chapters.scheduled_at */}
+                    <div style={{ flex: 1 }}>
+                      <label style={labelStyle}>Schedule For Later (optional)</label>
+                      <input
+                        type="datetime-local"
+                        value={scheduledAt}
+                        onChange={(e) => setScheduledAt(e.target.value)}
+                        style={{ ...inputStyle, colorScheme: 'dark' as const }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={handleSaveNovelDraft}
+                      disabled={loading || savingDraft}
+                      style={{
+                        flex: 1, padding: '14px',
+                        background: '#08080c', border: '1px solid #1f1f2e', borderRadius: '12px',
+                        color: (loading || savingDraft) ? '#4b5563' : '#9ca3af',
+                        fontSize: '13px', fontWeight: 700,
+                        cursor: (loading || savingDraft) ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {savingDraft ? 'Saving Draft...' : '📝 Save Draft'}
+                    </button>
+                    <button
+                      onClick={handlePublishNovelChapter}
+                      disabled={loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER}
+                      style={{
+                        flex: 2, padding: '14px',
+                        background: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                        border: '1px solid #7f1d1d', borderRadius: '12px',
+                        color: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? '#6b7280' : '#fff',
+                        fontSize: '13px', fontWeight: 700,
+                        cursor: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {loading
+                        ? (isEditMode ? 'Saving...' : 'Publishing...')
+                        : countWords(novelContent) < MIN_WORDS_PER_CHAPTER
+                        ? `🔒 Need ${MIN_WORDS_PER_CHAPTER - countWords(novelContent)} more word(s) to publish`
+                        : scheduledAt && new Date(scheduledAt).getTime() > Date.now()
+                        ? `🗓️ Schedule Chapter (${countWords(novelContent)} words)`
+                        : isEditMode
+                        ? `💾 Save Changes (${countWords(novelContent)} words)`
+                        : `🚀 Publish Live (${countWords(novelContent)} words)`}
+                    </button>
+                  </div>
                 </>
               )}
             </div>
