@@ -227,7 +227,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
     setRatingLoading(false);
   };
 
-  const [sortDesc, setSortDesc] = useState(true);
+  const [sortDesc, setSortDesc] = useState(false);
   const displayedChapters = sortDesc ? [...chapters].reverse() : chapters;
 
   // Creator-only: delete a chapter (and its child rows) from the series.
