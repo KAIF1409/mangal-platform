@@ -187,11 +187,11 @@ export default function HomePage() {
       }}>
         {/* Logo */}
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '10px',
-            background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-          }}>🔥</div>
+          <img
+            src="/icon.png"
+            alt="MANGAL"
+            style={{ width: '36px', height: '36px', display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
+          />
           <span style={{ fontWeight: 900, fontSize: '20px', color: '#fff', letterSpacing: '-0.03em' }}>MANGAL</span>
         </a>
 
