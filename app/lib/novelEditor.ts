@@ -99,15 +99,36 @@ export function parseChapterContent(raw: string): FormattedSegment[] {
     const trimmed = block.trim();
     if (!trimmed) continue;
 
-    // Scene break: *** alone on a block
-    if (trimmed === '***') {
+    // Scene break: *** alone on a block. Also tolerates stray spaces
+    // between the asterisks (e.g. "* * *"), which previously fell through
+    // to the paragraph branch and got mangled by parseInlineRuns.
+    if (/^\*{3,}$/.test(trimmed.replace(/\s+/g, ''))) {
       segments.push({ type: 'scene_break' });
       continue;
     }
 
-    // Heading: line starting with # (only first line of block considered)
-    if (trimmed.startsWith('# ')) {
-      segments.push({ type: 'heading', text: trimmed.slice(2).trim() });
+    // Heading: line starting with one or more "#" markers, possibly
+    // repeated with spaces between them (e.g. "# # # text").
+    // FIXED: trimmed.slice(2) only ever stripped a single leading "# ",
+    // so input like "# # # some text" (repeated/duplicated hashes — e.g.
+    // from a paste or accidental double-click on the H toolbar button)
+    // left the extra "# #" sitting as literal text inside the heading,
+    // which is exactly the "# # # *****..." artifact seen in the reader.
+    // The loop below strips EVERY leading "#" token (each optionally
+    // followed by spaces) one at a time, however many there are, instead
+    // of matching only the first contiguous run of "#" characters.
+    if (/^#(\s|$)/.test(trimmed)) {
+      let headingText = trimmed;
+      while (/^#\s*/.test(headingText)) {
+        headingText = headingText.replace(/^#\s*/, '');
+      }
+      // Headings render as plain text, so any stray *, **, *** markers that
+      // ended up on the same line (e.g. pasted-in malformed content) are
+      // stripped rather than shown as raw asterisks.
+      headingText = headingText.replace(/\*+/g, '').trim();
+      if (headingText) {
+        segments.push({ type: 'heading', text: headingText });
+      }
       continue;
     }
 

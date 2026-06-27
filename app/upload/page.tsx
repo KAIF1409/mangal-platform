@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 import { checkImageBatchQuality } from '../lib/imageQuality';
-import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft } from '../lib/novelEditor';
+import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../lib/novelEditor';
 
 type UploadPage = {
   file: File;
@@ -729,6 +729,16 @@ function UploadFlow() {
 
   // Wraps selection with mark (** bold, * italic). Toggles off if already wrapped.
   // If no selection, inserts placeholder text wrapped in mark.
+  //
+  // FIXED: the old version detected "wrapped with `mark`" using only
+  // startsWith/endsWith, so selecting bold text ("**bold**") and clicking
+  // Italic (mark = '*') would false-positive match — "**bold**" DOES start
+  // and end with a single '*' — and strip one asterisk off each side,
+  // silently corrupting **bold** into *bold*. Same collision happened with
+  // the "marks just outside selection" branch. Fix: every boundary check
+  // now also confirms the character just beyond the marker is NOT itself
+  // '*', so a single-* check can never match inside/around a double-**
+  // (or triple-***) run.
   const wrapNovelSelection = (mark: string, placeholder: string) => {
     const el = novelTextareaRef.current;
     if (!el) return;
@@ -736,15 +746,25 @@ function UploadFlow() {
     const selected = value.slice(selectionStart, selectionEnd);
     const ml = mark.length;
 
-    // Toggle OFF: selection itself is wrapped
-    if (selected.startsWith(mark) && selected.endsWith(mark) && selected.length > ml * 2) {
+    // Toggle OFF: selection itself is wrapped in EXACTLY `mark` (not a longer run).
+    const startsWithExact = selected.startsWith(mark) && selected[ml] !== '*';
+    const endsWithExact = selected.endsWith(mark) && selected[selected.length - ml - 1] !== '*';
+    if (startsWithExact && endsWithExact && selected.length > ml * 2) {
       const inner = selected.slice(ml, selected.length - ml);
       const next = value.slice(0, selectionStart) + inner + value.slice(selectionEnd);
       applyToTextarea(next, selectionStart, selectionStart + inner.length);
       return;
     }
-    // Toggle OFF: marks are just outside the selection
-    if (selectionStart >= ml && value.slice(selectionStart - ml, selectionStart) === mark && value.slice(selectionEnd, selectionEnd + ml) === mark) {
+    // Toggle OFF: marks are just outside the selection, and are EXACTLY
+    // `ml` long (the character one further out must not also be '*').
+    const beforeIsExactMark =
+      selectionStart >= ml &&
+      value.slice(selectionStart - ml, selectionStart) === mark &&
+      value[selectionStart - ml - 1] !== '*';
+    const afterIsExactMark =
+      value.slice(selectionEnd, selectionEnd + ml) === mark &&
+      value[selectionEnd + ml] !== '*';
+    if (beforeIsExactMark && afterIsExactMark) {
       const next = value.slice(0, selectionStart - ml) + selected + value.slice(selectionEnd + ml);
       applyToTextarea(next, selectionStart - ml, selectionStart - ml + selected.length);
       return;
@@ -789,26 +809,12 @@ function UploadFlow() {
     if (mod && e.key.toLowerCase() === 'h') { e.preventDefault(); toggleNovelHeading(); }
   };
 
-  // Tiny markdown-ish renderer for the live preview — mirrors the same
-  // syntax already taught in the placeholder (# heading, **bold**, *italic*,
-  // *** scene break). Intentionally minimal; this is for the writer to
-  // proof-read formatting before publishing, not a full markdown engine.
-  const renderNovelPreviewHtml = (text: string) => {
-    const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return text
-      .split(/\n{2,}/)
-      .map((block) => {
-        const trimmed = block.trim();
-        if (trimmed === '***') return '<hr style="border-color:#1f1f2e;margin:20px 0;" />';
-        let html = escapeHtml(trimmed)
-          .replace(/^#\s+(.*)$/m, '<strong style="font-size:18px;display:block;margin-bottom:8px;">$1</strong>')
-          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\*(.+?)\*/g, '<em>$1</em>')
-          .replace(/\n/g, '<br/>');
-        return `<p style="margin:0 0 16px 0;">${html}</p>`;
-      })
-      .join('');
-  };
+  // Live preview HTML now comes from lib/novelEditor.ts's renderNovelPreviewHtml,
+  // which shares the exact same parseChapterContent() logic the Reader uses —
+  // so what the creator sees in Preview mode is guaranteed to match what
+  // readers will actually see. (Previously this was a separate, fragile
+  // regex chain here that broke on repeated "#", runs of "*****", and
+  // "***" appearing inline — see novelEditor.ts header comment for details.)
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: '#07070a', padding: '40px 24px', fontFamily: 'Arial, Helvetica, sans-serif' }}>
