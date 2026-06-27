@@ -266,18 +266,32 @@ export default function HomePage() {
       {/* ── HERO BANNER ── */}
       <div style={{
         position: 'relative', overflow: 'hidden',
-        background: 'linear-gradient(135deg, #0d0005 0%, #07070a 40%, #0a0500 100%)',
         padding: '64px 24px 56px',
         borderBottom: '1px solid #1a1a26',
+        minHeight: '420px',
+        display: 'flex', alignItems: 'center',
       }}>
-        {/* Decorative glow */}
+        {/* BG IMAGE — comics.png */}
         <div style={{
-          position: 'absolute', top: '-80px', left: '50%', transform: 'translateX(-50%)',
-          width: '600px', height: '300px', borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(127,29,29,0.25) 0%, transparent 70%)',
+          position: 'absolute', inset: 0, zIndex: 0,
+          backgroundImage: 'url(/comics.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center center',
+          backgroundRepeat: 'no-repeat',
+        }} />
+        {/* Dark overlay — heavier at edges, lighter in center so text pops */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 1,
+          background: 'linear-gradient(to bottom, rgba(7,7,10,0.78) 0%, rgba(7,7,10,0.52) 40%, rgba(7,7,10,0.52) 65%, rgba(7,7,10,0.88) 100%)',
           pointerEvents: 'none',
         }} />
-        <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', textAlign: 'center' }}>
+        {/* Amber center glow to match palette */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 2,
+          background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(127,29,29,0.18) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 3, textAlign: 'center', width: '100%' }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '8px',
             fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', color: '#d97706',
@@ -289,11 +303,12 @@ export default function HomePage() {
           <h1 style={{
             fontSize: 'clamp(36px, 6vw, 72px)', fontWeight: 900,
             letterSpacing: '-0.04em', lineHeight: 1.05, margin: '0 0 16px',
+            filter: 'drop-shadow(0 2px 20px rgba(0,0,0,0.9))',
           }}>
             <span style={{ color: '#fff' }}>{t('heroTitleWhite')}</span>{' '}
             <span style={{ background: 'linear-gradient(90deg, #d97706, #ef4444)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('heroTitleOrange')}</span>
           </h1>
-          <p style={{ fontSize: '16px', color: '#6b7280', maxWidth: '480px', margin: '0 auto 32px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: '16px', color: '#e5e7eb', maxWidth: '480px', margin: '0 auto 32px', lineHeight: 1.6, textShadow: '0 1px 12px rgba(0,0,0,0.9)' }}>
             {t('heroSubtitle')}
           </p>
 
