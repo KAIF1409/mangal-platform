@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MANGAL — Dual-Mode Indian Webnovel & Comic Publishing Platform
 
-## Getting Started
+**Live:** [mangal-platform.vercel.app](https://mangal-platform.vercel.app)
 
-First, run the development server:
+MANGAL is a full-stack publishing platform built for Indian creators to upload and monetize manga-style comics and web novels under one unified account — readers can switch between Comic and Novel mode with zero friction. Built solo, end-to-end, from database schema to deployed production app.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Why this exists
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+India has 500M+ smartphone users and a fast-growing base of indie comic/manga artists and novelists, but most existing platforms force creators to choose between a comics platform or a novel platform. MANGAL lets one creator account host both content types under a single series model, with **0% platform cut** for creators at this stage.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Frontend:** Next.js 14 (App Router), TypeScript, React
+- **Backend / DB:** Supabase (PostgreSQL, Row-Level Security, Auth, Storage)
+- **Email:** Resend (transactional + notification emails)
+- **Hosting / CI-CD:** Vercel
+- **AI-assisted development:** Used Claude as a pair-programmer throughout — for architecture decisions, debugging, and feature implementation
 
-## Learn More
+## Key Features
 
-To learn more about Next.js, take a look at the following resources:
+- **Dual content-type engine** — a single `series` schema supports both manga (page/scroll image-based chapters) and novels (rich-text chapters), with a content-type-aware reader, uploader, and dashboard across the whole app
+- **Custom novel writer** — built-from-scratch lightweight text formatting engine (headings, bold, italic, scene breaks) with live word count, estimated read time, and local-storage draft autosave — no external rich-text library
+- **DPDP Act 2023 compliance** — itemized consent logging, DOB-based minor detection, automated parental-consent email verification flow for under-18 accounts, and a Download-My-Data / Delete-My-Account flow
+- **IT Rules 2021 compliance** — Grievance Officer page with legally mandated 24-hour acknowledgement / 15-day resolution SLAs, two-tier data retention (immediate front-end erasure + 180-day encrypted cold storage for legal/CERT-In requests)
+- **Admin moderation dashboard** — developer-role-gated, RLS-enforced two-click content removal and instant account bans
+- **Reader experience** — bookmarks, reading history with progress tracking, follow + new-chapter email notifications, WhatsApp share, RTL reading mode for manga, Hindi/English UI toggle
+- **Search & discovery** — genre/language/content-type filters, URL-synced query params, trending/staff-picks sections
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Single unified `series` + `chapters` schema for both content types, differentiated by a `content_type` column rather than separate tables — keeps search, bookmarks, library, and history working identically across comics and novels with no duplicated logic
+- All sensitive operations (account deletion, data export, parent-consent confirmation, follower notifications) run through server-only API routes using the Supabase service role, never exposed client-side
+- RLS policies enforce access control at the database layer, not just in application code
 
-## Deploy on Vercel
+## Status
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+In active development. Core publishing, reading, and compliance flows are live in production. Monetization (UPI creator tips, premium chapter unlocks) is planned for after the platform reaches consistent reader traffic.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Author
+
+**Mohammed Kaif** — B.Tech CSE, PES University (2026)
+[LinkedIn](www.linkedin.com/in/mohammed-kaif-714a79242) · [kaifmohammed.work@gmail.com](mailto:kaifmohammed.work@gmail.com)
