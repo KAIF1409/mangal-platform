@@ -39,4 +39,4 @@ In active development. Core publishing, reading, and compliance flows are live i
 ## Author
 
 **Mohammed Kaif** — B.Tech CSE, PES University (2026)
-[LinkedIn](www.linkedin.com/in/mohammed-kaif-714a79242) · [kaifmohammed.work@gmail.com](mailto:kaifmohammed.work@gmail.com)
+[LinkedIn]((https://www.linkedin.com/in/mohammed-kaif-714a79242/)) · [kaifmohammed.work@gmail.com](mailto:kaifmohammed.work@gmail.com)
