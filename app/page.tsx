@@ -288,7 +288,7 @@ export default function LandingPage() {
           minHeight: '92vh',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {/* ── BG IMAGE ── */}
+          {/* BG IMAGE */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 0,
             backgroundImage: 'url(/hero-bg.png)',
@@ -296,15 +296,13 @@ export default function LandingPage() {
             backgroundPosition: 'center top',
             backgroundRepeat: 'no-repeat',
           }} />
-
-          {/* Dark overlay so text stays readable — heavier at top/bottom, lighter in center */}
+          {/* Dark overlay */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 1,
             background: 'linear-gradient(to bottom, rgba(7,7,10,0.72) 0%, rgba(7,7,10,0.38) 35%, rgba(7,7,10,0.38) 65%, rgba(7,7,10,0.88) 100%)',
             pointerEvents: 'none',
           }} />
-
-          {/* Subtle amber glow in center to blend with existing palette */}
+          {/* Amber glow */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 2,
             background: 'radial-gradient(ellipse 60% 40% at 50% 55%, rgba(217,119,6,0.08) 0%, transparent 70%)',
@@ -323,7 +321,7 @@ export default function LandingPage() {
               Bharat Ki Kahaniyan 🔥
             </h1>
             <p style={{
-              fontSize: 'clamp(14px, 2vw, 20px)', color: '#9ca3af', margin: '0 0 32px', lineHeight: 1.6,
+              fontSize: 'clamp(14px, 2vw, 20px)', color: '#f3f4f6', margin: '0 0 32px', lineHeight: 1.6, textShadow: '0 1px 12px rgba(0,0,0,0.9)',
               maxWidth: '620px', marginLeft: 'auto', marginRight: 'auto',
             }}>
               1000+ Desi comics & novels by Desi people. Scroll or read. Free forever. No ads, no gatekeepers.
@@ -360,12 +358,27 @@ export default function LandingPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '8px' }}>
               {GENRE_PILLS.map(g => (
                 <a key={g} href={`/search?genre=${encodeURIComponent(g)}`} style={{
-                  fontSize: '12px', padding: '6px 14px', borderRadius: '20px',
-                  background: 'rgba(217,119,6,0.1)', color: '#d97706', textDecoration: 'none',
-                  border: '1px solid rgba(217,119,6,0.3)', transition: 'all 0.15s',
+                  fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
+                  background: 'rgba(7,7,10,0.78)',
+                  backdropFilter: 'blur(8px)',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  border: '1px solid rgba(255,255,255,0.22)',
+                  transition: 'all 0.15s',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
                 }}
-                  onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(217,119,6,0.2)'; }}
-                  onMouseLeave={e => { (e.target as HTMLElement).style.background = 'rgba(217,119,6,0.1)'; }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget;
+                    el.style.background = 'rgba(217,119,6,0.92)';
+                    el.style.borderColor = '#d97706';
+                    el.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget;
+                    el.style.background = 'rgba(7,7,10,0.78)';
+                    el.style.borderColor = 'rgba(255,255,255,0.22)';
+                    el.style.transform = 'none';
+                  }}
                 >
                   {g}
                 </a>
