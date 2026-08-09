@@ -161,7 +161,7 @@ export default function BookmarksPage() {
 
   const statusColor = (s: string | null) => {
     if (s === 'completed') return { color: '#10b981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)' };
-    if (s === 'hiatus') return { color: '#6b7280', bg: '#08080c', border: '#1a1a26' };
+    if (s === 'hiatus') return { color: 'var(--text-tertiary)', bg: 'var(--bg-input)', border: 'var(--border-color)' };
     return { color: '#d97706', bg: 'rgba(120,53,15,0.25)', border: 'rgba(180,83,9,0.4)' };
   };
 
@@ -184,7 +184,7 @@ export default function BookmarksPage() {
   }, [series, activeContentType, sortBy]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#07070a', color: '#f9fafb', }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
 
       {/* NAV (shared component) */}
       <Navbar
@@ -199,11 +199,11 @@ export default function BookmarksPage() {
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                color: '#9ca3af', textDecoration: 'none',
+                color: 'var(--text-secondary)', textDecoration: 'none',
                 transition: 'color 0.15s, background 0.15s',
               }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.color = '#fff'; (e.target as HTMLElement).style.background = '#1a1a26'; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#9ca3af'; (e.target as HTMLElement).style.background = 'transparent'; }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
               >{link.label}</a>
             ))}
           </div>
@@ -225,7 +225,7 @@ export default function BookmarksPage() {
       {/* HEADER */}
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 20px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🔖 Bookmarks</h1>
-        <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 16px' }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 16px' }}>
           {loading ? '' : series.length === 0
             ? 'No bookmarks yet.'
             : activeContentType === 'all'
@@ -250,7 +250,7 @@ export default function BookmarksPage() {
                   style={{
                     padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
                     cursor: 'pointer', transition: 'all 0.15s',
-                    ...(isActive ? activeStyle : { background: '#08080c', border: '1px solid #1a1a26', color: '#6b7280' }),
+                    ...(isActive ? activeStyle : { background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-tertiary)' }),
                   }}
                 >
                   {opt.label}
@@ -260,12 +260,12 @@ export default function BookmarksPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>Sort:</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>Sort:</span>
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as BookmarkSortOption)}
               style={{
-                padding: '8px 12px', borderRadius: '8px', background: '#0d0d14',
+                padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-card)',
                 border: '1px solid #2a2a3a', color: '#d97706', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
               }}
             >
@@ -279,15 +279,15 @@ export default function BookmarksPage() {
       {/* CONTENT */}
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#4b5563' }}>
+          <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '36px', marginBottom: '12px' }}>🔖</div>
             <div>Loading bookmarks...</div>
           </div>
         ) : series.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 40px', background: '#0d0d14', borderRadius: '16px', border: '1px solid #1a1a26' }}>
+          <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
-            <p style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>No bookmarks yet</p>
-            <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 24px' }}>
+            <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>No bookmarks yet</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 24px' }}>
               Follow a series to bookmark it — you&apos;ll find them all here.
             </p>
             <Link href="/" style={{
@@ -299,12 +299,12 @@ export default function BookmarksPage() {
             </Link>
           </div>
         ) : filteredSeries.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 40px', background: '#0d0d14', borderRadius: '16px', border: '1px solid #1a1a26' }}>
+          <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>{activeContentType === 'novel' ? '📕' : '📖'}</div>
-            <p style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>
+            <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
               No {activeContentType === 'novel' ? 'novels' : 'manga'} bookmarked
             </p>
-            <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 24px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 24px' }}>
               Try switching the filter to see your other bookmarks.
             </p>
             <button
@@ -354,7 +354,7 @@ function BookmarkCard({
 
   return (
     <div style={{
-      background: '#0d0d14', border: '1px solid #1a1a26',
+      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
       borderRadius: '14px', overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
       transition: 'border-color 0.15s',
@@ -371,7 +371,7 @@ function BookmarkCard({
               style={{ objectFit: 'cover' }}
             />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', color: '#374151' }}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', color: 'var(--text-faint)' }}>
               {series.content_type === 'novel' ? '📕' : '📜'}
             </div>
           )}
@@ -403,7 +403,7 @@ function BookmarkCard({
       {/* Info */}
       <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}>
-          <div style={{ fontSize: '14px', fontWeight: 800, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {series.title}
           </div>
         </a>
@@ -414,12 +414,12 @@ function BookmarkCard({
               {series.genre}
             </span>
           )}
-          <span style={{ fontSize: '9px', fontWeight: 700, color: '#6b7280', background: '#08080c', border: '1px solid #1a1a26', padding: '2px 8px', borderRadius: '20px' }}>
+          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-tertiary)', background: 'var(--bg-input)', border: '1px solid var(--border-color)', padding: '2px 8px', borderRadius: '20px' }}>
             {series.chapter_count} ch
           </span>
         </div>
 
-        <p style={{ fontSize: '12px', color: '#4b5563', margin: 0, lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
           {series.synopsis}
         </p>
 
@@ -446,7 +446,7 @@ function BookmarkCard({
               </button>
               <button
                 onClick={() => setConfirmUnfollow(false)}
-                style={{ flex: 1, padding: '7px', borderRadius: '7px', fontSize: '11px', background: '#08080c', border: '1px solid #1a1a26', color: '#6b7280', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '7px', borderRadius: '7px', fontSize: '11px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-tertiary)', cursor: 'pointer' }}
               >
                 Cancel
               </button>
@@ -454,7 +454,7 @@ function BookmarkCard({
           ) : (
             <button
               onClick={() => setConfirmUnfollow(true)}
-              style={{ padding: '7px', borderRadius: '7px', fontSize: '11px', fontWeight: 600, background: 'transparent', border: '1px solid #1a1a26', color: '#4b5563', cursor: 'pointer' }}
+              style={{ padding: '7px', borderRadius: '7px', fontSize: '11px', fontWeight: 600, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer' }}
             >
               🔕 Remove Bookmark
             </button>
