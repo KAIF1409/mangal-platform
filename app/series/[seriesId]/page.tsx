@@ -85,6 +85,16 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
     full_name: string;
     helpful_count: number;
   }
+  interface ReviewQueryRow {
+    id: string;
+    reader_id: string;
+    stars: number;
+    review_title: string | null;
+    review_text: string | null;
+    created_at: string;
+    profiles: { full_name: string | null }[] | { full_name: string | null } | null;
+    review_helpful_votes: { count: number }[] | { count: number } | null;
+  }
   const [reviews, setReviews] = useState<Review[]>([]);
   const [myVotedHelpful, setMyVotedHelpful] = useState<Set<string>>(new Set());
   const [reviewTitle, setReviewTitle] = useState('');
@@ -120,8 +130,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           .eq('series_id', seriesId);
         if (tagRows) {
           const flat = tagRows
-            .map((r: any) => (Array.isArray(r.tags) ? r.tags[0] : r.tags))
-            .filter(Boolean);
+            .map((r: { tags: { id: string; name: string; slug: string }[] | { id: string; name: string; slug: string } | null }) => (Array.isArray(r.tags) ? r.tags[0] : r.tags))
+            .filter((tag): tag is { id: string; name: string; slug: string } => !!tag);
           setTags(flat);
         }
       }
@@ -190,7 +200,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           .from('review_helpful_votes')
           .select('rating_id')
           .eq('voter_id', u.user.id);
-        if (voteRows) setMyVotedHelpful(new Set(voteRows.map((v: any) => v.rating_id)));
+        if (voteRows) setMyVotedHelpful(new Set(voteRows.map((v: { rating_id: string }) => v.rating_id)));
       }
 
       const { count } = await supabase
@@ -219,7 +229,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         .not('review_text', 'is', null)
         .order('created_at', { ascending: false });
       if (reviewRows) {
-        const mapped: Review[] = reviewRows.map((r: any) => ({
+        const mapped: Review[] = reviewRows.map((r: ReviewQueryRow) => ({
           id: r.id,
           reader_id: r.reader_id,
           stars: r.stars,
@@ -339,7 +349,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         .not('review_text', 'is', null)
         .order('created_at', { ascending: false });
       if (reviewRows) {
-        const mapped: Review[] = reviewRows.map((r: any) => ({
+        const mapped: Review[] = reviewRows.map((r: ReviewQueryRow) => ({
           id: r.id,
           reader_id: r.reader_id,
           stars: r.stars,

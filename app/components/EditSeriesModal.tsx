@@ -70,7 +70,7 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
         .from('series_tags')
         .select('tag_id')
         .eq('series_id', story.id);
-      if (seriesTagRows) setSelectedTagIds(new Set(seriesTagRows.map((r: any) => r.tag_id)));
+      if (seriesTagRows) setSelectedTagIds(new Set(seriesTagRows.map((r: { tag_id: string }) => r.tag_id)));
       setTagsLoaded(true);
     };
     loadTags();
@@ -190,7 +190,7 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
     }
 
     const { data: existingRows } = await supabase.from('series_tags').select('tag_id').eq('series_id', story.id);
-    const existingIds = new Set((existingRows ?? []).map((r: any) => r.tag_id));
+    const existingIds = new Set((existingRows ?? []).map((r: { tag_id: string }) => r.tag_id));
 
     const toAdd = [...finalSelectedIds].filter(id => !existingIds.has(id));
     const toRemove = [...existingIds].filter(id => !finalSelectedIds.has(id));

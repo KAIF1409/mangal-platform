@@ -26,6 +26,21 @@ interface FollowedSeries {
   chapter_count: number;
 }
 
+interface FollowSeriesRow {
+  id: string;
+  title: string;
+  synopsis: string;
+  genre: string | null;
+  language: string | null;
+  cover_url: string | null;
+  reading_mode: 'scroll' | 'page';
+  status: string;
+}
+interface FollowRow {
+  created_at: string;
+  series: FollowSeriesRow | FollowSeriesRow[] | null;
+}
+
 // Step 28 — sort control, matching the pattern already used on /search
 type LibrarySortOption = 'recent' | 'added' | 'az' | 'chapters';
 const LIBRARY_SORT_OPTIONS: { value: LibrarySortOption; label: string }[] = [
@@ -68,7 +83,7 @@ export default function LibraryPage() {
 
       // For each followed series, fetch chapter count + latest chapter
       const enriched = await Promise.all(
-        follows.map(async (f: any) => {
+        follows.map(async (f: FollowRow) => {
           const s = Array.isArray(f.series) ? f.series[0] : f.series;
           if (!s) return null;
 

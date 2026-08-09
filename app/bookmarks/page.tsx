@@ -28,6 +28,25 @@ interface BookmarkedSeries {
   latest_chapter_number: number | null;
 }
 
+interface FollowSeriesRow {
+  id: string;
+  title: string;
+  synopsis: string;
+  genre: string | null;
+  cover_url: string | null;
+  completion_status: string | null;
+  content_type: 'mangal' | 'novel' | null;
+}
+interface FollowRow {
+  created_at: string;
+  series: FollowSeriesRow | FollowSeriesRow[] | null;
+}
+interface ChapterRow {
+  id: string;
+  series_id: string;
+  chapter_number: number;
+}
+
 const CONTENT_TYPE_OPTIONS: { value: 'all' | 'mangal' | 'novel'; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'mangal', label: '📖 Manga' },
@@ -89,7 +108,7 @@ export default function BookmarksPage() {
 
       if (!follows || follows.length === 0) { setLoading(false); return; }
 
-      const seriesIds = follows.map((f: any) => {
+      const seriesIds = follows.map((f: FollowRow) => {
         const s = Array.isArray(f.series) ? f.series[0] : f.series;
         return s?.id;
       }).filter(Boolean);
@@ -104,12 +123,12 @@ export default function BookmarksPage() {
       // Build a map: series_id → latest chapter
       const latestMap: Record<string, { id: string; chapter_number: number }> = {};
       const countMap: Record<string, number> = {};
-      (allChapters ?? []).forEach((ch: any) => {
+      (allChapters ?? []).forEach((ch: ChapterRow) => {
         if (!latestMap[ch.series_id]) latestMap[ch.series_id] = { id: ch.id, chapter_number: ch.chapter_number };
         countMap[ch.series_id] = (countMap[ch.series_id] ?? 0) + 1;
       });
 
-      const enriched: BookmarkedSeries[] = follows.map((f: any) => {
+      const enriched: BookmarkedSeries[] = follows.map((f: FollowRow) => {
         const s = Array.isArray(f.series) ? f.series[0] : f.series;
         if (!s) return null;
         const latest = latestMap[s.id] ?? null;

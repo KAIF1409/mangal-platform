@@ -14,6 +14,9 @@ interface Series {
   reading_mode: 'scroll' | 'page';
   views: number;
 }
+interface SeriesTagRow extends Series {
+  status: string;
+}
 
 function formatViews(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -87,8 +90,8 @@ export default function TagPage({ params }: { params: Promise<{ slug: string }> 
 
       if (rows) {
         const list = rows
-          .map((r: any) => (Array.isArray(r.series) ? r.series[0] : r.series))
-          .filter((s: any) => s && s.status === 'published');
+          .map((r: { series: SeriesTagRow[] | SeriesTagRow | null }) => (Array.isArray(r.series) ? r.series[0] : r.series))
+          .filter((s): s is SeriesTagRow => !!s && s.status === 'published');
         setSeries(list);
       }
       setLoading(false);

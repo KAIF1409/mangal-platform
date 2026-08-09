@@ -26,6 +26,10 @@ interface Series {
   chapter_count?: number;
 }
 
+interface SeriesQueryRow extends Omit<Series, 'chapter_count'> {
+  chapters: { count: number }[] | { count: number } | null;
+}
+
 type SortOption = 'latest' | 'views' | 'az';
 
 // Step 2 — Reading Progress: one resumable series for the "Continue Reading" row
@@ -149,7 +153,7 @@ export default function HomePage() {
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (data) {
-          const normalized = data.map((s: any) => ({
+          const normalized = data.map((s: SeriesQueryRow) => ({
             ...s,
             chapter_count: Array.isArray(s.chapters) ? (s.chapters[0]?.count ?? 0) : 0,
           }));
@@ -447,7 +451,7 @@ export default function HomePage() {
               color: activeGenre === g ? '#fff' : 'var(--text-tertiary)',
               transition: 'all 0.15s',
             }}>
-              {t(GENRE_KEYS[g] as any)}
+              {t(GENRE_KEYS[g])}
             </button>
           ))}
         </div>
@@ -544,7 +548,7 @@ export default function HomePage() {
                   {showDesiComics
                     ? `🇮🇳 ${t('desiComics')}`
                     : activeGenre !== 'All'
-                    ? `${t(GENRE_KEYS[activeGenre] as any)} ${t('genreSeriesSuffix')}`
+                    ? `${t(GENRE_KEYS[activeGenre])} ${t('genreSeriesSuffix')}`
                     : t('allSeries')}
                 </h2>
 

@@ -24,7 +24,7 @@ export default function TagsIndexPage() {
         .order('name');
       if (data) {
         const withCounts = data
-          .map((t: any) => ({
+          .map((t: { id: string; name: string; slug: string; series_tags: { count: number }[] | { count: number } | null }) => ({
             id: t.id,
             name: t.name,
             slug: t.slug,

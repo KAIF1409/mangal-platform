@@ -28,6 +28,28 @@ interface HistoryEntry {
 
 const STORAGE_KEY = 'mangal_content_type';
 
+interface ProgressSeriesRow {
+  title: string;
+  cover_url: string | null;
+  genre: string | null;
+  content_type: ContentType;
+}
+interface ProgressChapterRow {
+  chapter_number: number | null;
+  title: string | null;
+}
+interface ProgressRow {
+  series_id: string;
+  chapter_id: string;
+  page_number: number;
+  updated_at: string;
+  series: ProgressSeriesRow | ProgressSeriesRow[] | null;
+  chapter: ProgressChapterRow | ProgressChapterRow[] | null;
+}
+interface ChapterCountRow {
+  series_id: string;
+}
+
 export default function HistoryPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,18 +91,18 @@ export default function HistoryPage() {
       if (!progress || progress.length === 0) { setLoading(false); return; }
 
       // Batch fetch chapter counts for all series in history
-      const seriesIds = progress.map((p: any) => p.series_id);
+      const seriesIds = progress.map((p: ProgressRow) => p.series_id);
       const { data: allChapters } = await supabase
         .from('chapters')
         .select('series_id')
         .in('series_id', seriesIds);
 
       const countMap: Record<string, number> = {};
-      (allChapters ?? []).forEach((ch: any) => {
+      (allChapters ?? []).forEach((ch: ChapterCountRow) => {
         countMap[ch.series_id] = (countMap[ch.series_id] ?? 0) + 1;
       });
 
-      const entries: HistoryEntry[] = progress.map((p: any) => {
+      const entries: HistoryEntry[] = progress.map((p: ProgressRow) => {
         const s = Array.isArray(p.series) ? p.series[0] : p.series;
         const ch = Array.isArray(p.chapter) ? p.chapter[0] : p.chapter;
         return {
