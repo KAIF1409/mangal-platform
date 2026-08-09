@@ -20,7 +20,10 @@ interface Series {
   status: 'draft' | 'published';
   created_at: string;
   views: number;
+  chapter_count?: number;
 }
+
+type SortOption = 'latest' | 'views' | 'az';
 
 // Step 2 — Reading Progress: one resumable series for the "Continue Reading" row
 interface ContinueItem {
@@ -71,6 +74,7 @@ export default function HomePage() {
   // founder's request. Independent of activeGenre/activeContentType so it
   // can layer on top of either filter state.
   const [showDesiComics, setShowDesiComics] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('latest');
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [isCreator, setIsCreator] = useState(false);
@@ -124,13 +128,22 @@ export default function HomePage() {
       }
     });
 
+    // Step 24 — chapters(count) is a single embedded aggregate query (Supabase/
+    // PostgREST FK count), not a per-series round trip — safe at homepage scale.
     supabase
       .from('series')
-      .select('*')
+      .select('*, chapters(count)')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        if (data) { setSeries(data); setFiltered(data); }
+        if (data) {
+          const normalized = data.map((s: any) => ({
+            ...s,
+            chapter_count: Array.isArray(s.chapters) ? (s.chapters[0]?.count ?? 0) : 0,
+          }));
+          setSeries(normalized);
+          setFiltered(normalized);
+        }
         setLoading(false);
       });
 
@@ -158,8 +171,17 @@ export default function HomePage() {
     if (activeGenre !== 'All') result = result.filter(s => s.genre === activeGenre);
     if (activeContentType !== 'all') result = result.filter(s => s.content_type === activeContentType);
     if (showDesiComics) result = result.filter(s => s.genre && DESI_GENRES.includes(s.genre));
+
+    // Step 24 — sort control. 'latest' relies on the query's own created_at
+    // ordering (already newest-first), so no extra sort needed for it.
+    if (sortBy === 'views') {
+      result = [...result].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+    } else if (sortBy === 'az') {
+      result = [...result].sort((a, b) => a.title.localeCompare(b.title));
+    }
+
     setFiltered(result);
-  }, [activeGenre, activeContentType, showDesiComics, series]);
+  }, [activeGenre, activeContentType, showDesiComics, sortBy, series]);
 
   const featured = filtered.slice(0, 3);
   const rest = filtered.slice(3);
@@ -433,8 +455,8 @@ export default function HomePage() {
                   {t('trendingThisWeek')}
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '40px' }}>
-                  {trending.filter(s => activeContentType === 'all' || s.content_type === activeContentType).map(s => (
-                    <SeriesCard key={s.id} series={s} />
+                  {trending.filter(s => activeContentType === 'all' || s.content_type === activeContentType).map((s, i) => (
+                    <SeriesCard key={s.id} series={s} rank={i + 1} />
                   ))}
                 </div>
               </section>
@@ -487,13 +509,39 @@ export default function HomePage() {
 
             {/* ── ALL SERIES GRID ── */}
             <section id="new" style={{ padding: '8px 0 40px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: '#fff' }}>
-                {showDesiComics
-                  ? `🇮🇳 ${t('desiComics')}`
-                  : activeGenre !== 'All'
-                  ? `${t(GENRE_KEYS[activeGenre] as any)} ${t('genreSeriesSuffix')}`
-                  : t('allSeries')}
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: '10px', marginBottom: '16px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#fff' }}>
+                  {showDesiComics
+                    ? `🇮🇳 ${t('desiComics')}`
+                    : activeGenre !== 'All'
+                    ? `${t(GENRE_KEYS[activeGenre] as any)} ${t('genreSeriesSuffix')}`
+                    : t('allSeries')}
+                </h2>
+
+                {/* Step 24 — Sort control */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', color: '#4b5563', fontWeight: 600 }}>Sort:</span>
+                  <div style={{ display: 'flex', gap: '2px', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '8px', padding: '3px' }}>
+                    {([
+                      { value: 'latest', label: 'Latest' },
+                      { value: 'views', label: 'Most Viewed' },
+                      { value: 'az', label: 'A–Z' },
+                    ] as const).map(({ value, label }) => (
+                      <button
+                        key={value}
+                        onClick={() => setSortBy(value)}
+                        style={{
+                          padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                          background: sortBy === value ? '#1a1a26' : 'transparent',
+                          color: sortBy === value ? '#fff' : '#6b7280',
+                          fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap',
+                          transition: 'background 0.15s, color 0.15s',
+                        }}
+                      >{label}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
                 {(activeGenre !== 'All' || showDesiComics ? filtered : rest).map(s => (
                   <SeriesCard key={s.id} series={s} />
@@ -627,10 +675,14 @@ function FeaturedCard({ series }: { series: Series }) {
 }
 
 /* ── SERIES CARD (portrait/grid) ── */
-function SeriesCard({ series }: { series: Series }) {
+// Step 24 — `rank` is optional: when passed (Trending row), renders a
+// numbered badge over the top-left corner of the cover. Also now shows the
+// chapter count next to the view count, since that's a key trust signal
+// Webnovel-style sites always surface up front.
+function SeriesCard({ series, rank }: { series: Series; rank?: number }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}
+    <a href={`/series/${series.id}`} style={{ textDecoration: 'none', position: 'relative', display: 'block' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}>
       <div style={{
@@ -646,6 +698,22 @@ function SeriesCard({ series }: { series: Series }) {
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
           )}
+
+          {/* Step 24 — rank badge, top-left, only when rank is passed */}
+          {rank && (
+            <div style={{
+              position: 'absolute', top: '8px', left: '8px',
+              width: '24px', height: '24px', borderRadius: '6px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '12px', fontWeight: 900, color: '#fff',
+              background: rank <= 3 ? 'linear-gradient(135deg, #d97706, #ef4444)' : 'rgba(0,0,0,0.75)',
+              boxShadow: rank <= 3 ? '0 2px 8px rgba(217,119,6,0.5)' : 'none',
+              border: rank <= 3 ? 'none' : '1px solid #2a2a3a',
+            }}>
+              {rank}
+            </div>
+          )}
+
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
             background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
@@ -677,7 +745,12 @@ function SeriesCard({ series }: { series: Series }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: '#4b5563' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {typeof series.chapter_count === 'number' && (
+                <span style={{ fontSize: '9px', color: '#4b5563' }}>{series.chapter_count} ch</span>
+              )}
+              <span style={{ fontSize: '9px', color: '#4b5563' }}>👁 {formatViews(series.views ?? 0)}</span>
+            </div>
           </div>
         </div>
       </div>
