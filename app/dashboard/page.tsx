@@ -946,6 +946,32 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* Reader Trends — mirrors inkstone's "Daily Key Metrics" line chart.
+                    Plain inline SVG so we don't pull in a charting library just
+                    for one sparkline. Flat zero line until per-day view logging
+                    exists — same honesty as the "not tracked yet" note below. */}
+                <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
+                  📉 Reader Trends (7 days)
+                </h3>
+                <div style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
+                  padding: '20px', marginBottom: '24px',
+                }}>
+                  <svg viewBox="0 0 700 140" style={{ width: '100%', height: '140px', display: 'block' }}>
+                    <line x1="0" y1="110" x2="700" y2="110" stroke="var(--divider)" strokeWidth="1" />
+                    <polyline
+                      points="0,108 116,108 233,108 350,108 466,108 583,108 700,108"
+                      fill="none" stroke="var(--accent)" strokeWidth="2"
+                    />
+                  </svg>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-faint)', marginTop: '4px' }}>
+                    {['-6d', '-5d', '-4d', '-3d', '-2d', '-1d', 'Today'].map((d) => <span key={d}>{d}</span>)}
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px', marginTop: '14px', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                    <span><span style={{ color: 'var(--accent)' }}>●</span> Reader Count</span>
+                  </div>
+                </div>
+
                 {/* News & Updates — mirrors inkstone's News/Inbox tabbed panel.
                     Static for now since there's no announcements table yet. */}
                 <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
