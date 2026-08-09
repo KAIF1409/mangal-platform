@@ -44,7 +44,7 @@ const MIN_WORDS_PER_CHAPTER = 300;
 export default function CreatorUploadPage() {
   return (
     <Suspense fallback={
-      <main style={{ minHeight: '100vh', backgroundColor: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
+      <main style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', }}>
         Loading...
       </main>
     }>
@@ -228,19 +228,19 @@ function UploadFlow() {
 
   const inputStyle = {
     width: '100%', padding: '11px 14px', borderRadius: '10px',
-    background: '#08080c', border: '1px solid #1f1f2e',
-    color: '#f9fafb', fontSize: '13px', outline: 'none',
+    background: 'var(--bg-input)', border: '1px solid var(--border-light)',
+    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
     boxSizing: 'border-box' as const, fontFamily: 'inherit',
   };
   const labelStyle = {
     display: 'block', fontSize: '10px', fontWeight: 700 as const,
-    color: '#6b7280', letterSpacing: '0.12em', textTransform: 'uppercase' as const,
+    color: 'var(--text-tertiary)', letterSpacing: '0.12em', textTransform: 'uppercase' as const,
     marginBottom: '6px',
   };
   const toolbarBtnStyle = {
     padding: '6px 10px', borderRadius: '6px',
-    background: '#08080c', border: '1px solid #1f1f2e',
-    color: '#9ca3af', fontSize: '11px', fontWeight: 700 as const,
+    background: 'var(--bg-input)', border: '1px solid var(--border-light)',
+    color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 700 as const,
     cursor: 'pointer' as const,
   };
   const toolbarBtnActiveStyle = {
@@ -818,17 +818,17 @@ function UploadFlow() {
   // "***" appearing inline — see novelEditor.ts header comment for details.)
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#07070a', padding: '40px 24px', }}>
+    <main style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', padding: '40px 24px', }}>
       <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-        <a href={seriesId ? `/series/${seriesId}` : '/dashboard'} style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>← Back to {seriesId ? 'Series' : 'Dashboard'}</a>
+        <a href={seriesId ? `/series/${seriesId}` : '/dashboard'} style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to {seriesId ? 'Series' : 'Dashboard'}</a>
         <div style={{ marginTop: '16px' }} />
         <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em', color: '#d97706', background: 'rgba(120,53,15,0.25)', border: '1px solid rgba(180,83,9,0.3)', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' as const }}>
           Mangal Engine V1.0
         </span>
-        <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#fff', margin: '16px 0 4px' }}>
+        <h1 style={{ fontSize: '36px', fontWeight: 900, color: 'var(--text-primary)', margin: '16px 0 4px' }}>
           {step === 'series' ? 'Start a New Story' : isEditMode ? 'Edit Chapter' : justPublishedChapterId ? 'Chapter Published' : contentType === 'novel' ? 'Write Chapter' : 'Upload Pages'}
         </h1>
-        <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '32px' }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginBottom: '32px' }}>
           {step === 'series'
             ? 'Tell readers what your series is about'
             : justPublishedChapterId
@@ -837,7 +837,7 @@ function UploadFlow() {
         </p>
 
         {editLoading && (
-          <div style={{ textAlign: 'center' as const, padding: '40px', color: '#6b7280', fontSize: '13px' }}>
+          <div style={{ textAlign: 'center' as const, padding: '40px', color: 'var(--text-tertiary)', fontSize: '13px' }}>
             Loading chapter...
           </div>
         )}
@@ -853,7 +853,7 @@ function UploadFlow() {
         {error && <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '12px', marginBottom: '16px' }}>{error}</div>}
         {message && !justPublishedChapterId && <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '12px', marginBottom: '16px' }}>{message}</div>}
 
-        <div style={{ background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '20px', padding: '32px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '32px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
 
           {/* STEP 1: SERIES INFO */}
           {step === 'series' && (
@@ -865,8 +865,8 @@ function UploadFlow() {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}>
                   <div style={{
                     width: '90px', height: '120px', borderRadius: '10px', overflow: 'hidden' as const,
-                    border: '2px dashed #1f1f2e', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: '#08080c', flexShrink: 0, position: 'relative',
+                    border: '2px dashed var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'var(--bg-input)', flexShrink: 0, position: 'relative',
                   }}>
                     {coverPreview ? (
                       <Image src={coverPreview} alt="Cover" fill sizes="90px" unoptimized style={{ objectFit: 'cover' }} />
@@ -874,7 +874,7 @@ function UploadFlow() {
                       <span style={{ fontSize: '22px' }}>📷</span>
                     )}
                   </div>
-                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
                     {coverPreview ? 'Change cover photo' : 'Click to upload a cover photo'}
                   </span>
                   <input type="file" accept="image/*" onChange={handleCoverSelect} style={{ display: 'none' }} />
@@ -885,10 +885,10 @@ function UploadFlow() {
               <div>
                 <label style={labelStyle}>Content Type</label>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button onClick={() => setContentType('mangal')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: contentType === 'mangal' ? '1px solid #dc2626' : '1px solid #1f1f2e', background: contentType === 'mangal' ? 'rgba(127,29,29,0.2)' : '#08080c', color: contentType === 'mangal' ? '#fff' : '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                  <button onClick={() => setContentType('mangal')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: contentType === 'mangal' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: contentType === 'mangal' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: contentType === 'mangal' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
                     📖 Comic<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Pages with images</span>
                   </button>
-                  <button onClick={() => setContentType('novel')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: contentType === 'novel' ? '1px solid #dc2626' : '1px solid #1f1f2e', background: contentType === 'novel' ? 'rgba(127,29,29,0.2)' : '#08080c', color: contentType === 'novel' ? '#fff' : '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                  <button onClick={() => setContentType('novel')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: contentType === 'novel' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: contentType === 'novel' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: contentType === 'novel' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
                     📕 Novel<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Text chapters</span>
                   </button>
                 </div>
@@ -925,17 +925,17 @@ function UploadFlow() {
                 <div>
                   <label style={labelStyle}>Reading Mode</label>
                   <div style={{ display: 'flex', gap: '12px' }}>
-                    <button onClick={() => setReadingMode('scroll')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'scroll' ? '1px solid #dc2626' : '1px solid #1f1f2e', background: readingMode === 'scroll' ? 'rgba(127,29,29,0.2)' : '#08080c', color: readingMode === 'scroll' ? '#fff' : '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                    <button onClick={() => setReadingMode('scroll')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'scroll' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingMode === 'scroll' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingMode === 'scroll' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
                       📜 Vertical Scroll<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Webtoon style</span>
                     </button>
-                    <button onClick={() => setReadingMode('page')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'page' ? '1px solid #dc2626' : '1px solid #1f1f2e', background: readingMode === 'page' ? 'rgba(127,29,29,0.2)' : '#08080c', color: readingMode === 'page' ? '#fff' : '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                    <button onClick={() => setReadingMode('page')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'page' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingMode === 'page' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingMode === 'page' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
                       📖 Page by Page<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Traditional manga</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              <button onClick={handleCreateSeries} disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', border: '1px solid #7f1d1d', borderRadius: '12px', color: loading ? '#6b7280' : '#fff', fontSize: '13px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px' }}>
+              <button onClick={handleCreateSeries} disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', border: '1px solid #7f1d1d', borderRadius: '12px', color: loading ? 'var(--text-tertiary)' : '#fff', fontSize: '13px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px' }}>
                 {loading ? 'Creating...' : contentType === 'novel' ? '➡️ Continue — Write Chapter' : '➡️ Continue — Upload Pages'}
               </button>
             </div>
@@ -962,7 +962,7 @@ function UploadFlow() {
               {seriesId && (
                 <a href={`/series/${seriesId}`} style={{
                   display: 'block', width: '100%', padding: '14px', background: 'transparent',
-                  border: '1px solid #1f1f2e', borderRadius: '12px', color: '#9ca3af',
+                  border: '1px solid var(--border-light)', borderRadius: '12px', color: 'var(--text-secondary)',
                   fontSize: '13px', fontWeight: 600, textDecoration: 'none', boxSizing: 'border-box' as const,
                 }}>
                   ✅ I&apos;m Done — Go to Series Page
@@ -988,7 +988,7 @@ function UploadFlow() {
                 <>
                   <div>
                     <label style={labelStyle}>Comic Pages (order will be kept as shown)</label>
-                    <label style={{ display: 'block', padding: '24px', textAlign: 'center' as const, border: '2px dashed #1f1f2e', borderRadius: '12px', cursor: checkingQuality ? 'wait' : 'pointer', color: '#6b7280', fontSize: '12px' }}>
+                    <label style={{ display: 'block', padding: '24px', textAlign: 'center' as const, border: '2px dashed var(--border-light)', borderRadius: '12px', cursor: checkingQuality ? 'wait' : 'pointer', color: 'var(--text-tertiary)', fontSize: '12px' }}>
                       {checkingQuality ? '🔍 Checking image quality...' : '📤 Click to select pages (multiple images, in order)'}
                       <input type="file" accept="image/*" multiple onChange={handleFileSelect} disabled={checkingQuality} style={{ display: 'none' }} />
                     </label>
@@ -1006,7 +1006,7 @@ function UploadFlow() {
                       {totalMangaPageCount} / {MIN_PAGES_PER_CHAPTER} pages minimum
                     </span>
                     {totalMangaPageCount < MIN_PAGES_PER_CHAPTER && (
-                      <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                         {MIN_PAGES_PER_CHAPTER - totalMangaPageCount} more needed to publish
                       </span>
                     )}
@@ -1025,7 +1025,7 @@ function UploadFlow() {
                   {pages.length > 0 && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
                       {pages.map((item, i) => (
-                        <div key={item.kind === 'existing' ? item.id : `new-${i}`} style={{ position: 'relative' as const, border: `1px solid ${item.kind === 'new' ? 'rgba(217,119,6,0.4)' : '#1f1f2e'}`, borderRadius: '8px', overflow: 'hidden', height: '120px' }}>
+                        <div key={item.kind === 'existing' ? item.id : `new-${i}`} style={{ position: 'relative' as const, border: `1px solid ${item.kind === 'new' ? 'rgba(217,119,6,0.4)' : 'var(--border-light)'}`, borderRadius: '8px', overflow: 'hidden', height: '120px' }}>
                           <Image
                             src={item.kind === 'existing' ? item.image_url : item.preview}
                             alt={`Page ${i + 1}`}
@@ -1038,10 +1038,10 @@ function UploadFlow() {
                           {item.kind === 'new' && (
                             <div style={{ position: 'absolute' as const, top: 4, right: 4, background: 'rgba(217,119,6,0.85)', color: '#fff', fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>NEW</div>
                           )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between' as const, background: '#08080c', padding: '4px' }}>
-                            <button onClick={() => movePage(i, -1)} disabled={i === 0} style={{ background: 'none', border: 'none', color: i === 0 ? '#374151' : '#9ca3af', cursor: i === 0 ? 'not-allowed' : 'pointer', fontSize: '11px' }}>⬅️</button>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' as const, background: 'var(--bg-input)', padding: '4px' }}>
+                            <button onClick={() => movePage(i, -1)} disabled={i === 0} style={{ background: 'none', border: 'none', color: i === 0 ? 'var(--text-faint)' : 'var(--text-secondary)', cursor: i === 0 ? 'not-allowed' : 'pointer', fontSize: '11px' }}>⬅️</button>
                             <button onClick={() => removePage(i)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '11px' }}>🗑️</button>
-                            <button onClick={() => movePage(i, 1)} disabled={i === pages.length - 1} style={{ background: 'none', border: 'none', color: i === pages.length - 1 ? '#374151' : '#9ca3af', cursor: i === pages.length - 1 ? 'not-allowed' : 'pointer', fontSize: '11px' }}>➡️</button>
+                            <button onClick={() => movePage(i, 1)} disabled={i === pages.length - 1} style={{ background: 'none', border: 'none', color: i === pages.length - 1 ? 'var(--text-faint)' : 'var(--text-secondary)', cursor: i === pages.length - 1 ? 'not-allowed' : 'pointer', fontSize: '11px' }}>➡️</button>
                           </div>
                         </div>
                       ))}
@@ -1053,9 +1053,9 @@ function UploadFlow() {
                     disabled={loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER}
                     style={{
                       width: '100%', padding: '14px',
-                      background: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                      background: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
                       border: '1px solid #7f1d1d', borderRadius: '12px',
-                      color: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? '#6b7280' : '#fff',
+                      color: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'var(--text-tertiary)' : '#fff',
                       fontSize: '13px', fontWeight: 700,
                       cursor: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'not-allowed' : 'pointer',
                     }}
@@ -1109,7 +1109,7 @@ function UploadFlow() {
                     {novelPreviewMode ? (
                       <div
                         style={{ ...inputStyle, minHeight: '380px', lineHeight: 1.7, fontFamily: 'Georgia, "Noto Serif", serif', fontSize: '14px', overflowY: 'auto' as const }}
-                        dangerouslySetInnerHTML={{ __html: novelContent.trim() ? renderNovelPreviewHtml(novelContent) : '<p style="color:#4b5563;">Nothing to preview yet — start writing.</p>' }}
+                        dangerouslySetInnerHTML={{ __html: novelContent.trim() ? renderNovelPreviewHtml(novelContent) : '<p style="color:var(--text-muted);">Nothing to preview yet — start writing.</p>' }}
                       />
                     ) : (
                       <textarea
@@ -1133,9 +1133,9 @@ function UploadFlow() {
 
                   {/* Focus mode — full-screen distraction-free overlay, same textarea state */}
                   {novelFocusMode && (
-                    <div style={{ position: 'fixed' as const, inset: 0, background: '#07070a', zIndex: 1000, display: 'flex', flexDirection: 'column' as const, padding: '32px' }}>
+                    <div style={{ position: 'fixed' as const, inset: 0, background: 'var(--bg-primary)', zIndex: 1000, display: 'flex', flexDirection: 'column' as const, padding: '32px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '760px', margin: '0 auto 16px', width: '100%' }}>
-                        <span style={{ fontSize: '12px', color: '#6b7280' }}>{countWords(novelContent)} words · {estimateReadTime(countWords(novelContent))}</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{countWords(novelContent)} words · {estimateReadTime(countWords(novelContent))}</span>
                         <button type="button" onClick={() => setNovelFocusMode(false)} style={toolbarBtnStyle}>✕ Exit Focus Mode</button>
                       </div>
                       <textarea
@@ -1147,7 +1147,7 @@ function UploadFlow() {
                         style={{
                           flex: 1, width: '100%', maxWidth: '760px', margin: '0 auto',
                           background: 'transparent', border: 'none', outline: 'none', resize: 'none' as const,
-                          color: '#e5e7eb', lineHeight: 1.9, fontFamily: 'Georgia, "Noto Serif", serif', fontSize: '17px',
+                          color: 'var(--text-soft)', lineHeight: 1.9, fontFamily: 'Georgia, "Noto Serif", serif', fontSize: '17px',
                         }}
                       />
                     </div>
@@ -1163,13 +1163,13 @@ function UploadFlow() {
                     <span style={{ fontSize: '12px', fontWeight: 700, color: countWords(novelContent) >= MIN_WORDS_PER_CHAPTER ? '#10b981' : '#d97706' }}>
                       {countWords(novelContent)} / {MIN_WORDS_PER_CHAPTER} words minimum
                     </span>
-                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                       {estimateReadTime(countWords(novelContent))}
                     </span>
                   </div>
 
                   {!isEditMode && (
-                    <p style={{ fontSize: '10px', color: '#4b5563', margin: 0 }}>
+                    <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>
                       💾 Draft auto-saves on this device as you type — safe even if the tab closes.
                     </p>
                   )}
@@ -1222,8 +1222,8 @@ function UploadFlow() {
                       disabled={loading || savingDraft}
                       style={{
                         flex: 1, padding: '14px',
-                        background: '#08080c', border: '1px solid #1f1f2e', borderRadius: '12px',
-                        color: (loading || savingDraft) ? '#4b5563' : '#9ca3af',
+                        background: 'var(--bg-input)', border: '1px solid var(--border-light)', borderRadius: '12px',
+                        color: (loading || savingDraft) ? 'var(--text-muted)' : 'var(--text-secondary)',
                         fontSize: '13px', fontWeight: 700,
                         cursor: (loading || savingDraft) ? 'not-allowed' : 'pointer',
                       }}
@@ -1235,9 +1235,9 @@ function UploadFlow() {
                       disabled={loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER}
                       style={{
                         flex: 2, padding: '14px',
-                        background: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                        background: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
                         border: '1px solid #7f1d1d', borderRadius: '12px',
-                        color: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? '#6b7280' : '#fff',
+                        color: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? 'var(--text-tertiary)' : '#fff',
                         fontSize: '13px', fontWeight: 700,
                         cursor: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? 'not-allowed' : 'pointer',
                       }}

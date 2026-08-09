@@ -17,8 +17,12 @@
 :root {
   --bg-primary: #07070a;
   --bg-card: #0d0d14;
+  --bg-input: #08080c;
   --border-color: #1a1a26;
+  --border-light: #1f1f2e;
+  --divider: #14141e;
   --text-primary: #f9fafb;
+  --text-soft: #e5e7eb;
   --text-secondary: #9ca3af;
   --text-tertiary: #6b7280;
   --text-muted: #4b5563;
@@ -32,8 +36,12 @@
 [data-theme='light'] {
   --bg-primary: #ffffff;
   --bg-card: #f7f7f9;
+  --bg-input: #f0f0f3;
   --border-color: #e5e7eb;
+  --border-light: #d8dbe0;
+  --divider: #edeef1;
   --text-primary: #14141c;
+  --text-soft: #1f2430;
   --text-secondary: #4b5563;
   --text-tertiary: #6b7280;
   --text-muted: #9ca3af;

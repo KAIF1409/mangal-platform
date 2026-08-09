@@ -63,11 +63,11 @@ interface AnalyticsData {
 function SeriesMiniStat({ label, value, dotColor }: { label: string; value: string; dotColor?: string }) {
   return (
     <div>
-      <div style={{ fontSize: '9px', color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+      <div style={{ fontSize: '9px', color: 'var(--text-tertiary)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
         {dotColor && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: dotColor, display: 'inline-block' }} />}
         {label}
       </div>
-      <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>{value}</div>
+      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>{value}</div>
     </div>
   );
 }
@@ -91,7 +91,7 @@ const STATUS_CYCLE: Story['completion_status'][] = ['ongoing', 'completed', 'hia
 const STATUS_CONFIG: Record<Story['completion_status'], { label: string; ring: string; dot: string; bg: string }> = {
   ongoing: { label: 'Ongoing', ring: '#d97706', dot: '#d97706', bg: 'rgba(217,119,6,0.12)' },
   completed: { label: 'Completed', ring: '#10b981', dot: '#10b981', bg: 'rgba(16,185,129,0.12)' },
-  hiatus: { label: 'Hiatus', ring: '#6b7280', dot: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
+  hiatus: { label: 'Hiatus', ring: 'var(--text-tertiary)', dot: 'var(--text-tertiary)', bg: 'rgba(107,114,128,0.12)' },
 };
 
 export default function Dashboard() {
@@ -357,7 +357,7 @@ export default function Dashboard() {
 
   const navLinkStyle = (active = false) => ({
     fontSize: '13px',
-    color: active ? '#fff' : '#6b7280',
+    color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
     fontWeight: active ? 700 : 500,
     textDecoration: 'none',
     borderBottom: active ? '2px solid #d97706' : '2px solid transparent',
@@ -368,9 +368,9 @@ export default function Dashboard() {
   const tabButtonStyle = (active: boolean) => ({
     padding: '8px 18px',
     borderRadius: '9px',
-    border: active ? '1px solid rgba(217,119,6,0.4)' : '1px solid #1a1a26',
-    background: active ? 'rgba(217,119,6,0.12)' : '#0d0d14',
-    color: active ? '#d97706' : '#6b7280',
+    border: active ? '1px solid rgba(217,119,6,0.4)' : '1px solid var(--border-color)',
+    background: active ? 'rgba(217,119,6,0.12)' : 'var(--bg-card)',
+    color: active ? '#d97706' : 'var(--text-tertiary)',
     fontSize: '12px',
     fontWeight: 700,
     cursor: 'pointer' as const,
@@ -380,7 +380,7 @@ export default function Dashboard() {
 
   if (!roleChecked) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4b5563', fontSize: '13px' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
         Loading...
       </div>
     );
@@ -388,11 +388,11 @@ export default function Dashboard() {
 
   if (!isCreator) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ width: '100%', maxWidth: '420px', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '20px', padding: '40px 32px', textAlign: 'center' as const, boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ width: '100%', maxWidth: '420px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '40px 32px', textAlign: 'center' as const, boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
           <div style={{ fontSize: '36px', marginBottom: '14px' }}>📖</div>
-          <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>{t('forCreatorsTitle')}</h2>
-          <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, margin: '0 0 28px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 8px' }}>{t('forCreatorsTitle')}</h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 28px' }}>
             {t('forCreatorsBody')}
           </p>
           <Link href="/" style={{
@@ -419,7 +419,7 @@ export default function Dashboard() {
   const selectedStory = stories.find((s) => s.id === selectedSeriesId) || stories[0];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
 
       {/* Global responsive rules. Plain <style> tag because: (a) @keyframes
           can't be expressed in React inline styles, and (b) media queries
@@ -490,15 +490,15 @@ export default function Dashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* Step 22 — Hindi UI Toggle, left of ProfileMenu so the profile chip
                 stays the rightmost element, same placement as the homepage. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '8px', padding: '3px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '3px', flexShrink: 0 }}>
               {LANGUAGES.map(({ code, label }) => (
                 <button
                   key={code}
                   onClick={() => setLang(code)}
                   style={{
                     padding: '5px 10px', borderRadius: '6px', border: 'none',
-                    background: lang === code ? '#1a1a26' : 'transparent',
-                    color: lang === code ? '#fff' : '#6b7280',
+                    background: lang === code ? 'var(--border-color)' : 'transparent',
+                    color: lang === code ? 'var(--text-primary)' : 'var(--text-tertiary)',
                     fontSize: '11px', fontWeight: 700, cursor: 'pointer',
                     transition: 'background 0.15s, color 0.15s',
                   }}
@@ -538,12 +538,12 @@ export default function Dashboard() {
         }}>
           {t('myCreatorDashboard')}
         </h1>
-        <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: 0 }}>
           {t('manageSeriesIntro')}{' '}
           <a href="/upload" style={{ color: '#d97706', fontWeight: 700, textDecoration: 'none' }}>{t('createNewArrow')}</a>
         </p>
 
-        <div style={{ height: '1px', background: '#1a1a26', margin: '24px 0' }} />
+        <div style={{ height: '1px', background: 'var(--border-color)', margin: '24px 0' }} />
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
           <button onClick={() => setActiveTab('series')} style={tabButtonStyle(activeTab === 'series')}>
@@ -556,16 +556,16 @@ export default function Dashboard() {
 
         {activeTab === 'series' ? (
           <>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: '#fff' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-primary)' }}>
               {t('mySeriesCount')} ({stories.length})
             </h2>
 
             {fetching ? (
-              <p style={{ fontSize: '13px', color: '#4b5563' }}>{t('loadingSeries')}</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('loadingSeries')}</p>
             ) : stories.length === 0 ? (
-              <div style={{ textAlign: 'center' as const, padding: '60px 0', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px' }}>
+              <div style={{ textAlign: 'center' as const, padding: '60px 0', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px' }}>
                 <div style={{ fontSize: '40px', marginBottom: '12px' }}>📖</div>
-                <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '16px' }}>{t('noSeriesYet')}</p>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', marginBottom: '16px' }}>{t('noSeriesYet')}</p>
                 <a href="/upload" style={{
                   display: 'inline-block', padding: '12px 28px', borderRadius: '10px',
                   background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
@@ -576,8 +576,8 @@ export default function Dashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                 {stories.map((story) => (
                   <div key={story.id} className="mangal-story-card" style={{
-                    background: '#0d0d14',
-                    border: '1px solid #1a1a26',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '14px',
                     overflow: 'hidden' as const,
                     position: 'relative' as const,
@@ -591,7 +591,7 @@ export default function Dashboard() {
                     <a href={`/series/${story.id}`} className="mangal-story-cover" style={{ flexShrink: 0, textDecoration: 'none' }}>
                       <div style={{
                         width: '100%', height: '100%', minHeight: '120px',
-                        background: story.cover_url ? 'none' : 'linear-gradient(135deg, #1a0a0a, #0d0d14)',
+                        background: story.cover_url ? 'none' : 'linear-gradient(135deg, #1a0a0a, var(--bg-card))',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         position: 'relative',
                       }}>
@@ -606,7 +606,7 @@ export default function Dashboard() {
                     <div style={{ padding: '16px', flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' as const, alignItems: 'flex-start' as const, gap: '8px' }}>
                         <a href={`/series/${story.id}`} style={{ textDecoration: 'none' }}>
-                          <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 4px 0', color: '#fff' }}>
+                          <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
                             {story.title}
                           </h3>
                         </a>
@@ -621,7 +621,7 @@ export default function Dashboard() {
                       </div>
 
                       <p style={{
-                        fontSize: '11px', color: '#9ca3af', margin: '0 0 10px 0', lineHeight: '1.5',
+                        fontSize: '11px', color: 'var(--text-secondary)', margin: '0 0 10px 0', lineHeight: '1.5',
                         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
                       }}>
                         {story.synopsis}
@@ -635,8 +635,8 @@ export default function Dashboard() {
                           onClick={(e) => { e.stopPropagation(); toggleChapterList(story.id); }}
                           title={expandedSeriesId === story.id ? 'Collapse chapters' : 'Expand chapters'}
                           style={{
-                            fontSize: '9px', color: expandedSeriesId === story.id ? '#d97706' : '#6b7280',
-                            background: expandedSeriesId === story.id ? 'rgba(120,53,15,0.18)' : '#08080c',
+                            fontSize: '9px', color: expandedSeriesId === story.id ? '#d97706' : 'var(--text-tertiary)',
+                            background: expandedSeriesId === story.id ? 'rgba(120,53,15,0.18)' : 'var(--bg-input)',
                             border: expandedSeriesId === story.id ? '1px solid rgba(180,83,9,0.3)' : '1px solid transparent',
                             padding: '2px 7px', borderRadius: '5px', cursor: 'pointer',
                             transition: 'all 0.15s',
@@ -646,14 +646,14 @@ export default function Dashboard() {
                         </button>
                         <span style={{
                           fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '5px',
-                          background: story.content_type === 'novel' ? 'rgba(124,58,237,0.15)' : '#08080c',
-                          color: story.content_type === 'novel' ? '#a78bfa' : '#6b7280',
+                          background: story.content_type === 'novel' ? 'rgba(124,58,237,0.15)' : 'var(--bg-input)',
+                          color: story.content_type === 'novel' ? '#a78bfa' : 'var(--text-tertiary)',
                         }}>
                           {story.content_type === 'novel' ? '📕 Novel' : (story.reading_mode === 'scroll' ? '📜 Scroll' : '📖 Page')}
                         </span>
 
                         {/* Step 28 — view count, previously only visible in the Analytics tab */}
-                        <span style={{ fontSize: '9px', fontWeight: 700, color: '#4b5563', padding: '2px 7px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', padding: '2px 7px' }}>
                           👁 {formatViews(story.views ?? 0)}
                         </span>
 
@@ -692,12 +692,12 @@ export default function Dashboard() {
                       {expandedSeriesId === story.id && (
                         <div style={{
                           margin: '4px 0 10px',
-                          border: '1px solid #1a1a26',
+                          border: '1px solid var(--border-color)',
                           borderRadius: '8px',
                           overflow: 'hidden',
                         }}>
                           {(chaptersBySeriesId[story.id] || []).length === 0 ? (
-                            <div style={{ padding: '10px 12px', fontSize: '11px', color: '#4b5563' }}>
+                            <div style={{ padding: '10px 12px', fontSize: '11px', color: 'var(--text-muted)' }}>
                               {t('noChaptersYet')}
                             </div>
                           ) : (
@@ -707,14 +707,14 @@ export default function Dashboard() {
                                 style={{
                                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                   padding: '8px 10px',
-                                  borderBottom: idx < arr.length - 1 ? '1px solid #14141e' : 'none',
-                                  background: '#08080c',
+                                  borderBottom: idx < arr.length - 1 ? '1px solid var(--divider)' : 'none',
+                                  background: 'var(--bg-input)',
                                   flexWrap: 'wrap' as const,
                                   gap: '6px',
                                 }}
                               >
-                                <span style={{ fontSize: '11px', color: '#9ca3af', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  <span style={{ color: '#4b5563', fontWeight: 700, marginRight: '6px' }}>#{ch.chapter_number}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: 700, marginRight: '6px' }}>#{ch.chapter_number}</span>
                                   {ch.title || `Chapter ${ch.chapter_number}`}
                                 </span>
                                 {story.content_type === 'novel' ? (
@@ -735,7 +735,7 @@ export default function Dashboard() {
                                         onClick={() => setConfirmDeleteChapterId(null)}
                                         style={{
                                           padding: '4px 9px', borderRadius: '5px',
-                                          background: 'transparent', border: '1px solid #1f1f2e', color: '#6b7280',
+                                          background: 'transparent', border: '1px solid var(--border-light)', color: 'var(--text-tertiary)',
                                           fontSize: '10px', fontWeight: 600, cursor: 'pointer',
                                         }}
                                       >
@@ -748,7 +748,7 @@ export default function Dashboard() {
                                       style={{
                                         marginLeft: '8px', flexShrink: 0,
                                         padding: '4px 9px', borderRadius: '5px',
-                                        background: 'transparent', border: '1px solid #1f1f2e',
+                                        background: 'transparent', border: '1px solid var(--border-light)',
                                         color: '#ef4444', fontSize: '10px', fontWeight: 600,
                                         cursor: 'pointer', transition: 'all 0.15s',
                                       }}
@@ -756,7 +756,7 @@ export default function Dashboard() {
                                         (e.currentTarget as HTMLButtonElement).style.borderColor = '#ef4444';
                                       }}
                                       onMouseLeave={(e) => {
-                                        (e.currentTarget as HTMLButtonElement).style.borderColor = '#1f1f2e';
+                                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-light)';
                                       }}
                                     >
                                       {t('deleteChapter')}
@@ -768,8 +768,8 @@ export default function Dashboard() {
                                     style={{
                                       marginLeft: '8px', flexShrink: 0,
                                       padding: '4px 9px', borderRadius: '5px',
-                                      background: 'transparent', border: '1px solid #1f1f2e',
-                                      color: '#6b7280', fontSize: '10px', fontWeight: 600,
+                                      background: 'transparent', border: '1px solid var(--border-light)',
+                                      color: 'var(--text-tertiary)', fontSize: '10px', fontWeight: 600,
                                       cursor: 'pointer', transition: 'all 0.15s',
                                     }}
                                     onMouseEnter={(e) => {
@@ -777,8 +777,8 @@ export default function Dashboard() {
                                       (e.currentTarget as HTMLButtonElement).style.color = '#d97706';
                                     }}
                                     onMouseLeave={(e) => {
-                                      (e.currentTarget as HTMLButtonElement).style.borderColor = '#1f1f2e';
-                                      (e.currentTarget as HTMLButtonElement).style.color = '#6b7280';
+                                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-light)';
+                                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-tertiary)';
                                     }}
                                   >
                                     {t('managePages')}
@@ -793,14 +793,14 @@ export default function Dashboard() {
                       <div className="mangal-story-actions">
                         <a href={`/series/${story.id}`} style={{
                           flex: 1, textAlign: 'center' as const, borderRadius: '7px',
-                          background: '#08080c', border: '1px solid #1f1f2e', color: '#9ca3af',
+                          background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)',
                           fontWeight: 600, textDecoration: 'none',
                         }}>
                           {t('view')}
                         </a>
                         <a href={`/upload?seriesId=${story.id}`} style={{
                           flex: 1, textAlign: 'center' as const, borderRadius: '7px',
-                          background: '#08080c', border: '1px solid #1f1f2e', color: '#9ca3af',
+                          background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)',
                           fontWeight: 600, textDecoration: 'none',
                         }}>
                           {t('addChapter')}
@@ -811,7 +811,7 @@ export default function Dashboard() {
                           title="Edit series details"
                           style={{
                             borderRadius: '7px',
-                            background: '#08080c', border: '1px solid #1f1f2e', color: '#9ca3af',
+                            background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)',
                             fontWeight: 600, cursor: 'pointer',
                           }}
                         >
@@ -835,7 +835,7 @@ export default function Dashboard() {
                             onClick={() => setConfirmDeleteId(story.id)}
                             style={{
                               borderRadius: '7px',
-                              background: '#08080c', border: '1px solid #1f1f2e', color: '#ef4444',
+                              background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: '#ef4444',
                               fontWeight: 600, cursor: 'pointer',
                             }}
                           >
@@ -851,14 +851,14 @@ export default function Dashboard() {
           </>
         ) : (
           <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: '#fff' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-primary)' }}>
               {t('analyticsTitle')}
             </h2>
 
             {analyticsLoading && !analytics ? (
-              <p style={{ fontSize: '13px', color: '#4b5563' }}>{t('crunchingNumbers')}</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('crunchingNumbers')}</p>
             ) : !analytics ? (
-              <p style={{ fontSize: '13px', color: '#4b5563' }}>{t('noDataYet')}</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('noDataYet')}</p>
             ) : (
               <>
                 {/* Per-series detail card — pick a series, see its own numbers,
@@ -866,12 +866,12 @@ export default function Dashboard() {
                 {selectedStory && (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' as const,
-                    background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px',
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
                     padding: '18px', marginBottom: '20px',
                   }}>
                     <div style={{
                       width: '52px', height: '68px', borderRadius: '8px', flexShrink: 0, position: 'relative' as const,
-                      background: selectedStory.cover_url ? 'none' : 'linear-gradient(135deg, #1a0a0a, #0d0d14)',
+                      background: selectedStory.cover_url ? 'none' : 'linear-gradient(135deg, #1a0a0a, var(--bg-card))',
                       overflow: 'hidden' as const,
                     }}>
                       {selectedStory.cover_url ? (
@@ -882,8 +882,8 @@ export default function Dashboard() {
                     </div>
 
                     <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                      <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '3px' }}>{t('selectedSeries')}</div>
-                      <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginBottom: '3px' }}>{t('selectedSeries')}</div>
+                      <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {selectedStory.title}
                       </h3>
                     </div>
@@ -893,8 +893,8 @@ export default function Dashboard() {
                         value={selectedStory.id}
                         onChange={(e) => setSelectedSeriesId(e.target.value)}
                         style={{
-                          background: '#08080c', border: '1px solid #1a1a26', borderRadius: '8px',
-                          color: '#e5e7eb', fontSize: '12px', fontWeight: 700, padding: '9px 12px',
+                          background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px',
+                          color: 'var(--text-soft)', fontSize: '12px', fontWeight: 700, padding: '9px 12px',
                           cursor: 'pointer',
                         }}
                       >
@@ -904,7 +904,7 @@ export default function Dashboard() {
                       </select>
                     )}
 
-                    <div style={{ display: 'flex', gap: '22px', flexWrap: 'wrap' as const, width: '100%', paddingTop: '4px', borderTop: '1px solid #14141e', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', gap: '22px', flexWrap: 'wrap' as const, width: '100%', paddingTop: '4px', borderTop: '1px solid var(--divider)', marginTop: '4px' }}>
                       <SeriesMiniStat label={t('views')} value={formatCount(selectedStory.views ?? 0)} />
                       <SeriesMiniStat label={t('tabMySeries') === 'My Series' ? 'Chapters' : 'चैप्टर्स'} value={String(selectedStory.chapterCount ?? 0)} />
                       <SeriesMiniStat label={t('totalWords')} value={formatCount(analytics.wordsBySeriesId[selectedStory.id] || 0)} />
@@ -915,29 +915,29 @@ export default function Dashboard() {
 
                 <div className="mangal-stat-grid" style={{ display: 'grid', gap: '14px', marginBottom: '28px' }}>
                   {statCards.map((card) => (
-                    <div key={card.label} style={{ background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px', padding: '18px' }}>
+                    <div key={card.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '18px' }}>
                       <div style={{ fontSize: '20px', marginBottom: '8px' }}>{card.icon}</div>
-                      <div style={{ fontSize: '24px', fontWeight: 900, color: '#fff', marginBottom: '2px' }}>{card.value}</div>
-                      <div style={{ fontSize: '11px', color: '#6b7280' }}>{card.label}</div>
+                      <div style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '2px' }}>{card.value}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{card.label}</div>
                     </div>
                   ))}
                 </div>
 
-                <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>{t('viewsPerSeries')}</h3>
+                <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>{t('viewsPerSeries')}</h3>
                 {analytics.viewsPerSeries.length === 0 ? (
-                  <p style={{ fontSize: '12px', color: '#4b5563', marginBottom: '24px' }}>{t('noSeriesYetShort')}</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px' }}>{t('noSeriesYetShort')}</p>
                 ) : (
-                  <div style={{ background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px', padding: '6px', marginBottom: '24px' }}>
+                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '6px', marginBottom: '24px' }}>
                     {analytics.viewsPerSeries.map((s, i) => {
                       const max = analytics.viewsPerSeries[0]?.views || 1;
                       const pct = max > 0 ? Math.max((s.views / max) * 100, 3) : 0;
                       return (
-                        <div key={s.id} style={{ padding: '12px 14px', borderBottom: i === analytics.viewsPerSeries.length - 1 ? 'none' : '1px solid #14141e' }}>
+                        <div key={s.id} style={{ padding: '12px 14px', borderBottom: i === analytics.viewsPerSeries.length - 1 ? 'none' : '1px solid var(--divider)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between' as const, fontSize: '12px', marginBottom: '6px', gap: '8px' }}>
-                            <span style={{ color: '#e5e7eb', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</span>
+                            <span style={{ color: 'var(--text-soft)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</span>
                             <span style={{ color: '#d97706', fontWeight: 700, flexShrink: 0 }}>{formatCount(s.views)}</span>
                           </div>
-                          <div style={{ height: '4px', borderRadius: '2px', background: '#08080c', overflow: 'hidden' as const }}>
+                          <div style={{ height: '4px', borderRadius: '2px', background: 'var(--bg-input)', overflow: 'hidden' as const }}>
                             <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #7f1d1d, #d97706)', borderRadius: '2px' }} />
                           </div>
                         </div>
@@ -948,7 +948,7 @@ export default function Dashboard() {
 
                 <div style={{
                   border: '1px dashed #2a2a38', borderRadius: '14px', padding: '16px 18px',
-                  color: '#6b7280', fontSize: '12px', lineHeight: 1.6,
+                  color: 'var(--text-tertiary)', fontSize: '12px', lineHeight: 1.6,
                 }}>
                   {t('viewsPerChapterNote')}
                 </div>

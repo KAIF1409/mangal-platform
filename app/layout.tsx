@@ -64,10 +64,11 @@ export default function RootLayout({
     >
       <head>
         {/* Runs before paint so the saved theme applies immediately —
-            avoids a flash of the wrong theme on load. */}
+            avoids a flash of the wrong theme on load. White/light is now
+            the default; dark only applies if the user explicitly chose it. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('mangal_theme');if(t==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('mangal_theme');if(t!=='dark'){document.documentElement.setAttribute('data-theme','light');}}catch(e){document.documentElement.setAttribute('data-theme','light');}`,
           }}
         />
       </head>

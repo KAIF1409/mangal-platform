@@ -39,7 +39,7 @@ function initialsFromUsername(username: string): string {
 
 function Footer() {
   return (
-    <footer style={{ borderTop: '1px solid #1a1a26', padding: '24px', textAlign: 'center' }}>
+    <footer style={{ borderTop: '1px solid var(--border-color)', padding: '24px', textAlign: 'center' }}>
       <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' as const }}>
         {[
           { label: 'Home', href: '/' },
@@ -47,7 +47,7 @@ function Footer() {
           { label: 'Terms of Service', href: '/terms' },
           { label: 'Grievance Officer', href: '/grievance' },
         ].map(link => (
-          <a key={link.href} href={link.href} style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}>
+          <a key={link.href} href={link.href} style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none' }}>
             {link.label}
           </a>
         ))}
@@ -157,7 +157,7 @@ export default function CreatorProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4b5563', fontSize: '13px' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
         Loading creator profile...
       </div>
     );
@@ -165,12 +165,12 @@ export default function CreatorProfilePage() {
 
   if (notFound || !creator) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' as const, backgroundColor: '#07070a', color: '#f9fafb', }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' as const, backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ width: '100%', maxWidth: '420px', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '20px', padding: '40px 32px', textAlign: 'center' as const, boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+          <div style={{ width: '100%', maxWidth: '420px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '40px 32px', textAlign: 'center' as const, boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
             <div style={{ fontSize: '36px', marginBottom: '14px' }}>🔍</div>
-            <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Creator Not Found</h2>
-            <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, margin: '0 0 28px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 8px' }}>Creator Not Found</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 28px' }}>
               No creator with the username &ldquo;@{username}&rdquo; exists.
             </p>
             <Link href="/" style={{
@@ -188,13 +188,13 @@ export default function CreatorProfilePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
 
       {/* ── NAV ── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'rgba(7,7,10,0.97)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid #1a1a26',
+        borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '64px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
@@ -204,9 +204,9 @@ export default function CreatorProfilePage() {
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
           }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '20px', color: '#fff', letterSpacing: '-0.03em' }}>MANGAL</span>
+          <span style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
         </Link>
-        <Link href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>← Back to Browse</Link>
+        <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to Browse</Link>
       </nav>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px 60px' }}>
@@ -215,7 +215,7 @@ export default function CreatorProfilePage() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: '20px',
           padding: '28px', borderRadius: '20px',
-          background: '#0d0d14', border: '1px solid #1a1a26',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           marginBottom: '32px',
         }}>
           <div style={{
@@ -228,7 +228,7 @@ export default function CreatorProfilePage() {
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' as const, marginBottom: '4px' }}>
-              <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+              <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
                 @{creator.username}
               </h1>
               {!accountActive && (
@@ -243,17 +243,17 @@ export default function CreatorProfilePage() {
             </div>
             {/* No bio column yet on creator_profiles — placeholder keeps the
                 layout settled now and is a one-line swap once bio exists */}
-            <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 12px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 12px' }}>
               Creator on MANGAL
             </p>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' as const }}>
               <div>
-                <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>{series.length}</span>
-                <span style={{ fontSize: '11px', color: '#6b7280', marginLeft: '5px' }}>series</span>
+                <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>{series.length}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginLeft: '5px' }}>series</span>
               </div>
               <div>
-                <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>👁 {formatViews(totalViews)}</span>
-                <span style={{ fontSize: '11px', color: '#6b7280', marginLeft: '5px' }}>total views</span>
+                <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>👁 {formatViews(totalViews)}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginLeft: '5px' }}>total views</span>
               </div>
               {isDeveloper && accountActive && (
                 banConfirm ? (
@@ -274,7 +274,7 @@ export default function CreatorProfilePage() {
                       disabled={banning}
                       style={{
                         padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-                        background: '#08080c', border: '1px solid #1a1a26', color: '#9ca3af', cursor: 'pointer',
+                        background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer',
                       }}
                     >
                       Cancel
@@ -299,14 +299,14 @@ export default function CreatorProfilePage() {
         </div>
 
         {/* ── SERIES GRID ── */}
-        <h2 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', color: '#fff' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', color: 'var(--text-primary)' }}>
           Series by @{creator.username}
         </h2>
 
         {series.length === 0 ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: '#374151' }}>
+          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
-            <div style={{ fontSize: '13px', color: '#6b7280' }}>No published series yet.</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>No published series yet.</div>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
@@ -330,7 +330,7 @@ function SeriesCard({ series }: { series: Series }) {
       onMouseLeave={() => setHovered(false)}>
       <div style={{
         borderRadius: '12px', overflow: 'hidden',
-        background: '#0d0d14', border: `1px solid ${hovered ? '#d97706' : '#1a1a26'}`,
+        background: 'var(--bg-card)', border: `1px solid ${hovered ? '#d97706' : 'var(--border-color)'}`,
         transition: 'border-color 0.2s, transform 0.2s',
         transform: hovered ? 'translateY(-3px)' : 'none',
       }}>
@@ -355,14 +355,14 @@ function SeriesCard({ series }: { series: Series }) {
         </div>
         <div style={{ padding: '10px 10px 12px' }}>
           <div style={{
-            fontSize: '12px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px',
+            fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '4px',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {series.title}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: '#4b5563' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
       </div>

@@ -26,6 +26,9 @@ export default function ThemeToggle({ size = 34 }: { size?: number }) {
       document.documentElement.removeAttribute('data-theme');
     }
     try {
+      // Light is the site default now — only 'dark' needs to be persisted;
+      // clearing the key entirely would also work, but storing it explicitly
+      // makes the saved choice easy to inspect/debug in localStorage.
       localStorage.setItem(STORAGE_KEY, next ? 'light' : 'dark');
     } catch {
       // localStorage unavailable — theme still applies for this session
