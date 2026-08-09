@@ -946,6 +946,30 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* News & Updates — mirrors inkstone's News/Inbox tabbed panel.
+                    Static for now since there's no announcements table yet. */}
+                <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
+                  📰 News &amp; Updates
+                </h3>
+                <div style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
+                  padding: '6px', marginBottom: '24px',
+                }}>
+                  {[
+                    { title: 'Welcome to the Mangal Creator Studio', date: 'Aug 09, 2026' },
+                    { title: 'Tips: how the Views counter works', date: 'Aug 05, 2026' },
+                    { title: 'Please avoid uploading AI-generated chapters without disclosure', date: 'Jul 28, 2026' },
+                  ].map((n, i, arr) => (
+                    <div key={n.title} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px',
+                      padding: '12px 14px', borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--divider)',
+                    }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-soft)' }}>{n.title}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-faint)', flexShrink: 0 }}>{n.date}</span>
+                    </div>
+                  ))}
+                </div>
+
                 {/* Release Statistics — mirrors inkstone's completion-rate + avg-words panel.
                     Avg words/chapter is real (totalWords / totalChapters); completion
                     rate isn't tracked yet, shown as a placeholder like the note below. */}
