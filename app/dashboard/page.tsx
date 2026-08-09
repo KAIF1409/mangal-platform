@@ -52,10 +52,26 @@ interface AnalyticsData {
   totalFollowers: number;
   newFollowersThisWeek: number;
   totalComments: number;
+  totalChapters: number;
+  totalWords: number;
   viewsPerSeries: SeriesViewStat[];
+  wordsBySeriesId: Record<string, number>;
 }
 
 // Step 28 — mirrors formatViews used on homepage/search cards for consistent display
+// Small inline stat used inside the per-series detail card (Views / Chapters / Words / Status)
+function SeriesMiniStat({ label, value, dotColor }: { label: string; value: string; dotColor?: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: '9px', color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+        {dotColor && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: dotColor, display: 'inline-block' }} />}
+        {label}
+      </div>
+      <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>{value}</div>
+    </div>
+  );
+}
+
 function formatViews(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
@@ -116,6 +132,8 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
+  // Inkstone-style per-series detail selector — which series' own card is shown
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(null);
 
   const fetchStories = async (creatorId: string) => {
     try {
@@ -167,7 +185,7 @@ export default function Dashboard() {
       const seriesIds = stories.map((s) => s.id);
 
       if (seriesIds.length === 0) {
-        setAnalytics({ totalViews: 0, totalFollowers: 0, newFollowersThisWeek: 0, totalComments: 0, viewsPerSeries: [] });
+        setAnalytics({ totalViews: 0, totalFollowers: 0, newFollowersThisWeek: 0, totalComments: 0, totalChapters: 0, totalWords: 0, viewsPerSeries: [], wordsBySeriesId: {} });
         setAnalyticsLoaded(true);
         return;
       }
@@ -179,26 +197,44 @@ export default function Dashboard() {
 
       const weekAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      const [followResult, commentsResult] = await Promise.all([
+      const [followResult, commentsResult, wordsResult] = await Promise.all([
         supabase.from('follows').select('created_at').in('series_id', seriesIds),
         chapterIds.length > 0
           ? supabase.from('comments').select('id', { count: 'exact', head: true }).in('chapter_id', chapterIds)
           : Promise.resolve({ data: null, count: 0, error: null }),
+        // Inkstone-style "Words" stat — sums chapters.word_count per series.
+        // Manga chapters don't set word_count (novel-only field), so they
+        // simply contribute 0 without needing a separate content-type branch.
+        chapterIds.length > 0
+          ? supabase.from('chapters').select('series_id, word_count').in('id', chapterIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (followResult.error) throw followResult.error;
       if (commentsResult.error) throw commentsResult.error;
+      if (wordsResult.error) throw wordsResult.error;
 
       const followRows = followResult.data || [];
       const totalFollowers = followRows.length;
       const newFollowersThisWeek = followRows.filter((f: { created_at: string }) => f.created_at >= weekAgoIso).length;
+
+      const wordsBySeriesId: Record<string, number> = {};
+      let totalWords = 0;
+      (wordsResult.data || []).forEach((row: { series_id: string; word_count: number | null }) => {
+        const words = row.word_count || 0;
+        wordsBySeriesId[row.series_id] = (wordsBySeriesId[row.series_id] || 0) + words;
+        totalWords += words;
+      });
 
       setAnalytics({
         totalViews,
         totalFollowers,
         newFollowersThisWeek,
         totalComments: commentsResult.count || 0,
+        totalChapters: chapterIds.length,
+        totalWords,
         viewsPerSeries,
+        wordsBySeriesId,
       });
     } catch (err) {
       console.error('Error fetching analytics:', err instanceof Error ? err.message : err);
@@ -376,7 +412,11 @@ export default function Dashboard() {
     { label: t('totalFollowers'), value: formatCount(analytics.totalFollowers), icon: '⭐' },
     { label: t('newFollowers7d'), value: `+${analytics.newFollowersThisWeek}`, icon: '📈' },
     { label: t('totalComments'), value: formatCount(analytics.totalComments), icon: '💬' },
+    { label: t('totalChapters'), value: formatCount(analytics.totalChapters), icon: '📑' },
+    { label: t('totalWords'), value: formatCount(analytics.totalWords), icon: '✍️' },
   ] : [];
+
+  const selectedStory = stories.find((s) => s.id === selectedSeriesId) || stories[0];
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
@@ -821,6 +861,58 @@ export default function Dashboard() {
               <p style={{ fontSize: '13px', color: '#4b5563' }}>{t('noDataYet')}</p>
             ) : (
               <>
+                {/* Per-series detail card — pick a series, see its own numbers,
+                    same shape as inkstone.webnovel.com's book selector card */}
+                {selectedStory && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' as const,
+                    background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px',
+                    padding: '18px', marginBottom: '20px',
+                  }}>
+                    <div style={{
+                      width: '52px', height: '68px', borderRadius: '8px', flexShrink: 0, position: 'relative' as const,
+                      background: selectedStory.cover_url ? 'none' : 'linear-gradient(135deg, #1a0a0a, #0d0d14)',
+                      overflow: 'hidden' as const,
+                    }}>
+                      {selectedStory.cover_url ? (
+                        <Image src={selectedStory.cover_url} alt={selectedStory.title} fill sizes="52px" style={{ objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📜</div>
+                      )}
+                    </div>
+
+                    <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                      <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '3px' }}>{t('selectedSeries')}</div>
+                      <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {selectedStory.title}
+                      </h3>
+                    </div>
+
+                    {stories.length > 1 && (
+                      <select
+                        value={selectedStory.id}
+                        onChange={(e) => setSelectedSeriesId(e.target.value)}
+                        style={{
+                          background: '#08080c', border: '1px solid #1a1a26', borderRadius: '8px',
+                          color: '#e5e7eb', fontSize: '12px', fontWeight: 700, padding: '9px 12px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {stories.map((s) => (
+                          <option key={s.id} value={s.id}>{s.title}</option>
+                        ))}
+                      </select>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '22px', flexWrap: 'wrap' as const, width: '100%', paddingTop: '4px', borderTop: '1px solid #14141e', marginTop: '4px' }}>
+                      <SeriesMiniStat label={t('views')} value={formatCount(selectedStory.views ?? 0)} />
+                      <SeriesMiniStat label={t('tabMySeries') === 'My Series' ? 'Chapters' : 'चैप्टर्स'} value={String(selectedStory.chapterCount ?? 0)} />
+                      <SeriesMiniStat label={t('totalWords')} value={formatCount(analytics.wordsBySeriesId[selectedStory.id] || 0)} />
+                      <SeriesMiniStat label={STATUS_CONFIG[selectedStory.completion_status]?.label ?? ''} value={selectedStory.content_type === 'novel' ? '📕' : '📜'} dotColor={STATUS_CONFIG[selectedStory.completion_status]?.dot} />
+                    </div>
+                  </div>
+                )}
+
                 <div className="mangal-stat-grid" style={{ display: 'grid', gap: '14px', marginBottom: '28px' }}>
                   {statCards.map((card) => (
                     <div key={card.label} style={{ background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px', padding: '18px' }}>
