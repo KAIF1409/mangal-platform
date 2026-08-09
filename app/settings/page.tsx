@@ -10,7 +10,7 @@
 // your actual lib/supabase.ts export shape differs from a plain
 // createBrowserClient() call.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { CONSENT_VERSION } from '../lib/dpdp';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
@@ -21,6 +21,7 @@ const PLATFORM_NAME = 'MANGAL';
 type DeleteFlowState = 'idle' | 'confirming' | 'deleting' | 'done' | 'error';
 type ExportState = 'idle' | 'exporting' | 'error';
 type WithdrawState = 'idle' | 'withdrawing' | 'withdrawn' | 'error';
+type Gender = 'male' | 'female' | 'unspecified';
 
 export default function SettingsPage() {
   const { lang, setLang, t } = useUiLanguage();
@@ -28,6 +29,43 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [exportState, setExportState] = useState<ExportState>('idle');
   const [withdrawState, setWithdrawState] = useState<WithdrawState>('idle');
+
+  // Optional, self-reported — feeds the (real) Gender split in creator
+  // Audience Insights. Left unset unless the user explicitly picks one.
+  const [gender, setGender] = useState<Gender | null>(null);
+  const [genderSaving, setGenderSaving] = useState(false);
+  const [genderLoaded, setGenderLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadGender = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) { setGenderLoaded(true); return; }
+      const { data } = await supabase
+        .from('profiles')
+        .select('gender')
+        .eq('id', userData.user.id)
+        .single();
+      setGender((data?.gender as Gender | null) ?? null);
+      setGenderLoaded(true);
+    };
+    loadGender();
+  }, []);
+
+  const handleSetGender = async (value: Gender) => {
+    setGenderSaving(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ gender: value })
+        .eq('id', userData.user.id);
+      if (!error) setGender(value);
+    } finally {
+      setGenderSaving(false);
+    }
+  };
+
 
 
   const sectionCard: React.CSSProperties = {
@@ -183,6 +221,34 @@ export default function SettingsPage() {
             <a href="/privacy" style={{ color: '#d97706', textDecoration: 'none' }}>{t('settingsIntroLink')}</a>
             {t('settingsIntroSuffix')}
           </p>
+        </div>
+
+        {/* Profile — optional gender, feeds real Audience Insights for creators */}
+        <div style={sectionCard}>
+          <h2 style={sectionTitle}>👤 Profile</h2>
+          <p style={bodyText}>
+            Optional. If you share this, it helps creators understand their audience —
+            shown in aggregate only, never tied to your identity. Leave it unset if you&apos;d rather not say.
+          </p>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {(['male', 'female', 'unspecified'] as Gender[]).map((g) => (
+              <button
+                key={g}
+                onClick={() => handleSetGender(g)}
+                disabled={!genderLoaded || genderSaving}
+                style={{
+                  ...buttonBase,
+                  background: gender === g ? 'rgba(217,119,6,0.15)' : 'var(--bg-input)',
+                  border: gender === g ? '1px solid rgba(217,119,6,0.4)' : '1px solid var(--border-color)',
+                  color: gender === g ? '#d97706' : 'var(--text-secondary)',
+                  opacity: genderSaving ? 0.6 : 1,
+                  textTransform: 'capitalize',
+                }}
+              >
+                {g === 'unspecified' ? 'Prefer not to say' : g}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Download My Data */}
