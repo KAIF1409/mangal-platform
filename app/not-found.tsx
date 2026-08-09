@@ -10,8 +10,8 @@ export default function NotFound() {
     <div
       style={{
         minHeight: "100vh",
-        backgroundColor: "#07070a",
-        color: "#f9fafb",
+        backgroundColor: "var(--bg-primary)",
+        color: "var(--text-primary)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -25,7 +25,7 @@ export default function NotFound() {
           fontSize: "13px",
           fontWeight: 700,
           letterSpacing: "0.12em",
-          color: "#9ca3af",
+          color: "var(--text-secondary)",
           textTransform: "uppercase",
           marginBottom: "12px",
         }}
@@ -37,7 +37,7 @@ export default function NotFound() {
           fontSize: "84px",
           fontWeight: 800,
           lineHeight: 1,
-          background: "linear-gradient(135deg, #f9fafb, #6b7280)",
+          background: "linear-gradient(135deg, var(--text-primary), var(--text-tertiary))",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           backgroundClip: "text",
@@ -48,7 +48,7 @@ export default function NotFound() {
       <h1 style={{ fontSize: "22px", fontWeight: 700, margin: "16px 0 8px" }}>
         This page doesn&apos;t exist
       </h1>
-      <p style={{ fontSize: "14px", color: "#9ca3af", maxWidth: "420px", margin: "0 0 28px" }}>
+      <p style={{ fontSize: "14px", color: "var(--text-secondary)", maxWidth: "420px", margin: "0 0 28px" }}>
         The chapter, series or page you&apos;re looking for may have been moved,
         renamed, or removed by its creator.
       </p>
