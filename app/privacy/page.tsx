@@ -100,21 +100,21 @@ export default function PrivacyPolicyPage() {
   const [langNotice, setLangNotice] = useState(true);
 
   const sectionCard: React.CSSProperties = {
-    background: '#0d0d14', border: '1px solid #1a1a26',
+    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
     borderRadius: '16px', padding: '24px 28px', marginBottom: '24px',
   };
   const sectionTitle: React.CSSProperties = {
-    fontSize: '16px', fontWeight: 800, color: '#fff', margin: '0 0 14px',
+    fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 14px',
     display: 'flex', alignItems: 'center', gap: '8px',
   };
   const bodyText: React.CSSProperties = {
-    fontSize: '13px', color: '#9ca3af', lineHeight: 1.75, margin: '0 0 10px',
+    fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.75, margin: '0 0 10px',
   };
 
   return (
     <div style={{
-      minHeight: '100vh', backgroundColor: '#07070a',
-      color: '#f9fafb', }}>
+      minHeight: '100vh', backgroundColor: 'var(--bg-primary)',
+      color: 'var(--text-primary)', }}>
       
      <Navbar />
 
@@ -132,16 +132,16 @@ export default function PrivacyPolicyPage() {
           </span>
           <h1 style={{
             fontSize: '32px', fontWeight: 900, letterSpacing: '-0.02em',
-            margin: '16px 0 8px', color: '#fff',
+            margin: '16px 0 8px', color: 'var(--text-primary)',
           }}>
             Privacy Policy
           </h1>
-          <p style={{ fontSize: '14px', color: '#9ca3af', lineHeight: 1.7, margin: 0, maxWidth: '580px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0, maxWidth: '580px' }}>
             This policy explains what personal data {PLATFORM_NAME} collects, why,
             how long we keep it, and the rights you have over it under India&apos;s
             Digital Personal Data Protection Act, 2023.
           </p>
-          <p style={{ fontSize: '11px', color: '#4b5563', margin: '10px 0 0' }}>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '10px 0 0' }}>
             Last updated: {LAST_UPDATED}
           </p>
         </div>
@@ -158,7 +158,7 @@ export default function PrivacyPolicyPage() {
             </span>
             <button
               onClick={() => setLangNotice(false)}
-              style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}
             >
               Dismiss ✕
             </button>
@@ -186,16 +186,16 @@ export default function PrivacyPolicyPage() {
           <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
             {DATA_ITEMS.map((item, idx) => (
               <div key={idx} style={{
-                background: '#08080c', border: '1px solid #14141e',
+                background: 'var(--bg-input)', border: '1px solid var(--divider)',
                 borderRadius: '10px', padding: '14px 16px',
               }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#d97706', marginBottom: '6px' }}>
                   {item.what}
                 </div>
-                <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                   <span style={{ color: '#d97706', fontWeight: 700 }}>Why: </span>{item.why}
                 </div>
-                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                   <span style={{ color: '#d97706', fontWeight: 700 }}>Kept: </span>{item.retention}
                 </div>
               </div>
@@ -211,13 +211,13 @@ export default function PrivacyPolicyPage() {
             upfront about how we handle it rather than bury it in legal text:
           </p>
           <p style={bodyText}>
-            <strong style={{ color: '#fff' }}>Immediately on deletion:</strong> your
+            <strong style={{ color: 'var(--text-primary)' }}>Immediately on deletion:</strong> your
             profile, avatar, bio, reading history, follows, comments, ratings, and
             reactions are permanently removed from the live app and database.
             Nothing personally identifying remains visible anywhere on MANGAL.
           </p>
           <p style={bodyText}>
-            <strong style={{ color: '#fff' }}>Retained separately for 180 days:</strong> your
+            <strong style={{ color: 'var(--text-primary)' }}>Retained separately for 180 days:</strong> your
             account-creation timestamp, registration IP address, and an encrypted
             account identifier move into an isolated, access-restricted log store.
             This isn&apos;t optional on our part — the IT Rules, 2021 require
@@ -251,13 +251,13 @@ export default function PrivacyPolicyPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px', marginTop: '8px' }}>
             {YOUR_RIGHTS.map((r) => (
               <div key={r.title} style={{
-                background: '#08080c', border: '1px solid #14141e',
+                background: 'var(--bg-input)', border: '1px solid var(--divider)',
                 borderRadius: '10px', padding: '14px 16px',
               }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#d97706', marginBottom: '4px' }}>
                   {r.title}
                 </div>
-                <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.6 }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   {r.body}
                 </div>
               </div>
@@ -279,9 +279,9 @@ export default function PrivacyPolicyPage() {
             to operate the platform:
           </p>
           <ul style={{ ...bodyText, paddingLeft: '20px', margin: 0 }}>
-            <li><strong style={{ color: '#fff' }}>Supabase</strong> — hosts our database, authentication, and file storage</li>
-            <li><strong style={{ color: '#fff' }}>Vercel</strong> — hosts and serves the MANGAL website</li>
-            <li><strong style={{ color: '#fff' }}>Formspree</strong> — processes grievance form submissions only</li>
+            <li><strong style={{ color: 'var(--text-primary)' }}>Supabase</strong> — hosts our database, authentication, and file storage</li>
+            <li><strong style={{ color: 'var(--text-primary)' }}>Vercel</strong> — hosts and serves the MANGAL website</li>
+            <li><strong style={{ color: 'var(--text-primary)' }}>Formspree</strong> — processes grievance form submissions only</li>
           </ul>
           <p style={{ ...bodyText, marginTop: '10px' }}>
             We may disclose limited data if legally required to do so by an Indian
@@ -328,7 +328,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Contact / Grievance */}
         <div style={{
-          background: '#0d0d14', border: '1px solid #1a1a26',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           borderRadius: '16px', padding: '24px 28px',
         }}>
           <h2 style={sectionTitle}>📬 Questions or Concerns</h2>
@@ -336,13 +336,13 @@ export default function PrivacyPolicyPage() {
             For anything related to this policy or your personal data, contact our
             appointed Grievance Officer:
           </p>
-          <div style={{ fontSize: '13px', color: '#fff', fontWeight: 700, marginTop: '8px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 700, marginTop: '8px' }}>
             {GRIEVANCE_OFFICER_NAME}
           </div>
           <a href={`mailto:${GRIEVANCE_OFFICER_EMAIL}`} style={{ fontSize: '13px', color: '#d97706', textDecoration: 'none' }}>
             {GRIEVANCE_OFFICER_EMAIL}
           </a>
-          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
             {PLATFORM_ADDRESS}
           </div>
           <a href="/grievance" style={{
