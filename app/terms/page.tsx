@@ -47,14 +47,14 @@ function Section({
         style={{
           fontSize: '18px',
           fontWeight: 800,
-          color: '#fff',
+          color: 'var(--text-primary)',
           margin: '0 0 14px',
           letterSpacing: '-0.01em',
         }}
       >
         {title}
       </h2>
-      <div style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.8 }}>{children}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.8 }}>{children}</div>
     </section>
   );
 }
@@ -73,8 +73,8 @@ export default function TermsOfServicePage() {
     <div
       style={{
         minHeight: '100vh',
-        backgroundColor: '#07070a',
-        color: '#f9fafb',
+        backgroundColor: 'var(--bg-primary)',
+        color: 'var(--text-primary)',
         }}
     >
       {/* NAVBAR COMPONENT */}
@@ -114,16 +114,16 @@ export default function TermsOfServicePage() {
                 fontWeight: 900,
                 letterSpacing: '-0.02em',
                 margin: '16px 0 8px',
-                color: '#fff',
+                color: 'var(--text-primary)',
               }}
             >
               Terms of Service
             </h1>
-            <p style={{ fontSize: '14px', color: '#9ca3af', lineHeight: 1.7, margin: '0 0 4px', maxWidth: '600px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 4px', maxWidth: '600px' }}>
               These terms govern your use of {PLATFORM_NAME}. By using the platform, you agree to
               them. We have tried to write this in plain language rather than dense legal text.
             </p>
-            <p style={{ fontSize: '11px', color: '#4b5563', margin: 0 }}>Last updated: {LAST_UPDATED}</p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Last updated: {LAST_UPDATED}</p>
           </div>
 
           <Section id="acceptance" title="Acceptance of Terms">
@@ -322,7 +322,7 @@ export default function TermsOfServicePage() {
             style={{
               position: 'sticky',
               top: '92px',
-              borderLeft: '1px solid #1a1a26',
+              borderLeft: '1px solid var(--border-color)',
               paddingLeft: '20px',
             }}
           >
@@ -330,7 +330,7 @@ export default function TermsOfServicePage() {
               style={{
                 fontSize: '10px',
                 fontWeight: 700,
-                color: '#4b5563',
+                color: 'var(--text-muted)',
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 marginBottom: '12px',
@@ -345,7 +345,7 @@ export default function TermsOfServicePage() {
                 style={{
                   display: 'block',
                   fontSize: '12px',
-                  color: '#6b7280',
+                  color: 'var(--text-tertiary)',
                   textDecoration: 'none',
                   marginBottom: '10px',
                   lineHeight: 1.4,
