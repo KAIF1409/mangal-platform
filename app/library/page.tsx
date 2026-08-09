@@ -150,7 +150,7 @@ export default function LibraryPage() {
   }, [series, sortBy]);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
 
       {/* ── NAV (shared component) ── */}
       <Navbar
@@ -165,11 +165,11 @@ export default function LibraryPage() {
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                color: '#9ca3af', textDecoration: 'none',
+                color: 'var(--text-secondary)', textDecoration: 'none',
                 transition: 'color 0.15s, background 0.15s',
               }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.color = '#fff'; (e.target as HTMLElement).style.background = '#1a1a26'; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#9ca3af'; (e.target as HTMLElement).style.background = 'transparent'; }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
               >{link.label}</a>
             ))}
           </div>
@@ -193,19 +193,19 @@ export default function LibraryPage() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🔔 My Library</h1>
-            <p style={{ fontSize: '13px', color: '#4b5563', margin: 0 }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
               {loading ? '' : series.length === 0 ? 'No series followed yet.' : `${series.length} series followed`}
             </p>
           </div>
 
           {!loading && series.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>Sort:</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>Sort:</span>
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as LibrarySortOption)}
                 style={{
-                  padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
+                  padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
                   border: '1px solid #2a2a3a', color: '#d97706', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
                 }}
               >
@@ -219,15 +219,15 @@ export default function LibraryPage() {
       {/* ── CONTENT ── */}
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px 60px' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#4b5563' }}>
+          <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>📚</div>
             <div>Loading your library...</div>
           </div>
         ) : series.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px', background: '#0d0d14', borderRadius: '16px', border: '1px solid #1a1a26' }}>
+          <div style={{ textAlign: 'center', padding: '80px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
-            <p style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Your library is empty</p>
-            <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 24px' }}>Follow a series to get notified when new chapters drop</p>
+            <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Your library is empty</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 24px' }}>Follow a series to get notified when new chapters drop</p>
             <Link href="/" style={{ padding: '10px 24px', borderRadius: '10px', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
               Browse Series
             </Link>
@@ -253,12 +253,12 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
   return (
     <div style={{
       display: 'flex', gap: '16px', alignItems: 'center',
-      background: '#0d0d14', border: '1px solid #1a1a26',
+      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
       borderRadius: '12px', padding: '16px', transition: 'border-color 0.15s',
     }}>
       {/* Cover */}
       <a href={`/series/${series.id}`} style={{ flexShrink: 0, textDecoration: 'none' }}>
-        <div style={{ width: '64px', height: '86px', borderRadius: '8px', overflow: 'hidden', background: '#1a0a0a', border: '1px solid #1a1a26', position: 'relative' }}>
+        <div style={{ width: '64px', height: '86px', borderRadius: '8px', overflow: 'hidden', background: '#1a0a0a', border: '1px solid var(--border-color)', position: 'relative' }}>
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="64px" style={{ objectFit: 'cover' }} />
           ) : (
@@ -270,7 +270,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}>
-          <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {series.title}
           </div>
         </a>
@@ -280,11 +280,11 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
               {series.genre}
             </span>
           )}
-          <span style={{ fontSize: '9px', fontWeight: 700, color: '#6b7280', background: '#08080c', border: '1px solid #1a1a26', padding: '2px 8px', borderRadius: '20px' }}>
+          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-tertiary)', background: 'var(--bg-input)', border: '1px solid var(--border-color)', padding: '2px 8px', borderRadius: '20px' }}>
             {series.chapter_count} ch
           </span>
         </div>
-        <p style={{ fontSize: '12px', color: '#4b5563', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {series.synopsis}
         </p>
       </div>
@@ -310,7 +310,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
             </button>
             <button
               onClick={() => setConfirmUnfollow(false)}
-              style={{ padding: '6px 10px', borderRadius: '6px', fontSize: '11px', background: '#08080c', border: '1px solid #1a1a26', color: '#6b7280', cursor: 'pointer' }}
+              style={{ padding: '6px 10px', borderRadius: '6px', fontSize: '11px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-tertiary)', cursor: 'pointer' }}
             >
               Cancel
             </button>
@@ -318,7 +318,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
         ) : (
           <button
             onClick={() => setConfirmUnfollow(true)}
-            style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, background: 'transparent', border: '1px solid #1a1a26', color: '#4b5563', cursor: 'pointer' }}
+            style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer' }}
           >
             🔕 Unfollow
           </button>
