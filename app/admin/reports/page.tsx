@@ -181,7 +181,7 @@ export default function AdminReportsPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', }}>
         Loading...
       </div>
     );
@@ -189,7 +189,7 @@ export default function AdminReportsPage() {
 
   if (!allowed) {
     return (
-      <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔒</div>
           <div>This page is for developers only.</div>
@@ -200,10 +200,10 @@ export default function AdminReportsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 4px' }}>🚩 Reports</h1>
-        <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 24px' }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 24px' }}>
           {reports.filter(r => r.status === 'open').length} open &middot; {reports.length} total
         </p>
 
@@ -215,9 +215,9 @@ export default function AdminReportsPage() {
               style={{
                 padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
                 textTransform: 'capitalize', cursor: 'pointer',
-                border: filter === f ? '1px solid #d97706' : '1px solid #1a1a26',
-                background: filter === f ? 'rgba(217,119,6,0.12)' : '#0d0d14',
-                color: filter === f ? '#d97706' : '#9ca3af',
+                border: filter === f ? '1px solid #d97706' : '1px solid var(--border-color)',
+                background: filter === f ? 'rgba(217,119,6,0.12)' : 'var(--bg-card)',
+                color: filter === f ? '#d97706' : 'var(--text-secondary)',
               }}
             >
               {f}
@@ -226,9 +226,9 @@ export default function AdminReportsPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px', background: '#0d0d14', borderRadius: '14px', border: '1px solid #1a1a26' }}>
+          <div style={{ textAlign: 'center', padding: '60px', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
-            <p style={{ color: '#4b5563', fontSize: '14px', margin: 0 }}>No {filter !== 'all' ? filter : ''} reports.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>No {filter !== 'all' ? filter : ''} reports.</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -237,7 +237,7 @@ export default function AdminReportsPage() {
               return (
                 <div key={r.id} style={{
                   padding: '16px 18px', borderRadius: '12px',
-                  background: '#0d0d14', border: `1px solid ${as.removed || as.banned ? 'rgba(16,185,129,0.3)' : '#1a1a26'}`,
+                  background: 'var(--bg-card)', border: `1px solid ${as.removed || as.banned ? 'rgba(16,185,129,0.3)' : 'var(--border-color)'}`,
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
                     <div>
@@ -248,30 +248,30 @@ export default function AdminReportsPage() {
                       }}>
                         {r.target_type}
                       </span>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{r.reason}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.reason}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{
                         fontSize: '9px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px',
                         textTransform: 'uppercase', letterSpacing: '0.06em',
-                        background: r.status === 'open' ? 'rgba(239,68,68,0.12)' : r.status === 'reviewed' ? 'rgba(16,185,129,0.12)' : '#1a1a26',
-                        color: r.status === 'open' ? '#ef4444' : r.status === 'reviewed' ? '#10b981' : '#6b7280',
-                        border: r.status === 'open' ? '1px solid rgba(239,68,68,0.3)' : r.status === 'reviewed' ? '1px solid rgba(16,185,129,0.3)' : '1px solid #1a1a26',
+                        background: r.status === 'open' ? 'rgba(239,68,68,0.12)' : r.status === 'reviewed' ? 'rgba(16,185,129,0.12)' : 'var(--border-color)',
+                        color: r.status === 'open' ? '#ef4444' : r.status === 'reviewed' ? '#10b981' : 'var(--text-tertiary)',
+                        border: r.status === 'open' ? '1px solid rgba(239,68,68,0.3)' : r.status === 'reviewed' ? '1px solid rgba(16,185,129,0.3)' : '1px solid var(--border-color)',
                       }}>
                         {r.status}
                       </span>
-                      <span style={{ fontSize: '11px', color: '#4b5563' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                         {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '11px', color: '#4b5563', marginBottom: r.details ? '8px' : '12px' }}>
-                    target_id: <span style={{ color: '#6b7280', fontFamily: 'monospace' }}>{r.target_id}</span>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: r.details ? '8px' : '12px' }}>
+                    target_id: <span style={{ color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>{r.target_id}</span>
                   </div>
 
                   {r.details && (
-                    <p style={{ fontSize: '13px', color: '#9ca3af', margin: '0 0 12px', lineHeight: 1.5 }}>{r.details}</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 12px', lineHeight: 1.5 }}>{r.details}</p>
                   )}
 
                   {as.removed && (
@@ -292,9 +292,9 @@ export default function AdminReportsPage() {
                       style={{
                         padding: '6px 12px', borderRadius: '7px', fontSize: '11px', fontWeight: 700,
                         cursor: r.status === 'reviewed' ? 'default' : 'pointer',
-                        background: r.status === 'reviewed' ? '#1a1a26' : 'rgba(16,185,129,0.12)',
-                        border: r.status === 'reviewed' ? '1px solid #1a1a26' : '1px solid rgba(16,185,129,0.3)',
-                        color: r.status === 'reviewed' ? '#4b5563' : '#10b981',
+                        background: r.status === 'reviewed' ? 'var(--border-color)' : 'rgba(16,185,129,0.12)',
+                        border: r.status === 'reviewed' ? '1px solid var(--border-color)' : '1px solid rgba(16,185,129,0.3)',
+                        color: r.status === 'reviewed' ? 'var(--text-muted)' : '#10b981',
                       }}
                     >
                       ✓ Mark Reviewed
@@ -306,9 +306,9 @@ export default function AdminReportsPage() {
                       style={{
                         padding: '6px 12px', borderRadius: '7px', fontSize: '11px', fontWeight: 700,
                         cursor: r.status === 'dismissed' ? 'default' : 'pointer',
-                        background: r.status === 'dismissed' ? '#1a1a26' : '#08080c',
-                        border: '1px solid #1a1a26',
-                        color: r.status === 'dismissed' ? '#4b5563' : '#9ca3af',
+                        background: r.status === 'dismissed' ? 'var(--border-color)' : 'var(--bg-input)',
+                        border: '1px solid var(--border-color)',
+                        color: r.status === 'dismissed' ? 'var(--text-muted)' : 'var(--text-secondary)',
                       }}
                     >
                       Dismiss
@@ -319,14 +319,14 @@ export default function AdminReportsPage() {
                         onClick={() => updateStatus(r.id, 'open')}
                         style={{
                           padding: '6px 12px', borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-                          cursor: 'pointer', background: '#08080c', border: '1px solid #1a1a26', color: '#9ca3af',
+                          cursor: 'pointer', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)',
                         }}
                       >
                         Reopen
                       </button>
                     )}
 
-                    <div style={{ width: '1px', background: '#1a1a26', margin: '0 2px' }} />
+                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 2px' }} />
 
                     {!as.removed && (
                       <button
@@ -367,7 +367,7 @@ export default function AdminReportsPage() {
                         onClick={() => patchAction(r.id, { removeConfirm: false, banConfirm: false })}
                         style={{
                           padding: '6px 12px', borderRadius: '7px', fontSize: '11px', fontWeight: 700,
-                          cursor: 'pointer', background: '#08080c', border: '1px solid #1a1a26', color: '#6b7280',
+                          cursor: 'pointer', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-tertiary)',
                         }}
                       >
                         Cancel
