@@ -58,13 +58,13 @@ export default function GrievancePage() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '11px 14px', borderRadius: '10px',
-    background: '#08080c', border: '1px solid #1f1f2e',
-    color: '#f9fafb', fontSize: '13px', outline: 'none',
+    background: 'var(--bg-input)', border: '1px solid var(--border-light)',
+    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
     boxSizing: 'border-box', fontFamily: 'inherit',
   };
   const labelStyle: React.CSSProperties = {
     display: 'block', fontSize: '10px', fontWeight: 700,
-    color: '#6b7280', letterSpacing: '0.12em', textTransform: 'uppercase',
+    color: 'var(--text-tertiary)', letterSpacing: '0.12em', textTransform: 'uppercase',
     marginBottom: '6px',
   };
 
@@ -111,13 +111,13 @@ export default function GrievancePage() {
 
   return (
     <div style={{
-      minHeight: '100vh', backgroundColor: '#07070a',
-      color: '#f9fafb', }}>
+      minHeight: '100vh', backgroundColor: 'var(--bg-primary)',
+      color: 'var(--text-primary)', }}>
       {/* NAV */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: 'rgba(7,7,10,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #1a1a26',
+        borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
@@ -129,11 +129,11 @@ export default function GrievancePage() {
             height={32}
             style={{ borderRadius: '8px', display: 'block' }}
           />
-          <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
+          <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             {PLATFORM_NAME}
           </span>
         </Link>
-        <Link href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>
+        <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
           ← Back to Home
         </Link>
       </nav>
@@ -152,11 +152,11 @@ export default function GrievancePage() {
           </span>
           <h1 style={{
             fontSize: '32px', fontWeight: 900, letterSpacing: '-0.02em',
-            margin: '16px 0 8px', color: '#fff',
+            margin: '16px 0 8px', color: 'var(--text-primary)',
           }}>
             Grievance Officer
           </h1>
-          <p style={{ fontSize: '14px', color: '#9ca3af', lineHeight: 1.7, margin: 0, maxWidth: '580px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0, maxWidth: '580px' }}>
             In compliance with Rule 3(2)(b) of the Information Technology (Intermediary
             Guidelines and Digital Media Ethics Code) Rules, 2021, {PLATFORM_NAME} has
             appointed a Grievance Officer to address complaints from users.
@@ -165,7 +165,7 @@ export default function GrievancePage() {
 
         {/* Officer Card */}
         <div style={{
-          background: '#0d0d14', border: '1px solid #1a1a26',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           borderRadius: '16px', padding: '24px 28px',
           marginBottom: '32px',
           display: 'flex', gap: '24px', alignItems: 'flex-start',
@@ -182,13 +182,13 @@ export default function GrievancePage() {
           </div>
 
           <div style={{ flex: 1, minWidth: '200px' }}>
-            <div style={{ fontSize: '11px', color: '#4b5563', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>
               Appointed Grievance Officer
             </div>
-            <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff', marginBottom: '12px' }}>
+            <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '12px' }}>
               {GRIEVANCE_OFFICER_NAME}
             </div>
-            <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.6 }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               <p style={{ margin: '0 0 8px' }}>
                 <a href={`mailto:${GRIEVANCE_OFFICER_EMAIL}`}
                   style={{ color: '#d97706', textDecoration: 'none' }}>
@@ -207,7 +207,7 @@ export default function GrievancePage() {
           background: 'rgba(217,119,6,0.05)', border: '1px solid rgba(217,119,6,0.2)',
           borderRadius: '12px', padding: '16px 20px', marginBottom: '32px',
         }}>
-          <div style={{ fontSize: '12px', color: '#f9fafb', lineHeight: 1.7 }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.7 }}>
             <strong style={{ color: '#d97706', display: 'block', marginBottom: '8px' }}>
               ⏱️ Response & Appeal Timeline (IT Rules 2021 as amended)
             </strong>
@@ -218,7 +218,7 @@ export default function GrievancePage() {
               <li>Appeal to Grievance Appellate Committee: <strong>30 days</strong> from officer&apos;s decision (Amendment 2022)</li>
               <li>GAC Decision: <strong>30 days</strong> from appeal receipt</li>
             </ul>
-            <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>
+            <p style={{ margin: '8px 0 0', fontSize: '11px', color: 'var(--text-secondary)' }}>
               Users dissatisfied with the grievance officer&apos;s decision may appeal to the centrally-appointed Grievance Appellate Committee.
             </p>
           </div>
@@ -226,13 +226,13 @@ export default function GrievancePage() {
 
         {/* Grievance Form */}
         <div style={{
-          background: '#0d0d14', border: '1px solid #1a1a26',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           borderRadius: '16px', padding: '28px', marginBottom: '32px',
         }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#fff', margin: '0 0 6px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px' }}>
             📝 Submit a Grievance
           </h2>
-          <p style={{ fontSize: '12px', color: '#4b5563', margin: '0 0 24px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 24px', lineHeight: 1.5 }}>
             All fields marked * are required. You will receive an email acknowledgement within 24 hours.
           </p>
 
@@ -246,12 +246,12 @@ export default function GrievancePage() {
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#10b981', margin: '0 0 8px' }}>
                 Grievance Received
               </h3>
-              <p style={{ fontSize: '13px', color: '#9ca3af', margin: '0 0 6px', lineHeight: 1.6 }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 6px', lineHeight: 1.6 }}>
                 We have received your complaint. You will get an acknowledgement at{' '}
-                <strong style={{ color: '#fff' }}>{email}</strong> within 24 hours,
+                <strong style={{ color: 'var(--text-primary)' }}>{email}</strong> within 24 hours,
                 and a resolution within 15 days as required by IT Rules 2021.
               </p>
-              <p style={{ fontSize: '12px', color: '#4b5563', margin: '16px 0 0' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '16px 0 0' }}>
                 If you don&apos;t hear back, email us directly at{' '}
                 <a href={`mailto:${GRIEVANCE_OFFICER_EMAIL}`}
                   style={{ color: '#d97706', textDecoration: 'none' }}>
@@ -312,7 +312,7 @@ export default function GrievancePage() {
                   style={inputStyle}
                   disabled={formState === 'submitting'}
                 />
-                <p style={{ fontSize: '11px', color: '#4b5563', margin: '5px 0 0' }}>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '5px 0 0' }}>
                   Paste the link to the specific series, chapter, or comment you are reporting.
                 </p>
               </div>
@@ -330,7 +330,7 @@ export default function GrievancePage() {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
                   <span style={{
                     fontSize: '11px',
-                    color: description.length < 30 ? '#4b5563' : '#10b981',
+                    color: description.length < 30 ? 'var(--text-muted)' : '#10b981',
                   }}>
                     {description.length} characters {description.length < 30 ? `(${30 - description.length} more needed)` : '✓'}
                   </span>
@@ -353,10 +353,10 @@ export default function GrievancePage() {
                 style={{
                   width: '100%', padding: '14px',
                   background: formState === 'submitting'
-                    ? '#1a1a26'
+                    ? 'var(--border-color)'
                     : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
                   border: '1px solid #7f1d1d', borderRadius: '12px',
-                  color: formState === 'submitting' ? '#4b5563' : '#fff',
+                  color: formState === 'submitting' ? 'var(--text-muted)' : '#fff',
                   fontSize: '13px', fontWeight: 700,
                   cursor: formState === 'submitting' ? 'not-allowed' : 'pointer',
                 }}
@@ -364,7 +364,7 @@ export default function GrievancePage() {
                 {formState === 'submitting' ? 'Submitting...' : '📨 Submit Grievance'}
               </button>
 
-              <p style={{ fontSize: '11px', color: '#4b5563', textAlign: 'center', margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', margin: 0, lineHeight: 1.6 }}>
                 By submitting, you confirm that the information provided is accurate to the best
                 of your knowledge. False complaints may result in account action.
               </p>
@@ -374,10 +374,10 @@ export default function GrievancePage() {
 
         {/* Legal notice - Updated with 2025/2026 amendments */}
         <div style={{
-          border: '1px dashed #1f1f2e', borderRadius: '12px',
-          padding: '20px 24px', color: '#4b5563', fontSize: '12px', lineHeight: 1.7,
+          border: '1px dashed var(--border-light)', borderRadius: '12px',
+          padding: '20px 24px', color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.7,
         }}>
-          <strong style={{ color: '#6b7280', display: 'block', marginBottom: '8px' }}>
+          <strong style={{ color: 'var(--text-tertiary)', display: 'block', marginBottom: '8px' }}>
             Legal Reference & Latest Amendments
           </strong>
           <p style={{ margin: '0 0 10px' }}>
@@ -386,7 +386,7 @@ export default function GrievancePage() {
             notified under Section 87(2) of the Information Technology Act, 2000.
             {' '}{PLATFORM_NAME} acts as an intermediary platform under this Act.
           </p>
-          <p style={{ margin: '0 0 10px', fontSize: '11px', color: '#6b7280' }}>
+          <p style={{ margin: '0 0 10px', fontSize: '11px', color: 'var(--text-tertiary)' }}>
             <strong>Latest Amendments (2022-2026):</strong>
             <br />• Grievance Appellate Committee (GAC) mechanism established for appeals within 30 days
             <br />• 72-hour response requirement for specified prohibited content (Amendment 2025)
@@ -403,7 +403,7 @@ export default function GrievancePage() {
 
       {/* Footer */}
       <div style={{
-        borderTop: '1px solid #1a1a26', padding: '20px 24px',
+        borderTop: '1px solid var(--border-color)', padding: '20px 24px',
         display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap',
       }}>
         {[
@@ -413,7 +413,7 @@ export default function GrievancePage() {
           { label: 'Grievance Officer', href: '/grievance' },
         ].map((link) => (
           <a key={link.href} href={link.href} style={{
-            fontSize: '11px', color: '#4b5563', textDecoration: 'none',
+            fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none',
           }}>
             {link.label}
           </a>
