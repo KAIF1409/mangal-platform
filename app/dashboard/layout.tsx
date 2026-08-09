@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import StudioSidebar from "../components/StudioSidebar";
 
 export const metadata: Metadata = {
   title: "Creator Dashboard",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+      <StudioSidebar />
+      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+    </div>
+  );
 }
