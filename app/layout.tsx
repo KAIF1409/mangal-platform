@@ -14,14 +14,42 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = "https://mangal-platform.vercel.app";
+const siteDescription = "Read and publish India's best manga, comics and web novels — one account, both content types, 0% platform cut for creators.";
+
 export const metadata: Metadata = {
-  title: "MANGAL — India's Mangal Platform",
-  description: "Read and publish India's best mangal and comics.",
- icons: {
-  icon: "/favicon.ico",
-  shortcut: "/favicon.ico",
-  apple: "/favicon.ico",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "MANGAL — India's Manga & Novel Platform",
+    template: "%s | MANGAL",
+  },
+  description: siteDescription,
+  openGraph: {
+    title: "MANGAL — India's Manga & Novel Platform",
+    description: siteDescription,
+    url: siteUrl,
+    siteName: "MANGAL",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "MANGAL — Read and publish manga, comics and web novels",
       },
+    ],
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MANGAL — India's Manga & Novel Platform",
+    description: siteDescription,
+    images: ["/og-image.jpg"],
+  },
+  // No manual `icons` override here — Next.js auto-detects app/icon.png and
+  // app/apple-icon.png (already in the repo) and serves those directly.
+  // The previous version forced everything to favicon.ico instead, which
+  // meant the sharper PNG icons were never actually used.
 };
 
 export default function RootLayout({

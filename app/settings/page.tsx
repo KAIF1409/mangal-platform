@@ -125,8 +125,7 @@ export default function SettingsPage() {
   return (
     <div style={{
       minHeight: '100vh', backgroundColor: '#07070a',
-      color: '#f9fafb', fontFamily: 'Arial, Helvetica, sans-serif',
-    }}>
+      color: '#f9fafb', }}>
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: 'rgba(7,7,10,0.92)', backdropFilter: 'blur(12px)',

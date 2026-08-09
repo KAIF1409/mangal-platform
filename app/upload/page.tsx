@@ -44,7 +44,7 @@ const MIN_WORDS_PER_CHAPTER = 300;
 export default function CreatorUploadPage() {
   return (
     <Suspense fallback={
-      <main style={{ minHeight: '100vh', backgroundColor: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+      <main style={{ minHeight: '100vh', backgroundColor: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
         Loading...
       </main>
     }>
@@ -818,7 +818,7 @@ function UploadFlow() {
   // "***" appearing inline — see novelEditor.ts header comment for details.)
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: '#07070a', padding: '40px 24px', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+    <main style={{ minHeight: '100vh', backgroundColor: '#07070a', padding: '40px 24px', }}>
       <div style={{ maxWidth: '720px', margin: '0 auto' }}>
         <a href={seriesId ? `/series/${seriesId}` : '/dashboard'} style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>← Back to {seriesId ? 'Series' : 'Dashboard'}</a>
         <div style={{ marginTop: '16px' }} />

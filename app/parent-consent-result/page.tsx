@@ -68,9 +68,7 @@ function ConsentResult() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '24px 16px',
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
+        }}
     >
       {/* Card */}
       <div
@@ -203,8 +201,7 @@ export default function ParentConsentResultPage() {
             alignItems: 'center',
             justifyContent: 'center',
             color: '#475569',
-            fontFamily: 'sans-serif',
-          }}
+            }}
         >
           Loading...
         </div>

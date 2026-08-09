@@ -82,7 +82,7 @@ export default function LibraryPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
 
       {/* ── NAV ── */}
       <nav style={{

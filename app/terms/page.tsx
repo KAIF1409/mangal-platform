@@ -75,8 +75,7 @@ export default function TermsOfServicePage() {
         minHeight: '100vh',
         backgroundColor: '#07070a',
         color: '#f9fafb',
-        fontFamily: 'Arial, Helvetica, sans-serif',
-      }}
+        }}
     >
       {/* NAVBAR COMPONENT */}
       <Navbar />

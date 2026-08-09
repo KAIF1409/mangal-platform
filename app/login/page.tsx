@@ -560,7 +560,7 @@ export default function AuthPage() {
   // ── PENDING CONSENT SCREEN ────────────────────────────────────────────────
   if (mode === 'pending')
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', }}>
         <CosmicBackground />
         <CosmicOverlay />
         <EmberCanvas />
@@ -595,7 +595,7 @@ export default function AuthPage() {
   // ── DOB SCREEN (Google OAuth new users only) ──────────────────────────────
   if (mode === 'dob')
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', }}>
         <CosmicBackground />
         <CosmicOverlay />
         <EmberCanvas />
@@ -659,7 +659,7 @@ export default function AuthPage() {
   // ── LANDING ──────────────────────────────────────────────────────────────
   if (mode === 'landing')
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Segoe UI', Arial, sans-serif", overflow: 'hidden' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <CosmicBackground />
         <CosmicOverlay />
         <EmberCanvas />
@@ -861,7 +861,7 @@ export default function AuthPage() {
   // ── ROLE SELECTION ────────────────────────────────────────────────────────
   if (mode === 'role')
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', }}>
         <CosmicBackground />
         <CosmicOverlay />
         <EmberCanvas />
@@ -957,7 +957,7 @@ export default function AuthPage() {
   // ── LOGIN / REGISTER ──────────────────────────────────────────────────────
   const isLogin = mode === 'login';
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', }}>
       <CosmicBackground />
       <CosmicOverlay />
       <EmberCanvas />

@@ -185,7 +185,7 @@ function SearchPageInner() {
   const createLabel = isCreator ? 'Go to Studio' : user ? 'Become a Creator' : 'Log In to Create';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', fontFamily: "'Segoe UI', Arial, sans-serif", display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── NAV ── */}
       <nav style={{

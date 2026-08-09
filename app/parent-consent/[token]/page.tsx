@@ -87,7 +87,6 @@ export default function ParentConsentPage() {
     minHeight: '100vh',
     backgroundColor: '#07070a',
     color: '#f9fafb',
-    fontFamily: 'Arial, Helvetica, sans-serif',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',

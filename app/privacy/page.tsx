@@ -114,8 +114,7 @@ export default function PrivacyPolicyPage() {
   return (
     <div style={{
       minHeight: '100vh', backgroundColor: '#07070a',
-      color: '#f9fafb', fontFamily: 'Arial, Helvetica, sans-serif',
-    }}>
+      color: '#f9fafb', }}>
       
      <Navbar />
 

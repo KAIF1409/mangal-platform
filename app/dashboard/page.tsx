@@ -334,7 +334,7 @@ export default function Dashboard() {
 
   if (!roleChecked) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4b5563', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4b5563', fontSize: '13px' }}>
         Loading...
       </div>
     );
@@ -342,7 +342,7 @@ export default function Dashboard() {
 
   if (!isCreator) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', fontFamily: 'Arial, Helvetica, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ width: '100%', maxWidth: '420px', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '20px', padding: '40px 32px', textAlign: 'center' as const, boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
           <div style={{ fontSize: '36px', marginBottom: '14px' }}>📖</div>
           <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>{t('forCreatorsTitle')}</h2>
@@ -369,7 +369,7 @@ export default function Dashboard() {
   ] : [];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
 
       {/* Global responsive rules. Plain <style> tag because: (a) @keyframes
           can't be expressed in React inline styles, and (b) media queries

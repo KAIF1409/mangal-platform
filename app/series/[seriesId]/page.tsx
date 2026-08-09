@@ -334,7 +334,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
         <div>Loading series...</div>
@@ -343,7 +343,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   );
 
   if (!series) return (
-    <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '32px', marginBottom: '12px' }}>😔</div>
         <div>Series not found.</div>
@@ -367,7 +367,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
 
       {/* ── NAV ── */}
       <nav style={{

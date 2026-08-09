@@ -180,7 +180,7 @@ export default function AdminReportsPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
         Loading...
       </div>
     );
@@ -188,7 +188,7 @@ export default function AdminReportsPage() {
 
   if (!allowed) {
     return (
-      <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔒</div>
           <div>This page is for developers only.</div>
@@ -199,7 +199,7 @@ export default function AdminReportsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 4px' }}>🚩 Reports</h1>
         <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 24px' }}>

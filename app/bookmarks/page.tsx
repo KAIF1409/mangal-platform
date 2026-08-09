@@ -125,7 +125,7 @@ export default function BookmarksPage() {
   }, [series, activeContentType]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#07070a', color: '#f9fafb', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#07070a', color: '#f9fafb', }}>
 
       {/* NAV */}
       <nav style={{

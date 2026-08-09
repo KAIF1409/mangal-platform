@@ -111,8 +111,7 @@ export default function GrievancePage() {
   return (
     <div style={{
       minHeight: '100vh', backgroundColor: '#07070a',
-      color: '#f9fafb', fontFamily: 'Arial, Helvetica, sans-serif',
-    }}>
+      color: '#f9fafb', }}>
       {/* NAV */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
