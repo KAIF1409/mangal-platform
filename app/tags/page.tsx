@@ -46,7 +46,7 @@ export default function TagsIndexPage() {
           Browse by Tag
         </h1>
         <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 32px' }}>
-          Find your next read by the tropes and themes you're in the mood for.
+          Find your next read by the tropes and themes you&apos;re in the mood for.
         </p>
 
         {loading ? (

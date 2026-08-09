@@ -631,7 +631,7 @@ export default function AuthPage() {
               />
               {minorDetected && (
                 <div style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', borderRadius: '12px', padding: '16px' }}>
-                  <p style={{ fontSize: '12px', color: '#fbbf24', margin: '0 0 10px', fontWeight: 700 }}>🛡️ Under 18 — parent's email needed</p>
+                  <p style={{ fontSize: '12px', color: '#fbbf24', margin: '0 0 10px', fontWeight: 700 }}>🛡️ Under 18 — parent&apos;s email needed</p>
                   <AnimInput
                     label="Parent / Guardian Email"
                     type="email"
@@ -688,7 +688,7 @@ export default function AuthPage() {
               />
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
                 <div style={{ height: '1px', width: '40px', background: 'linear-gradient(to right, transparent, #f59e0b)' }} />
-                <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.22em', color: '#fbbf24', textTransform: 'uppercase' }}>India's Comic Revolution</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.22em', color: '#fbbf24', textTransform: 'uppercase' }}>India&apos;s Comic Revolution</span>
                 <div style={{ height: '1px', width: '40px', background: 'linear-gradient(to left, transparent, #f59e0b)' }} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '12px' }}>
@@ -714,7 +714,7 @@ export default function AuthPage() {
                 Bharat Ki Kahaniyan
               </p>
               <p style={{ fontSize: '15px', color: 'rgba(229,231,235,0.85)', lineHeight: 1.7, margin: 0, textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
-                The home India's storytellers never had.
+                The home India&apos;s storytellers never had.
                 <br />
                 <span style={{ color: '#fbbf24', fontWeight: 700 }}>Read. Create. Rise.</span>
               </p>
@@ -1117,7 +1117,7 @@ export default function AuthPage() {
                       padding: '16px',
                     }}
                   >
-                    <p style={{ fontSize: '12px', color: '#fbbf24', margin: '0 0 10px', fontWeight: 700 }}>🛡️ Under 18 — parent's email needed</p>
+                    <p style={{ fontSize: '12px', color: '#fbbf24', margin: '0 0 10px', fontWeight: 700 }}>🛡️ Under 18 — parent&apos;s email needed</p>
                     <AnimInput
                       label="Parent / Guardian Email"
                       type="email"

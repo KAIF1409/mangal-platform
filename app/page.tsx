@@ -492,7 +492,7 @@ export default function LandingPage() {
               Why Choose Mangal?
             </h2>
             <p style={{ fontSize: 'clamp(13px, 1.8vw, 16px)', color: 'var(--text-tertiary)', margin: '0 0 32px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
-              India's platform by creators, for readers. Discover stories rooted in our culture.
+              India&apos;s platform by creators, for readers. Discover stories rooted in our culture.
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
@@ -546,7 +546,7 @@ export default function LandingPage() {
                   <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)' }}>MANGAL</span>
                 </div>
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px', lineHeight: 1.6, margin: 0 }}>
-                  India's home for original comics &amp; novels. Made with ❤️ in Bharat.
+                  India&apos;s home for original comics &amp; novels. Made with ❤️ in Bharat.
                 </p>
               </div>
 

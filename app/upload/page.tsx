@@ -965,7 +965,7 @@ function UploadFlow() {
                   border: '1px solid #1f1f2e', borderRadius: '12px', color: '#9ca3af',
                   fontSize: '13px', fontWeight: 600, textDecoration: 'none', boxSizing: 'border-box' as const,
                 }}>
-                  ✅ I'm Done — Go to Series Page
+                  ✅ I&apos;m Done — Go to Series Page
                 </a>
               )}
             </div>
@@ -1076,7 +1076,7 @@ function UploadFlow() {
                 <>
                   {/* Author's Note — before chapter. Optional; needs chapters.author_note_before */}
                   <div>
-                    <label style={labelStyle}>Author's Note — Before Chapter (optional)</label>
+                    <label style={labelStyle}>Author&apos;s Note — Before Chapter (optional)</label>
                     <textarea
                       placeholder="e.g. Sorry for the late update! Thanks for 1k reads 🙏"
                       value={authorNoteBefore}
@@ -1182,7 +1182,7 @@ function UploadFlow() {
 
                   {/* Author's Note — after chapter. Optional; needs chapters.author_note_after */}
                   <div>
-                    <label style={labelStyle}>Author's Note — After Chapter (optional)</label>
+                    <label style={labelStyle}>Author&apos;s Note — After Chapter (optional)</label>
                     <textarea
                       placeholder="e.g. Next chapter drops Friday. Comment your theories!"
                       value={authorNoteAfter}

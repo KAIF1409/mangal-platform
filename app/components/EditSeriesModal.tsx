@@ -330,7 +330,7 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
                 border: '1px solid #1f1f2e', color: '#6b7280', fontSize: '12px', lineHeight: 1.5,
               }}>
                 🔒 {story.reading_mode === 'scroll' ? '📜 Vertical Scroll' : '📖 Page by Page'} — locked.
-                Can't change after the first chapter is published, it'd confuse readers mid-series.
+                Can&apos;t change after the first chapter is published, it&apos;d confuse readers mid-series.
               </div>
             ) : (
               <div style={{ display: 'flex', gap: '12px' }}>

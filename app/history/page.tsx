@@ -258,7 +258,7 @@ export default function HistoryPage() {
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📖</div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Nothing read yet</p>
             <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 24px' }}>
-              Start reading a series and it'll appear here automatically.
+              Start reading a series and it&apos;ll appear here automatically.
             </p>
             <a href="/" style={{
               padding: '10px 24px', borderRadius: '10px',
@@ -278,7 +278,7 @@ export default function HistoryPage() {
               No {activeContentType === 'novel' ? 'novels' : 'mangal'} in history
             </p>
             <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 20px' }}>
-              You haven't read any {activeContentType === 'novel' ? 'novels' : 'mangal'} yet.
+              You haven&apos;t read any {activeContentType === 'novel' ? 'novels' : 'mangal'} yet.
             </p>
             <button
               onClick={() => handleContentTypeToggle('all')}

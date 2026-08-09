@@ -214,11 +214,11 @@ export default function GrievancePage() {
               <li>Acknowledgement: <strong>24 hours</strong></li>
               <li>Standard Resolution: <strong>15 days</strong></li>
               <li>Prohibited Content (specified): <strong>72 hours</strong> (Amendment 2025)</li>
-              <li>Appeal to Grievance Appellate Committee: <strong>30 days</strong> from officer's decision (Amendment 2022)</li>
+              <li>Appeal to Grievance Appellate Committee: <strong>30 days</strong> from officer&apos;s decision (Amendment 2022)</li>
               <li>GAC Decision: <strong>30 days</strong> from appeal receipt</li>
             </ul>
             <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#9ca3af' }}>
-              Users dissatisfied with the grievance officer's decision may appeal to the centrally-appointed Grievance Appellate Committee.
+              Users dissatisfied with the grievance officer&apos;s decision may appeal to the centrally-appointed Grievance Appellate Committee.
             </p>
           </div>
         </div>

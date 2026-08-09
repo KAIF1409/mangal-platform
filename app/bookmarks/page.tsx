@@ -267,7 +267,7 @@ export default function BookmarksPage() {
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>No bookmarks yet</p>
             <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 24px' }}>
-              Follow a series to bookmark it — you'll find them all here.
+              Follow a series to bookmark it — you&apos;ll find them all here.
             </p>
             <a href="/" style={{
               padding: '10px 24px', borderRadius: '10px',

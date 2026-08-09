@@ -205,7 +205,7 @@ export default function BecomeCreatorPage() {
               Confirm Your Account
             </h2>
             <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, margin: '0 0 24px' }}>
-              Your creator identity is tied to a Google account — this is the account future earnings and payouts will be linked to. Make sure it's the right one before continuing.
+              Your creator identity is tied to a Google account — this is the account future earnings and payouts will be linked to. Make sure it&apos;s the right one before continuing.
             </p>
 
             <div style={{ padding: '14px 16px', background: '#08080c', border: '1px solid #1a1a26', borderRadius: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -327,7 +327,7 @@ export default function BecomeCreatorPage() {
         {step === 'done' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎉</div>
-            <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>You're a Creator Now</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>You&apos;re a Creator Now</h2>
             <p style={{ fontSize: '13px', color: '#9ca3af' }}>Taking you to your new Dashboard...</p>
           </div>
         )}
