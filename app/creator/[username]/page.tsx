@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
+import Link from 'next/link';
 
 interface Series {
   id: string;
@@ -172,13 +173,13 @@ export default function CreatorProfilePage() {
             <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, margin: '0 0 28px' }}>
               No creator with the username &ldquo;@{username}&rdquo; exists.
             </p>
-            <a href="/" style={{
+            <Link href="/" style={{
               display: 'inline-block', padding: '12px 28px', borderRadius: '10px',
               background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
               color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: '13px',
             }}>
               ← Back to Browse
-            </a>
+            </Link>
           </div>
         </div>
         <Footer />
@@ -197,15 +198,15 @@ export default function CreatorProfilePage() {
         padding: '0 24px', height: '64px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
           <div style={{
             width: '36px', height: '36px', borderRadius: '10px',
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
           }}>🔥</div>
           <span style={{ fontWeight: 900, fontSize: '20px', color: '#fff', letterSpacing: '-0.03em' }}>MANGAL</span>
-        </a>
-        <a href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>← Back to Browse</a>
+        </Link>
+        <Link href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>← Back to Browse</Link>
       </nav>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px 60px' }}>

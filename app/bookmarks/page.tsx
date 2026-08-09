@@ -7,6 +7,7 @@ import ProfileMenu from '../components/ProfileMenu';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
+import Link from 'next/link';
 
 // NOTE: "bookmarks" on MANGAL = followed series (follows table).
 // This page is an alias/friendlier entry point to the same data as /library.
@@ -269,13 +270,13 @@ export default function BookmarksPage() {
             <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 24px' }}>
               Follow a series to bookmark it — you&apos;ll find them all here.
             </p>
-            <a href="/" style={{
+            <Link href="/" style={{
               padding: '10px 24px', borderRadius: '10px',
               background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
               color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700,
             }}>
               Browse Series
-            </a>
+            </Link>
           </div>
         ) : filteredSeries.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 40px', background: '#0d0d14', borderRadius: '16px', border: '1px solid #1a1a26' }}>

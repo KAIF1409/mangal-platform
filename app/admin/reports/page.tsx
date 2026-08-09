@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
+import Link from 'next/link';
 
 
 interface Report {
@@ -192,7 +193,7 @@ export default function AdminReportsPage() {
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔒</div>
           <div>This page is for developers only.</div>
-          <a href="/" style={{ color: '#d97706', textDecoration: 'none', fontSize: '13px', marginTop: '8px', display: 'block' }}>&larr; Back to Browse</a>
+          <Link href="/" style={{ color: '#d97706', textDecoration: 'none', fontSize: '13px', marginTop: '8px', display: 'block' }}>&larr; Back to Browse</Link>
         </div>
       </div>
     );

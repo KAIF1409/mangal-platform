@@ -7,6 +7,7 @@ import ProfileMenu from '../components/ProfileMenu';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
+import Link from 'next/link';
 
 interface FollowedSeries {
   id: string;
@@ -211,9 +212,9 @@ export default function LibraryPage() {
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Your library is empty</p>
             <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 24px' }}>Follow a series to get notified when new chapters drop</p>
-            <a href="/" style={{ padding: '10px 24px', borderRadius: '10px', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+            <Link href="/" style={{ padding: '10px 24px', borderRadius: '10px', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
               Browse Series
-            </a>
+            </Link>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

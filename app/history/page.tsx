@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import Link from 'next/link';
 
 // Reading History — pulls from reading_progress table.
 // One row per reader+series (UNIQUE constraint), holds the last-read chapter + page.
@@ -190,14 +191,14 @@ export default function HistoryPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
             <span style={{ fontWeight: 900, fontSize: '17px', color: '#fff' }}>MANGAL</span>
-          </a>
+          </Link>
           <span style={{ color: '#374151' }}>›</span>
           <span style={{ fontSize: '13px', color: '#6b7280' }}>Reading History</span>
         </div>
-        <a href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: '#6b7280', textDecoration: 'none', border: '1px solid #1a1a26' }}>Browse</a>
+        <Link href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: '#6b7280', textDecoration: 'none', border: '1px solid #1a1a26' }}>Browse</Link>
       </nav>
 
       {/* HEADER */}
@@ -260,13 +261,13 @@ export default function HistoryPage() {
             <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 24px' }}>
               Start reading a series and it&apos;ll appear here automatically.
             </p>
-            <a href="/" style={{
+            <Link href="/" style={{
               padding: '10px 24px', borderRadius: '10px',
               background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
               color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700,
             }}>
               Browse Series
-            </a>
+            </Link>
           </div>
         ) : filteredHistory.length === 0 ? (
           /* Empty — filter returned zero results */

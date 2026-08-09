@@ -8,6 +8,7 @@ import ReportButton from '../../components/ReportButton';
 import ShareButton from '../../components/ShareButton';
 import { canManageSeries, isDeveloperRole } from '../../lib/roles';
 import { estimateReadTime } from '../../lib/novelEditor';
+import Link from 'next/link';
 
 interface Series {
   id: string;
@@ -480,7 +481,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '32px', marginBottom: '12px' }}>😔</div>
         <div>Series not found.</div>
-        <a href="/" style={{ color: '#d97706', textDecoration: 'none', fontSize: '13px', marginTop: '8px', display: 'block' }}>← Back to Browse</a>
+        <Link href="/" style={{ color: '#d97706', textDecoration: 'none', fontSize: '13px', marginTop: '8px', display: 'block' }}>← Back to Browse</Link>
       </div>
     </div>
   );
@@ -511,15 +512,15 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
             <span style={{ fontWeight: 900, fontSize: '17px', color: '#fff' }}>MANGAL</span>
-          </a>
+          </Link>
           <span style={{ color: '#374151' }}>›</span>
           <span style={{ fontSize: '13px', color: '#6b7280', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{series.title}</span>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <a href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: '#6b7280', textDecoration: 'none', border: '1px solid #1a1a26' }}>Browse</a>
+          <Link href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: '#6b7280', textDecoration: 'none', border: '1px solid #1a1a26' }}>Browse</Link>
           {isCreator && (
             <a href={`/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none' }}>
               + Add Chapter

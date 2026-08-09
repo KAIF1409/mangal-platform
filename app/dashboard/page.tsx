@@ -10,6 +10,7 @@ import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import Link from 'next/link';
 
 interface Story {
   id: string;
@@ -356,13 +357,13 @@ export default function Dashboard() {
           <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, margin: '0 0 28px' }}>
             {t('forCreatorsBody')}
           </p>
-          <a href="/" style={{
+          <Link href="/" style={{
             display: 'inline-block', padding: '12px 28px', borderRadius: '10px',
             background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
             color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: '13px',
           }}>
             {t('backToReading')}
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -470,7 +471,7 @@ export default function Dashboard() {
         }
         centerSlot={
           <div className="mangal-dash-nav-links">
-            <a href="/" style={navLinkStyle(false)}>{t('readerView')}</a>
+            <Link href="/" style={navLinkStyle(false)}>{t('readerView')}</Link>
             <a href="/dashboard" style={navLinkStyle(true)}>{t('dashboard')}</a>
             <a href="/upload" style={navLinkStyle(false)}>{t('createNew')}</a>
           </div>

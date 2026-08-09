@@ -23,6 +23,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 // ── CONFIGURE THESE BEFORE GOING LIVE ────────────────────────────────────────
 const GRIEVANCE_OFFICER_NAME = 'Mohammed Kaif';
@@ -120,7 +121,7 @@ export default function GrievancePage() {
         padding: '0 24px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
           <Image
             src="/logo-icon.png"
             alt={PLATFORM_NAME}
@@ -131,10 +132,10 @@ export default function GrievancePage() {
           <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
             {PLATFORM_NAME}
           </span>
-        </a>
-        <a href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>
+        </Link>
+        <Link href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>
           ← Back to Home
-        </a>
+        </Link>
       </nav>
 
       <div style={{ maxWidth: '760px', margin: '0 auto', padding: '48px 24px 80px' }}>

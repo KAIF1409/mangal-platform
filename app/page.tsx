@@ -260,7 +260,7 @@ export default function LandingPage() {
           transition: 'background 0.3s, border-color 0.3s',
         }}>
           {/* Logo */}
-          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
             <Image
               src="/logo-icon.png"
               alt="MANGAL"
@@ -273,7 +273,7 @@ export default function LandingPage() {
               priority
             />
             <span style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
-          </a>
+          </Link>
 
           {/* Center links */}
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>

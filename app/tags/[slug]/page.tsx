@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
+import Link from 'next/link';
 
 interface Series {
   id: string;
@@ -98,7 +99,7 @@ export default function TagPage({ params }: { params: Promise<{ slug: string }> 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px 24px' }}>
-        <a href="/tags" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>← All Tags</a>
+        <Link href="/tags" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>← All Tags</Link>
 
         {loading ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: '#374151' }}>Loading...</div>

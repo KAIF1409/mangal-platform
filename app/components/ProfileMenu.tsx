@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useUiLanguage } from '../lib/i18n';
+import Link from 'next/link';
 
 interface ProfileMenuProps {
   user: any;
@@ -139,7 +140,7 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
           {isCreator ? (
             <>
               <a href="/dashboard" style={itemStyle}>{t('pmDashboard')}</a>
-              <a href="/" style={itemStyle}>{t('pmReaderView')}</a>
+              <Link href="/" style={itemStyle}>{t('pmReaderView')}</Link>
               <a href="/upload" style={itemStyle}>{t('pmCreateNewSeries')}</a>
               <div style={{ height: '1px', background: '#1a1a26', margin: '6px 4px' }} />
               <a href="/history" style={itemStyle}>{t('pmReadingHistory')}</a>

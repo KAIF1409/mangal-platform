@@ -8,6 +8,7 @@ import ProfileMenu from '../components/ProfileMenu';
 import ThemeToggle from '../components/ThemeToggle';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
+import Link from 'next/link';
 
 interface Series {
   id: string;
@@ -219,7 +220,7 @@ export default function HomePage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         {/* Logo */}
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
           <Image
             src="/icon.png"
             alt="MANGAL"
@@ -229,7 +230,7 @@ export default function HomePage() {
             priority
           />
           <span style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
-        </a>
+        </Link>
 
         {/* Center Nav Links */}
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center', overflow: 'hidden', flexShrink: 1 }}>

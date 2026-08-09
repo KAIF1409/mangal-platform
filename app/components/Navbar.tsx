@@ -84,9 +84,9 @@ export default function Navbar({
       {variant === 'legal' ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <ThemeToggle size={30} />
-          <a href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
+          <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
             ← Back to Home
-          </a>
+          </Link>
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>

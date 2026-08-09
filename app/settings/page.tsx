@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { CONSENT_VERSION } from '../lib/dpdp';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
+import Link from 'next/link';
 
 const PLATFORM_NAME = 'MANGAL';
 
@@ -133,7 +134,7 @@ export default function SettingsPage() {
         padding: '0 24px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
           <div style={{
             width: '32px', height: '32px', borderRadius: '8px',
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
@@ -142,7 +143,7 @@ export default function SettingsPage() {
           <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
             {PLATFORM_NAME}
           </span>
-        </a>
+        </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {/* Step 22 — Hindi UI Toggle. This page has no ProfileMenu (it's a
@@ -166,9 +167,9 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
-          <a href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>
+          <Link href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>
             {t('backToHome')}
-          </a>
+          </Link>
         </div>
       </nav>
 
