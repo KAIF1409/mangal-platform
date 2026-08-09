@@ -226,6 +226,7 @@ export default function HomePage() {
           {[
             { label: t('browse'), href: '/' },
             { label: t('genres'), href: '/#genres' },
+            { label: 'Tags', href: '/tags' },
             { label: t('newReleases'), href: '/#new' },
             { label: t('library'), href: '/library' },
           ].map(link => (

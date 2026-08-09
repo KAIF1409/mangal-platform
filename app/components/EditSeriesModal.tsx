@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { checkImageBatchQuality } from '../lib/imageQuality';
@@ -52,6 +52,37 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
   const [checkingQuality, setCheckingQuality] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Step 25 — Tags: `allTags` is the master list to pick from, `selectedTagIds`
+  // is this series' current selection, `newTagName` lets a creator type a tag
+  // that doesn't exist yet (created on save).
+  const [allTags, setAllTags] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+  const [newTagName, setNewTagName] = useState('');
+  const [tagsLoaded, setTagsLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadTags = async () => {
+      const { data: tagRows } = await supabase.from('tags').select('id, name, slug').order('name');
+      if (tagRows) setAllTags(tagRows);
+
+      const { data: seriesTagRows } = await supabase
+        .from('series_tags')
+        .select('tag_id')
+        .eq('series_id', story.id);
+      if (seriesTagRows) setSelectedTagIds(new Set(seriesTagRows.map((r: any) => r.tag_id)));
+      setTagsLoaded(true);
+    };
+    loadTags();
+  }, [story.id]);
+
+  const toggleTag = (id: string) => {
+    setSelectedTagIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else if (next.size < 8) next.add(id);
+      return next;
+    });
+  };
 
   // Step 15: reading mode can't change once the series has a published chapter —
   // switching scroll<->page mid-series would confuse anyone already reading it.
@@ -139,6 +170,38 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
     if (updateError) { setError(updateError.message); setSaving(false); return; }
     if (!data) { setError('Update was blocked — no row returned. Check permissions.'); setSaving(false); return; }
 
+    // Step 25 — Tags: create a new tag if the creator typed one that doesn't
+    // exist, then diff selected vs. currently-saved and insert/delete only
+    // what changed. Non-fatal — a tag sync failure shouldn't block the save
+    // the creator actually asked for.
+    let finalSelectedIds = selectedTagIds;
+    const trimmedNewTag = newTagName.trim();
+    if (trimmedNewTag) {
+      const slug = trimmedNewTag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const { data: createdTag } = await supabase
+        .from('tags')
+        .upsert({ name: trimmedNewTag, slug }, { onConflict: 'name' })
+        .select('id')
+        .single();
+      if (createdTag) {
+        finalSelectedIds = new Set(selectedTagIds);
+        finalSelectedIds.add(createdTag.id);
+      }
+    }
+
+    const { data: existingRows } = await supabase.from('series_tags').select('tag_id').eq('series_id', story.id);
+    const existingIds = new Set((existingRows ?? []).map((r: any) => r.tag_id));
+
+    const toAdd = [...finalSelectedIds].filter(id => !existingIds.has(id));
+    const toRemove = [...existingIds].filter(id => !finalSelectedIds.has(id));
+
+    if (toAdd.length > 0) {
+      await supabase.from('series_tags').insert(toAdd.map(tag_id => ({ series_id: story.id, tag_id })));
+    }
+    if (toRemove.length > 0) {
+      await supabase.from('series_tags').delete().eq('series_id', story.id).in('tag_id', toRemove);
+    }
+
     setSaving(false);
     onSaved({ id: story.id, ...updates });
   };
@@ -206,6 +269,41 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
               <option value="">Select genre</option>
               {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
+          </div>
+
+          {/* Step 25 — Tags: up to 8, pick from existing or type a new one */}
+          <div>
+            <label style={labelStyle}>Tags <span style={{ textTransform: 'none', fontWeight: 400 }}>(up to 8 — helps readers find your series)</span></label>
+            {tagsLoaded && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                {allTags.map(tag => {
+                  const selected = selectedTagIds.has(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => toggleTag(tag.id)}
+                      style={{
+                        fontSize: '11px', fontWeight: 700, padding: '5px 12px', borderRadius: '20px',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                        border: selected ? '1px solid #d97706' : '1px solid #1f1f2e',
+                        background: selected ? 'rgba(217,119,6,0.15)' : '#08080c',
+                        color: selected ? '#d97706' : '#6b7280',
+                      }}
+                    >
+                      #{tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <input
+              type="text"
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              placeholder="Type a new tag not in the list above..."
+              style={inputStyle}
+            />
           </div>
 
           <div>

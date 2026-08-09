@@ -69,6 +69,9 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
+  // Step 25 — Tags system
+  const [tags, setTags] = useState<{ id: string; name: string; slug: string }[]>([]);
+
   useEffect(() => {
     const load = async () => {
       const { data: s } = await supabase.from('series').select('*').eq('id', seriesId).single();
@@ -85,6 +88,19 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           .eq('user_id', s.creator_id)
           .single();
         if (creatorRow) setCreatorUsername(creatorRow.username);
+
+        // Step 25 — Tags: joined through series_tags. Table may not exist yet
+        // on older deployments before the migration runs, so fail silently.
+        const { data: tagRows } = await supabase
+          .from('series_tags')
+          .select('tags(id, name, slug)')
+          .eq('series_id', seriesId);
+        if (tagRows) {
+          const flat = tagRows
+            .map((r: any) => (Array.isArray(r.tags) ? r.tags[0] : r.tags))
+            .filter(Boolean);
+          setTags(flat);
+        }
       }
 
       // Step 7 — view count: once per visitor per series per day (industry-standard
@@ -488,9 +504,31 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 by @{creatorUsername}
               </a>
             )}
-            <p style={{ fontSize: '14px', color: '#9ca3af', lineHeight: 1.7, margin: '0 0 24px', maxWidth: '540px' }}>
+            <p style={{ fontSize: '14px', color: '#9ca3af', lineHeight: 1.7, margin: '0 0 16px', maxWidth: '540px' }}>
               {series.synopsis}
             </p>
+
+            {/* Step 25 — Tag chips, clickable through to /tags/[slug] browse page */}
+            {tags.length > 0 && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '24px' }}>
+                {tags.map(tag => (
+                  <a
+                    key={tag.id}
+                    href={`/tags/${tag.slug}`}
+                    style={{
+                      fontSize: '10px', fontWeight: 600, color: '#9ca3af',
+                      background: '#0d0d14', border: '1px solid #1a1a26',
+                      padding: '4px 10px', borderRadius: '20px', textDecoration: 'none',
+                      transition: 'color 0.15s, border-color 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#d97706'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,119,6,0.4)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = '#1a1a26'; }}
+                  >
+                    #{tag.name}
+                  </a>
+                ))}
+              </div>
+            )}
 
             {/* Stats row */}
             <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
