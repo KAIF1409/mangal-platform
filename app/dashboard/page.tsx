@@ -53,6 +53,13 @@ interface AnalyticsData {
   viewsPerSeries: SeriesViewStat[];
 }
 
+// Step 28 — mirrors formatViews used on homepage/search cards for consistent display
+function formatViews(n: number): string {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return `${n}`;
+}
+
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
@@ -600,6 +607,11 @@ export default function Dashboard() {
                           color: story.content_type === 'novel' ? '#a78bfa' : '#6b7280',
                         }}>
                           {story.content_type === 'novel' ? '📕 Novel' : (story.reading_mode === 'scroll' ? '📜 Scroll' : '📖 Page')}
+                        </span>
+
+                        {/* Step 28 — view count, previously only visible in the Analytics tab */}
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: '#4b5563', padding: '2px 7px' }}>
+                          👁 {formatViews(story.views ?? 0)}
                         </span>
 
                         <button
