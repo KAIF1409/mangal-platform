@@ -946,6 +946,41 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* Audience Insights — mirrors inkstone's Geographical Distribution +
+                    Gender donut. No location/gender data collected yet, so this
+                    shows the same "100% unknown" honesty rather than fake numbers. */}
+                <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
+                  🌍 Audience Insights
+                </h3>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(160px, 1fr)', gap: '14px', marginBottom: '24px',
+                }}>
+                  <div style={{
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
+                    padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '160px',
+                  }}>
+                    <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: '12px' }}>
+                      🗺️ Geographic breakdown not tracked yet
+                    </div>
+                  </div>
+                  <div style={{
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
+                    padding: '20px',
+                  }}>
+                    <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '14px' }}>
+                      Gender
+                    </div>
+                    <svg viewBox="0 0 100 100" style={{ width: '80px', height: '80px', display: 'block', margin: '0 auto 14px' }}>
+                      <circle cx="50" cy="50" r="38" fill="none" stroke="var(--divider)" strokeWidth="14" />
+                    </svg>
+                    <div style={{ display: 'grid', gap: '6px', fontSize: '11px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}><span>Male</span><span>0.00%</span></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}><span>Female</span><span>0.00%</span></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}><span>Unknown</span><span>100.00%</span></div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Reader Trends — mirrors inkstone's "Daily Key Metrics" line chart.
                     Plain inline SVG so we don't pull in a charting library just
                     for one sparkline. Flat zero line until per-day view logging
