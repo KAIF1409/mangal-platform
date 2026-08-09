@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
@@ -72,7 +72,6 @@ export default function HomePage() {
   const router = useRouter();
   const { lang, setLang, t } = useUiLanguage();
   const [series, setSeries] = useState<Series[]>([]);
-  const [filtered, setFiltered] = useState<Series[]>([]);
   const [search, setSearch] = useState('');
   const [activeGenre, setActiveGenre] = useState('All');
   const [activeContentType, setActiveContentType] = useState<'all' | 'mangal' | 'novel'>('all');
@@ -158,7 +157,6 @@ export default function HomePage() {
             chapter_count: Array.isArray(s.chapters) ? (s.chapters[0]?.count ?? 0) : 0,
           }));
           setSeries(normalized);
-          setFiltered(normalized);
         }
         setLoading(false);
       });
@@ -182,7 +180,7 @@ export default function HomePage() {
     });
   }, []);
 
-  useEffect(() => {
+  const filtered = useMemo(() => {
     let result = series;
     if (activeGenre !== 'All') result = result.filter(s => s.genre === activeGenre);
     if (activeContentType !== 'all') result = result.filter(s => s.content_type === activeContentType);
@@ -196,7 +194,7 @@ export default function HomePage() {
       result = [...result].sort((a, b) => a.title.localeCompare(b.title));
     }
 
-    setFiltered(result);
+    return result;
   }, [activeGenre, activeContentType, showDesiComics, sortBy, series]);
 
   const featured = filtered.slice(0, 3);
