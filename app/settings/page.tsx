@@ -31,15 +31,15 @@ export default function SettingsPage() {
 
 
   const sectionCard: React.CSSProperties = {
-    background: '#0d0d14', border: '1px solid #1a1a26',
+    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
     borderRadius: '16px', padding: '24px 28px', marginBottom: '24px',
   };
   const sectionTitle: React.CSSProperties = {
-    fontSize: '16px', fontWeight: 800, color: '#fff', margin: '0 0 14px',
+    fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 14px',
     display: 'flex', alignItems: 'center', gap: '8px',
   };
   const bodyText: React.CSSProperties = {
-    fontSize: '13px', color: '#9ca3af', lineHeight: 1.75, margin: '0 0 14px',
+    fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.75, margin: '0 0 14px',
   };
   const buttonBase: React.CSSProperties = {
     padding: '10px 20px',
@@ -125,12 +125,12 @@ export default function SettingsPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', backgroundColor: '#07070a',
-      color: '#f9fafb', }}>
+      minHeight: '100vh', backgroundColor: 'var(--bg-primary)',
+      color: 'var(--text-primary)', }}>
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: 'rgba(7,7,10,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #1a1a26',
+        borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
@@ -140,7 +140,7 @@ export default function SettingsPage() {
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
           }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
+          <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             {PLATFORM_NAME}
           </span>
         </Link>
@@ -150,15 +150,15 @@ export default function SettingsPage() {
               standalone settings screen), so the toggle sits directly next
               to the Back to Home link instead, keeping the same EN/हिं
               pill style used everywhere else. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '8px', padding: '3px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '3px' }}>
             {LANGUAGES.map(({ code, label }) => (
               <button
                 key={code}
                 onClick={() => setLang(code)}
                 style={{
                   padding: '5px 10px', borderRadius: '6px', border: 'none',
-                  background: lang === code ? '#1a1a26' : 'transparent',
-                  color: lang === code ? '#fff' : '#6b7280',
+                  background: lang === code ? 'var(--border-color)' : 'transparent',
+                  color: lang === code ? 'var(--text-primary)' : 'var(--text-tertiary)',
                   fontSize: '11px', fontWeight: 700, cursor: 'pointer',
                   transition: 'background 0.15s, color 0.15s',
                 }}
@@ -167,7 +167,7 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
-          <Link href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>
+          <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
             {t('backToHome')}
           </Link>
         </div>
@@ -175,10 +175,10 @@ export default function SettingsPage() {
 
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '48px 24px 80px' }}>
         <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.02em', margin: '0 0 8px', color: '#fff' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.02em', margin: '0 0 8px', color: 'var(--text-primary)' }}>
             {t('settingsTitle')}
           </h1>
-          <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0 }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
             {t('settingsIntro')}{' '}
             <a href="/privacy" style={{ color: '#d97706', textDecoration: 'none' }}>{t('settingsIntroLink')}</a>
             {t('settingsIntroSuffix')}
@@ -288,7 +288,7 @@ export default function SettingsPage() {
                     ...buttonBase,
                     background: 'transparent',
                     border: '1px solid #2a2a36',
-                    color: '#9ca3af',
+                    color: 'var(--text-secondary)',
                   }}
                 >
                   {t('deleteAccountCancel')}
@@ -319,7 +319,7 @@ export default function SettingsPage() {
                   ...buttonBase,
                   background: 'transparent',
                   border: '1px solid #2a2a36',
-                  color: '#9ca3af',
+                  color: 'var(--text-secondary)',
                 }}
               >
                 {t('deleteAccountBack')}
