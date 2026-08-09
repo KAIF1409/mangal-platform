@@ -62,7 +62,7 @@ function ConsentResult() {
     <div
       style={{
         minHeight: '100vh',
-        background: '#07070a',
+        background: 'var(--bg-primary)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -73,8 +73,8 @@ function ConsentResult() {
       {/* Card */}
       <div
         style={{
-          background: '#0d0d14',
-          border: '1px solid #1a1a26',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
           borderRadius: '16px',
           maxWidth: '480px',
           width: '100%',
@@ -147,7 +147,7 @@ function ConsentResult() {
         {/* Divider */}
         <div
           style={{
-            borderTop: '1px solid #1a1a26',
+            borderTop: '1px solid var(--border-color)',
             paddingTop: '24px',
           }}
         >
@@ -196,7 +196,7 @@ export default function ParentConsentResultPage() {
         <div
           style={{
             minHeight: '100vh',
-            background: '#07070a',
+            background: 'var(--bg-primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
