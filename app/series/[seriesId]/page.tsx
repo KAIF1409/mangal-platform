@@ -48,6 +48,13 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   const [user, setUser] = useState<any>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
+  // Bug fix: whole-series delete was only reachable from the owner's own
+  // Dashboard (query scoped to creator_id === current user), so a developer
+  // account had no direct way to remove someone else's series — the only
+  // path was Report -> Admin Reports -> Remove. This button gives
+  // developers (and the owning creator) a direct delete right here.
+  const [confirmDeleteSeries, setConfirmDeleteSeries] = useState(false);
+  const [deletingSeries, setDeletingSeries] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followCount, setFollowCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
@@ -272,6 +279,57 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
     }
 
     setChapters(prev => prev.filter(c => c.id !== chapterId));
+  };
+
+  // Whole-series delete (see confirmDeleteSeries state comment above).
+  // Cleans up every chapter's child rows first (reusing the same steps as
+  // handleDeleteChapter), then the chapters, then the series row itself.
+  const handleDeleteSeries = async () => {
+    if (!series) return;
+    setDeletingSeries(true);
+    try {
+      for (const ch of chapters) {
+        const { data: pageRows } = await supabase
+          .from('pages')
+          .select('id, image_url')
+          .eq('chapter_id', ch.id);
+
+        if (pageRows && pageRows.length > 0) {
+          const paths = pageRows
+            .map(p => {
+              const marker = '/manga-pages/';
+              const idx = p.image_url.indexOf(marker);
+              return idx === -1 ? null : p.image_url.slice(idx + marker.length);
+            })
+            .filter((p): p is string => !!p);
+          if (paths.length > 0) {
+            await supabase.storage.from('manga-pages').remove(paths);
+          }
+          await supabase.from('pages').delete().eq('chapter_id', ch.id);
+        }
+
+        await supabase.from('reading_progress').delete().eq('chapter_id', ch.id);
+        await supabase.from('reactions').delete().eq('chapter_id', ch.id);
+        await supabase.from('comments').delete().eq('chapter_id', ch.id);
+      }
+
+      if (chapters.length > 0) {
+        await supabase.from('chapters').delete().eq('series_id', series.id);
+      }
+
+      // Series-level related rows
+      await supabase.from('follows').delete().eq('series_id', series.id);
+      await supabase.from('ratings').delete().eq('series_id', series.id);
+
+      const { error } = await supabase.from('series').delete().eq('id', series.id);
+      if (error) throw error;
+
+      window.location.href = '/dashboard';
+    } catch (err: any) {
+      alert(`Could not delete series: ${err.message}`);
+      setDeletingSeries(false);
+      setConfirmDeleteSeries(false);
+    }
   };
 
   if (loading) return (
@@ -555,6 +613,47 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 }}>
                   + Add Chapter
                 </a>
+              )}
+              {isCreator && (
+                confirmDeleteSeries ? (
+                  <div style={{ display: 'inline-flex', gap: '6px' }}>
+                    <button
+                      onClick={handleDeleteSeries}
+                      disabled={deletingSeries}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '12px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '13px',
+                        background: '#7f1d1d', border: '1px solid #991b1b', color: '#fff',
+                        cursor: deletingSeries ? 'wait' : 'pointer', opacity: deletingSeries ? 0.7 : 1,
+                      }}
+                    >
+                      {deletingSeries ? 'Deleting...' : '⚠️ Confirm Delete Series'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteSeries(false)}
+                      disabled={deletingSeries}
+                      style={{
+                        padding: '12px 16px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
+                        background: '#0d0d14', border: '1px solid #2a2a3a', color: '#9ca3af', cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteSeries(true)}
+                    title="Delete this entire series"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '8px',
+                      padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
+                      background: 'rgba(153,27,27,0.1)', border: '1px solid rgba(153,27,27,0.3)',
+                      color: '#ef4444', cursor: 'pointer',
+                    }}
+                  >
+                    🗑️ Delete Series
+                  </button>
+                )
               )}
               {/* Step 11 — WhatsApp Share */}
               <ShareButton title={series.title} url={typeof window !== 'undefined' ? window.location.href : ''} />
