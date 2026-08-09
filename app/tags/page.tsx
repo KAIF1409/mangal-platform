@@ -39,20 +39,20 @@ export default function TagsIndexPage() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px' }}>
-        <a href="/home" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>← Back to MANGAL</a>
+        <a href="/home" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to MANGAL</a>
         <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, margin: '12px 0 8px', letterSpacing: '-0.02em' }}>
           Browse by Tag
         </h1>
-        <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 32px' }}>
+        <p style={{ fontSize: '14px', color: 'var(--text-tertiary)', margin: '0 0 32px' }}>
           Find your next read by the tropes and themes you&apos;re in the mood for.
         </p>
 
         {loading ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: '#374151' }}>Loading tags...</div>
+          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-faint)' }}>Loading tags...</div>
         ) : tags.length === 0 ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: '#374151' }}>No tags yet.</div>
+          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-faint)' }}>No tags yet.</div>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
             {tags.map(tag => (
@@ -61,16 +61,16 @@ export default function TagsIndexPage() {
                 href={`/tags/${tag.slug}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  fontSize: '13px', fontWeight: 700, color: '#e5e7eb',
-                  background: '#0d0d14', border: '1px solid #1a1a26',
+                  fontSize: '13px', fontWeight: 700, color: 'var(--text-soft)',
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                   padding: '10px 16px', borderRadius: '24px', textDecoration: 'none',
                   transition: 'border-color 0.15s, color 0.15s',
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,119,6,0.5)'; (e.currentTarget as HTMLElement).style.color = '#d97706'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#1a1a26'; (e.currentTarget as HTMLElement).style.color = '#e5e7eb'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-color)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-soft)'; }}
               >
                 #{tag.name}
-                <span style={{ fontSize: '11px', color: '#4b5563', fontWeight: 600 }}>{tag.count}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{tag.count}</span>
               </a>
             ))}
           </div>
