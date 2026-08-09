@@ -3,6 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import ProfileMenu from '../components/ProfileMenu';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 
 // NOTE: "bookmarks" on MANGAL = followed series (follows table).
 // This page is an alias/friendlier entry point to the same data as /library.
@@ -29,11 +33,23 @@ const CONTENT_TYPE_OPTIONS: { value: 'all' | 'mangal' | 'novel'; label: string }
 ];
 const CONTENT_TYPE_STORAGE_KEY = 'mangal_content_type';
 
+// Step 28 — sort control, matching /search and /library
+type BookmarkSortOption = 'added' | 'az' | 'chapters';
+const BOOKMARK_SORT_OPTIONS: { value: BookmarkSortOption; label: string }[] = [
+  { value: 'added', label: 'Recently Bookmarked' },
+  { value: 'az', label: 'A–Z' },
+  { value: 'chapters', label: 'Most Chapters' },
+];
+
 export default function BookmarksPage() {
   const [series, setSeries] = useState<BookmarkedSeries[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [isCreator, setIsCreator] = useState(false);
+  const [isDeveloper, setIsDeveloper] = useState(false);
   const [activeContentType, setActiveContentType] = useState<'all' | 'mangal' | 'novel'>('all');
+  const [sortBy, setSortBy] = useState<BookmarkSortOption>('added');
 
   useEffect(() => {
     const stored = localStorage.getItem(CONTENT_TYPE_STORAGE_KEY);
@@ -53,6 +69,15 @@ export default function BookmarksPage() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) { window.location.href = '/login'; return; }
       setUserId(u.user.id);
+      setUser(u.user);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', u.user.id)
+        .single();
+      if (hasCreatorAccess(profile?.role)) setIsCreator(true);
+      setIsDeveloper(isDeveloperRole(profile?.role));
 
       const { data: follows } = await supabase
         .from('follows')
@@ -120,34 +145,60 @@ export default function BookmarksPage() {
   };
 
   const filteredSeries = useMemo(() => {
-    if (activeContentType === 'all') return series;
-    return series.filter(s => s.content_type === activeContentType);
-  }, [series, activeContentType]);
+    let r = activeContentType === 'all' ? series : series.filter(s => s.content_type === activeContentType);
+    r = [...r];
+    switch (sortBy) {
+      case 'az':
+        r.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'chapters':
+        r.sort((a, b) => b.chapter_count - a.chapter_count);
+        break;
+      case 'added':
+      default:
+        r.sort((a, b) => new Date(b.followed_at).getTime() - new Date(a.followed_at).getTime());
+        break;
+    }
+    return r;
+  }, [series, activeContentType, sortBy]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#07070a', color: '#f9fafb', }}>
 
-      {/* NAV */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(7,7,10,0.97)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid #1a1a26',
-        padding: '0 24px', height: '60px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-            <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
-            <span style={{ fontWeight: 900, fontSize: '17px', color: '#fff' }}>MANGAL</span>
-          </a>
-          <span style={{ color: '#374151' }}>›</span>
-          <span style={{ fontSize: '13px', color: '#6b7280' }}>Bookmarks</span>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <a href="/library" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>My Library</a>
-          <a href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: '#6b7280', textDecoration: 'none', border: '1px solid #1a1a26' }}>Browse</a>
-        </div>
-      </nav>
+      {/* NAV (shared component) */}
+      <Navbar
+        variant="custom"
+        centerSlot={
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            {[
+              { label: 'Browse', href: '/' },
+              { label: '🔍 Search', href: '/search' },
+              { label: '🔔 Library', href: '/library' },
+            ].map(link => (
+              <a key={link.label} href={link.href} style={{
+                padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                color: '#9ca3af', textDecoration: 'none',
+                transition: 'color 0.15s, background 0.15s',
+              }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = '#fff'; (e.target as HTMLElement).style.background = '#1a1a26'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#9ca3af'; (e.target as HTMLElement).style.background = 'transparent'; }}
+              >{link.label}</a>
+            ))}
+          </div>
+        }
+        rightSlot={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {isCreator && (
+              <a href="/dashboard" style={{
+                padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
+                color: '#d97706', textDecoration: 'none',
+              }}>🛠 Studio</a>
+            )}
+            {user && <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />}
+          </div>
+        }
+      />
 
       {/* HEADER */}
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 20px' }}>
@@ -161,6 +212,7 @@ export default function BookmarksPage() {
         </p>
 
         {!loading && series.length > 0 && (
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             {CONTENT_TYPE_OPTIONS.map(opt => {
               const isActive = activeContentType === opt.value;
@@ -183,6 +235,21 @@ export default function BookmarksPage() {
                 </button>
               );
             })}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>Sort:</span>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as BookmarkSortOption)}
+              style={{
+                padding: '8px 12px', borderRadius: '8px', background: '#0d0d14',
+                border: '1px solid #2a2a3a', color: '#d97706', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              {BOOKMARK_SORT_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
           </div>
         )}
       </div>
@@ -246,21 +313,8 @@ export default function BookmarksPage() {
         )}
       </div>
 
-      {/* FOOTER */}
-      <footer style={{ borderTop: '1px solid #1a1a26', padding: '32px 24px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '10px' }}>
-          <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '15px', color: '#fff' }}>MANGAL</span>
-        </div>
-        <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 12px' }}>Made with ❤️ in India · Free to read, forever.</p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          {['/privacy', '/terms', '/grievance'].map(href => (
-            <a key={href} href={href} style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}>
-              {href === '/privacy' ? 'Privacy Policy' : href === '/terms' ? 'Terms of Service' : 'Grievance Officer'}
-            </a>
-          ))}
-        </div>
-      </footer>
+      {/* FOOTER (shared component) */}
+      <Footer />
     </div>
   );
 }
