@@ -85,16 +85,16 @@ export default function ParentConsentPage() {
 
   const wrapperStyle: React.CSSProperties = {
     minHeight: '100vh',
-    backgroundColor: '#07070a',
-    color: '#f9fafb',
+    backgroundColor: 'var(--bg-primary)',
+    color: 'var(--text-primary)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '24px',
   };
   const cardStyle: React.CSSProperties = {
-    background: '#0d0d14',
-    border: '1px solid #1a1a26',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-color)',
     borderRadius: '16px',
     padding: '32px',
     maxWidth: '440px',
@@ -105,7 +105,7 @@ export default function ParentConsentPage() {
     return (
       <div style={wrapperStyle}>
         <div style={cardStyle}>
-          <p style={{ color: '#9ca3af', fontSize: '14px' }}>Loading…</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Loading…</p>
         </div>
       </div>
     );
@@ -118,7 +118,7 @@ export default function ParentConsentPage() {
           <h1 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '12px' }}>
             Link not recognized
           </h1>
-          <p style={{ color: '#9ca3af', fontSize: '13px', lineHeight: 1.7 }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.7 }}>
             This confirmation link is invalid or has already been used. If you
             believe this is an error, contact us at{' '}
             <a href="mailto:kaifmohammed.work@gmail.com" style={{ color: '#d97706' }}>
@@ -138,7 +138,7 @@ export default function ParentConsentPage() {
           <h1 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '12px', color: '#10b981' }}>
             ✓ Account confirmed
           </h1>
-          <p style={{ color: '#9ca3af', fontSize: '13px', lineHeight: 1.7 }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.7 }}>
             Thank you. The account is now active. As required under India&apos;s
             DPDP Act, 2023, MANGAL will not run targeted advertising or build
             behavioral profiles from this account&apos;s reading activity.
@@ -155,7 +155,7 @@ export default function ParentConsentPage() {
           <h1 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '12px', color: '#ef4444' }}>
             Something went wrong
           </h1>
-          <p style={{ color: '#9ca3af', fontSize: '13px', lineHeight: 1.7 }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.7 }}>
             We couldn&apos;t confirm this just now. Please try again, or email{' '}
             <a href="mailto:kaifmohammed.work@gmail.com" style={{ color: '#d97706' }}>
               kaifmohammed.work@gmail.com
@@ -173,7 +173,7 @@ export default function ParentConsentPage() {
         <h1 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '12px' }}>
           Parental Consent Required
         </h1>
-        <p style={{ color: '#9ca3af', fontSize: '13px', lineHeight: 1.7, marginBottom: '20px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.7, marginBottom: '20px' }}>
           {childFirstName} has signed up for MANGAL and indicated they are
           under 18. Under India&apos;s Digital Personal Data Protection Act,
           2023, we need your confirmation as a parent or guardian before this
@@ -189,7 +189,7 @@ export default function ParentConsentPage() {
             borderRadius: '8px',
             background: '#d97706',
             border: 'none',
-            color: '#07070a',
+            color: 'var(--bg-primary)',
             fontSize: '14px',
             fontWeight: 700,
             cursor: state === 'confirming' ? 'default' : 'pointer',
