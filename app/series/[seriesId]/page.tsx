@@ -151,13 +151,20 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       // Step 7 — view count: once per visitor per series per day (industry-standard
       // anti-spam pattern, same idea as YouTube/Webtoon). Guarded via localStorage so
       // refreshes, re-renders, and repeat same-day visits don't inflate the number.
+      // Routed through /api/log-view (instead of calling the RPC directly from the
+      // browser) so the server can read Vercel's edge geo header and record which
+      // country the view came from — used by creator Audience Insights.
       try {
         const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
         const storageKey = `viewed:${seriesId}:${today}`;
         if (!localStorage.getItem(storageKey)) {
           localStorage.setItem(storageKey, '1');
-          const { error: viewError } = await supabase.rpc('increment_series_views', { series_id_input: seriesId });
-          if (!viewError) {
+          const res = await fetch('/api/log-view', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ seriesId }),
+          });
+          if (res.ok) {
             setViewCount(c => c + 1);
           }
         }
