@@ -72,6 +72,24 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   // Step 25 — Tags system
   const [tags, setTags] = useState<{ id: string; name: string; slug: string }[]>([]);
 
+  // Step 26 — Written Reviews
+  interface Review {
+    id: string;
+    reader_id: string;
+    stars: number;
+    review_title: string | null;
+    review_text: string | null;
+    created_at: string;
+    full_name: string;
+    helpful_count: number;
+  }
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [myVotedHelpful, setMyVotedHelpful] = useState<Set<string>>(new Set());
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewText, setReviewText] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       const { data: s } = await supabase.from('series').select('*').eq('id', seriesId).single();
@@ -152,11 +170,22 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
 
         const { data: myR } = await supabase
           .from('ratings')
-          .select('stars')
+          .select('stars, review_title, review_text')
           .eq('series_id', seriesId)
           .eq('reader_id', u.user.id)
           .maybeSingle();
-        if (myR) setMyRating(myR.stars);
+        if (myR) {
+          setMyRating(myR.stars);
+          setReviewTitle(myR.review_title ?? '');
+          setReviewText(myR.review_text ?? '');
+        }
+
+        // Step 26 — which reviews this reader has already marked helpful
+        const { data: voteRows } = await supabase
+          .from('review_helpful_votes')
+          .select('rating_id')
+          .eq('voter_id', u.user.id);
+        if (voteRows) setMyVotedHelpful(new Set(voteRows.map((v: any) => v.rating_id)));
       }
 
       const { count } = await supabase
@@ -173,6 +202,29 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         setRatingCount(allRatings.length);
         const avg = allRatings.reduce((sum, r) => sum + r.stars, 0) / allRatings.length;
         setAvgRating(Math.round(avg * 10) / 10);
+      }
+
+      // Step 26 — Written reviews: only rows with actual review text, newest
+      // first. Helpful count via embedded aggregate, same no-N+1 pattern used
+      // for chapter counts and tag counts elsewhere.
+      const { data: reviewRows } = await supabase
+        .from('ratings')
+        .select('id, reader_id, stars, review_title, review_text, created_at, profiles(full_name), review_helpful_votes(count)')
+        .eq('series_id', seriesId)
+        .not('review_text', 'is', null)
+        .order('created_at', { ascending: false });
+      if (reviewRows) {
+        const mapped: Review[] = reviewRows.map((r: any) => ({
+          id: r.id,
+          reader_id: r.reader_id,
+          stars: r.stars,
+          review_title: r.review_title,
+          review_text: r.review_text,
+          created_at: r.created_at,
+          full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader',
+          helpful_count: Array.isArray(r.review_helpful_votes) ? (r.review_helpful_votes[0]?.count ?? 0) : 0,
+        }));
+        setReviews(mapped);
       }
 
       const c = await fetchChapters();
@@ -249,6 +301,63 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       }
     }
     setRatingLoading(false);
+  };
+
+  // Step 26 — Written Reviews
+  const submitReview = async () => {
+    if (!user) { window.location.href = '/login'; return; }
+    if (!myRating) return; // must rate before/along with reviewing
+    if (reviewSubmitting) return;
+    setReviewSubmitting(true);
+    const { error } = await supabase
+      .from('ratings')
+      .upsert({
+        series_id: seriesId,
+        reader_id: user.id,
+        stars: myRating,
+        review_title: reviewTitle.trim() || null,
+        review_text: reviewText.trim() || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'series_id,reader_id' });
+    setReviewSubmitting(false);
+    if (!error) {
+      setShowReviewForm(false);
+      const { data: reviewRows } = await supabase
+        .from('ratings')
+        .select('id, reader_id, stars, review_title, review_text, created_at, profiles(full_name), review_helpful_votes(count)')
+        .eq('series_id', seriesId)
+        .not('review_text', 'is', null)
+        .order('created_at', { ascending: false });
+      if (reviewRows) {
+        const mapped: Review[] = reviewRows.map((r: any) => ({
+          id: r.id,
+          reader_id: r.reader_id,
+          stars: r.stars,
+          review_title: r.review_title,
+          review_text: r.review_text,
+          created_at: r.created_at,
+          full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader',
+          helpful_count: Array.isArray(r.review_helpful_votes) ? (r.review_helpful_votes[0]?.count ?? 0) : 0,
+        }));
+        setReviews(mapped);
+      }
+    }
+  };
+
+  const toggleHelpful = async (reviewId: string) => {
+    if (!user) { window.location.href = '/login'; return; }
+    const alreadyVoted = myVotedHelpful.has(reviewId);
+    setMyVotedHelpful(prev => {
+      const next = new Set(prev);
+      if (alreadyVoted) next.delete(reviewId); else next.add(reviewId);
+      return next;
+    });
+    setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, helpful_count: r.helpful_count + (alreadyVoted ? -1 : 1) } : r));
+    if (alreadyVoted) {
+      await supabase.from('review_helpful_votes').delete().eq('rating_id', reviewId).eq('voter_id', user.id);
+    } else {
+      await supabase.from('review_helpful_votes').insert({ rating_id: reviewId, voter_id: user.id });
+    }
   };
 
   const [sortDesc, setSortDesc] = useState(false);
@@ -743,6 +852,121 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             ))}
           </div>
         )}
+
+        {/* ── STEP 26 — WRITTEN REVIEWS ── */}
+        <section style={{ padding: '48px 0 40px', borderTop: '1px solid #1a1a26', marginTop: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: '10px', marginBottom: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#fff' }}>
+              Reviews {reviews.length > 0 && <span style={{ color: '#4b5563', fontWeight: 600 }}>({reviews.length})</span>}
+            </h2>
+            {user && !showReviewForm && (
+              <button
+                onClick={() => { if (!myRating) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; } setShowReviewForm(true); }}
+                style={{
+                  padding: '9px 18px', borderRadius: '10px', border: '1px solid #1a1a26',
+                  background: '#0d0d14', color: '#d97706', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                {myRating && reviews.some(r => r.reader_id === user.id) ? '✏️ Edit Your Review' : '✍️ Write a Review'}
+              </button>
+            )}
+          </div>
+
+          {!myRating && user && (
+            <p style={{ fontSize: '12px', color: '#4b5563', marginBottom: '20px' }}>
+              Rate the series above (★) before writing a review.
+            </p>
+          )}
+
+          {showReviewForm && (
+            <div style={{ background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px', padding: '20px', marginBottom: '24px' }}>
+              <input
+                type="text"
+                value={reviewTitle}
+                onChange={e => setReviewTitle(e.target.value)}
+                placeholder="Review title (optional)"
+                maxLength={100}
+                style={{
+                  width: '100%', padding: '11px 14px', borderRadius: '10px', marginBottom: '10px',
+                  background: '#08080c', border: '1px solid #1f1f2e', color: '#fff',
+                  fontSize: '13px', outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit',
+                }}
+              />
+              <textarea
+                value={reviewText}
+                onChange={e => setReviewText(e.target.value)}
+                placeholder="What did you think of this series?"
+                rows={4}
+                maxLength={2000}
+                style={{
+                  width: '100%', padding: '11px 14px', borderRadius: '10px',
+                  background: '#08080c', border: '1px solid #1f1f2e', color: '#fff',
+                  fontSize: '13px', outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', resize: 'vertical' as const,
+                }}
+              />
+              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                <button
+                  onClick={() => setShowReviewForm(false)}
+                  style={{ padding: '10px 18px', borderRadius: '10px', background: 'transparent', border: '1px solid #1f1f2e', color: '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                >Cancel</button>
+                <button
+                  onClick={submitReview}
+                  disabled={reviewSubmitting}
+                  style={{
+                    padding: '10px 20px', borderRadius: '10px', border: 'none',
+                    background: reviewSubmitting ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d, #d97706)',
+                    color: '#fff', fontSize: '12px', fontWeight: 700, cursor: reviewSubmitting ? 'not-allowed' : 'pointer',
+                  }}
+                >{reviewSubmitting ? 'Posting...' : 'Post Review'}</button>
+              </div>
+            </div>
+          )}
+
+          {reviews.length === 0 ? (
+            <div style={{ padding: '40px 0', textAlign: 'center', color: '#374151', fontSize: '13px' }}>
+              No written reviews yet — be the first to share your thoughts.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {reviews.map(review => (
+                <div key={review.id} style={{ background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px', padding: '18px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap' as const, gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{review.full_name}</span>
+                      <span style={{ display: 'flex', gap: '1px' }}>
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <span key={s} style={{ fontSize: '11px', color: s <= review.stars ? '#d97706' : '#2a2a3a' }}>★</span>
+                        ))}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '10px', color: '#4b5563' }}>
+                      {new Date(review.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                  {review.review_title && (
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>{review.review_title}</div>
+                  )}
+                  {review.review_text && (
+                    <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, margin: '0 0 12px' }}>{review.review_text}</p>
+                  )}
+                  <button
+                    onClick={() => toggleHelpful(review.id)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      padding: '5px 12px', borderRadius: '8px', cursor: 'pointer',
+                      border: myVotedHelpful.has(review.id) ? '1px solid rgba(217,119,6,0.4)' : '1px solid #1a1a26',
+                      background: myVotedHelpful.has(review.id) ? 'rgba(217,119,6,0.1)' : 'transparent',
+                      color: myVotedHelpful.has(review.id) ? '#d97706' : '#6b7280',
+                      fontSize: '11px', fontWeight: 700,
+                    }}
+                  >
+                    👍 Helpful{review.helpful_count > 0 ? ` (${review.helpful_count})` : ''}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {/* ── FOOTER ── */}
