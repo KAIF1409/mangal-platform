@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import ProfileMenu from '../components/ProfileMenu';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 
 interface Series {
@@ -219,44 +221,32 @@ function SearchPageInner() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── NAV ── */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(7,7,10,0.97)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid #1a1a26',
-        padding: '0 24px', height: '64px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '10px',
-            background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-          }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '20px', color: '#fff', letterSpacing: '-0.03em' }}>MANGAL</span>
-        </a>
-
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-          {[
-            { label: 'Browse', href: '/' },
-            { label: 'Genres', href: '/#genres' },
-            { label: 'New Releases', href: '/#new' },
-            { label: '🔔 Library', href: '/library' },
-          ].map(link => (
-            <a key={link.label} href={link.href} style={{
-              padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-              color: '#9ca3af', textDecoration: 'none',
-              transition: 'color 0.15s, background 0.15s',
-            }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.color = '#fff'; (e.target as HTMLElement).style.background = '#1a1a26'; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = '#9ca3af'; (e.target as HTMLElement).style.background = 'transparent'; }}
-            >{link.label}</a>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {user ? (
-            <>
+      {/* ── NAV (shared component — same header as Home/Dashboard) ── */}
+      <Navbar
+        variant="custom"
+        centerSlot={
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            {[
+              { label: 'Browse', href: '/' },
+              { label: 'Genres', href: '/#genres' },
+              { label: 'New Releases', href: '/#new' },
+              { label: '🔔 Library', href: '/library' },
+              { label: '🔖 Bookmarks', href: '/bookmarks' },
+            ].map(link => (
+              <a key={link.label} href={link.href} style={{
+                padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                color: '#9ca3af', textDecoration: 'none',
+                transition: 'color 0.15s, background 0.15s',
+              }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = '#fff'; (e.target as HTMLElement).style.background = '#1a1a26'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#9ca3af'; (e.target as HTMLElement).style.background = 'transparent'; }}
+              >{link.label}</a>
+            ))}
+          </div>
+        }
+        rightSlot={
+          user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {isCreator && (
                 <a href="/dashboard" style={{
                   padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
@@ -265,19 +255,19 @@ function SearchPageInner() {
                 }}>🛠 Studio</a>
               )}
               <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
-            </>
+            </div>
           ) : (
-            <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <a href="/login" style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#9ca3af', textDecoration: 'none' }}>Log in</a>
               <a href="/login" style={{
                 padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
                 background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
                 color: '#fff', textDecoration: 'none',
               }}>Get Started</a>
-            </>
-          )}
-        </div>
-      </nav>
+            </div>
+          )
+        }
+      />
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px 60px', flex: 1, width: '100%', boxSizing: 'border-box' }}>
 
@@ -430,25 +420,8 @@ function SearchPageInner() {
         )}
       </div>
 
-      {/* ── FOOTER ── */}
-      <footer style={{ borderTop: '1px solid #1a1a26', padding: '32px 24px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff' }}>MANGAL</span>
-        </div>
-        <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 14px' }}>Made with ❤️ in India · Free to read, forever.</p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          {[
-            { label: 'Privacy Policy', href: '/privacy' },
-            { label: 'Terms of Service', href: '/terms' },
-            { label: 'Grievance Officer', href: '/grievance' },
-          ].map(link => (
-            <a key={link.href} href={link.href} style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}>
-              {link.label}
-            </a>
-          ))}
-        </div>
-      </footer>
+      {/* ── FOOTER (shared component) ── */}
+      <Footer />
     </div>
   );
 }
