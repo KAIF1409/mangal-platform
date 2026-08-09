@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { supabase } from './lib/supabase';
 
 // ── Public landing page — no auth required ──
@@ -19,6 +20,13 @@ interface Series {
   content_type: 'mangal' | 'novel';
   status: 'draft' | 'published';
   views: number;
+}
+
+interface TagWithCount {
+  id: string;
+  name: string;
+  slug: string;
+  count: number;
 }
 
 function formatViews(n: number): string {
@@ -149,6 +157,7 @@ export default function LandingPage() {
   const [search, setSearch] = useState('');
   const [scrolled, setScrolled] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
+  const [tagCloud, setTagCloud] = useState<TagWithCount[]>([]);
 
   // Redirect logged-in users to /home
   useEffect(() => {
@@ -193,6 +202,28 @@ export default function LandingPage() {
       setLoading(false);
     };
     loadShowcase();
+  }, []);
+
+  // Fetch top tags for the "Browse by Tag" cloud — same single-embedded-count
+  // query as /tags, just capped to the top 16 by usage for a homepage teaser.
+  useEffect(() => {
+    supabase
+      .from('tags')
+      .select('id, name, slug, series_tags(count)')
+      .then(({ data }) => {
+        if (!data) return;
+        const withCounts = data
+          .map((t: { id: string; name: string; slug: string; series_tags: { count: number }[] | null }) => ({
+            id: t.id,
+            name: t.name,
+            slug: t.slug,
+            count: Array.isArray(t.series_tags) ? (t.series_tags[0]?.count ?? 0) : 0,
+          }))
+          .filter((t) => t.count > 0)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 16);
+        setTagCloud(withCounts);
+      });
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -412,6 +443,41 @@ export default function LandingPage() {
             )}
           </div>
         </section>
+
+
+        {/* ── TAG CLOUD ── */}
+        {tagCloud.length > 0 && (
+          <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
+              <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: '#fff' }}>
+                🏷️ Browse by Tag
+              </h2>
+              <Link href="/tags" style={{ fontSize: '13px', fontWeight: 700, color: '#d97706', textDecoration: 'none' }}>
+                See all tags →
+              </Link>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {tagCloud.map(tag => (
+                <a
+                  key={tag.id}
+                  href={`/tags/${tag.slug}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    fontSize: '13px', fontWeight: 700, color: '#e5e7eb',
+                    background: '#0d0d14', border: '1px solid #1a1a26',
+                    padding: '10px 16px', borderRadius: '24px', textDecoration: 'none',
+                    transition: 'border-color 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,119,6,0.5)'; (e.currentTarget as HTMLElement).style.color = '#d97706'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#1a1a26'; (e.currentTarget as HTMLElement).style.color = '#e5e7eb'; }}
+                >
+                  #{tag.name}
+                  <span style={{ fontSize: '11px', color: '#4b5563', fontWeight: 600 }}>{tag.count}</span>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
 
         {/* ── FEATURES ── */}
