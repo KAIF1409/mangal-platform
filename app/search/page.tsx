@@ -542,4 +542,4 @@ export default function SearchPage() {
       <SearchPageInner />
     </Suspense>
   );
-}x`
+}
