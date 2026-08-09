@@ -23,6 +23,9 @@ interface Series {
   completion_status?: 'ongoing' | 'completed' | 'hiatus';
   // Step 21 — Dual Content Mode: mangal (comic) or novel
   content_type: 'mangal' | 'novel';
+  // Rating aggregate — optional so this page still works if not selected/present
+  avg_rating?: number | null;
+  rating_count?: number | null;
 }
 
 const GENRE_OPTIONS = ['All', 'Action', 'Romance', 'Fantasy', 'Comedy', 'Drama', 'Horror', 'Slice of Life', 'Sci-Fi', 'Thriller', 'Mythology'];
@@ -31,6 +34,15 @@ const STATUS_OPTIONS: { value: NonNullable<Series['completion_status']>; label: 
   { value: 'ongoing', label: 'Ongoing' },
   { value: 'completed', label: 'Completed' },
   { value: 'hiatus', label: 'Hiatus' },
+];
+
+// ── SORTING ──
+type SortOption = 'newest' | 'views' | 'rating' | 'az';
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'newest', label: 'Latest Update' },
+  { value: 'views', label: 'Most Viewed' },
+  { value: 'rating', label: 'Top Rated' },
+  { value: 'az', label: 'A–Z' },
 ];
 
 // Step 21 — Dual Content Mode: All/Manga/Novel filter pill, same localStorage
@@ -80,6 +92,7 @@ function SearchPageInner() {
   const [genreFilter, setGenreFilter] = useState(searchParams.get('genre') ?? 'All');
   const [languageFilter, setLanguageFilter] = useState(searchParams.get('language') ?? 'All');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') ?? 'All');
+  const [sortBy, setSortBy] = useState<SortOption>((searchParams.get('sort') as SortOption) ?? 'newest');
   // Step 21 — Dual Content Mode toggle, persisted via localStorage (same key as homepage)
   const [activeContentType, setActiveContentType] = useState<ContentTypeFilter>('all');
 
@@ -138,10 +151,11 @@ function SearchPageInner() {
     if (genreFilter !== 'All') params.set('genre', genreFilter);
     if (languageFilter !== 'All') params.set('language', languageFilter);
     if (statusFilter !== 'All') params.set('status', statusFilter);
+    if (sortBy !== 'newest') params.set('sort', sortBy);
     const qs = params.toString();
     router.replace(qs ? `/search?${qs}` : '/search', { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, genreFilter, languageFilter, statusFilter]);
+  }, [query, genreFilter, languageFilter, statusFilter, sortBy]);
 
   // completion_status isn't migrated yet (Step 12) — hide that filter until real data has it,
   // so this page doesn't show a dead dropdown in the meantime
@@ -177,10 +191,28 @@ function SearchPageInner() {
         );
       });
     }
-    return r;
-  }, [series, genreFilter, languageFilter, statusFilter, query, creatorUsernames, hasCompletionStatus, activeContentType]);
 
-  const filtersActive = activeContentType !== 'all' || genreFilter !== 'All' || languageFilter !== 'All' || statusFilter !== 'All';
+    // ── SORT ──
+    const sorted = [...r];
+    switch (sortBy) {
+      case 'views':
+        sorted.sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+        break;
+      case 'rating':
+        sorted.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
+        break;
+      case 'az':
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'newest':
+      default:
+        sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+    }
+    return sorted;
+  }, [series, genreFilter, languageFilter, statusFilter, query, creatorUsernames, hasCompletionStatus, activeContentType, sortBy]);
+
+  const filtersActive = activeContentType !== 'all' || genreFilter !== 'All' || languageFilter !== 'All' || statusFilter !== 'All' || sortBy !== 'newest';
   const createHref = isCreator ? '/dashboard' : user ? '/become-creator' : '/login';
   const createLabel = isCreator ? 'Go to Studio' : user ? 'Become a Creator' : 'Log In to Create';
 
@@ -289,56 +321,75 @@ function SearchPageInner() {
           ))}
         </div>
 
-        {/* ── FILTERS ── */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '28px' }}>
-          <select
-            value={genreFilter}
-            onChange={e => setGenreFilter(e.target.value)}
-            style={{
-              padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
-              border: '1px solid #2a2a3a', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            {GENRE_OPTIONS.map(g => <option key={g} value={g}>{g === 'All' ? 'All Genres' : g}</option>)}
-          </select>
-
-          <select
-            value={languageFilter}
-            onChange={e => setLanguageFilter(e.target.value)}
-            style={{
-              padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
-              border: '1px solid #2a2a3a', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            {LANGUAGE_OPTIONS.map(l => <option key={l} value={l}>{l === 'All' ? 'All Languages' : l}</option>)}
-          </select>
-
-          {hasCompletionStatus && (
+        {/* ── FILTERS + SORT ── */}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
+              value={genreFilter}
+              onChange={e => setGenreFilter(e.target.value)}
               style={{
                 padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
                 border: '1px solid #2a2a3a', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
               }}
             >
-              <option value="All">All Statuses</option>
-              {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              {GENRE_OPTIONS.map(g => <option key={g} value={g}>{g === 'All' ? 'All Genres' : g}</option>)}
             </select>
-          )}
 
-          {filtersActive && (
-            <button
-              onClick={() => { handleContentTypeToggle('all'); setGenreFilter('All'); setLanguageFilter('All'); setStatusFilter('All'); }}
+            <select
+              value={languageFilter}
+              onChange={e => setLanguageFilter(e.target.value)}
               style={{
-                padding: '9px 14px', borderRadius: '8px', background: 'transparent',
-                border: '1px solid #2a2a3a', color: '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
+                border: '1px solid #2a2a3a', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
               }}
             >
-              Clear filters ✕
-            </button>
-          )}
+              {LANGUAGE_OPTIONS.map(l => <option key={l} value={l}>{l === 'All' ? 'All Languages' : l}</option>)}
+            </select>
+
+            {hasCompletionStatus && (
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                style={{
+                  padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
+                  border: '1px solid #2a2a3a', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <option value="All">All Statuses</option>
+                {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            )}
+
+            {filtersActive && (
+              <button
+                onClick={() => { handleContentTypeToggle('all'); setGenreFilter('All'); setLanguageFilter('All'); setStatusFilter('All'); setSortBy('newest'); }}
+                style={{
+                  padding: '9px 14px', borderRadius: '8px', background: 'transparent',
+                  border: '1px solid #2a2a3a', color: '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Clear filters ✕
+              </button>
+            )}
+          </div>
+
+          {/* Sort dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>Sort:</span>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as SortOption)}
+              style={{
+                padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
+                border: '1px solid #2a2a3a', color: '#d97706', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              {SORT_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
         </div>
+
+        <div style={{ marginBottom: '18px' }} />
 
         {/* ── RESULTS ── */}
         {loading ? (
@@ -371,8 +422,8 @@ function SearchPageInner() {
               {results.length} series found
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
-              {results.map(s => (
-                <ResultCard key={s.id} series={s} creatorUsername={creatorUsernames[s.creator_id]} />
+              {results.map((s, i) => (
+                <ResultCard key={s.id} series={s} creatorUsername={creatorUsernames[s.creator_id]} rank={sortBy === 'views' ? i + 1 : undefined} />
               ))}
             </div>
           </>
@@ -402,8 +453,8 @@ function SearchPageInner() {
   );
 }
 
-/* ── RESULT CARD (portrait, shows creator username) ── */
-function ResultCard({ series, creatorUsername }: { series: Series; creatorUsername?: string }) {
+/* ── RESULT CARD (portrait, shows creator username, rank badge, rating) ── */
+function ResultCard({ series, creatorUsername, rank }: { series: Series; creatorUsername?: string; rank?: number }) {
   const router = useRouter();
   const [hovered, setHovered] = useState(false);
   return (
@@ -411,7 +462,7 @@ function ResultCard({ series, creatorUsername }: { series: Series; creatorUserna
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}>
       <div style={{
-        borderRadius: '12px', overflow: 'hidden',
+        borderRadius: '12px', overflow: 'hidden', position: 'relative',
         background: '#0d0d14', border: `1px solid ${hovered ? '#d97706' : '#1a1a26'}`,
         transition: 'border-color 0.2s, transform 0.2s',
         transform: hovered ? 'translateY(-3px)' : 'none',
@@ -422,6 +473,30 @@ function ResultCard({ series, creatorUsername }: { series: Series; creatorUserna
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
           )}
+
+          {/* Rank badge — only shown when sorting by Most Viewed */}
+          {rank && rank <= 3 && (
+            <div style={{
+              position: 'absolute', top: '6px', left: '6px',
+              width: '22px', height: '22px', borderRadius: '6px',
+              background: rank === 1 ? '#d97706' : rank === 2 ? '#9ca3af' : '#92400e',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '11px', fontWeight: 900, color: '#0d0d14',
+            }}>#{rank}</div>
+          )}
+
+          {/* Rating badge, top-right, only if data present */}
+          {typeof series.avg_rating === 'number' && series.avg_rating > 0 && (
+            <div style={{
+              position: 'absolute', top: '6px', right: '6px',
+              display: 'flex', alignItems: 'center', gap: '3px',
+              background: 'rgba(0,0,0,0.65)', borderRadius: '5px', padding: '2px 6px',
+              fontSize: '10px', fontWeight: 700, color: '#fbbf24',
+            }}>
+              ★ {series.avg_rating.toFixed(1)}
+            </div>
+          )}
+
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
             background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
@@ -467,4 +542,4 @@ export default function SearchPage() {
       <SearchPageInner />
     </Suspense>
   );
-}
+}x`
