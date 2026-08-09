@@ -946,6 +946,33 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* Release Statistics — mirrors inkstone's completion-rate + avg-words panel.
+                    Avg words/chapter is real (totalWords / totalChapters); completion
+                    rate isn't tracked yet, shown as a placeholder like the note below. */}
+                <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
+                  📈 Release Stats
+                </h3>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '24px',
+                }}>
+                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '18px' }}>
+                    <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px' }}>
+                      Chapter Completion Rate
+                    </div>
+                    <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--text-primary)' }}>—</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>Not tracked yet</div>
+                  </div>
+                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '18px' }}>
+                    <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px' }}>
+                      Average Words / Chapter
+                    </div>
+                    <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--text-primary)' }}>
+                      {formatCount(analytics.totalChapters > 0 ? Math.round(analytics.totalWords / analytics.totalChapters) : 0)}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>Across all published chapters</div>
+                  </div>
+                </div>
+
                 <div style={{
                   border: '1px dashed #2a2a38', borderRadius: '14px', padding: '16px 18px',
                   color: 'var(--text-tertiary)', fontSize: '12px', lineHeight: 1.6,
