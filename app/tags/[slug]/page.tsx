@@ -31,7 +31,7 @@ function TagCard({ series }: { series: Series }) {
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div style={{
         borderRadius: '12px', overflow: 'hidden',
-        background: '#0d0d14', border: `1px solid ${hovered ? '#d97706' : '#1a1a26'}`,
+        background: 'var(--bg-card)', border: `1px solid ${hovered ? '#d97706' : 'var(--border-color)'}`,
         transition: 'border-color 0.2s, transform 0.2s',
         transform: hovered ? 'translateY(-3px)' : 'none',
       }}>
@@ -56,13 +56,13 @@ function TagCard({ series }: { series: Series }) {
           </div>
         </div>
         <div style={{ padding: '10px 10px 12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px',
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '4px',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {series.title}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: '#4b5563' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
       </div>
@@ -100,14 +100,14 @@ export default function TagPage({ params }: { params: Promise<{ slug: string }> 
   }, [slug]);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px 24px' }}>
-        <Link href="/tags" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>← All Tags</Link>
+        <Link href="/tags" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← All Tags</Link>
 
         {loading ? (
-          <div style={{ padding: '80px 0', textAlign: 'center', color: '#374151' }}>Loading...</div>
+          <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>Loading...</div>
         ) : notFound ? (
-          <div style={{ padding: '80px 0', textAlign: 'center', color: '#374151' }}>
+          <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
             <div style={{ fontSize: '14px' }}>Tag not found.</div>
           </div>
@@ -116,12 +116,12 @@ export default function TagPage({ params }: { params: Promise<{ slug: string }> 
             <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, margin: '12px 0 8px', letterSpacing: '-0.02em' }}>
               #{tagName}
             </h1>
-            <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 32px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 32px' }}>
               {series.length} {series.length === 1 ? 'series' : 'series'} tagged #{tagName}
             </p>
 
             {series.length === 0 ? (
-              <div style={{ padding: '60px 0', textAlign: 'center', color: '#374151' }}>
+              <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
                 <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
                 <div style={{ fontSize: '14px' }}>No series with this tag yet.</div>
               </div>
