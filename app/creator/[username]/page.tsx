@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { isDeveloperRole } from '../../lib/roles';
 
 interface Series {
   id: string;
@@ -62,6 +63,15 @@ export default function CreatorProfilePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  // Bug fix: developers had no direct way to ban a user from their profile
+  // page — the only path was Report -> Admin Reports -> Ban User, which
+  // requires the offending content to still exist to report against. This
+  // lets a developer act straight from the creator's public profile.
+  const [isDeveloper, setIsDeveloper] = useState(false);
+  const [accountActive, setAccountActive] = useState(true);
+  const [banConfirm, setBanConfirm] = useState(false);
+  const [banning, setBanning] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -83,6 +93,27 @@ export default function CreatorProfilePage() {
       }
       setCreator(creatorRow);
 
+      // Check the viewer's own role — only developers see the Ban button —
+      // and this creator's current account_active status, so a developer
+      // visiting an already-banned profile sees that instead of a stale
+      // "Ban User" button.
+      const { data: viewer } = await supabase.auth.getUser();
+      if (viewer.user) {
+        const { data: viewerProfile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', viewer.user.id)
+          .single();
+        setIsDeveloper(isDeveloperRole(viewerProfile?.role));
+      }
+
+      const { data: creatorProfile } = await supabase
+        .from('profiles')
+        .select('account_active')
+        .eq('id', creatorRow.user_id)
+        .single();
+      setAccountActive(creatorProfile?.account_active ?? true);
+
       // Only published series — drafts stay private to the creator's own dashboard
       const { data: seriesData } = await supabase
         .from('series')
@@ -98,6 +129,29 @@ export default function CreatorProfilePage() {
   }, [username]);
 
   const totalViews = series.reduce((sum, s) => sum + (s.views ?? 0), 0);
+
+  const handleBanUser = async () => {
+    if (!creator) return;
+    if (!banConfirm) {
+      setBanConfirm(true);
+      return;
+    }
+    setBanning(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ account_active: false })
+      .eq('id', creator.user_id);
+
+    if (error) {
+      alert(`Failed to ban user: ${error.message}`);
+      setBanning(false);
+      setBanConfirm(false);
+      return;
+    }
+    setAccountActive(false);
+    setBanning(false);
+    setBanConfirm(false);
+  };
 
   if (loading) {
     return (
@@ -171,15 +225,26 @@ export default function CreatorProfilePage() {
             {initialsFromUsername(creator.username)}
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
-              @{creator.username}
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' as const, marginBottom: '4px' }}>
+              <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                @{creator.username}
+              </h1>
+              {!accountActive && (
+                <span style={{
+                  fontSize: '10px', fontWeight: 700, color: '#ef4444', background: 'rgba(239,68,68,0.12)',
+                  border: '1px solid rgba(239,68,68,0.3)', padding: '3px 9px', borderRadius: '12px',
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                }}>
+                  Banned
+                </span>
+              )}
+            </div>
             {/* No bio column yet on creator_profiles — placeholder keeps the
                 layout settled now and is a one-line swap once bio exists */}
             <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 12px' }}>
               Creator on MANGAL
             </p>
-            <div style={{ display: 'flex', gap: '16px' }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' as const }}>
               <div>
                 <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>{series.length}</span>
                 <span style={{ fontSize: '11px', color: '#6b7280', marginLeft: '5px' }}>series</span>
@@ -188,6 +253,45 @@ export default function CreatorProfilePage() {
                 <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff' }}>👁 {formatViews(totalViews)}</span>
                 <span style={{ fontSize: '11px', color: '#6b7280', marginLeft: '5px' }}>total views</span>
               </div>
+              {isDeveloper && accountActive && (
+                banConfirm ? (
+                  <div style={{ display: 'inline-flex', gap: '6px' }}>
+                    <button
+                      onClick={handleBanUser}
+                      disabled={banning}
+                      style={{
+                        padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                        background: '#7f1d1d', border: '1px solid #991b1b', color: '#fff',
+                        cursor: banning ? 'wait' : 'pointer', opacity: banning ? 0.7 : 1,
+                      }}
+                    >
+                      {banning ? 'Banning...' : '⚠️ Confirm Ban'}
+                    </button>
+                    <button
+                      onClick={() => setBanConfirm(false)}
+                      disabled={banning}
+                      style={{
+                        padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                        background: '#08080c', border: '1px solid #1a1a26', color: '#9ca3af', cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleBanUser}
+                    title="Ban this user's account"
+                    style={{
+                      padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                      background: 'rgba(153,27,27,0.1)', border: '1px solid rgba(153,27,27,0.3)',
+                      color: '#ef4444', cursor: 'pointer',
+                    }}
+                  >
+                    🚫 Ban User
+                  </button>
+                )
+              )}
             </div>
           </div>
         </div>
