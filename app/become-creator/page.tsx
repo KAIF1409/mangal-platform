@@ -167,25 +167,25 @@ export default function BecomeCreatorPage() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '11px 14px', borderRadius: '10px',
-    background: '#08080c', border: '1px solid #1f1f2e',
-    color: '#f9fafb', fontSize: '13px', outline: 'none',
+    background: 'var(--bg-input)', border: '1px solid var(--border-light)',
+    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
     boxSizing: 'border-box',
   };
   const labelStyle: React.CSSProperties = {
     display: 'block', fontSize: '10px', fontWeight: 700,
-    color: '#6b7280', letterSpacing: '0.12em', textTransform: 'uppercase',
+    color: 'var(--text-tertiary)', letterSpacing: '0.12em', textTransform: 'uppercase',
     marginBottom: '6px',
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#07070a', }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', }}>
     <main style={{
       flex: 1, display: 'flex',
       alignItems: 'center', justifyContent: 'center', padding: '24px',
     }}>
       <div style={{
-        width: '100%', maxWidth: '460px', background: '#0d0d14',
-        border: '1px solid #1a1a26', borderRadius: '20px', padding: '36px 32px',
+        width: '100%', maxWidth: '460px', background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)', borderRadius: '20px', padding: '36px 32px',
         boxShadow: '0 32px 80px rgba(0,0,0,0.6)', position: 'relative',
       }}>
         <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '120px', height: '1px', background: 'linear-gradient(to right, transparent, #d97706, transparent)' }} />
@@ -200,20 +200,20 @@ export default function BecomeCreatorPage() {
 
         {/* ── STEP: Loading ── */}
         {step === 'loading' && (
-          <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '20px' }}>Loading...</p>
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '13px', marginTop: '20px' }}>Loading...</p>
         )}
 
         {/* ── STEP 1: Confirm Google account ── */}
         {step === 'confirm-account' && (
           <>
-            <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', margin: '16px 0 8px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', margin: '16px 0 8px' }}>
               Confirm Your Account
             </h2>
-            <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, margin: '0 0 24px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 24px' }}>
               Your creator identity is tied to a Google account — this is the account future earnings and payouts will be linked to. Make sure it&apos;s the right one before continuing.
             </p>
 
-            <div style={{ padding: '14px 16px', background: '#08080c', border: '1px solid #1a1a26', borderRadius: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ padding: '14px 16px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: '36px', height: '36px', borderRadius: '50%',
                 background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
@@ -223,10 +223,10 @@ export default function BecomeCreatorPage() {
                 {(user?.email?.[0] || '?').toUpperCase()}
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user?.email}
                 </div>
-                <div style={{ fontSize: '11px', color: '#6b7280' }}>Currently signed in</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Currently signed in</div>
               </div>
             </div>
 
@@ -242,7 +242,7 @@ export default function BecomeCreatorPage() {
               </button>
               <button onClick={handleConfirmAccount} style={{
                 width: '100%', padding: '12px', borderRadius: '10px',
-                background: '#fff', border: '1px solid #1f1f2e',
+                background: '#fff', border: '1px solid var(--border-light)',
                 color: '#111', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
               }}>
@@ -256,10 +256,10 @@ export default function BecomeCreatorPage() {
         {/* ── STEP 2: Details form ── */}
         {(step === 'details' || step === 'submitting') && (
           <>
-            <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', margin: '16px 0 8px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', margin: '16px 0 8px' }}>
               Tell Us About You
             </h2>
-            <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, margin: '0 0 24px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 24px' }}>
               These details power your public creator profile and are used later for verifying payouts when monetization goes live.
             </p>
 
@@ -273,7 +273,7 @@ export default function BecomeCreatorPage() {
               <div>
                 <label style={labelStyle}>Creator Username</label>
                 <input value={username} onChange={e => setUsername(e.target.value.replace(/\s/g, ''))} placeholder="e.g., arjun_writes" style={inputStyle} />
-                <p style={{ fontSize: '11px', color: '#4b5563', margin: '6px 0 0' }}>Your profile will be at mangal.app/creator/{username || 'username'}</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '6px 0 0' }}>Your profile will be at mangal.app/creator/{username || 'username'}</p>
               </div>
               <div>
                 <label style={labelStyle}>Short Bio (optional)</label>
@@ -289,25 +289,25 @@ export default function BecomeCreatorPage() {
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                   <button onClick={() => setPayoutMethod('upi')} style={{
                     flex: 1, padding: '9px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                    background: payoutMethod === 'upi' ? 'rgba(217,119,6,0.15)' : '#08080c',
-                    border: payoutMethod === 'upi' ? '1px solid rgba(217,119,6,0.4)' : '1px solid #1a1a26',
-                    color: payoutMethod === 'upi' ? '#d97706' : '#6b7280',
+                    background: payoutMethod === 'upi' ? 'rgba(217,119,6,0.15)' : 'var(--bg-input)',
+                    border: payoutMethod === 'upi' ? '1px solid rgba(217,119,6,0.4)' : '1px solid var(--border-color)',
+                    color: payoutMethod === 'upi' ? '#d97706' : 'var(--text-tertiary)',
                   }}>UPI</button>
                   <button onClick={() => setPayoutMethod('bank')} style={{
                     flex: 1, padding: '9px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                    background: payoutMethod === 'bank' ? 'rgba(217,119,6,0.15)' : '#08080c',
-                    border: payoutMethod === 'bank' ? '1px solid rgba(217,119,6,0.4)' : '1px solid #1a1a26',
-                    color: payoutMethod === 'bank' ? '#d97706' : '#6b7280',
+                    background: payoutMethod === 'bank' ? 'rgba(217,119,6,0.15)' : 'var(--bg-input)',
+                    border: payoutMethod === 'bank' ? '1px solid rgba(217,119,6,0.4)' : '1px solid var(--border-color)',
+                    color: payoutMethod === 'bank' ? '#d97706' : 'var(--text-tertiary)',
                   }}>Bank Transfer</button>
                 </div>
                 {payoutMethod === 'upi' ? (
                   <input value={upiId} onChange={e => setUpiId(e.target.value)} placeholder="justput any xyz13@upi just for testing purposes" style={inputStyle} />
                 ) : (
-                  <p style={{ fontSize: '11px', color: '#4b5563', margin: 0 }}>Bank details will be collected separately once payouts launch.</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Bank details will be collected separately once payouts launch.</p>
                 )}
               </div>
 
-              <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '11px', color: '#6b7280', lineHeight: 1.5, cursor: 'pointer' }}>
+              <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '11px', color: 'var(--text-tertiary)', lineHeight: 1.5, cursor: 'pointer' }}>
                 <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ marginTop: '2px' }} />
                 I understand these payout details are stored as pending and will be verified when monetization is enabled — Mangal does not process payments yet.
               </label>
@@ -317,8 +317,8 @@ export default function BecomeCreatorPage() {
                 disabled={step === 'submitting'}
                 style={{
                   width: '100%', padding: '13px', borderRadius: '10px', marginTop: '4px',
-                  background: step === 'submitting' ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
-                  border: 'none', color: step === 'submitting' ? '#6b7280' : '#fff',
+                  background: step === 'submitting' ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                  border: 'none', color: step === 'submitting' ? 'var(--text-tertiary)' : '#fff',
                   fontSize: '13px', fontWeight: 700, cursor: step === 'submitting' ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -332,13 +332,13 @@ export default function BecomeCreatorPage() {
         {step === 'done' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎉</div>
-            <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>You&apos;re a Creator Now</h2>
-            <p style={{ fontSize: '13px', color: '#9ca3af' }}>Taking you to your new Dashboard...</p>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 8px' }}>You&apos;re a Creator Now</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Taking you to your new Dashboard...</p>
           </div>
         )}
       </div>
     </main>
-    <footer style={{ borderTop: '1px solid #1a1a26', padding: '24px', textAlign: 'center' }}>
+    <footer style={{ borderTop: '1px solid var(--border-color)', padding: '24px', textAlign: 'center' }}>
       <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' as const }}>
         {[
           { label: 'Home', href: '/' },
@@ -346,7 +346,7 @@ export default function BecomeCreatorPage() {
           { label: 'Terms of Service', href: '/terms' },
           { label: 'Grievance Officer', href: '/grievance' },
         ].map(link => (
-          <a key={link.href} href={link.href} style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}>
+          <a key={link.href} href={link.href} style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none' }}>
             {link.label}
           </a>
         ))}
