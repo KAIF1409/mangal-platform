@@ -156,7 +156,7 @@ export default function CreatorProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4b5563', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4b5563', fontSize: '13px' }}>
         Loading creator profile...
       </div>
     );
@@ -164,7 +164,7 @@ export default function CreatorProfilePage() {
 
   if (notFound || !creator) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' as const, backgroundColor: '#07070a', color: '#f9fafb', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' as const, backgroundColor: '#07070a', color: '#f9fafb', }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ width: '100%', maxWidth: '420px', background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '20px', padding: '40px 32px', textAlign: 'center' as const, boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
             <div style={{ fontSize: '36px', marginBottom: '14px' }}>🔍</div>
@@ -187,7 +187,7 @@ export default function CreatorProfilePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
 
       {/* ── NAV ── */}
       <nav style={{

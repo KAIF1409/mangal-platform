@@ -173,7 +173,7 @@ export default function BecomeCreatorPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#07070a', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#07070a', }}>
     <main style={{
       flex: 1, display: 'flex',
       alignItems: 'center', justifyContent: 'center', padding: '24px',

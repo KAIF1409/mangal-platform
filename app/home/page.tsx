@@ -176,7 +176,7 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', fontFamily: "'Segoe UI', Arial, sans-serif", overflowX: 'hidden', maxWidth: '100vw' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', overflowX: 'hidden', maxWidth: '100vw' }}>
 
       {/* ── NAV ── */}
       <nav style={{

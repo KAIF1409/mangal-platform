@@ -702,7 +702,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#07070a', fontFamily: "'Segoe UI', Arial, sans-serif", overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: '#07070a', overflowX: 'hidden' }}>
 
       {/* Fake top bar skeleton */}
       <div style={{
@@ -783,7 +783,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // Draft / not-yet-due scheduled chapter — not readable via direct link.
   if (chapterUnavailable) {
     return (
-      <div style={{ width: '100vw', minHeight: '100vh', background: '#07070a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+      <div style={{ width: '100vw', minHeight: '100vh', background: '#07070a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', }}>
         <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(217,119,6,0.05)', filter: 'blur(100px)' }} />
         <div style={{ maxWidth: '480px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: '64px', marginBottom: '24px' }}>{chapterUnavailable === 'scheduled' ? '🗓️' : '📝'}</div>
@@ -813,7 +813,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // Step 26 — Read Gate screen (appears when free tier limits are hit)
   if (readGate.gated && readGate.reason) {
     return (
-      <div style={{ width: '100vw', minHeight: '100vh', background: '#07070a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+      <div style={{ width: '100vw', minHeight: '100vh', background: '#07070a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', }}>
         {/* Background accent */}
         <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(217,119,6,0.05)', filter: 'blur(100px)' }} />
         
@@ -894,7 +894,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   return (
     <div
       ref={rootRef}
-      style={{ position: 'fixed', inset: 0, backgroundColor: bgColor, fontFamily: "'Segoe UI', Arial, sans-serif", userSelect: 'none', overflow: 'hidden' }}
+      style={{ position: 'fixed', inset: 0, backgroundColor: bgColor, userSelect: 'none', overflow: 'hidden' }}
       onContextMenu={e => e.preventDefault()}
     >
     {/* Lock Screen: hides the native browser scrollbar so nothing but the chosen
@@ -1305,15 +1305,15 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 {!lockScreen && (
                   <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                     {prevChapter ? (
-                      <a href={`/read/${prevChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+                      <a href={`/read/${prevChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, }}>
                         ← Ch.{prevChapter.chapter_number}
                       </a>
                     ) : <div />}
-                    <a href={series ? `/series/${series.id}` : '/'} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+                    <a href={series ? `/series/${series.id}` : '/'} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, }}>
                       📋 All Chapters
                     </a>
                     {nextChapter ? (
-                      <a href={`/read/${nextChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, fontFamily: "'Segoe UI', Arial, sans-serif" }}>
+                      <a href={`/read/${nextChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, }}>
                         Ch.{nextChapter.chapter_number} →
                       </a>
                     ) : <div />}

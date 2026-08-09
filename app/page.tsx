@@ -115,7 +115,6 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            fontFamily: "'Segoe UI', Arial, sans-serif",
             transform: phase >= 1 ? 'translateX(0)' : 'translateX(60px)',
             transition: phase >= 1 ? 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
           }}>
@@ -136,8 +135,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         textTransform: 'uppercase',
         opacity: phase >= 2 ? 0.8 : 0,
         transition: 'opacity 0.5s ease',
-        fontFamily: "'Segoe UI', Arial, sans-serif",
-      }}>
+        }}>
         Bharat Ki Kahaniyan
       </div>
     </div>
@@ -207,7 +205,6 @@ export default function LandingPage() {
       minHeight: '100vh',
       backgroundColor: '#07070a',
       color: '#f9fafb',
-      fontFamily: "'Segoe UI', Arial, sans-serif",
       overflowX: 'hidden',
     }}>
 

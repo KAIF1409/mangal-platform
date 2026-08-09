@@ -111,7 +111,6 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
               width: '100%', maxWidth: '360px',
               background: '#0d0d14', border: '1px solid #1a1a26',
               borderRadius: '14px', padding: '24px',
-              fontFamily: "'Segoe UI', Arial, sans-serif",
               color: '#f9fafb',
             }}
           >
