@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import ProfileMenu from '../components/ProfileMenu';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 
 interface FollowedSeries {
   id: string;
@@ -16,19 +20,40 @@ interface FollowedSeries {
   followed_at: string;
   latest_chapter_number: number | null;
   latest_chapter_id: string | null;
+  latest_chapter_at: string | null;
   chapter_count: number;
 }
+
+// Step 28 — sort control, matching the pattern already used on /search
+type LibrarySortOption = 'recent' | 'added' | 'az' | 'chapters';
+const LIBRARY_SORT_OPTIONS: { value: LibrarySortOption; label: string }[] = [
+  { value: 'recent', label: 'Recently Updated' },
+  { value: 'added', label: 'Recently Added' },
+  { value: 'az', label: 'A–Z' },
+  { value: 'chapters', label: 'Most Chapters' },
+];
 
 export default function LibraryPage() {
   const [series, setSeries] = useState<FollowedSeries[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [isCreator, setIsCreator] = useState(false);
+  const [isDeveloper, setIsDeveloper] = useState(false);
+  const [sortBy, setSortBy] = useState<LibrarySortOption>('recent');
 
   useEffect(() => {
     const load = async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) { window.location.href = '/login'; return; }
       setUser(u.user);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', u.user.id)
+        .single();
+      if (hasCreatorAccess(profile?.role)) setIsCreator(true);
+      setIsDeveloper(isDeveloperRole(profile?.role));
 
       // Get all series this reader follows, with series details
       const { data: follows } = await supabase
@@ -47,7 +72,7 @@ export default function LibraryPage() {
 
           const { data: chapters } = await supabase
             .from('chapters')
-            .select('id, chapter_number')
+            .select('id, chapter_number, created_at')
             .eq('series_id', s.id)
             .order('chapter_number', { ascending: false })
             .limit(1);
@@ -64,6 +89,7 @@ export default function LibraryPage() {
             followed_at: f.created_at,
             latest_chapter_number: latest?.chapter_number ?? null,
             latest_chapter_id: latest?.id ?? null,
+            latest_chapter_at: latest?.created_at ?? null,
             chapter_count: count ?? 0,
           } as FollowedSeries;
         })
@@ -81,34 +107,95 @@ export default function LibraryPage() {
     setSeries(prev => prev.filter(s => s.id !== seriesId));
   };
 
+  // Step 28 — sort control
+  const sortedSeries = useMemo(() => {
+    const arr = [...series];
+    switch (sortBy) {
+      case 'added':
+        arr.sort((a, b) => new Date(b.followed_at).getTime() - new Date(a.followed_at).getTime());
+        break;
+      case 'az':
+        arr.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'chapters':
+        arr.sort((a, b) => b.chapter_count - a.chapter_count);
+        break;
+      case 'recent':
+      default:
+        arr.sort((a, b) => {
+          const at = a.latest_chapter_at ? new Date(a.latest_chapter_at).getTime() : 0;
+          const bt = b.latest_chapter_at ? new Date(b.latest_chapter_at).getTime() : 0;
+          return bt - at;
+        });
+        break;
+    }
+    return arr;
+  }, [series, sortBy]);
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
 
-      {/* ── NAV ── */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(7,7,10,0.97)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid #1a1a26',
-        padding: '0 24px', height: '60px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-            <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
-            <span style={{ fontWeight: 900, fontSize: '17px', color: '#fff' }}>MANGAL</span>
-          </a>
-          <span style={{ color: '#374151' }}>›</span>
-          <span style={{ fontSize: '13px', color: '#6b7280' }}>My Library</span>
-        </div>
-        <a href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: '#6b7280', textDecoration: 'none', border: '1px solid #1a1a26' }}>Browse</a>
-      </nav>
+      {/* ── NAV (shared component) ── */}
+      <Navbar
+        variant="custom"
+        centerSlot={
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            {[
+              { label: 'Browse', href: '/' },
+              { label: '🔍 Search', href: '/search' },
+              { label: '🔖 Bookmarks', href: '/bookmarks' },
+            ].map(link => (
+              <a key={link.label} href={link.href} style={{
+                padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                color: '#9ca3af', textDecoration: 'none',
+                transition: 'color 0.15s, background 0.15s',
+              }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = '#fff'; (e.target as HTMLElement).style.background = '#1a1a26'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#9ca3af'; (e.target as HTMLElement).style.background = 'transparent'; }}
+              >{link.label}</a>
+            ))}
+          </div>
+        }
+        rightSlot={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {isCreator && (
+              <a href="/dashboard" style={{
+                padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
+                color: '#d97706', textDecoration: 'none',
+              }}>🛠 Studio</a>
+            )}
+            {user && <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />}
+          </div>
+        }
+      />
 
       {/* ── HEADER ── */}
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px 24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🔔 My Library</h1>
-        <p style={{ fontSize: '13px', color: '#4b5563', margin: 0 }}>
-          {loading ? '' : series.length === 0 ? 'No series followed yet.' : `${series.length} series followed`}
-        </p>
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px 20px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🔔 My Library</h1>
+            <p style={{ fontSize: '13px', color: '#4b5563', margin: 0 }}>
+              {loading ? '' : series.length === 0 ? 'No series followed yet.' : `${series.length} series followed`}
+            </p>
+          </div>
+
+          {!loading && series.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>Sort:</span>
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as LibrarySortOption)}
+                style={{
+                  padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
+                  border: '1px solid #2a2a3a', color: '#d97706', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                {LIBRARY_SORT_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── CONTENT ── */}
@@ -129,32 +216,15 @@ export default function LibraryPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {series.map(s => (
+            {sortedSeries.map(s => (
               <LibraryCard key={s.id} series={s} onUnfollow={() => unfollow(s.id)} />
             ))}
           </div>
         )}
       </div>
 
-      {/* ── FOOTER ── */}
-      <footer style={{ borderTop: '1px solid #1a1a26', padding: '32px 24px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff' }}>MANGAL</span>
-        </div>
-        <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 14px' }}>Made with ❤️ in India · Free to read, forever.</p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          {[
-            { label: 'Privacy Policy', href: '/privacy' },
-            { label: 'Terms of Service', href: '/terms' },
-            { label: 'Grievance Officer', href: '/grievance' },
-          ].map(link => (
-            <a key={link.href} href={link.href} style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}>
-              {link.label}
-            </a>
-          ))}
-        </div>
-      </footer>
+      {/* ── FOOTER (shared component) ── */}
+      <Footer />
     </div>
   );
 }
