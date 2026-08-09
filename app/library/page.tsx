@@ -142,6 +142,7 @@ export default function LibraryPage() {
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
               { label: 'Browse', href: '/' },
+              { label: '🏆 Rankings', href: '/rankings' },
               { label: '🔍 Search', href: '/search' },
               { label: '🔖 Bookmarks', href: '/bookmarks' },
             ].map(link => (

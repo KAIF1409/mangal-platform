@@ -234,6 +234,7 @@ export default function HomePage() {
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center', overflow: 'hidden', flexShrink: 1 }}>
           {[
             { label: t('browse'), href: '/' },
+            { label: '🏆 Rankings', href: '/rankings' },
             { label: t('genres'), href: '/#genres' },
             { label: 'Tags', href: '/tags' },
             { label: t('newReleases'), href: '/#new' },

@@ -228,6 +228,7 @@ function SearchPageInner() {
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
               { label: 'Browse', href: '/' },
+              { label: '🏆 Rankings', href: '/rankings' },
               { label: 'Genres', href: '/#genres' },
               { label: 'New Releases', href: '/#new' },
               { label: '🔔 Library', href: '/library' },

@@ -172,6 +172,7 @@ export default function BookmarksPage() {
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
               { label: 'Browse', href: '/' },
+              { label: '🏆 Rankings', href: '/rankings' },
               { label: '🔍 Search', href: '/search' },
               { label: '🔔 Library', href: '/library' },
             ].map(link => (

@@ -247,6 +247,7 @@ export default function LandingPage() {
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
               { label: 'Browse', href: '/search' },
+              { label: 'Rankings', href: '/rankings' },
               { label: 'Genres', href: '/search' },
               { label: 'New Releases', href: '/search' },
             ].map(link => (
@@ -484,6 +485,7 @@ export default function LandingPage() {
               <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
                 <FooterCol title="Platform" links={[
                   { label: 'Browse', href: '/search' },
+                  { label: 'Rankings', href: '/rankings' },
                   { label: 'Genres', href: '/search' },
                   { label: 'New Releases', href: '/search' },
                 ]} />
