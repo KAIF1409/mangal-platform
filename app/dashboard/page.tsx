@@ -946,6 +946,29 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* Reading Time Distribution — mirrors inkstone's hourly bar chart.
+                    Flat until we log read timestamps per-hour. */}
+                <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
+                  🕐 Reading Time Distribution
+                </h3>
+                <div style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
+                  padding: '20px', marginBottom: '24px',
+                }}>
+                  <svg viewBox="0 0 700 100" style={{ width: '100%', height: '100px', display: 'block' }}>
+                    <line x1="0" y1="90" x2="700" y2="90" stroke="var(--divider)" strokeWidth="1" />
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <rect key={i} x={i * 58 + 6} y={88} width="46" height="2" fill="var(--border-light)" />
+                    ))}
+                  </svg>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-faint)', marginTop: '4px' }}>
+                    {['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'].map((t2) => <span key={t2}>{t2}</span>)}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '10px' }}>
+                    Hourly breakdown not tracked yet
+                  </div>
+                </div>
+
                 {/* Audience Insights — mirrors inkstone's Geographical Distribution +
                     Gender donut. No location/gender data collected yet, so this
                     shows the same "100% unknown" honesty rather than fake numbers. */}
