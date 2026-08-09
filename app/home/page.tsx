@@ -275,10 +275,10 @@ export default function HomePage() {
         minHeight: '420px',
         display: 'flex', alignItems: 'center',
       }}>
-        {/* BG IMAGE — comics.png */}
+        {/* BG IMAGE — comics.jpg */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
-          backgroundImage: 'url(/comics.png)',
+          backgroundImage: 'url(/comics.jpg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center center',
           backgroundRepeat: 'no-repeat',

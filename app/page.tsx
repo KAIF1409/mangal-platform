@@ -298,7 +298,7 @@ export default function LandingPage() {
           {/* BG IMAGE */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 0,
-            backgroundImage: 'url(/hero-bg.png)',
+            backgroundImage: 'url(/hero-bg.jpg)',
             backgroundSize: 'cover',
             backgroundPosition: 'center top',
             backgroundRepeat: 'no-repeat',
