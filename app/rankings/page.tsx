@@ -86,7 +86,7 @@ export default function RankingsPage() {
   const activeMeta = TABS.find(t => t.value === tab)!;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <Navbar
         variant="custom"
         centerSlot={
@@ -99,7 +99,7 @@ export default function RankingsPage() {
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                color: link.href === '/rankings' ? '#d97706' : '#9ca3af', textDecoration: 'none',
+                color: link.href === '/rankings' ? '#d97706' : 'var(--text-secondary)', textDecoration: 'none',
               }}>{link.label}</a>
             ))}
           </div>
@@ -110,7 +110,7 @@ export default function RankingsPage() {
         <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
           Rankings
         </h1>
-        <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 28px' }}>
+        <p style={{ fontSize: '14px', color: 'var(--text-tertiary)', margin: '0 0 28px' }}>
           The most read, most talked-about, and highest-rated stories on MANGAL right now.
         </p>
 
@@ -122,9 +122,9 @@ export default function RankingsPage() {
               onClick={() => setTab(t.value)}
               style={{
                 padding: '10px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                cursor: 'pointer', border: `1px solid ${tab === t.value ? '#d97706' : '#1a1a26'}`,
-                background: tab === t.value ? 'rgba(217,119,6,0.12)' : '#0d0d14',
-                color: tab === t.value ? '#d97706' : '#9ca3af',
+                cursor: 'pointer', border: `1px solid ${tab === t.value ? '#d97706' : 'var(--border-color)'}`,
+                background: tab === t.value ? 'rgba(217,119,6,0.12)' : 'var(--bg-card)',
+                color: tab === t.value ? '#d97706' : 'var(--text-secondary)',
               }}
             >
               {t.label}
@@ -140,9 +140,9 @@ export default function RankingsPage() {
               onClick={() => setContentType(c.value)}
               style={{
                 padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
-                cursor: 'pointer', border: `1px solid ${contentType === c.value ? '#4b5563' : '#1a1a26'}`,
-                background: contentType === c.value ? '#1a1a26' : 'transparent',
-                color: contentType === c.value ? '#f9fafb' : '#6b7280',
+                cursor: 'pointer', border: `1px solid ${contentType === c.value ? 'var(--text-muted)' : 'var(--border-color)'}`,
+                background: contentType === c.value ? 'var(--border-color)' : 'transparent',
+                color: contentType === c.value ? 'var(--text-primary)' : 'var(--text-tertiary)',
               }}
             >
               {c.label}
@@ -151,9 +151,9 @@ export default function RankingsPage() {
         </div>
 
         {loading ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: '#374151' }}>Loading rankings...</div>
+          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-faint)' }}>Loading rankings...</div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: '#374151' }}>
+          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             Not enough data yet for this ranking.
           </div>
         ) : (
@@ -177,7 +177,7 @@ function RankRow({ series, rank, statLabel, tab }: { series: Series; rank: numbe
       ? `★ ${(series.avg_rating ?? 0).toFixed(1)} (${series.rating_count ?? 0})`
       : (series.views ?? 0).toLocaleString('en-IN');
 
-  const rankColor = rank === 1 ? '#d97706' : rank === 2 ? '#9ca3af' : rank === 3 ? '#92400e' : '#374151';
+  const rankColor = rank === 1 ? '#d97706' : rank === 2 ? 'var(--text-secondary)' : rank === 3 ? '#92400e' : 'var(--text-faint)';
 
   return (
     <a
@@ -187,7 +187,7 @@ function RankRow({ series, rank, statLabel, tab }: { series: Series; rank: numbe
       style={{
         display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 10px',
         textDecoration: 'none', borderBottom: '1px solid #14141c',
-        background: hovered ? '#0d0d14' : 'transparent', borderRadius: '8px',
+        background: hovered ? 'var(--bg-card)' : 'transparent', borderRadius: '8px',
         transition: 'background 0.15s',
       }}
     >
@@ -208,7 +208,7 @@ function RankRow({ series, rank, statLabel, tab }: { series: Series; rank: numbe
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: '14px', fontWeight: 700, color: hovered ? '#d97706' : '#f9fafb',
+          fontSize: '14px', fontWeight: 700, color: hovered ? '#d97706' : 'var(--text-primary)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px',
           transition: 'color 0.15s',
         }}>
@@ -223,14 +223,14 @@ function RankRow({ series, rank, statLabel, tab }: { series: Series; rank: numbe
             {series.content_type === 'novel' ? 'Novel' : 'Comic'}
           </span>
           {series.genre && (
-            <span style={{ fontSize: '11px', color: '#6b7280' }}>{series.genre}</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{series.genre}</span>
           )}
         </div>
       </div>
 
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: '#e5e7eb' }}>{statValue}</div>
-        <div style={{ fontSize: '10px', color: '#4b5563' }}>{statLabel}</div>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-soft)' }}>{statValue}</div>
+        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{statLabel}</div>
       </div>
     </a>
   );
