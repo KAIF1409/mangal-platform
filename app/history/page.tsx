@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 
 // Reading History — pulls from reading_progress table.
@@ -366,7 +367,7 @@ function HistoryRow({
       <a href={`/series/${entry.series_id}`} style={{ flexShrink: 0, textDecoration: 'none', position: 'relative' }}>
         <div style={{ width: '52px', height: '70px', borderRadius: '7px', overflow: 'hidden', background: coverBg, border: '1px solid #1a1a26', position: 'relative' }}>
           {entry.series_cover ? (
-            <img src={entry.series_cover} alt={entry.series_title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <Image src={entry.series_cover} alt={entry.series_title} fill sizes="52px" style={{ objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>{coverFallbackIcon}</div>
           )}

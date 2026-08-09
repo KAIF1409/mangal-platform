@@ -22,6 +22,7 @@
 // grievance form that should ideally get zero submissions.
 
 import { useState } from 'react';
+import Image from 'next/image';
 
 // ── CONFIGURE THESE BEFORE GOING LIVE ────────────────────────────────────────
 const GRIEVANCE_OFFICER_NAME = 'Mohammed Kaif';
@@ -121,10 +122,12 @@ export default function GrievancePage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-          <img
+          <Image
             src="/logo-icon.png"
             alt={PLATFORM_NAME}
-            style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'block' }}
+            width={32}
+            height={32}
+            style={{ borderRadius: '8px', display: 'block' }}
           />
           <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
             {PLATFORM_NAME}

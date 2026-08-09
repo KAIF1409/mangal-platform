@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 
 // NOTE: "bookmarks" on MANGAL = followed series (follows table).
@@ -284,12 +285,14 @@ function BookmarkCard({
     }}>
       {/* Cover */}
       <a href={`/series/${series.id}`} style={{ textDecoration: 'none', display: 'block', position: 'relative' }}>
-        <div style={{ width: '100%', aspectRatio: '3/4', background: '#1a0a0a', overflow: 'hidden', maxHeight: '220px' }}>
+        <div style={{ width: '100%', aspectRatio: '3/4', background: '#1a0a0a', overflow: 'hidden', maxHeight: '220px', position: 'relative' }}>
           {series.cover_url ? (
-            <img
+            <Image
               src={series.cover_url}
               alt={series.title}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              fill
+              sizes="(max-width: 768px) 45vw, 220px"
+              style={{ objectFit: 'cover' }}
             />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', color: '#374151' }}>

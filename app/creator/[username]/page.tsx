@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
 
@@ -334,7 +335,7 @@ function SeriesCard({ series }: { series: Series }) {
       }}>
         <div style={{ position: 'relative', aspectRatio: '3/4', background: '#1a0a0a' }}>
           {series.cover_url ? (
-            <img src={series.cover_url} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
           )}

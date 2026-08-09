@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import ProfileMenu from '../components/ProfileMenu';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
@@ -187,10 +188,13 @@ export default function HomePage() {
       }}>
         {/* Logo */}
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <img
+          <Image
             src="/icon.png"
             alt="MANGAL"
-            style={{ width: '36px', height: '36px', display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
+            width={36}
+            height={36}
+            style={{ display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
+            priority
           />
           <span style={{ fontWeight: 900, fontSize: '20px', color: '#fff', letterSpacing: '-0.03em' }}>MANGAL</span>
         </a>
@@ -528,7 +532,7 @@ function ContinueCard({ item }: { item: ContinueItem }) {
         {/* Cover */}
         <div style={{ position: 'relative', aspectRatio: '3/4', background: '#1a0a0a' }}>
           {item.coverUrl ? (
-            <img src={item.coverUrl} alt={item.seriesTitle} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <Image src={item.coverUrl} alt={item.seriesTitle} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>📜</div>
           )}
@@ -572,7 +576,7 @@ function FeaturedCard({ series }: { series: Series }) {
         {/* Cover */}
         <div style={{ width: '100px', flexShrink: 0, background: '#1a0a0a', position: 'relative' }}>
           {series.cover_url ? (
-            <img src={series.cover_url} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <Image src={series.cover_url} alt={series.title} fill sizes="100px" style={{ objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' }}>📜</div>
           )}
@@ -638,7 +642,7 @@ function SeriesCard({ series }: { series: Series }) {
         {/* Cover */}
         <div style={{ position: 'relative', aspectRatio: '3/4', background: '#1a0a0a' }}>
           {series.cover_url ? (
-            <img src={series.cover_url} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
           )}

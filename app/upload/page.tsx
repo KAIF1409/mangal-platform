@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { checkImageBatchQuality } from '../lib/imageQuality';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../lib/novelEditor';
@@ -865,10 +866,10 @@ function UploadFlow() {
                   <div style={{
                     width: '90px', height: '120px', borderRadius: '10px', overflow: 'hidden' as const,
                     border: '2px dashed #1f1f2e', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: '#08080c', flexShrink: 0,
+                    background: '#08080c', flexShrink: 0, position: 'relative',
                   }}>
                     {coverPreview ? (
-                      <img src={coverPreview} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' as const }} />
+                      <Image src={coverPreview} alt="Cover" fill sizes="90px" unoptimized style={{ objectFit: 'cover' }} />
                     ) : (
                       <span style={{ fontSize: '22px' }}>📷</span>
                     )}
@@ -1024,11 +1025,14 @@ function UploadFlow() {
                   {pages.length > 0 && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
                       {pages.map((item, i) => (
-                        <div key={item.kind === 'existing' ? item.id : `new-${i}`} style={{ position: 'relative' as const, border: `1px solid ${item.kind === 'new' ? 'rgba(217,119,6,0.4)' : '#1f1f2e'}`, borderRadius: '8px', overflow: 'hidden' }}>
-                          <img
+                        <div key={item.kind === 'existing' ? item.id : `new-${i}`} style={{ position: 'relative' as const, border: `1px solid ${item.kind === 'new' ? 'rgba(217,119,6,0.4)' : '#1f1f2e'}`, borderRadius: '8px', overflow: 'hidden', height: '120px' }}>
+                          <Image
                             src={item.kind === 'existing' ? item.image_url : item.preview}
                             alt={`Page ${i + 1}`}
-                            style={{ width: '100%', height: '120px', objectFit: 'cover' as const, display: 'block' }}
+                            fill
+                            sizes="100px"
+                            unoptimized
+                            style={{ objectFit: 'cover' }}
                           />
                           <div style={{ position: 'absolute' as const, top: 4, left: 4, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px' }}>#{i + 1}</div>
                           {item.kind === 'new' && (

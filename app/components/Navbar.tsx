@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface NavbarProps {
   /** "legal" = logo + "← Back to Home" only (privacy/terms/grievance style).
@@ -64,10 +65,12 @@ export default function Navbar({
           href="/"
           style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}
         >
-          <img
+          <Image
             src="/icon.png"
             alt={platformName}
-            style={{ width: logoSize, height: logoSize, display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
+            width={logoSize}
+            height={logoSize}
+            style={{ display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
           />
           <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
             {platformName}

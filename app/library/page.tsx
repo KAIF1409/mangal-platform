@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 
 interface FollowedSeries {
@@ -169,9 +170,9 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
     }}>
       {/* Cover */}
       <a href={`/series/${series.id}`} style={{ flexShrink: 0, textDecoration: 'none' }}>
-        <div style={{ width: '64px', height: '86px', borderRadius: '8px', overflow: 'hidden', background: '#1a0a0a', border: '1px solid #1a1a26' }}>
+        <div style={{ width: '64px', height: '86px', borderRadius: '8px', overflow: 'hidden', background: '#1a0a0a', border: '1px solid #1a1a26', position: 'relative' }}>
           {series.cover_url ? (
-            <img src={series.cover_url} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <Image src={series.cover_url} alt={series.title} fill sizes="64px" style={{ objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>📜</div>
           )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
+import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import ProfileMenu from '../../components/ProfileMenu';
 import ReportButton from '../../components/ReportButton';
@@ -417,10 +418,10 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           <div style={{
             width: '200px', flexShrink: 0, borderRadius: '14px', overflow: 'hidden',
             boxShadow: '0 20px 60px rgba(0,0,0,0.6)', border: '1px solid #1a1a26', aspectRatio: '3/4',
-            background: '#1a0a0a',
+            background: '#1a0a0a', position: 'relative',
           }}>
             {series.cover_url ? (
-              <img src={series.cover_url} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <Image src={series.cover_url} alt={series.title} fill sizes="200px" style={{ objectFit: 'cover' }} />
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>📜</div>
             )}

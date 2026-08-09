@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { checkImageBatchQuality } from '../lib/imageQuality';
 
@@ -179,10 +180,10 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
               <div style={{
                 width: '70px', height: '94px', borderRadius: '10px', overflow: 'hidden' as const,
                 border: '2px dashed #1f1f2e', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: '#08080c', flexShrink: 0,
+                background: '#08080c', flexShrink: 0, position: 'relative',
               }}>
                 {coverPreview ? (
-                  <img src={coverPreview} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' as const }} />
+                  <Image src={coverPreview} alt="Cover" fill sizes="70px" unoptimized style={{ objectFit: 'cover' }} />
                 ) : (
                   <span style={{ fontSize: '20px' }}>📷</span>
                 )}

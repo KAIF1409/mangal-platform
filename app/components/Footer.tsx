@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 type FooterLink = { label: string; href: string };
 
 interface FooterProps {
@@ -41,10 +43,12 @@ export default function Footer({
             marginBottom: '12px',
           }}
         >
-          <img
+          <Image
             src="/icon.png"
             alt={platformName}
-            style={{ width: logoSize, height: logoSize, display: 'block', filter: 'drop-shadow(0 0 6px rgba(217,119,6,0.4))' }}
+            width={logoSize}
+            height={logoSize}
+            style={{ display: 'block', filter: 'drop-shadow(0 0 6px rgba(217,119,6,0.4))' }}
           />
           <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff' }}>{platformName}</span>
         </div>

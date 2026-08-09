@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import ProfileMenu from '../components/ProfileMenu';
 import EditSeriesModal from '../components/EditSeriesModal';
@@ -542,9 +543,10 @@ export default function Dashboard() {
                         width: '100%', height: '100%', minHeight: '120px',
                         background: story.cover_url ? 'none' : 'linear-gradient(135deg, #1a0a0a, #0d0d14)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        position: 'relative',
                       }}>
                         {story.cover_url ? (
-                          <img src={story.cover_url} alt={story.title} style={{ width: '100%', height: '100%', objectFit: 'cover' as const }} />
+                          <Image src={story.cover_url} alt={story.title} fill sizes="120px" style={{ objectFit: 'cover' }} />
                         ) : (
                           <span style={{ fontSize: '20px' }}>📜</span>
                         )}

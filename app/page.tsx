@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from './lib/supabase';
 
 // ── Public landing page — no auth required ──
@@ -84,10 +85,13 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
             filter: phase >= 1 ? 'drop-shadow(0 0 32px rgba(217,119,6,0.7)) drop-shadow(0 8px 24px rgba(0,0,0,0.8))' : 'none',
             transition: 'filter 0.3s ease 0.1s',
           }}>
-            <img
+            <Image
               src="/apple-icon.png"
               alt="M"
-              style={{ width: '80px', height: '80px', display: 'block' }}
+              width={80}
+              height={80}
+              style={{ display: 'block' }}
+              priority
             />
           </div>
         </div>
@@ -228,13 +232,16 @@ export default function LandingPage() {
         }}>
           {/* Logo */}
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-            <img
+            <Image
               src="/logo-icon.png"
               alt="MANGAL"
+              width={36}
+              height={36}
               style={{
-                width: '36px', height: '36px', borderRadius: '10px',
+                borderRadius: '10px',
                 boxShadow: '0 0 20px rgba(217,119,6,0.3)', display: 'block',
               }}
+              priority
             />
             <span style={{ fontWeight: 900, fontSize: '20px', color: '#fff', letterSpacing: '-0.03em' }}>MANGAL</span>
           </a>
@@ -463,10 +470,12 @@ export default function LandingPage() {
               {/* Brand */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <img
+                  <Image
                     src="/logo-icon.png"
                     alt="MANGAL"
-                    style={{ width: '32px', height: '32px', borderRadius: '9px', display: 'block' }}
+                    width={32}
+                    height={32}
+                    style={{ borderRadius: '9px', display: 'block' }}
                   />
                   <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff' }}>MANGAL</span>
                 </div>
@@ -523,7 +532,7 @@ function ShowcaseCard({ series }: { series: Series }) {
       }}>
         <div style={{ position: 'relative', aspectRatio: '3/4', background: '#1a0a0a' }}>
           {series.cover_url ? (
-            <img src={series.cover_url} alt={series.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
           )}

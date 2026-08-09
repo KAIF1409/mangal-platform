@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 
 interface PageRow {
@@ -355,17 +356,18 @@ export default function ManagePagesModal({
                       }}
                     >
                       {/* Page image */}
-                      <img
-                        src={page.image_url}
-                        alt={`Page ${page.page_number}`}
-                        style={{
-                          width: '100%',
-                          height: '140px',
-                          objectFit: 'cover',
-                          display: 'block',
-                          pointerEvents: 'none',
-                        }}
-                      />
+                      <div style={{ position: 'relative', width: '100%', height: '140px' }}>
+                        <Image
+                          src={page.image_url}
+                          alt={`Page ${page.page_number}`}
+                          fill
+                          sizes="140px"
+                          style={{
+                            objectFit: 'cover',
+                            pointerEvents: 'none',
+                          }}
+                        />
+                      </div>
 
                       {/* Page number badge */}
                       <div style={{
@@ -484,10 +486,13 @@ export default function ManagePagesModal({
                       Preview — Page #{pages.findIndex(p => p.id === selectedPage.id) + 1}
                     </span>
                   </div>
-                  <img
+                  <Image
                     src={selectedPage.image_url}
                     alt="Preview"
-                    style={{ width: '100%', display: 'block' }}
+                    width={800}
+                    height={1200}
+                    sizes="240px"
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
                   />
                   <div style={{ padding: '10px 14px' }}>
                     <button
