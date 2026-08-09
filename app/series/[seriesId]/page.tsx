@@ -90,6 +90,9 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
 
+  // Step 27 — Recommendations
+  const [relatedSeries, setRelatedSeries] = useState<Series[]>([]);
+
   useEffect(() => {
     const load = async () => {
       const { data: s } = await supabase.from('series').select('*').eq('id', seriesId).single();
@@ -229,6 +232,11 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
 
       const c = await fetchChapters();
       if (c) setChapters(c);
+
+      // Step 27 — Readers Also Liked
+      const { data: related } = await supabase.rpc('related_series', { target_series_id: seriesId, result_limit: 6 });
+      if (related) setRelatedSeries(related as Series[]);
+
       setLoading(false);
     };
     load();
@@ -853,6 +861,18 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           </div>
         )}
 
+        {/* ── STEP 27 — READERS ALSO LIKED ── */}
+        {relatedSeries.length > 0 && (
+          <section style={{ padding: '40px 0 0' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: '#fff' }}>
+              Readers Also Liked
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+              {relatedSeries.map(rs => <RelatedCard key={rs.id} series={rs} />)}
+            </div>
+          </section>
+        )}
+
         {/* ── STEP 26 — WRITTEN REVIEWS ── */}
         <section style={{ padding: '48px 0 40px', borderTop: '1px solid #1a1a26', marginTop: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: '10px', marginBottom: '20px' }}>
@@ -1142,4 +1162,57 @@ function ChapterRow({
 export default function Page({ params }: { params: Promise<{ seriesId: string }> }) {
   const { seriesId } = use(params);
   return <SeriesDetailPage seriesId={seriesId} />;
+}
+
+/* ── STEP 27 — RELATED SERIES CARD ── */
+function formatViews(n: number): string {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return n.toString();
+}
+
+function RelatedCard({ series }: { series: Series }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <div style={{
+        borderRadius: '12px', overflow: 'hidden',
+        background: '#0d0d14', border: `1px solid ${hovered ? '#d97706' : '#1a1a26'}`,
+        transition: 'border-color 0.2s, transform 0.2s',
+        transform: hovered ? 'translateY(-3px)' : 'none',
+      }}>
+        <div style={{ position: 'relative', aspectRatio: '3/4', background: '#1a0a0a' }}>
+          {series.cover_url ? (
+            <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
+          )}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
+            padding: '20px 8px 6px',
+          }}>
+            <span style={{
+              fontSize: '9px', fontWeight: 700, color: '#fff',
+              background: series.content_type === 'novel' ? 'rgba(109,40,217,0.9)' : 'rgba(127,29,29,0.9)',
+              padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
+            }}>
+              {series.content_type === 'novel' ? '📕 Novel' : '📖 Mangal'}
+            </span>
+          </div>
+        </div>
+        <div style={{ padding: '10px 10px 12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {series.title}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
+            <span style={{ fontSize: '9px', color: '#4b5563' }}>👁 {formatViews(series.views ?? 0)}</span>
+          </div>
+        </div>
+      </div>
+    </a>
+  );
 }

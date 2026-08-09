@@ -85,6 +85,11 @@ export default function HomePage() {
   const [trending, setTrending] = useState<Series[]>([]);
   const STAFF_PICK_TITLES: string[] = []; // developer-curated list — add exact series titles here
 
+  // Step 27 — For You: personalized feed for logged-in readers based on
+  // genres of series they already follow. Empty for readers who follow
+  // nothing yet — the section just doesn't render in that case.
+  const [forYou, setForYou] = useState<Series[]>([]);
+
   // Step 21 — content type toggle: persist across sessions
   useEffect(() => {
     try {
@@ -125,6 +130,10 @@ export default function HomePage() {
             .filter((item): item is ContinueItem => item !== null);
           setContinueReading(items);
         }
+
+        // Step 27 — For You feed
+        const { data: recs } = await supabase.rpc('for_you_series', { target_reader_id: data.user.id, result_limit: 6 });
+        if (recs) setForYou(recs as Series[]);
       }
     });
 
@@ -449,6 +458,20 @@ export default function HomePage() {
           </div>
         ) : (
           <>
+            {/* Step 27 — For You (personalized, logged-in readers only) */}
+            {forYou.filter(s => activeContentType === 'all' || s.content_type === activeContentType).length > 0 && activeGenre === 'All' && !showDesiComics && (
+              <section style={{ padding: '32px 0 0' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: '#fff' }}>
+                  ✨ For You
+                </h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+                  {forYou.filter(s => activeContentType === 'all' || s.content_type === activeContentType).map(s => (
+                    <SeriesCard key={s.id} series={s} />
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Step 9 — Trending This Week (top 6 by views in last 7 days) */}
             {trending.filter(s => activeContentType === 'all' || s.content_type === activeContentType).length > 0 && activeGenre === 'All' && !showDesiComics && (
               <section style={{ padding: '32px 0 0' }}>
