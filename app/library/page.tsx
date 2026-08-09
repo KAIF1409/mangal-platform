@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/ProfileMenu';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -37,7 +38,7 @@ const LIBRARY_SORT_OPTIONS: { value: LibrarySortOption; label: string }[] = [
 export default function LibraryPage() {
   const [series, setSeries] = useState<FollowedSeries[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [sortBy, setSortBy] = useState<LibrarySortOption>('recent');

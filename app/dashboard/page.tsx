@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/ProfileMenu';
 import EditSeriesModal from '../components/EditSeriesModal';
 import ManagePagesModal from '../components/ManagePagesModal';
@@ -79,7 +80,7 @@ const STATUS_CONFIG: Record<Story['completion_status'], { label: string; ring: s
 
 export default function Dashboard() {
   const { lang, setLang, t } = useUiLanguage();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
   const [fetching, setFetching] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -191,8 +192,8 @@ export default function Dashboard() {
       }));
 
       setStories(withCounts);
-    } catch (err: any) {
-      console.error('Error fetching stories:', err.message);
+    } catch (err) {
+      console.error('Error fetching stories:', err instanceof Error ? err.message : err);
     } finally {
       setFetching(false);
     }
@@ -238,8 +239,8 @@ export default function Dashboard() {
         totalComments: commentsResult.count || 0,
         viewsPerSeries,
       });
-    } catch (err: any) {
-      console.error('Error fetching analytics:', err.message);
+    } catch (err) {
+      console.error('Error fetching analytics:', err instanceof Error ? err.message : err);
     } finally {
       setAnalyticsLoading(false);
       setAnalyticsLoaded(true);
@@ -252,8 +253,8 @@ export default function Dashboard() {
       const { error } = await supabase.from('series').delete().eq('id', id);
       if (error) throw error;
       setStories((prev) => prev.filter((s) => s.id !== id));
-    } catch (err: any) {
-      alert(`Could not delete: ${err.message}`);
+    } catch (err) {
+      alert(`Could not delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setDeletingId(null);
       setConfirmDeleteId(null);
@@ -305,8 +306,8 @@ export default function Dashboard() {
       setStories((prev) =>
         prev.map((s) => (s.id === seriesId ? { ...s, chapterCount: Math.max(0, (s.chapterCount || 1) - 1) } : s))
       );
-    } catch (err: any) {
-      alert(`Could not delete chapter: ${err.message}`);
+    } catch (err) {
+      alert(`Could not delete chapter: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setDeletingChapterId(null);
       setConfirmDeleteChapterId(null);
@@ -466,7 +467,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
+            {user && <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />}
           </div>
         }
         centerSlot={

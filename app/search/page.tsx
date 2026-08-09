@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/ProfileMenu';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -98,7 +99,7 @@ function SearchPageInner() {
   // Step 21 — Dual Content Mode toggle, persisted via localStorage (same key as homepage)
   const [activeContentType, setActiveContentType] = useState<ContentTypeFilter>('all');
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
 

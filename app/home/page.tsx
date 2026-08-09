@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/ProfileMenu';
 import ThemeToggle from '../components/ThemeToggle';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
@@ -78,7 +79,7 @@ export default function HomePage() {
   const [showDesiComics, setShowDesiComics] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('latest');
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [continueReading, setContinueReading] = useState<ContinueItem[]>([]);

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/ProfileMenu';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -46,7 +47,7 @@ export default function BookmarksPage() {
   const [series, setSeries] = useState<BookmarkedSeries[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [activeContentType, setActiveContentType] = useState<'all' | 'mangal' | 'novel'>('all');

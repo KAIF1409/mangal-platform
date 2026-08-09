@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../../components/ProfileMenu';
 import ReportButton from '../../components/ReportButton';
 import ShareButton from '../../components/ShareButton';
@@ -47,7 +48,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   const [creatorUsername, setCreatorUsername] = useState<string | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
   // Bug fix: whole-series delete was only reachable from the owner's own
@@ -460,8 +461,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       if (error) throw error;
 
       window.location.href = '/dashboard';
-    } catch (err: any) {
-      alert(`Could not delete series: ${err.message}`);
+    } catch (err) {
+      alert(`Could not delete series: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setDeletingSeries(false);
       setConfirmDeleteSeries(false);
     }

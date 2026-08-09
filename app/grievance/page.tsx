@@ -103,9 +103,9 @@ export default function GrievancePage() {
         const data = await res.json();
         throw new Error(data?.error || 'Submission failed');
       }
-    } catch (err: any) {
+    } catch (err) {
       setFormState('error');
-      setErrorMsg(err.message || 'Something went wrong. Please try emailing us directly.');
+      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong. Please try emailing us directly.');
     }
   };
 

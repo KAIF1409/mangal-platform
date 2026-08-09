@@ -106,8 +106,8 @@ export default function ManagePagesModal({
       setPages(reordered);
       setOriginalOrder(reordered.map((p) => p.id));
       setSuccessMsg('Order saved!');
-    } catch (err: any) {
-      setError(`Failed to save order: ${err.message}`);
+    } catch (err) {
+      setError(`Failed to save order: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setSaving(false);
     }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 type Step = 'loading' | 'confirm-account' | 'details' | 'submitting' | 'done';
 
@@ -21,7 +22,7 @@ type Step = 'loading' | 'confirm-account' | 'details' | 'submitting' | 'done';
  */
 export default function BecomeCreatorPage() {
   const [step, setStep] = useState<Step>('loading');
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState('');
 
   // Details form fields
@@ -80,6 +81,10 @@ export default function BecomeCreatorPage() {
   };
 
   const handleSubmitDetails = async () => {
+    if (!user) {
+      setError('Your session expired. Please sign in again.');
+      return;
+    }
     if (!displayName.trim() || !username.trim()) {
       setError('Display name and username are required.');
       return;
@@ -154,8 +159,8 @@ export default function BecomeCreatorPage() {
 
       setStep('done');
       setTimeout(() => { window.location.href = '/dashboard'; }, 1800);
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
       setStep('details');
     }
   };
