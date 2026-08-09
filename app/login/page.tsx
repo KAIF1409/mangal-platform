@@ -554,7 +554,7 @@ export default function AuthPage() {
   const finishOnboarding = async (choice: 'reader' | 'creator') => {
     const { data: u } = await supabase.auth.getUser();
     if (u.user) await supabase.from('profiles').update({ onboarded: true }).eq('id', u.user.id);
-    window.location.href = choice === 'creator' ? '/become-creator' : '/home';
+    window.location.assign(choice === 'creator' ? '/become-creator' : '/home');
   };
 
   // ── PENDING CONSENT SCREEN ────────────────────────────────────────────────

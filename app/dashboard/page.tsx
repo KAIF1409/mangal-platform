@@ -117,45 +117,6 @@ export default function Dashboard() {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
 
-  useEffect(() => {
-    const init = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) {
-        // Not logged in at all — send to login
-        window.location.href = '/login';
-        return;
-      }
-      setUser(data.user);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-
-      if (hasCreatorAccess(profile?.role)) {
-        setIsCreator(true);
-        setIsDeveloper(isDeveloperRole(profile?.role));
-        fetchStories(data.user.id);
-      } else {
-        // Logged in but NOT a creator/developer — readers never see this panel
-        setIsCreator(false);
-      }
-      setRoleChecked(true);
-    };
-    init();
-  }, []);
-
-  // Step 14 — Creator Analytics: lazy-load once the Analytics tab is opened for
-  // the first time, and only after the main series/chapter fetch has finished
-  // (so it has seriesIds + chapterIds to work with). Cached after first load —
-  // switching tabs back and forth doesn't refire the queries.
-  useEffect(() => {
-    if (activeTab === 'analytics' && !fetching) {
-      fetchAnalytics();
-    }
-  }, [activeTab, fetching]);
-
   const fetchStories = async (creatorId: string) => {
     try {
       const { data: seriesData, error } = await supabase
@@ -246,6 +207,46 @@ export default function Dashboard() {
       setAnalyticsLoaded(true);
     }
   };
+
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) {
+        // Not logged in at all — send to login
+        window.location.href = '/login';
+        return;
+      }
+      setUser(data.user);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (hasCreatorAccess(profile?.role)) {
+        setIsCreator(true);
+        setIsDeveloper(isDeveloperRole(profile?.role));
+        fetchStories(data.user.id);
+      } else {
+        // Logged in but NOT a creator/developer — readers never see this panel
+        setIsCreator(false);
+      }
+      setRoleChecked(true);
+    };
+    init();
+  }, []);
+
+  // Step 14 — Creator Analytics: lazy-load once the Analytics tab is opened for
+  // the first time, and only after the main series/chapter fetch has finished
+  // (so it has seriesIds + chapterIds to work with). Cached after first load —
+  // switching tabs back and forth doesn't refire the queries.
+  useEffect(() => {
+    if (activeTab === 'analytics' && !fetching) {
+      fetchAnalytics();
+    }
+  }, [activeTab, fetching]);
+
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);

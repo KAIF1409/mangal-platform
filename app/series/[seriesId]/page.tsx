@@ -105,6 +105,18 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   // Step 27 — Recommendations
   const [relatedSeries, setRelatedSeries] = useState<Series[]>([]);
 
+  // Pulled out of the main load() below so it can also be called on its own
+  // whenever the tab/page becomes visible again (see effect below) — we only
+  // want to refresh the chapter list itself in that case, not redo the view
+  // count increment, follow status, or rating fetch every time someone tabs
+  // back in.
+  const fetchChapters = async () => {
+    const { data: c } = await supabase
+      .from('chapters').select('id, chapter_number, title, created_at, word_count')
+      .eq('series_id', seriesId).order('chapter_number', { ascending: true });
+    return c;
+  };
+
   useEffect(() => {
     const load = async () => {
       const { data: s } = await supabase.from('series').select('*').eq('id', seriesId).single();
@@ -254,18 +266,6 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
     load();
   }, [seriesId]);
 
-  // Pulled out of the main load() above so it can also be called on its own
-  // whenever the tab/page becomes visible again (see effect below) — we only
-  // want to refresh the chapter list itself in that case, not redo the view
-  // count increment, follow status, or rating fetch every time someone tabs
-  // back in.
-  const fetchChapters = async () => {
-    const { data: c } = await supabase
-      .from('chapters').select('id, chapter_number, title, created_at, word_count')
-      .eq('series_id', seriesId).order('chapter_number', { ascending: true });
-    return c;
-  };
-
   // Bug fix — creators editing a chapter (title, pages, etc.) from this same
   // browser, then navigating back here via the browser's back button or a
   // new tab, were seeing stale chapter data because this page only fetched
@@ -287,7 +287,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   }, [seriesId]);
 
   const toggleFollow = async () => {
-    if (!user) { window.location.href = '/login'; return; }
+    if (!user) { window.location.assign('/login'); return; }
     if (followLoading) return;
     setFollowLoading(true);
     if (isFollowing) {
@@ -303,7 +303,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   const handleRate = async (stars: number) => {
-    if (!user) { window.location.href = '/login'; return; }
+    if (!user) { window.location.assign('/login'); return; }
     if (ratingLoading) return;
     setRatingLoading(true);
     const prev = myRating;
@@ -325,7 +325,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
 
   // Step 26 — Written Reviews
   const submitReview = async () => {
-    if (!user) { window.location.href = '/login'; return; }
+    if (!user) { window.location.assign('/login'); return; }
     if (!myRating) return; // must rate before/along with reviewing
     if (reviewSubmitting) return;
     setReviewSubmitting(true);
@@ -365,7 +365,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   const toggleHelpful = async (reviewId: string) => {
-    if (!user) { window.location.href = '/login'; return; }
+    if (!user) { window.location.assign('/login'); return; }
     const alreadyVoted = myVotedHelpful.has(reviewId);
     setMyVotedHelpful(prev => {
       const next = new Set(prev);
@@ -470,7 +470,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       const { error } = await supabase.from('series').delete().eq('id', series.id);
       if (error) throw error;
 
-      window.location.href = '/dashboard';
+      window.location.assign('/dashboard');
     } catch (err) {
       alert(`Could not delete series: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setDeletingSeries(false);

@@ -406,7 +406,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // optimistically; .select() is chained so a silent RLS failure surfaces as an
   // empty result instead of looking successful.
   const handleReact = async (emojiKey: string) => {
-    if (!userId) { window.location.href = '/login'; return; }
+    if (!userId) { window.location.assign('/login'); return; }
     if (reactionLoading) return;
     setReactionLoading(true);
     if (myReaction === emojiKey) {
@@ -473,7 +473,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
   // Step 4 — Submit a top-level comment.
   const handleCommentSubmit = async () => {
-    if (!userId) { window.location.href = '/login'; return; }
+    if (!userId) { window.location.assign('/login'); return; }
     const body = commentBody.trim();
     if (!body || body.length > 500 || commentSubmitting) return;
     setCommentSubmitting(true);
@@ -495,7 +495,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
   // Step 5 — Submit a reply to a top-level comment.
   const handleReplySubmit = async (parentId: string) => {
-    if (!userId) { window.location.href = '/login'; return; }
+    if (!userId) { window.location.assign('/login'); return; }
     const body = replyBody.trim();
     if (!body || body.length > 500 || replySubmitting) return;
     setReplySubmitting(true);
