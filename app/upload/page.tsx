@@ -1246,6 +1246,11 @@ function UploadFlow() {
                         ? (isEditMode ? 'Saving...' : 'Publishing...')
                         : countWords(novelContent) < MIN_WORDS_PER_CHAPTER
                         ? `🔒 Need ${MIN_WORDS_PER_CHAPTER - countWords(novelContent)} more word(s) to publish`
+                        // Comparing against Date.now() here only decides which button
+                        // label to show (Schedule vs Publish Live) — it's cosmetic and
+                        // re-evaluates on every render anyway, so a stale value from
+                        // memoization isn't a real risk here.
+                        // eslint-disable-next-line react-hooks/purity
                         : scheduledAt && new Date(scheduledAt).getTime() > Date.now()
                         ? `🗓️ Schedule Chapter (${countWords(novelContent)} words)`
                         : isEditMode
