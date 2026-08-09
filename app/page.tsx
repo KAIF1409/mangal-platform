@@ -176,7 +176,7 @@ export default function LandingPage() {
   // Fetch showcase: try trending first, fall back to top by views
   useEffect(() => {
     const loadShowcase = async () => {
-      const { data: trendingRows } = await supabase.rpc('trending_series', { days_back: 7, result_limit: 6 });
+      const { data: trendingRows } = await supabase.rpc('trending_series', { days_back: 7, result_limit: 18 });
       if (trendingRows && trendingRows.length >= 4) {
         const ids = trendingRows.map((r: { series_id: string }) => r.series_id);
         const { data: ts } = await supabase
@@ -197,7 +197,7 @@ export default function LandingPage() {
         .select('id, title, synopsis, genre, language, cover_url, reading_mode, content_type, status, views')
         .eq('status', 'published')
         .order('views', { ascending: false })
-        .limit(6);
+        .limit(18);
       if (data) setShowcaseItems(data);
       setLoading(false);
     };
@@ -433,9 +433,9 @@ export default function LandingPage() {
             {loading ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#374151' }}>Loading stories...</div>
             ) : showcaseItems.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px' }}>
-                {showcaseItems.map(s => (
-                  <ShowcaseCard key={s.id} series={s} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '14px' }}>
+                {showcaseItems.map((s, i) => (
+                  <ShowcaseCard key={s.id} series={s} rank={i + 1} />
                 ))}
               </div>
             ) : (
@@ -582,14 +582,14 @@ export default function LandingPage() {
 
 
 /* ── SHOWCASE CARD ── */
-function ShowcaseCard({ series }: { series: Series }) {
+function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
   const [hovered, setHovered] = useState(false);
   return (
     <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}>
       <div style={{
-        borderRadius: '12px', overflow: 'hidden',
+        borderRadius: '10px', overflow: 'hidden',
         background: '#0d0d14', border: `1px solid ${hovered ? '#d97706' : '#1a1a26'}`,
         transition: 'border-color 0.2s, transform 0.2s, box-shadow 0.2s',
         transform: hovered ? 'translateY(-4px)' : 'none',
@@ -597,30 +597,39 @@ function ShowcaseCard({ series }: { series: Series }) {
       }}>
         <div style={{ position: 'relative', aspectRatio: '3/4', background: '#1a0a0a' }}>
           {series.cover_url ? (
-            <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
+            <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 32vw, 140px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px' }}>📜</div>
+          )}
+          {rank && rank <= 3 && (
+            <div style={{
+              position: 'absolute', top: '6px', left: '6px',
+              width: '20px', height: '20px', borderRadius: '5px',
+              background: rank === 1 ? '#d97706' : rank === 2 ? '#9ca3af' : '#92400e',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '10px', fontWeight: 900, color: '#0d0d14',
+            }}>#{rank}</div>
           )}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
             background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)',
-            padding: '22px 8px 8px',
+            padding: '20px 7px 7px',
           }}>
             <span style={{
-              fontSize: '9px', fontWeight: 700, color: '#fff',
+              fontSize: '8px', fontWeight: 700, color: '#fff',
               background: series.content_type === 'novel' ? 'rgba(109,40,217,0.9)' : 'rgba(127,29,29,0.9)',
-              padding: '2px 7px', borderRadius: '4px', textTransform: 'uppercase',
+              padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
             }}>
               {series.content_type === 'novel' ? '📕 Novel' : '📖 Mangal'}
             </span>
           </div>
         </div>
-        <div style={{ padding: '10px 10px 12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ padding: '8px 8px 10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {series.title}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
+            {series.genre ? <div style={{ fontSize: '9px', color: '#d97706' }}>{series.genre}</div> : <span />}
             <span style={{ fontSize: '9px', color: '#4b5563' }}>👁 {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
