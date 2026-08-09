@@ -8,13 +8,50 @@
   box-sizing: border-box;
 }
 
+/* ── Theme tokens ──
+   Dark is the default/original palette (unchanged values, so nothing
+   shifts for existing users). [data-theme="light"] on <html> overrides
+   these for readers who prefer a white background, à la Webnovel's
+   light mode. Components should use var(--...) instead of hardcoded
+   hex so both themes stay in sync automatically. */
+:root {
+  --bg-primary: #07070a;
+  --bg-card: #0d0d14;
+  --border-color: #1a1a26;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+  --text-muted: #4b5563;
+  --text-faint: #374151;
+  --accent: #d97706;
+  --accent-rgb: 217, 119, 6;
+  --nav-bg: rgba(7, 7, 10, 0.97);
+  --nav-bg-transparent: rgba(7, 7, 10, 0.85);
+}
+
+[data-theme='light'] {
+  --bg-primary: #ffffff;
+  --bg-card: #f7f7f9;
+  --border-color: #e5e7eb;
+  --text-primary: #14141c;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+  --text-muted: #9ca3af;
+  --text-faint: #d1d5db;
+  --accent: #b45309;
+  --accent-rgb: 180, 83, 9;
+  --nav-bg: rgba(255, 255, 255, 0.97);
+  --nav-bg-transparent: rgba(255, 255, 255, 0.88);
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
   max-width: 100%;
   overflow-x: hidden;
-  background-color: #0d0d12;
-  color: #f3f4f6;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }

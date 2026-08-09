@@ -19,6 +19,8 @@ interface FooterProps {
 
 const DEFAULT_FOOTER_LINKS: FooterLink[] = [
   { label: 'Home', href: '/' },
+  { label: 'About', href: '/about' },
+  { label: 'Help Center', href: '/help' },
   { label: 'Privacy Policy', href: '/privacy' },
   { label: 'Terms of Service', href: '/terms' },
   { label: 'Grievance Officer', href: '/grievance' },
@@ -32,7 +34,7 @@ export default function Footer({
   showBrandBlock = true,
 }: FooterProps) {
   return (
-    <footer style={{ borderTop: '1px solid #1a1a26', padding: '32px 24px', textAlign: 'center' }}>
+    <footer style={{ borderTop: '1px solid var(--border-color)', padding: '32px 24px', textAlign: 'center' }}>
       {showBrandBlock && (
         <div
           style={{
@@ -50,18 +52,18 @@ export default function Footer({
             height={logoSize}
             style={{ display: 'block', filter: 'drop-shadow(0 0 6px rgba(217,119,6,0.4))' }}
           />
-          <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff' }}>{platformName}</span>
+          <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--text-primary)' }}>{platformName}</span>
         </div>
       )}
 
-      <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 14px' }}>{tagline}</p>
+      <p style={{ fontSize: '12px', color: 'var(--text-faint)', margin: '0 0 14px' }}>{tagline}</p>
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
         {links.map((link) => (
           <a
             key={link.href}
             href={link.href}
-            style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}
+            style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none' }}
           >
             {link.label}
           </a>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import ThemeToggle from './ThemeToggle';
 
 interface NavbarProps {
   /** "legal" = logo + "← Back to Home" only (privacy/terms/grievance style).
@@ -45,9 +46,9 @@ export default function Navbar({
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        background: scrolled ? 'rgba(7,7,10,0.98)' : 'rgba(7,7,10,0.85)',
+        background: scrolled ? 'var(--nav-bg)' : 'var(--nav-bg-transparent)',
         backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #1a1a26',
+        borderBottom: '1px solid var(--border-color)',
         padding: '0 24px',
         height: '60px',
         display: 'flex',
@@ -72,7 +73,7 @@ export default function Navbar({
             height={logoSize}
             style={{ display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
           />
-          <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff', letterSpacing: '-0.02em' }}>
+          <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             {platformName}
           </span>
         </Link>
@@ -81,11 +82,17 @@ export default function Navbar({
       </div>
 
       {variant === 'legal' ? (
-        <a href="/" style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'none' }}>
-          ← Back to Home
-        </a>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <ThemeToggle size={30} />
+          <a href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
+            ← Back to Home
+          </a>
+        </div>
       ) : (
-        rightSlot
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <ThemeToggle size={32} />
+          {rightSlot}
+        </div>
       )}
     </nav>
   );

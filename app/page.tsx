@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import ThemeToggle from './components/ThemeToggle';
 import { supabase } from './lib/supabase';
 
 // ── Public landing page — no auth required ──
@@ -61,7 +62,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      backgroundColor: '#07070a',
+      backgroundColor: 'var(--bg-primary)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       opacity: phase === 3 ? 0 : 1,
       transition: phase === 3 ? 'opacity 0.6s ease' : 'none',
@@ -139,7 +140,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         textAlign: 'center',
         fontSize: '12px',
         letterSpacing: '0.22em',
-        color: '#4b5563',
+        color: 'var(--text-muted)',
         textTransform: 'uppercase',
         opacity: phase >= 2 ? 0.8 : 0,
         transition: 'opacity 0.5s ease',
@@ -234,8 +235,8 @@ export default function LandingPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#07070a',
-      color: '#f9fafb',
+      backgroundColor: 'var(--bg-primary)',
+      color: 'var(--text-primary)',
       overflowX: 'hidden',
     }}>
 
@@ -251,9 +252,9 @@ export default function LandingPage() {
         {/* ── NAV ── */}
         <nav style={{
           position: 'sticky', top: 0, zIndex: 100,
-          background: scrolled ? 'rgba(7,7,10,0.98)' : 'rgba(7,7,10,0.85)',
+          background: scrolled ? 'var(--nav-bg)' : 'var(--nav-bg-transparent)',
           backdropFilter: 'blur(20px)',
-          borderBottom: scrolled ? '1px solid #1a1a26' : '1px solid transparent',
+          borderBottom: scrolled ? '1px solid var(--border-color)' : '1px solid transparent',
           padding: '0 24px', height: '64px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           transition: 'background 0.3s, border-color 0.3s',
@@ -271,7 +272,7 @@ export default function LandingPage() {
               }}
               priority
             />
-            <span style={{ fontWeight: 900, fontSize: '20px', color: '#fff', letterSpacing: '-0.03em' }}>MANGAL</span>
+            <span style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
           </a>
 
           {/* Center links */}
@@ -284,23 +285,24 @@ export default function LandingPage() {
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                color: '#9ca3af', textDecoration: 'none', whiteSpace: 'nowrap',
+                color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap',
                 transition: 'color 0.15s, background 0.15s',
               }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.color = '#fff'; (e.target as HTMLElement).style.background = '#1a1a26'; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#9ca3af'; (e.target as HTMLElement).style.background = 'transparent'; }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
               >{link.label}</a>
             ))}
           </div>
 
           {/* Auth buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ThemeToggle size={32} />
             <a href="/login" style={{
               padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-              color: '#9ca3af', textDecoration: 'none', transition: 'color 0.15s',
+              color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s',
             }}
-              onMouseEnter={e => (e.target as HTMLElement).style.color = '#fff'}
-              onMouseLeave={e => (e.target as HTMLElement).style.color = '#9ca3af'}
+              onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text-primary)'}
+              onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-secondary)'}
             >Log in</a>
             <a href="/login" style={{
               padding: '9px 20px', borderRadius: '9px', fontSize: '13px', fontWeight: 700,
@@ -372,7 +374,7 @@ export default function LandingPage() {
                 onChange={e => setSearch(e.target.value)}
                 style={{
                   flex: 1, minWidth: '260px', padding: '12px 18px', borderRadius: '10px',
-                  background: '#0d0d14', border: '1px solid #2a2a3a', color: '#fff',
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-primary)',
                   fontSize: '14px', fontFamily: 'inherit',
                 }}
               />
@@ -427,11 +429,11 @@ export default function LandingPage() {
         {/* ── SHOWCASE ── */}
         <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ marginBottom: '48px' }}>
-            <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: '#fff' }}>
+            <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
               🔥 Trending Now
             </h2>
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#374151' }}>Loading stories...</div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-faint)' }}>Loading stories...</div>
             ) : showcaseItems.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '14px' }}>
                 {showcaseItems.map((s, i) => (
@@ -439,7 +441,7 @@ export default function LandingPage() {
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#374151' }}>No series yet</div>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-faint)' }}>No series yet</div>
             )}
           </div>
         </section>
@@ -449,7 +451,7 @@ export default function LandingPage() {
         {tagCloud.length > 0 && (
           <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
-              <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: '#fff' }}>
+              <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
                 🏷️ Browse by Tag
               </h2>
               <Link href="/tags" style={{ fontSize: '13px', fontWeight: 700, color: '#d97706', textDecoration: 'none' }}>
@@ -463,16 +465,16 @@ export default function LandingPage() {
                   href={`/tags/${tag.slug}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    fontSize: '13px', fontWeight: 700, color: '#e5e7eb',
-                    background: '#0d0d14', border: '1px solid #1a1a26',
+                    fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)',
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                     padding: '10px 16px', borderRadius: '24px', textDecoration: 'none',
                     transition: 'border-color 0.15s, color 0.15s',
                   }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,119,6,0.5)'; (e.currentTarget as HTMLElement).style.color = '#d97706'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#1a1a26'; (e.currentTarget as HTMLElement).style.color = '#e5e7eb'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-color)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
                 >
                   #{tag.name}
-                  <span style={{ fontSize: '11px', color: '#4b5563', fontWeight: 600 }}>{tag.count}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{tag.count}</span>
                 </a>
               ))}
             </div>
@@ -485,11 +487,11 @@ export default function LandingPage() {
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <h2 style={{
               fontSize: 'clamp(24px, 3.5vw, 42px)', fontWeight: 900, margin: '0 0 12px',
-              letterSpacing: '-0.03em', color: '#fff',
+              letterSpacing: '-0.03em', color: 'var(--text-primary)',
             }}>
               Why Choose Mangal?
             </h2>
-            <p style={{ fontSize: 'clamp(13px, 1.8vw, 16px)', color: '#6b7280', margin: '0 0 32px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
+            <p style={{ fontSize: 'clamp(13px, 1.8vw, 16px)', color: 'var(--text-tertiary)', margin: '0 0 32px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
               India's platform by creators, for readers. Discover stories rooted in our culture.
             </p>
 
@@ -505,10 +507,10 @@ export default function LandingPage() {
         {/* ── CREATOR CTA ── */}
         <section style={{ padding: 'clamp(70px,10vw,120px) 24px', textAlign: 'center', maxWidth: '680px', margin: '0 auto' }}>
           <div style={{ fontSize: '40px', marginBottom: '24px', filter: 'drop-shadow(0 0 20px rgba(217,119,6,0.6))' }}>🔥</div>
-          <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-0.04em', color: '#fff' }}>
+          <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-0.04em', color: 'var(--text-primary)' }}>
             Got a story in you?
           </h2>
-          <p style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: '#6b7280', margin: '0 0 36px', lineHeight: 1.65 }}>
+          <p style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: 'var(--text-tertiary)', margin: '0 0 36px', lineHeight: 1.65 }}>
             Publish your own Mangal or Novel on our platform. Free tools, real readers, no middlemen.
           </p>
           <a href="/login?creator=1" style={{
@@ -528,7 +530,7 @@ export default function LandingPage() {
 
 
         {/* ── FOOTER ── */}
-        <footer style={{ borderTop: '1px solid #1a1a26', padding: '40px 24px 32px' }}>
+        <footer style={{ borderTop: '1px solid var(--border-color)', padding: '40px 24px 32px' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', justifyContent: 'space-between', marginBottom: '32px' }}>
               {/* Brand */}
@@ -541,9 +543,9 @@ export default function LandingPage() {
                     height={32}
                     style={{ borderRadius: '9px', display: 'block' }}
                   />
-                  <span style={{ fontWeight: 900, fontSize: '18px', color: '#fff' }}>MANGAL</span>
+                  <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)' }}>MANGAL</span>
                 </div>
-                <p style={{ fontSize: '12px', color: '#4b5563', maxWidth: '200px', lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px', lineHeight: 1.6, margin: 0 }}>
                   India's home for original comics &amp; novels. Made with ❤️ in Bharat.
                 </p>
               </div>
@@ -560,6 +562,10 @@ export default function LandingPage() {
                   { label: 'Sign Up', href: '/login' },
                   { label: 'Become a Creator', href: '/login?creator=1' },
                 ]} />
+                <FooterCol title="Company" links={[
+                  { label: 'About', href: '/about' },
+                  { label: 'Help Center', href: '/help' },
+                ]} />
                 <FooterCol title="Legal" links={[
                   { label: 'Privacy Policy', href: '/privacy' },
                   { label: 'Terms of Service', href: '/terms' },
@@ -568,9 +574,9 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid #1a1a26', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={{ fontSize: '11px', color: '#374151', margin: 0 }}>© 2026 Mangal. All rights reserved.</p>
-              <p style={{ fontSize: '11px', color: '#374151', margin: 0 }}>Free to read, forever. 🇮🇳</p>
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: '11px', color: 'var(--text-faint)', margin: 0 }}>© 2026 Mangal. All rights reserved.</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-faint)', margin: 0 }}>Free to read, forever. 🇮🇳</p>
             </div>
           </div>
         </footer>
@@ -590,7 +596,7 @@ function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
       onMouseLeave={() => setHovered(false)}>
       <div style={{
         borderRadius: '10px', overflow: 'hidden',
-        background: '#0d0d14', border: `1px solid ${hovered ? '#d97706' : '#1a1a26'}`,
+        background: 'var(--bg-card)', border: `1px solid ${hovered ? '#d97706' : 'var(--border-color)'}`,
         transition: 'border-color 0.2s, transform 0.2s, box-shadow 0.2s',
         transform: hovered ? 'translateY(-4px)' : 'none',
         boxShadow: hovered ? '0 8px 32px rgba(0,0,0,0.5)' : 'none',
@@ -605,7 +611,7 @@ function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
             <div style={{
               position: 'absolute', top: '6px', left: '6px',
               width: '20px', height: '20px', borderRadius: '5px',
-              background: rank === 1 ? '#d97706' : rank === 2 ? '#9ca3af' : '#92400e',
+              background: rank === 1 ? '#d97706' : rank === 2 ? 'var(--text-secondary)' : '#92400e',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '10px', fontWeight: 900, color: '#0d0d14',
             }}>#{rank}</div>
@@ -625,12 +631,12 @@ function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
           </div>
         </div>
         <div style={{ padding: '8px 8px 10px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {series.title}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '9px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: '#4b5563' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
       </div>
@@ -647,8 +653,8 @@ function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc:
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: '#0d0d14',
-        border: `1px solid ${hovered ? 'rgba(217,119,6,0.4)' : '#1a1a26'}`,
+        background: 'var(--bg-card)',
+        border: `1px solid ${hovered ? 'rgba(217,119,6,0.4)' : 'var(--border-color)'}`,
         borderRadius: '16px', padding: '28px 24px',
         transition: 'border-color 0.2s, transform 0.2s, box-shadow 0.2s',
         transform: hovered ? 'translateY(-4px)' : 'none',
@@ -656,8 +662,8 @@ function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc:
       }}
     >
       <div style={{ fontSize: '30px', marginBottom: '14px' }}>{icon}</div>
-      <div style={{ fontSize: '15px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>{title}</div>
-      <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.6 }}>{desc}</div>
+      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>{title}</div>
+      <div style={{ fontSize: '13px', color: 'var(--text-tertiary)', lineHeight: 1.6 }}>{desc}</div>
     </div>
   );
 }
@@ -667,12 +673,12 @@ function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc:
 function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div>
-      <div style={{ fontSize: '11px', fontWeight: 800, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>{title}</div>
+      <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>{title}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {links.map(l => (
-          <a key={l.label} href={l.href} style={{ fontSize: '13px', color: '#6b7280', textDecoration: 'none', transition: 'color 0.15s' }}
+          <a key={l.label} href={l.href} style={{ fontSize: '13px', color: 'var(--text-tertiary)', textDecoration: 'none', transition: 'color 0.15s' }}
             onMouseEnter={e => (e.target as HTMLElement).style.color = '#d97706'}
-            onMouseLeave={e => (e.target as HTMLElement).style.color = '#6b7280'}
+            onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-tertiary)'}
           >{l.label}</a>
         ))}
       </div>

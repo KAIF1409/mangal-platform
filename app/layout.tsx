@@ -62,6 +62,15 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Runs before paint so the saved theme applies immediately —
+            avoids a flash of the wrong theme on load. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('mangal_theme');if(t==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <ConsentBanner />
