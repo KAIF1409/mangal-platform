@@ -63,3 +63,50 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* ── Global interactive hover ──
+   Every native button gets a highlighted border + a subtle zoom on hover
+   — one rule instead of touching every button's inline style across the
+   app. Also covers <a>/<Link> elements styled as CTA buttons (this app
+   uses gradient-filled links for most primary actions — "Read Chapter",
+   "Publish", "Browse Series" etc.) by matching their rendered inline
+   `style` attribute, so no per-file changes are needed there either.
+   Uses box-shadow (not outline) so it reads as the element's own border
+   "lighting up" rather than a focus ring, and layers on top of whatever
+   border already exists. Respects reduced-motion and skips disabled
+   buttons and plain nav/text links (which only ever set `color`, never
+   a gradient background, so they don't match the attribute selector). */
+button:not(:disabled),
+a[style*="gradient"],
+.mangal-clickable {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+button:not(:disabled):hover,
+a[style*="gradient"]:hover,
+.mangal-clickable:hover {
+  transform: scale(1.035);
+  box-shadow: 0 0 0 2px var(--accent);
+  filter: brightness(1.06);
+  z-index: 1;
+  position: relative;
+}
+
+button:not(:disabled):active,
+a[style*="gradient"]:active,
+.mangal-clickable:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled),
+  a[style*="gradient"],
+  .mangal-clickable {
+    transition: box-shadow 0.15s ease, filter 0.15s ease;
+  }
+  button:not(:disabled):hover,
+  a[style*="gradient"]:hover,
+  .mangal-clickable:hover {
+    transform: none;
+  }
+}
