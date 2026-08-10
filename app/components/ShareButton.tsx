@@ -42,8 +42,8 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
         onClick={() => setOpen(o => !o)}
         style={compact ? {
           width: '36px', height: '36px', borderRadius: '8px',
-          background: '#0d0d14', border: '1px solid #2a2a3a',
-          color: '#fff', fontSize: '15px', cursor: 'pointer',
+          background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+          color: 'var(--text-primary)', fontSize: '15px', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         } : {
           padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
@@ -58,7 +58,7 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200,
-          background: '#0d0d14', border: '1px solid #2a2a3a', borderRadius: '10px',
+          background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '10px',
           minWidth: '180px', overflow: 'hidden',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}>
@@ -70,8 +70,8 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
             style={{
               display: 'flex', alignItems: 'center', gap: '10px',
               padding: '12px 14px', fontSize: '13px', fontWeight: 600,
-              color: '#fff', textDecoration: 'none',
-              borderBottom: '1px solid #1a1a26',
+              color: 'var(--text-primary)', textDecoration: 'none',
+              borderBottom: '1px solid var(--border-color)',
             }}
           >
             <span style={{ fontSize: '16px' }}>💬</span> Share on WhatsApp
@@ -81,7 +81,7 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
             style={{
               display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
               padding: '12px 14px', fontSize: '13px', fontWeight: 600,
-              color: copied ? '#22c55e' : '#fff', background: 'transparent',
+              color: copied ? '#22c55e' : 'var(--text-primary)', background: 'transparent',
               border: 'none', cursor: 'pointer', textAlign: 'left',
             }}
           >
