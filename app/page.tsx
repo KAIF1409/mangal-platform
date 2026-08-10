@@ -299,7 +299,7 @@ export default function LandingPage() {
             }}
               onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
-            >🎬 Kalpanaverse</a>
+            >🎬 K-Tube</a>
             <a href="/kalpana-circle" style={{
               padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
               color: '#c4b5fd', textDecoration: 'none', whiteSpace: 'nowrap',
@@ -307,7 +307,7 @@ export default function LandingPage() {
             }}
               onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
-            >💬 Kalpana Circle</a>
+            >💬 K Circle</a>
           </div>
 
           {/* Auth buttons */}
@@ -475,7 +475,7 @@ export default function LandingPage() {
                 onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(37,99,235,0.32)'; el.style.borderColor = '#2563eb'; }}
                 onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.35)'; el.style.borderColor = 'rgba(37,99,235,0.4)'; }}
               >
-                <Image src="/kalpanaverse-logo.png" alt="Kalpanaverse" width={140} height={52} style={{ height: '30px', width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
+                <Image src="/ktube-logo.png" alt="K-Tube" width={140} height={70} style={{ height: '30px', width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontWeight: 900, fontSize: '15px', color: '#fff' }}>
                     <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(37,99,235,0.25)', border: '1px solid rgba(37,99,235,0.5)', color: '#60a5fa' }}>NEW</span>
@@ -496,10 +496,10 @@ export default function LandingPage() {
                 onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(124,58,237,0.32)'; el.style.borderColor = '#7c3aed'; }}
                 onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.35)'; el.style.borderColor = 'rgba(124,58,237,0.4)'; }}
               >
-                <span style={{ fontSize: '28px' }}>💬</span>
+                <Image src="/kcircle-logo.png" alt="K Circle" width={140} height={60} style={{ height: '30px', width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontWeight: 900, fontSize: '15px', color: '#fff' }}>
-                    Kalpana Circle <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.5)', color: '#c4b5fd', marginLeft: '5px', verticalAlign: 'middle' }}>NEW</span>
+                    <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.5)', color: '#c4b5fd' }}>NEW</span>
                   </div>
                   <div style={{ fontSize: '11.5px', color: '#d1d5db', marginTop: '2px' }}>Talk anime with the MANGAL community</div>
                 </div>

@@ -164,7 +164,7 @@ export default function KalpanaversePage() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Image src="/kalpanaverse-logo.png" alt="Kalpanaverse" width={140} height={52} style={{ display: 'block', height: '34px', width: 'auto', objectFit: 'contain' }} priority />
+          <Image src="/ktube-logo.png" alt="K-Tube" width={140} height={70} style={{ display: 'block', height: '34px', width: 'auto', objectFit: 'contain' }} priority />
           <span style={{
             fontSize: '9.5px', fontWeight: 800, color: '#2563eb',
             background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.32)',
@@ -177,7 +177,7 @@ export default function KalpanaversePage() {
             padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: '#7c3aed', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
             whiteSpace: 'nowrap',
-          }}>💬 Kalpana Circle</Link>
+          }}>💬 K Circle</Link>
           <ThemeToggle size={30} />
           <Link href="/" style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,

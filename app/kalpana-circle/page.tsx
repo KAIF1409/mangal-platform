@@ -22,7 +22,7 @@ interface DemoPost {
 
 const DEMO_POSTS: DemoPost[] = [
   { id: '1', author: 'Kaif', tag: 'Theory', text: 'Wild theory: the Banyan Spirit in the Folk Tales series is actually connected to the Panchayat storyline. Anyone else notice the recurring symbol?', replies: 14, likes: 32, time: '2h', avatarGradient: 'linear-gradient(135deg, #db2777, #7b2cbf)' },
-  { id: '2', author: 'ReaderX', tag: 'Fan Art', text: 'Drew a quick fan piece of the Aryavarta protagonist after watching the AI trailer on Kalpanaverse 🔥', replies: 8, likes: 51, time: '5h', avatarGradient: 'linear-gradient(135deg, #059669, #7b2cbf)' },
+  { id: '2', author: 'ReaderX', tag: 'Fan Art', text: 'Drew a quick fan piece of the Aryavarta protagonist after watching the AI trailer on K-Tube 🔥', replies: 8, likes: 51, time: '5h', avatarGradient: 'linear-gradient(135deg, #059669, #7b2cbf)' },
   { id: '3', author: 'MangaMaya', tag: 'Request', text: 'Can someone adapt Street Life Mumbai next? That series deserves an AI-anime short so bad', replies: 21, likes: 19, time: '8h', avatarGradient: 'linear-gradient(135deg, #ea580c, #db2777)' },
   { id: '4', author: 'AnimeFan108', tag: 'Reaction', text: 'The Desi Horror Anthology teaser genuinely scared me at 30 seconds long, how', replies: 6, likes: 27, time: '1d', avatarGradient: 'linear-gradient(135deg, #1e1b4b, #7b2cbf)' },
 ];
@@ -81,12 +81,7 @@ export default function KalpanaCirclePage() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '20px' }}>💬</span>
-          <span style={{
-            fontWeight: 900, fontSize: '20px', letterSpacing: '-0.03em',
-            background: 'linear-gradient(135deg, #a78bfa, #f472b6)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-          }}>Kalpana Circle</span>
+          <Image src="/kcircle-logo.png" alt="K Circle" width={140} height={60} style={{ display: 'block', height: '32px', width: 'auto', objectFit: 'contain' }} priority />
           <span style={{
             fontSize: '9.5px', fontWeight: 800, color: '#c4b5fd',
             background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.35)',
@@ -99,7 +94,7 @@ export default function KalpanaCirclePage() {
             padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)',
             whiteSpace: 'nowrap',
-          }}>🎬 Kalpanaverse</Link>
+          }}>🎬 K-Tube</Link>
           <ThemeToggle size={30} />
           <Link href="/" style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
@@ -117,7 +112,7 @@ export default function KalpanaCirclePage() {
           fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.03em',
         }}>Talk Anime With the Community</h1>
         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto' }}>
-          Theories, fan art, reactions, and requests for what MANGAL creators should adapt next on Kalpanaverse.
+          Theories, fan art, reactions, and requests for what MANGAL creators should adapt next on K-Tube.
           This is an early demo — posting isn&apos;t live yet.
         </p>
       </div>
