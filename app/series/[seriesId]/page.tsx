@@ -10,6 +10,7 @@ import ShareButton from '../../components/ShareButton';
 import { canManageSeries, isDeveloperRole } from '../../lib/roles';
 import { estimateReadTime } from '../../lib/novelEditor';
 import Link from 'next/link';
+import ThemeToggle from '../../components/ThemeToggle';
 
 interface Series {
   id: string;
@@ -486,7 +487,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
         <div>Loading series...</div>
@@ -495,7 +496,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   );
 
   if (!series) return (
-    <div style={{ minHeight: '100vh', background: '#07070a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '32px', marginBottom: '12px' }}>😔</div>
         <div>Series not found.</div>
@@ -519,26 +520,27 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
 
       {/* ── NAV ── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(7,7,10,0.97)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid #1a1a26',
+        background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
-            <span style={{ fontWeight: 900, fontSize: '17px', color: '#fff' }}>MANGAL</span>
+            <span style={{ fontWeight: 900, fontSize: '17px', color: 'var(--text-primary)' }}>MANGAL</span>
           </Link>
-          <span style={{ color: '#374151' }}>›</span>
-          <span style={{ fontSize: '13px', color: '#6b7280', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{series.title}</span>
+          <span style={{ color: 'var(--text-faint)' }}>›</span>
+          <span style={{ fontSize: '13px', color: 'var(--text-tertiary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{series.title}</span>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <Link href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: '#6b7280', textDecoration: 'none', border: '1px solid #1a1a26' }}>Browse</Link>
+          <ThemeToggle size={30} />
+          <Link href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)' }}>Browse</Link>
           {isCreator && (
             <a href={`/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none' }}>
               + Add Chapter
@@ -563,13 +565,13 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             transform: 'scale(1.1)',
           }} />
         )}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(7,7,10,0.4), #07070a)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(7,7,10,0.4), var(--bg-primary))' }} />
 
         <div style={{ position: 'relative', maxWidth: '1000px', margin: '0 auto', padding: '48px 24px 40px', display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
           {/* Cover */}
           <div style={{
             width: '200px', flexShrink: 0, borderRadius: '14px', overflow: 'hidden',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6)', border: '1px solid #1a1a26', aspectRatio: '3/4',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6)', border: '1px solid var(--border-color)', aspectRatio: '3/4',
             background: '#1a0a0a', position: 'relative',
           }}>
             {series.cover_url ? (
@@ -588,15 +590,15 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 </span>
               )}
               {series.language && (
-                <span style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', background: '#0d0d14', border: '1px solid #1a1a26', padding: '4px 12px', borderRadius: '20px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)', background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '4px 12px', borderRadius: '20px' }}>
                   {series.language}
                 </span>
               )}
               <span style={{
                 fontSize: '10px', fontWeight: 700, padding: '4px 12px', borderRadius: '20px',
-                border: isNovel ? '1px solid rgba(124,58,237,0.4)' : '1px solid #1a1a26',
-                background: isNovel ? 'rgba(124,58,237,0.15)' : '#0d0d14',
-                color: isNovel ? '#a78bfa' : '#9ca3af',
+                border: isNovel ? '1px solid rgba(124,58,237,0.4)' : '1px solid var(--border-color)',
+                background: isNovel ? 'rgba(124,58,237,0.15)' : 'var(--bg-card)',
+                color: isNovel ? '#a78bfa' : 'var(--text-secondary)',
               }}>
                 {isNovel ? '📕 Novel' : (series.reading_mode === 'scroll' ? '📜 Webtoon' : '📖 Mangal')}
               </span>
@@ -616,7 +618,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     series.completion_status === 'hiatus' ? 'rgba(107,114,128,0.15)' : 'rgba(217,119,6,0.15)',
                   color:
                     series.completion_status === 'completed' ? '#10b981' :
-                    series.completion_status === 'hiatus' ? '#9ca3af' : '#d97706',
+                    series.completion_status === 'hiatus' ? 'var(--text-secondary)' : '#d97706',
                 }}>
                   {series.completion_status === 'completed' && '✓ Completed'}
                   {series.completion_status === 'hiatus' && '⏸ On Hiatus'}
@@ -631,16 +633,16 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             {/* Step 13 — Public Creator Profile: links to /creator/[username] */}
             {creatorUsername && (
               <a href={`/creator/${creatorUsername}`} style={{
-                fontSize: '13px', color: '#6b7280', textDecoration: 'none',
+                fontSize: '13px', color: 'var(--text-tertiary)', textDecoration: 'none',
                 display: 'inline-block', marginBottom: '14px',
               }}
                 onMouseEnter={e => { (e.target as HTMLElement).style.color = '#d97706'; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#6b7280'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-tertiary)'; }}
               >
                 by @{creatorUsername}
               </a>
             )}
-            <p style={{ fontSize: '14px', color: '#9ca3af', lineHeight: 1.7, margin: '0 0 16px', maxWidth: '540px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 16px', maxWidth: '540px' }}>
               {series.synopsis}
             </p>
 
@@ -652,13 +654,13 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     key={tag.id}
                     href={`/tags/${tag.slug}`}
                     style={{
-                      fontSize: '10px', fontWeight: 600, color: '#9ca3af',
-                      background: '#0d0d14', border: '1px solid #1a1a26',
+                      fontSize: '10px', fontWeight: 600, color: 'var(--text-secondary)',
+                      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                       padding: '4px 10px', borderRadius: '20px', textDecoration: 'none',
                       transition: 'color 0.15s, border-color 0.15s',
                     }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#d97706'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,119,6,0.4)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = '#1a1a26'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-color)'; }}
                   >
                     #{tag.name}
                   </a>
@@ -669,24 +671,24 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             {/* Stats row */}
             <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>{chapters.length}</div>
-                <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Chapters</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)' }}>{chapters.length}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Chapters</div>
               </div>
               {latestChapter && (
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>Ch.{latestChapter.chapter_number}</div>
-                  <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Latest</div>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)' }}>Ch.{latestChapter.chapter_number}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Latest</div>
                 </div>
               )}
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>{followCount}</div>
-                <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Followers</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)' }}>{followCount}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Followers</div>
               </div>
 
               {/* Step 7 — View count */}
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: '#fff' }}>{formatViews(viewCount)}</div>
-                <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Views</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)' }}>{formatViews(viewCount)}</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Views</div>
               </div>
 
               {/* Step 6 — Star Rating */}
@@ -703,7 +705,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                       style={{
                         background: 'none', border: 'none', cursor: ratingLoading ? 'wait' : 'pointer',
                         fontSize: '20px', padding: '2px', lineHeight: 1,
-                        color: star <= displayStars ? '#d97706' : '#2a2a3a',
+                        color: star <= displayStars ? '#d97706' : 'var(--border-color)',
                         transition: 'color 0.1s, transform 0.1s',
                         transform: star <= displayStars ? 'scale(1.15)' : 'scale(1)',
                         opacity: ratingLoading ? 0.5 : 1,
@@ -711,7 +713,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     >★</button>
                   ))}
                 </div>
-                <div style={{ fontSize: '10px', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>
                   {avgRating !== null
                     ? <span><span style={{ color: '#d97706', fontWeight: 700 }}>{avgRating}</span> / 5 ({ratingCount})</span>
                     : 'Rate this'}
@@ -746,8 +748,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 <a href={`/read/${firstChapter.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
-                  background: '#0d0d14', border: '1px solid #2a2a3a',
-                  color: '#9ca3af', textDecoration: 'none',
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                  color: 'var(--text-secondary)', textDecoration: 'none',
                 }}>
                   ↺ Start From Beginning
                 </a>
@@ -756,8 +758,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 <a href={`/read/${latestChapter.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
-                  background: '#0d0d14', border: '1px solid #2a2a3a',
-                  color: '#9ca3af', textDecoration: 'none',
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                  color: 'var(--text-secondary)', textDecoration: 'none',
                 }}>
                   ⚡ Latest Chapter
                 </a>
@@ -770,9 +772,9 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                     padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
                     cursor: followLoading ? 'wait' : 'pointer',
-                    border: isFollowing ? '1px solid rgba(217,119,6,0.5)' : '1px solid #2a2a3a',
-                    background: isFollowing ? 'rgba(217,119,6,0.12)' : '#0d0d14',
-                    color: isFollowing ? '#d97706' : '#9ca3af',
+                    border: isFollowing ? '1px solid rgba(217,119,6,0.5)' : '1px solid var(--border-color)',
+                    background: isFollowing ? 'rgba(217,119,6,0.12)' : 'var(--bg-card)',
+                    color: isFollowing ? '#d97706' : 'var(--text-secondary)',
                     transition: 'all 0.2s',
                   }}
                 >
@@ -809,7 +811,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                       disabled={deletingSeries}
                       style={{
                         padding: '12px 16px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                        background: '#0d0d14', border: '1px solid #2a2a3a', color: '#9ca3af', cursor: 'pointer',
+                        background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer',
                       }}
                     >
                       Cancel
@@ -852,7 +854,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             onClick={() => setSortDesc(d => !d)}
             style={{
               padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
-              background: '#0d0d14', border: '1px solid #1a1a26', color: '#9ca3af', cursor: 'pointer',
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer',
             }}
           >
             {sortDesc ? '↓ Newest First' : '↑ Oldest First'}
@@ -860,9 +862,9 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         </div>
 
         {chapters.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px', background: '#0d0d14', borderRadius: '14px', border: '1px solid #1a1a26' }}>
+          <div style={{ textAlign: 'center', padding: '60px', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
-            <p style={{ color: '#4b5563', fontSize: '14px', margin: 0 }}>No chapters published yet. Check back soon!</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>No chapters published yet. Check back soon!</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -883,7 +885,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         {/* ── STEP 27 — READERS ALSO LIKED ── */}
         {relatedSeries.length > 0 && (
           <section style={{ padding: '40px 0 0' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: '#fff' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
               Readers Also Liked
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
@@ -893,17 +895,17 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         )}
 
         {/* ── STEP 26 — WRITTEN REVIEWS ── */}
-        <section style={{ padding: '48px 0 40px', borderTop: '1px solid #1a1a26', marginTop: '40px' }}>
+        <section style={{ padding: '48px 0 40px', borderTop: '1px solid var(--border-color)', marginTop: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: '10px', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#fff' }}>
-              Reviews {reviews.length > 0 && <span style={{ color: '#4b5563', fontWeight: 600 }}>({reviews.length})</span>}
+            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+              Reviews {reviews.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({reviews.length})</span>}
             </h2>
             {user && !showReviewForm && (
               <button
                 onClick={() => { if (!myRating) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; } setShowReviewForm(true); }}
                 style={{
-                  padding: '9px 18px', borderRadius: '10px', border: '1px solid #1a1a26',
-                  background: '#0d0d14', color: '#d97706', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                  padding: '9px 18px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)', color: '#d97706', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
                 }}
               >
                 {myRating && reviews.some(r => r.reader_id === user.id) ? '✏️ Edit Your Review' : '✍️ Write a Review'}
@@ -912,13 +914,13 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           </div>
 
           {!myRating && user && (
-            <p style={{ fontSize: '12px', color: '#4b5563', marginBottom: '20px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>
               Rate the series above (★) before writing a review.
             </p>
           )}
 
           {showReviewForm && (
-            <div style={{ background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px', padding: '20px', marginBottom: '24px' }}>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '20px', marginBottom: '24px' }}>
               <input
                 type="text"
                 value={reviewTitle}
@@ -927,7 +929,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 maxLength={100}
                 style={{
                   width: '100%', padding: '11px 14px', borderRadius: '10px', marginBottom: '10px',
-                  background: '#08080c', border: '1px solid #1f1f2e', color: '#fff',
+                  background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-primary)',
                   fontSize: '13px', outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit',
                 }}
               />
@@ -939,22 +941,22 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 maxLength={2000}
                 style={{
                   width: '100%', padding: '11px 14px', borderRadius: '10px',
-                  background: '#08080c', border: '1px solid #1f1f2e', color: '#fff',
+                  background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-primary)',
                   fontSize: '13px', outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', resize: 'vertical' as const,
                 }}
               />
               <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                 <button
                   onClick={() => setShowReviewForm(false)}
-                  style={{ padding: '10px 18px', borderRadius: '10px', background: 'transparent', border: '1px solid #1f1f2e', color: '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ padding: '10px 18px', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border-light)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
                 >Cancel</button>
                 <button
                   onClick={submitReview}
                   disabled={reviewSubmitting}
                   style={{
                     padding: '10px 20px', borderRadius: '10px', border: 'none',
-                    background: reviewSubmitting ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d, #d97706)',
-                    color: '#fff', fontSize: '12px', fontWeight: 700, cursor: reviewSubmitting ? 'not-allowed' : 'pointer',
+                    background: reviewSubmitting ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #d97706)',
+                    color: 'var(--text-primary)', fontSize: '12px', fontWeight: 700, cursor: reviewSubmitting ? 'not-allowed' : 'pointer',
                   }}
                 >{reviewSubmitting ? 'Posting...' : 'Post Review'}</button>
               </div>
@@ -962,40 +964,40 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           )}
 
           {reviews.length === 0 ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#374151', fontSize: '13px' }}>
+            <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
               No written reviews yet — be the first to share your thoughts.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {reviews.map(review => (
-                <div key={review.id} style={{ background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '14px', padding: '18px 20px' }}>
+                <div key={review.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '18px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap' as const, gap: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{review.full_name}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{review.full_name}</span>
                       <span style={{ display: 'flex', gap: '1px' }}>
                         {[1, 2, 3, 4, 5].map(s => (
-                          <span key={s} style={{ fontSize: '11px', color: s <= review.stars ? '#d97706' : '#2a2a3a' }}>★</span>
+                          <span key={s} style={{ fontSize: '11px', color: s <= review.stars ? '#d97706' : 'var(--border-color)' }}>★</span>
                         ))}
                       </span>
                     </div>
-                    <span style={{ fontSize: '10px', color: '#4b5563' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                       {new Date(review.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </div>
                   {review.review_title && (
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>{review.review_title}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>{review.review_title}</div>
                   )}
                   {review.review_text && (
-                    <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, margin: '0 0 12px' }}>{review.review_text}</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 12px' }}>{review.review_text}</p>
                   )}
                   <button
                     onClick={() => toggleHelpful(review.id)}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: '6px',
                       padding: '5px 12px', borderRadius: '8px', cursor: 'pointer',
-                      border: myVotedHelpful.has(review.id) ? '1px solid rgba(217,119,6,0.4)' : '1px solid #1a1a26',
+                      border: myVotedHelpful.has(review.id) ? '1px solid rgba(217,119,6,0.4)' : '1px solid var(--border-color)',
                       background: myVotedHelpful.has(review.id) ? 'rgba(217,119,6,0.1)' : 'transparent',
-                      color: myVotedHelpful.has(review.id) ? '#d97706' : '#6b7280',
+                      color: myVotedHelpful.has(review.id) ? '#d97706' : 'var(--text-tertiary)',
                       fontSize: '11px', fontWeight: 700,
                     }}
                   >
@@ -1009,19 +1011,19 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer style={{ borderTop: '1px solid #1a1a26', padding: '32px 24px', textAlign: 'center' }}>
+      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
           <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff' }}>MANGAL</span>
+          <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--text-primary)' }}>MANGAL</span>
         </div>
-        <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 14px' }}>Made with ❤️ in India · Free to read, forever.</p>
+        <p style={{ fontSize: '12px', color: 'var(--text-faint)', margin: '0 0 14px' }}>Made with ❤️ in India · Free to read, forever.</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
           {[
             { label: 'Privacy Policy', href: '/privacy' },
             { label: 'Terms of Service', href: '/terms' },
             { label: 'Grievance Officer', href: '/grievance' },
           ].map(link => (
-            <a key={link.href} href={link.href} style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}>
+            <a key={link.href} href={link.href} style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none' }}>
               {link.label}
             </a>
           ))}
@@ -1065,8 +1067,8 @@ function ChapterRow({
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 20px',
-        background: hovered ? '#111118' : '#0d0d14',
-        border: `1px solid ${hovered ? '#2a2a3a' : '#1a1a26'}`,
+        background: hovered ? '#111118' : 'var(--bg-card)',
+        border: `1px solid ${hovered ? 'var(--border-color)' : 'var(--border-color)'}`,
         borderRadius: '10px',
         transition: 'all 0.15s',
         gap: '12px',
@@ -1081,18 +1083,18 @@ function ChapterRow({
       >
         <span style={{
           width: '42px', height: '42px', borderRadius: '10px', flexShrink: 0,
-          background: hovered ? 'rgba(217,119,6,0.15)' : '#08080c',
-          border: `1px solid ${hovered ? 'rgba(217,119,6,0.3)' : '#1a1a26'}`,
+          background: hovered ? 'rgba(217,119,6,0.15)' : 'var(--bg-input)',
+          border: `1px solid ${hovered ? 'rgba(217,119,6,0.3)' : 'var(--border-color)'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '12px', fontWeight: 800,
-          color: hovered ? '#d97706' : '#4b5563',
+          color: hovered ? '#d97706' : 'var(--text-muted)',
           transition: 'all 0.15s',
         }}>
           {chapter.chapter_number}
         </span>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
               Chapter {chapter.chapter_number}{chapter.title ? ` — ${chapter.title}` : ''}
             </span>
             {isNew && (
@@ -1101,7 +1103,7 @@ function ChapterRow({
               </span>
             )}
           </div>
-          <div style={{ fontSize: '11px', color: '#4b5563', marginTop: '2px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
             {new Date(chapter.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
             {/* Step 21 — word count + estimated read time, novel chapters only */}
             {isNovel && chapter.word_count != null && chapter.word_count > 0 && (
@@ -1124,8 +1126,8 @@ function ChapterRow({
                 title="Edit chapter"
                 style={{
                   width: '32px', height: '32px', borderRadius: '8px',
-                  border: '1px solid #1a1a26', background: '#08080c',
-                  color: '#9ca3af', fontSize: '13px',
+                  border: '1px solid var(--border-color)', background: 'var(--bg-input)',
+                  color: 'var(--text-secondary)', fontSize: '13px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   textDecoration: 'none', flexShrink: 0,
                 }}
@@ -1135,7 +1137,7 @@ function ChapterRow({
                 title="Delete chapter"
                 style={{
                   width: '32px', height: '32px', borderRadius: '8px',
-                  border: '1px solid #1a1a26', background: '#08080c',
+                  border: '1px solid var(--border-color)', background: 'var(--bg-input)',
                   color: '#ef4444', fontSize: '13px', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
@@ -1160,8 +1162,8 @@ function ChapterRow({
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmingDelete(false); }}
                   style={{
                     padding: '7px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 600,
-                    border: '1px solid #1a1a26', background: '#08080c',
-                    color: '#9ca3af', cursor: 'pointer', whiteSpace: 'nowrap',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-input)',
+                    color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap',
                   }}
                 >
                   Cancel
@@ -1173,7 +1175,7 @@ function ChapterRow({
       )}
 
       {/* Arrow indicator — purely visual, points into the chapter link */}
-      <span style={{ color: hovered ? '#d97706' : '#374151', fontSize: '18px', transition: 'color 0.15s', flexShrink: 0 }}>→</span>
+      <span style={{ color: hovered ? '#d97706' : 'var(--text-faint)', fontSize: '18px', transition: 'color 0.15s', flexShrink: 0 }}>→</span>
     </div>
   );
 }
@@ -1197,7 +1199,7 @@ function RelatedCard({ series }: { series: Series }) {
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div style={{
         borderRadius: '12px', overflow: 'hidden',
-        background: '#0d0d14', border: `1px solid ${hovered ? '#d97706' : '#1a1a26'}`,
+        background: 'var(--bg-card)', border: `1px solid ${hovered ? '#d97706' : 'var(--border-color)'}`,
         transition: 'border-color 0.2s, transform 0.2s',
         transform: hovered ? 'translateY(-3px)' : 'none',
       }}>
@@ -1222,13 +1224,13 @@ function RelatedCard({ series }: { series: Series }) {
           </div>
         </div>
         <div style={{ padding: '10px 10px 12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px',
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '4px',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {series.title}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: '#4b5563' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
       </div>
