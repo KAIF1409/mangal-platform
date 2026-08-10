@@ -1011,19 +1011,19 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '32px 24px', textAlign: 'center' }}>
+      <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
           <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--text-primary)' }}>MANGAL</span>
+          <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>MANGAL</span>
         </div>
-        <p style={{ fontSize: '12px', color: 'var(--text-faint)', margin: '0 0 14px' }}>Made with ❤️ in India · Free to read, forever.</p>
+        <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 14px' }}>Made with ❤️ in India · Free to read, forever.</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
           {[
             { label: 'Privacy Policy', href: '/privacy' },
             { label: 'Terms of Service', href: '/terms' },
             { label: 'Grievance Officer', href: '/grievance' },
           ].map(link => (
-            <a key={link.href} href={link.href} style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none' }}>
+            <a key={link.href} href={link.href} style={{ fontSize: '11px', color: 'var(--footer-link)', textDecoration: 'none' }}>
               {link.label}
             </a>
           ))}

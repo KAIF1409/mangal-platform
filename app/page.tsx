@@ -657,7 +657,7 @@ export default function LandingPage() {
 
 
         {/* ── FOOTER ── */}
-        <footer style={{ borderTop: '1px solid var(--border-color)', padding: '40px 24px 32px' }}>
+        <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '40px 24px 32px' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', justifyContent: 'space-between', marginBottom: '32px' }}>
               {/* Brand */}
@@ -670,9 +670,9 @@ export default function LandingPage() {
                     height={32}
                     style={{ borderRadius: '9px', display: 'block' }}
                   />
-                  <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)' }}>MANGAL</span>
+                  <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--footer-text)' }}>MANGAL</span>
                 </div>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px', lineHeight: 1.6, margin: '0 0 16px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', maxWidth: '200px', lineHeight: 1.6, margin: '0 0 16px' }}>
                   India&apos;s home for original comics &amp; novels. Made with ❤️ in Bharat.
                 </p>
                 {/* Social icons — accounts aren't live yet, so these are
@@ -687,8 +687,8 @@ export default function LandingPage() {
                       style={{
                         width: '30px', height: '30px', borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                        color: 'var(--text-muted)', cursor: 'default',
+                        background: 'rgba(255,255,255,0.06)', border: '1px solid var(--footer-border)',
+                        color: 'var(--footer-text-muted)', cursor: 'default',
                       }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d={path} /></svg>
@@ -721,9 +721,9 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={{ fontSize: '11px', color: 'var(--text-faint)', margin: 0 }}>© 2026 Mangal. All rights reserved.</p>
-              <p style={{ fontSize: '11px', color: 'var(--text-faint)', margin: 0 }}>Free to read, forever. 🇮🇳</p>
+            <div style={{ borderTop: '1px solid var(--footer-border)', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: '11px', color: 'var(--footer-text-muted)', margin: 0 }}>© 2026 Mangal. All rights reserved.</p>
+              <p style={{ fontSize: '11px', color: 'var(--footer-text-muted)', margin: 0 }}>Free to read, forever. 🇮🇳</p>
             </div>
           </div>
         </footer>
@@ -830,12 +830,12 @@ const SOCIAL_ICONS = [
 function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div>
-      <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>{title}</div>
+      <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--footer-link)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>{title}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {links.map(l => (
-          <a key={l.label} href={l.href} style={{ fontSize: '13px', color: 'var(--text-tertiary)', textDecoration: 'none', transition: 'color 0.15s' }}
+          <a key={l.label} href={l.href} style={{ fontSize: '13px', color: 'var(--footer-text-muted)', textDecoration: 'none', transition: 'color 0.15s' }}
             onMouseEnter={e => (e.target as HTMLElement).style.color = '#d97706'}
-            onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-tertiary)'}
+            onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--footer-text-muted)'}
           >{l.label}</a>
         ))}
       </div>

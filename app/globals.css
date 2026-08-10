@@ -31,6 +31,16 @@
   --accent-rgb: 217, 119, 6;
   --nav-bg: rgba(7, 7, 10, 0.97);
   --nav-bg-transparent: rgba(7, 7, 10, 0.85);
+
+  /* Footer is intentionally the INVERSE of the site theme, à la Webnovel's
+     dark-navy footer on an otherwise white site — a deliberate contrast
+     band, not a themed section that matches the page around it. When the
+     site is dark (this root palette), the footer flips light. */
+  --footer-bg: #f5f5f7;
+  --footer-text: #14141c;
+  --footer-text-muted: #6b7280;
+  --footer-border: #e2e4e9;
+  --footer-link: #374151;
 }
 
 [data-theme='light'] {
@@ -50,6 +60,14 @@
   --accent-rgb: 180, 83, 9;
   --nav-bg: rgba(255, 255, 255, 0.97);
   --nav-bg-transparent: rgba(255, 255, 255, 0.88);
+
+  /* Site is light here, so the footer inverts to the dark-navy contrast
+     band from the Webnovel reference. */
+  --footer-bg: #14152a;
+  --footer-text: #f9fafb;
+  --footer-text-muted: #9199ad;
+  --footer-border: #262841;
+  --footer-link: #c3c8d6;
 }
 
 html,

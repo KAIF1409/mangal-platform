@@ -34,7 +34,15 @@ export default function Footer({
   showBrandBlock = true,
 }: FooterProps) {
   return (
-    <footer style={{ borderTop: '1px solid var(--border-color)', padding: '32px 24px', textAlign: 'center' }}>
+    <footer
+      style={{
+        borderTop: '1px solid var(--footer-border)',
+        background: 'var(--footer-bg)',
+        padding: '32px 24px',
+        textAlign: 'center',
+        transition: 'background-color 0.2s ease, color 0.2s ease',
+      }}
+    >
       {showBrandBlock && (
         <div
           style={{
@@ -52,18 +60,18 @@ export default function Footer({
             height={logoSize}
             style={{ display: 'block', filter: 'drop-shadow(0 0 6px rgba(217,119,6,0.4))' }}
           />
-          <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--text-primary)' }}>{platformName}</span>
+          <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>{platformName}</span>
         </div>
       )}
 
-      <p style={{ fontSize: '12px', color: 'var(--text-faint)', margin: '0 0 14px' }}>{tagline}</p>
+      <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 14px' }}>{tagline}</p>
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
         {links.map((link) => (
           <a
             key={link.href}
             href={link.href}
-            style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none' }}
+            style={{ fontSize: '11px', color: 'var(--footer-link)', textDecoration: 'none' }}
           >
             {link.label}
           </a>

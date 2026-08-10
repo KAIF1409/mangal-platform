@@ -338,7 +338,7 @@ export default function BecomeCreatorPage() {
         )}
       </div>
     </main>
-    <footer style={{ borderTop: '1px solid var(--border-color)', padding: '24px', textAlign: 'center' }}>
+    <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '24px', textAlign: 'center' }}>
       <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' as const }}>
         {[
           { label: 'Home', href: '/' },
@@ -346,7 +346,7 @@ export default function BecomeCreatorPage() {
           { label: 'Terms of Service', href: '/terms' },
           { label: 'Grievance Officer', href: '/grievance' },
         ].map(link => (
-          <a key={link.href} href={link.href} style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none' }}>
+          <a key={link.href} href={link.href} style={{ fontSize: '11px', color: 'var(--footer-link)', textDecoration: 'none' }}>
             {link.label}
           </a>
         ))}
