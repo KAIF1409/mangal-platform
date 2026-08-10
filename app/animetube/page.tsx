@@ -32,6 +32,54 @@ const DEMO_VIDEOS: DemoVideo[] = [
 
 const CATEGORY_PILLS = ['All', 'Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Trailers'];
 
+interface DemoShort {
+  id: string;
+  title: string;
+  views: string;
+  gradient: string;
+  emoji: string;
+}
+
+const DEMO_SHORTS: DemoShort[] = [
+  { id: 's1', title: 'Aryavarta in 30 seconds', views: '12K', gradient: 'linear-gradient(160deg, #db2777, #4f46e5)', emoji: '⚡' },
+  { id: 's2', title: 'That plot twist though 😱', views: '8.7K', gradient: 'linear-gradient(160deg, #7b2cbf, #1e1b4b)', emoji: '😱' },
+  { id: 's3', title: 'Banyan Spirit — best frame', views: '15K', gradient: 'linear-gradient(160deg, #059669, #7b2cbf)', emoji: '🌳' },
+  { id: 's4', title: 'Street Life Mumbai vibes', views: '6.1K', gradient: 'linear-gradient(160deg, #ea580c, #db2777)', emoji: '🌆' },
+  { id: 's5', title: 'POV: exam week hits different', views: '21K', gradient: 'linear-gradient(160deg, #d97706, #db2777)', emoji: '🎒' },
+  { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #1e1b4b, #db2777)', emoji: '👻' },
+];
+
+function ShortCard({ short }: { short: DemoShort }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        flexShrink: 0, width: '140px', borderRadius: '14px', overflow: 'hidden', cursor: 'pointer',
+        position: 'relative', aspectRatio: '9/16', background: short.gradient,
+        display: 'flex', alignItems: 'flex-end',
+        transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
+        boxShadow: hover ? '0 12px 24px rgba(219,39,119,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
+        transition: 'transform 0.15s, box-shadow 0.2s',
+      }}
+    >
+      <span style={{ position: 'absolute', top: '44%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '32px', opacity: 0.9 }}>{short.emoji}</span>
+      <span style={{
+        position: 'absolute', top: '8px', left: '8px', fontSize: '9.5px', fontWeight: 800, color: '#fff',
+        background: 'rgba(0,0,0,0.5)', padding: '2px 7px', borderRadius: '20px', letterSpacing: '0.02em',
+      }}>⚡ SHORTS</span>
+      <div style={{
+        position: 'relative', width: '100%', padding: '18px 10px 10px',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
+      }}>
+        <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '3px' }}>{short.title}</div>
+        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.75)' }}>{short.views} views</div>
+      </div>
+    </div>
+  );
+}
+
 function VideoCard({ video }: { video: DemoVideo }) {
   const [hover, setHover] = useState(false);
   return (
@@ -103,7 +151,7 @@ export default function AnimeTubePage() {
       {/* ── NAV ── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(10,7,14,0.94)', backdropFilter: 'blur(16px)',
+        background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 20px', height: '64px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -171,9 +219,22 @@ export default function AnimeTubePage() {
 
       {tab === 'videos' ? (
         <>
+          {/* Shorts row */}
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ⚡ Shorts
+              </h2>
+              <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#f472b6' }}>See all →</span>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
+              {DEMO_SHORTS.map(s => <ShortCard key={s.id} short={s} />)}
+            </div>
+          </div>
+
           {/* Category pills */}
           <div style={{
-            display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 20px 20px',
+            display: 'flex', gap: '8px', overflowX: 'auto', padding: '20px 20px 20px',
             maxWidth: '1200px', margin: '0 auto',
           }}>
             {CATEGORY_PILLS.map((c, i) => (
@@ -188,6 +249,9 @@ export default function AnimeTubePage() {
           </div>
 
           {/* Video grid */}
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 14px', letterSpacing: '-0.02em' }}>🎬 Videos</h2>
+          </div>
           <div style={{
             padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px',
