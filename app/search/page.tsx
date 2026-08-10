@@ -413,7 +413,7 @@ function SearchPageInner() {
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               {results.length} series found
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
               {results.map((s, i) => (
                 <ResultCard key={s.id} series={s} creatorUsername={creatorUsernames[s.creator_id]} rank={sortBy === 'views' ? i + 1 : undefined} />
               ))}

@@ -475,10 +475,10 @@ export default function LandingPage() {
                 onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(37,99,235,0.32)'; el.style.borderColor = '#2563eb'; }}
                 onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.35)'; el.style.borderColor = 'rgba(37,99,235,0.4)'; }}
               >
-                <span style={{ fontSize: '28px' }}>🎬</span>
+                <Image src="/kalpanaverse-logo.png" alt="Kalpanaverse" width={140} height={52} style={{ height: '30px', width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontWeight: 900, fontSize: '15px', color: '#fff' }}>
-                    Kalpanaverse <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(37,99,235,0.25)', border: '1px solid rgba(37,99,235,0.5)', color: '#60a5fa', marginLeft: '5px', verticalAlign: 'middle' }}>NEW</span>
+                    <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(37,99,235,0.25)', border: '1px solid rgba(37,99,235,0.5)', color: '#60a5fa' }}>NEW</span>
                   </div>
                   <div style={{ fontSize: '11.5px', color: '#d1d5db', marginTop: '2px' }}>AI-anime shorts from Mangal creators</div>
                 </div>
@@ -516,14 +516,14 @@ export default function LandingPage() {
               🔥 Trending Now
             </h2>
             {loading ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 180px))', gap: '14px' }}>
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} style={{ aspectRatio: '3/4.6', borderRadius: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }} />
                 ))}
               </div>
             ) : showcaseItems.length > 0 ? (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 180px))', gap: '14px' }}>
                   {showcaseItems.map((s, i) => (
                     <ShowcaseCard key={s.id} series={s} rank={i + 1} />
                   ))}
@@ -622,7 +622,7 @@ export default function LandingPage() {
               India&apos;s platform by creators, for readers. Discover stories rooted in our culture.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 280px))', gap: '20px' }}>
               {FEATURE_CARDS.map(f => (
                 <FeatureCard key={f.title} {...f} />
               ))}

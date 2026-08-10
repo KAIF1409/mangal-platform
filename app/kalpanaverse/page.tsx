@@ -164,12 +164,7 @@ export default function KalpanaversePage() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '20px' }}>🎬</span>
-          <span style={{
-            fontWeight: 900, fontSize: '20px', letterSpacing: '-0.03em',
-            background: 'linear-gradient(135deg, #2563eb, #0ea5e9)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-          }}>Kalpanaverse</span>
+          <Image src="/kalpanaverse-logo.png" alt="Kalpanaverse" width={140} height={52} style={{ display: 'block', height: '34px', width: 'auto', objectFit: 'contain' }} priority />
           <span style={{
             fontSize: '9.5px', fontWeight: 800, color: '#2563eb',
             background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.32)',

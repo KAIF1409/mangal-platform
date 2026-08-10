@@ -126,7 +126,7 @@ export default function TagPage({ params }: { params: Promise<{ slug: string }> 
                 <div style={{ fontSize: '14px' }}>No series with this tag yet.</div>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
                 {series.map(s => <TagCard key={s.id} series={s} />)}
               </div>
             )}

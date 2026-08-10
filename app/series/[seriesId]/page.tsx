@@ -888,7 +888,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
               Readers Also Liked
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
               {relatedSeries.map(rs => <RelatedCard key={rs.id} series={rs} />)}
             </div>
           </section>

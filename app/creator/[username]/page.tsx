@@ -309,7 +309,7 @@ export default function CreatorProfilePage() {
             <div style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>No published series yet.</div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
             {series.map(s => (
               <SeriesCard key={s.id} series={s} />
             ))}

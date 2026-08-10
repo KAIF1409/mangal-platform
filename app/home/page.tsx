@@ -488,7 +488,7 @@ export default function HomePage() {
                 <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
                   ✨ For You
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px', marginBottom: '40px' }}>
                   {forYou.filter(s => activeContentType === 'all' || s.content_type === activeContentType).map(s => (
                     <SeriesCard key={s.id} series={s} />
                   ))}
@@ -502,7 +502,7 @@ export default function HomePage() {
                 <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
                   {t('trendingThisWeek')}
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px', marginBottom: '40px' }}>
                   {trending.filter(s => activeContentType === 'all' || s.content_type === activeContentType).map((s, i) => (
                     <SeriesCard key={s.id} series={s} rank={i + 1} />
                   ))}
@@ -516,7 +516,7 @@ export default function HomePage() {
                 <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
                   {t('newArrivals')}
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px', marginBottom: '40px' }}>
                   {newArrivals.map(s => (
                     <SeriesCard key={s.id} series={s} />
                   ))}
@@ -530,7 +530,7 @@ export default function HomePage() {
                 <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
                   {t('staffPicks')}
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px', marginBottom: '40px' }}>
                   {staffPicks.map(s => (
                     <SeriesCard key={s.id} series={s} />
                   ))}
@@ -590,7 +590,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
                 {(activeGenre !== 'All' || showDesiComics ? filtered : rest).map(s => (
                   <SeriesCard key={s.id} series={s} />
                 ))}
