@@ -217,7 +217,7 @@ export default function HomePage() {
       {/* ── NAV ── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(7,7,10,0.97)', backdropFilter: 'blur(16px)',
+        background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 16px', height: '64px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
