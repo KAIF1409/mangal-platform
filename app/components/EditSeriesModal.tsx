@@ -90,13 +90,13 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
 
   const inputStyle = {
     width: '100%', padding: '11px 14px', borderRadius: '10px',
-    background: '#08080c', border: '1px solid #1f1f2e',
-    color: '#f9fafb', fontSize: '13px', outline: 'none',
+    background: 'var(--bg-input)', border: '1px solid var(--border-light)',
+    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
     boxSizing: 'border-box' as const, fontFamily: 'inherit',
   };
   const labelStyle = {
     display: 'block', fontSize: '10px', fontWeight: 700 as const,
-    color: '#6b7280', letterSpacing: '0.12em', textTransform: 'uppercase' as const,
+    color: 'var(--text-tertiary)', letterSpacing: '0.12em', textTransform: 'uppercase' as const,
     marginBottom: '6px',
   };
 
@@ -219,13 +219,13 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: '520px', maxHeight: '88vh', overflowY: 'auto' as const,
-          background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '20px',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px',
           padding: '28px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#fff', margin: 0 }}>✏️ Edit Series</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+          <h2 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>✏️ Edit Series</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
         </div>
 
         {error && (
@@ -242,8 +242,8 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
             <label style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: checkingQuality ? 'wait' : 'pointer' }}>
               <div style={{
                 width: '70px', height: '94px', borderRadius: '10px', overflow: 'hidden' as const,
-                border: '2px dashed #1f1f2e', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: '#08080c', flexShrink: 0, position: 'relative',
+                border: '2px dashed var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'var(--bg-input)', flexShrink: 0, position: 'relative',
               }}>
                 {coverPreview ? (
                   <Image src={coverPreview} alt="Cover" fill sizes="70px" unoptimized style={{ objectFit: 'cover' }} />
@@ -251,7 +251,7 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
                   <span style={{ fontSize: '20px' }}>📷</span>
                 )}
               </div>
-              <span style={{ fontSize: '12px', color: '#6b7280' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
                 {checkingQuality ? 'Checking image quality...' : 'Click to change cover photo'}
               </span>
               <input type="file" accept="image/*" onChange={handleCoverSelect} disabled={checkingQuality} style={{ display: 'none' }} />
@@ -286,9 +286,9 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
                       style={{
                         fontSize: '11px', fontWeight: 700, padding: '5px 12px', borderRadius: '20px',
                         cursor: 'pointer', transition: 'all 0.15s',
-                        border: selected ? '1px solid #d97706' : '1px solid #1f1f2e',
-                        background: selected ? 'rgba(217,119,6,0.15)' : '#08080c',
-                        color: selected ? '#d97706' : '#6b7280',
+                        border: selected ? '1px solid #d97706' : '1px solid var(--border-light)',
+                        background: selected ? 'rgba(217,119,6,0.15)' : 'var(--bg-input)',
+                        color: selected ? '#d97706' : 'var(--text-tertiary)',
                       }}
                     >
                       #{tag.name}
@@ -326,18 +326,18 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
             <label style={labelStyle}>Reading Mode</label>
             {readingModeLocked ? (
               <div style={{
-                padding: '11px 14px', borderRadius: '10px', background: '#08080c',
-                border: '1px solid #1f1f2e', color: '#6b7280', fontSize: '12px', lineHeight: 1.5,
+                padding: '11px 14px', borderRadius: '10px', background: 'var(--bg-input)',
+                border: '1px solid var(--border-light)', color: 'var(--text-tertiary)', fontSize: '12px', lineHeight: 1.5,
               }}>
                 🔒 {story.reading_mode === 'scroll' ? '📜 Vertical Scroll' : '📖 Page by Page'} — locked.
                 Can&apos;t change after the first chapter is published, it&apos;d confuse readers mid-series.
               </div>
             ) : (
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={() => setReadingMode('scroll')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'scroll' ? '1px solid #dc2626' : '1px solid #1f1f2e', background: readingMode === 'scroll' ? 'rgba(127,29,29,0.2)' : '#08080c', color: readingMode === 'scroll' ? '#fff' : '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={() => setReadingMode('scroll')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'scroll' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingMode === 'scroll' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingMode === 'scroll' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
                   📜 Vertical Scroll
                 </button>
-                <button onClick={() => setReadingMode('page')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'page' ? '1px solid #dc2626' : '1px solid #1f1f2e', background: readingMode === 'page' ? 'rgba(127,29,29,0.2)' : '#08080c', color: readingMode === 'page' ? '#fff' : '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={() => setReadingMode('page')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'page' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingMode === 'page' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingMode === 'page' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
                   📖 Page by Page
                 </button>
               </div>
@@ -351,18 +351,18 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
                   onClick={() => setReadingDirection('ltr')}
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingDirection === 'ltr' ? '1px solid #dc2626' : '1px solid #1f1f2e', background: readingDirection === 'ltr' ? 'rgba(127,29,29,0.2)' : '#08080c', color: readingDirection === 'ltr' ? '#fff' : '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingDirection === 'ltr' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingDirection === 'ltr' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingDirection === 'ltr' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   ← LTR (Default)
                 </button>
                 <button
                   onClick={() => setReadingDirection('rtl')}
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingDirection === 'rtl' ? '1px solid #dc2626' : '1px solid #1f1f2e', background: readingDirection === 'rtl' ? 'rgba(127,29,29,0.2)' : '#08080c', color: readingDirection === 'rtl' ? '#fff' : '#9ca3af', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingDirection === 'rtl' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingDirection === 'rtl' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingDirection === 'rtl' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   RTL → (Manga)
                 </button>
               </div>
-              <div style={{ fontSize: '10px', color: '#4b5563', marginTop: '6px', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
                 RTL flips page navigation so readers tap left to go forward — standard for right-to-left manga.
               </div>
             </div>
@@ -370,7 +370,7 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
           {readingModeLocked && readingMode === 'page' && (
             <div>
               <label style={labelStyle}>Reading Direction</label>
-              <div style={{ padding: '11px 14px', borderRadius: '10px', background: '#08080c', border: '1px solid #1f1f2e', color: '#6b7280', fontSize: '12px', lineHeight: 1.5 }}>
+              <div style={{ padding: '11px 14px', borderRadius: '10px', background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-tertiary)', fontSize: '12px', lineHeight: 1.5 }}>
                 {story.reading_direction === 'rtl' ? '→ RTL (Manga)' : '← LTR (Default)'} — set at creation.
               </div>
             </div>
@@ -378,8 +378,8 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
             <button onClick={onClose} style={{
-              flex: 1, padding: '13px', borderRadius: '10px', background: '#08080c',
-              border: '1px solid #1f1f2e', color: '#9ca3af', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+              flex: 1, padding: '13px', borderRadius: '10px', background: 'var(--bg-input)',
+              border: '1px solid var(--border-light)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
             }}>
               Cancel
             </button>
@@ -388,8 +388,8 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
               disabled={saving || checkingQuality}
               style={{
                 flex: 2, padding: '13px', borderRadius: '10px',
-                background: (saving || checkingQuality) ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                border: '1px solid #7f1d1d', color: (saving || checkingQuality) ? '#6b7280' : '#fff',
+                background: (saving || checkingQuality) ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
+                border: '1px solid #7f1d1d', color: (saving || checkingQuality) ? 'var(--text-tertiary)' : '#fff',
                 fontSize: '13px', fontWeight: 700, cursor: (saving || checkingQuality) ? 'not-allowed' : 'pointer',
               }}
             >
