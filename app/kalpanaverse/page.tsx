@@ -60,7 +60,7 @@ function ShortCard({ short }: { short: DemoShort }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        flexShrink: 0, width: '140px', borderRadius: '14px', overflow: 'hidden', cursor: 'pointer',
+        flexShrink: 0, width: '190px', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer',
         position: 'relative', aspectRatio: '9/16', background: short.gradient,
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
@@ -68,17 +68,17 @@ function ShortCard({ short }: { short: DemoShort }) {
         transition: 'transform 0.15s, box-shadow 0.2s',
       }}
     >
-      <span style={{ position: 'absolute', top: '44%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '32px', opacity: 0.9 }}>{short.emoji}</span>
+      <span style={{ position: 'absolute', top: '44%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '44px', opacity: 0.9 }}>{short.emoji}</span>
       <span style={{
-        position: 'absolute', top: '8px', left: '8px', fontSize: '9.5px', fontWeight: 800, color: '#fff',
-        background: 'rgba(0,0,0,0.5)', padding: '2px 7px', borderRadius: '20px', letterSpacing: '0.02em',
+        position: 'absolute', top: '10px', left: '10px', fontSize: '11px', fontWeight: 800, color: '#fff',
+        background: 'rgba(0,0,0,0.5)', padding: '3px 9px', borderRadius: '20px', letterSpacing: '0.02em',
       }}>⚡ SHORTS</span>
       <div style={{
-        position: 'relative', width: '100%', padding: '18px 10px 10px',
+        position: 'relative', width: '100%', padding: '24px 14px 14px',
         background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
       }}>
-        <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '3px' }}>{short.title}</div>
-        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.75)' }}>{short.views} views</div>
+        <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px' }}>{short.title}</div>
+        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>{short.views} views</div>
       </div>
     </div>
   );
@@ -213,7 +213,7 @@ export default function KalpanaversePage() {
           </h2>
           <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#2563eb' }}>See all →</span>
         </div>
-        <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
+        <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
           {DEMO_SHORTS.map(s => <ShortCard key={s.id} short={s} />)}
         </div>
       </div>
