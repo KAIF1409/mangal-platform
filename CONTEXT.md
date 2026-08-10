@@ -156,6 +156,25 @@ re-deriving the business case from scratch.
    the composer
 5. Subscribe/like/comment interactions across the video platform once the above
    exist
+6. **Kalpanaverse sponsorship/ad monetization (documented future step, not started —
+   gated behind real traffic).** Founder wants a revenue layer for Kalpanaverse
+   itself, not just discovery-for-MANGAL. Direction agreed:
+   - **Not YouTube ad revenue** — that stays with the creator's own channel, per the
+     zero-cost architecture in §2. This is a *separate* revenue stream the platform
+     controls directly: on-page sponsorship (banners/placements around the video
+     grid and Shorts row, not inside the embedded player itself), sponsored
+     category rows, "Powered by [AI tool]" badges, possibly affiliate links if the
+     AI tool companies offer a referral program.
+   - **Target sponsors:** AI video-generation tool companies (Kling, Runway, Pika,
+     Hailuo, Suno) — Kalpanaverse is a natural showcase for content made with their
+     tools, so this is a realistic first sponsorship conversation once there's an
+     audience worth showing them. Matches the founder's manual (PDF) §06 Phase 2.
+   - **Creator cut:** if a sponsor is specifically sponsoring a creator's content
+     (not just a generic site banner), founder wants creators to get a share of
+     that — keeps creators loyal, not just relying on YouTube's own ad revenue.
+   - **Sequencing — do NOT start this before real traffic exists.** Items 1–5 above
+     ship and get real usage first, *then* revisit this. Pitching sponsors or
+     building ad-slot infra with zero real users on Kalpanaverse is premature.
 
 ## 5. Working conventions (carried over from the original MANGAL build)
 
