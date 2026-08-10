@@ -87,7 +87,7 @@ visually distinguishable.
   (`#7c3aed`) to represent that destination's own brand; on Kalpana Circle, the
   "Kalpanaverse" nav link is now blue (`#2563eb`) for the same reason
 
-## 2. Why Kalpanaverse exists (the actual idea, so it doesn't get re-explained from scratch)
+## 2. Why Kalpanaverse(now KaTube) exists (the actual idea, so it doesn't get re-explained from scratch)
 
 - **Not a pirated-anime site.** Every Kalpanaverse video is meant to be an *original*
   AI-generated adaptation (Runway/Kling/Pika/Hailuo-style tools) made by a MANGAL
