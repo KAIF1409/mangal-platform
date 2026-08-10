@@ -80,6 +80,10 @@ function UploadFlow() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [seriesId, setSeriesId] = useState<string | null>(existingSeriesId);
+  // Step 30 — Tags at series creation, reusing the existing tags/series_tags
+  // tables from the Step 25 tags system (previously only editable after
+  // creation, via the dashboard's Edit Series modal).
+  const [seriesTagsInput, setSeriesTagsInput] = useState('');
 
   // Chapter fields
   const [chapterNumber, setChapterNumber] = useState(1);
@@ -309,6 +313,28 @@ function UploadFlow() {
       .single();
 
     if (error) { setError(error.message); setLoading(false); return; }
+
+    // Step 30 — attach tags typed at creation time, same pattern as
+    // EditSeriesModal's tag save: upsert any brand-new tag names, then
+    // insert the series_tags rows. Non-fatal — a tag hiccup shouldn't
+    // block the creator from moving on to uploading their first chapter.
+    const tagNames = seriesTagsInput.split(',').map(t => t.trim()).filter(Boolean);
+    if (tagNames.length > 0) {
+      const tagIds: string[] = [];
+      for (const name of tagNames) {
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        if (!slug) continue;
+        const { data: tagRow } = await supabase
+          .from('tags')
+          .upsert({ name, slug }, { onConflict: 'name' })
+          .select('id')
+          .single();
+        if (tagRow) tagIds.push(tagRow.id);
+      }
+      if (tagIds.length > 0) {
+        await supabase.from('series_tags').insert(tagIds.map(tag_id => ({ series_id: data.id, tag_id })));
+      }
+    }
 
     setSeriesId(data.id);
     setStep('chapter');
@@ -933,6 +959,14 @@ function UploadFlow() {
                 <div>
                   <label style={labelStyle}>Description</label>
                   <textarea placeholder="Write the cosmic arc..." value={synopsis} onChange={(e) => setSynopsis(e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' as const }} />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Tags <span style={{ textTransform: 'none' as const, fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span></label>
+                  <input type="text" placeholder="e.g. reincarnation, system, slow-burn" value={seriesTagsInput} onChange={(e) => setSeriesTagsInput(e.target.value)} style={inputStyle} />
+                  <span style={{ display: 'block', marginTop: '4px', fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                    Comma-separated. Helps readers find your series by trope/theme — you can always add more later from your dashboard.
+                  </span>
                 </div>
 
                 {contentType === 'mangal' && (
