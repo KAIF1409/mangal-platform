@@ -1072,8 +1072,8 @@ export default function Dashboard() {
                 </div>
 
                 {/* Audience Insights — mirrors inkstone's Geographical Distribution +
-                    Gender donut. No location/gender data collected yet, so this
-                    shows the same "100% unknown" honesty rather than fake numbers. */}
+                    Gender donut. Real data: countryCounts from view_events.country_code,
+                    genderCounts from followers' self-reported profiles.gender. */}
                 <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
                   🌍 Audience Insights
                 </h3>
@@ -1082,27 +1082,73 @@ export default function Dashboard() {
                 }}>
                   <div style={{
                     background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
-                    padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '160px',
+                    padding: '20px', minHeight: '160px',
                   }}>
-                    <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: '12px' }}>
-                      🗺️ Geographic breakdown not tracked yet
+                    <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '14px' }}>
+                      Views by Country (7 days)
                     </div>
+                    {(() => {
+                      const entries = Object.entries(analytics.countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+                      const max = Math.max(1, ...entries.map(([, c]) => c));
+                      if (entries.length === 0) {
+                        return (
+                          <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: '12px', padding: '30px 0' }}>
+                            🗺️ No geo data yet — shows up as readers view chapters
+                          </div>
+                        );
+                      }
+                      return (
+                        <div style={{ display: 'grid', gap: '10px' }}>
+                          {entries.map(([code, count]) => (
+                            <div key={code} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 700, width: '28px', color: 'var(--text-secondary)' }}>{code}</span>
+                              <div style={{ flex: 1, height: '8px', background: 'var(--border-light)', borderRadius: '4px', overflow: 'hidden' }}>
+                                <div style={{ width: `${(count / max) * 100}%`, height: '100%', background: 'var(--accent)' }} />
+                              </div>
+                              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', width: '24px', textAlign: 'right' }}>{count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div style={{
                     background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
                     padding: '20px',
                   }}>
                     <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '14px' }}>
-                      Gender
+                      Gender (followers)
                     </div>
-                    <svg viewBox="0 0 100 100" style={{ width: '80px', height: '80px', display: 'block', margin: '0 auto 14px' }}>
-                      <circle cx="50" cy="50" r="38" fill="none" stroke="var(--divider)" strokeWidth="14" />
-                    </svg>
-                    <div style={{ display: 'grid', gap: '6px', fontSize: '11px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}><span>Male</span><span>0.00%</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}><span>Female</span><span>0.00%</span></div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}><span>Unknown</span><span>100.00%</span></div>
-                    </div>
+                    {(() => {
+                      const { male, female, unspecified, unknown } = analytics.genderCounts;
+                      const total = male + female + unspecified + unknown || 1;
+                      const malePct = (male / total) * 100;
+                      const femalePct = (female / total) * 100;
+                      const circumference = 2 * Math.PI * 38;
+                      const maleDash = (malePct / 100) * circumference;
+                      const femaleDash = (femalePct / 100) * circumference;
+                      const pct = (n: number) => `${((n / total) * 100).toFixed(2)}%`;
+                      return (
+                        <>
+                          <svg viewBox="0 0 100 100" style={{ width: '80px', height: '80px', display: 'block', margin: '0 auto 14px', transform: 'rotate(-90deg)' }}>
+                            <circle cx="50" cy="50" r="38" fill="none" stroke="var(--divider)" strokeWidth="14" />
+                            {male > 0 && (
+                              <circle cx="50" cy="50" r="38" fill="none" stroke="#3b82f6" strokeWidth="14"
+                                strokeDasharray={`${maleDash} ${circumference - maleDash}`} strokeDashoffset="0" />
+                            )}
+                            {female > 0 && (
+                              <circle cx="50" cy="50" r="38" fill="none" stroke="#ec4899" strokeWidth="14"
+                                strokeDasharray={`${femaleDash} ${circumference - femaleDash}`} strokeDashoffset={-maleDash} />
+                            )}
+                          </svg>
+                          <div style={{ display: 'grid', gap: '6px', fontSize: '11px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}><span>Male</span><span>{pct(male)}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}><span>Female</span><span>{pct(female)}</span></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}><span>Unknown</span><span>{pct(unknown + unspecified)}</span></div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
