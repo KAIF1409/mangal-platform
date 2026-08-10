@@ -220,7 +220,7 @@ function SearchPageInner() {
   const createLabel = isCreator ? 'Go to Studio' : user ? 'Become a Creator' : 'Log In to Create';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#07070a', color: '#f9fafb', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── NAV (shared component — same header as Home/Dashboard) ── */}
       <Navbar
@@ -237,11 +237,11 @@ function SearchPageInner() {
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                color: '#9ca3af', textDecoration: 'none',
+                color: 'var(--text-secondary)', textDecoration: 'none',
                 transition: 'color 0.15s, background 0.15s',
               }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.color = '#fff'; (e.target as HTMLElement).style.background = '#1a1a26'; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#9ca3af'; (e.target as HTMLElement).style.background = 'transparent'; }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
               >{link.label}</a>
             ))}
           </div>
@@ -260,7 +260,7 @@ function SearchPageInner() {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <a href="/login" style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#9ca3af', textDecoration: 'none' }}>Log in</a>
+              <a href="/login" style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>Log in</a>
               <a href="/login" style={{
                 padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
                 background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
@@ -284,8 +284,8 @@ function SearchPageInner() {
             onChange={e => setQuery(e.target.value)}
             style={{
               width: '100%', padding: '14px 16px 14px 44px', borderRadius: '12px',
-              background: '#0d0d14', border: '1px solid #2a2a3a',
-              color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
             }}
           />
         </div>
@@ -303,9 +303,9 @@ function SearchPageInner() {
               style={{
                 padding: '8px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
                 cursor: 'pointer', transition: 'all 0.15s',
-                border: activeContentType === opt.value ? '1px solid rgba(217,119,6,0.5)' : '1px solid #2a2a3a',
-                background: activeContentType === opt.value ? 'rgba(217,119,6,0.15)' : '#0d0d14',
-                color: activeContentType === opt.value ? '#d97706' : '#9ca3af',
+                border: activeContentType === opt.value ? '1px solid rgba(217,119,6,0.5)' : '1px solid var(--border-color)',
+                background: activeContentType === opt.value ? 'rgba(217,119,6,0.15)' : 'var(--bg-card)',
+                color: activeContentType === opt.value ? '#d97706' : 'var(--text-secondary)',
               }}
             >
               {opt.label}
@@ -320,8 +320,8 @@ function SearchPageInner() {
               value={genreFilter}
               onChange={e => setGenreFilter(e.target.value)}
               style={{
-                padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
-                border: '1px solid #2a2a3a', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
               }}
             >
               {GENRE_OPTIONS.map(g => <option key={g} value={g}>{g === 'All' ? 'All Genres' : g}</option>)}
@@ -331,8 +331,8 @@ function SearchPageInner() {
               value={languageFilter}
               onChange={e => setLanguageFilter(e.target.value)}
               style={{
-                padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
-                border: '1px solid #2a2a3a', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
               }}
             >
               {LANGUAGE_OPTIONS.map(l => <option key={l} value={l}>{l === 'All' ? 'All Languages' : l}</option>)}
@@ -343,8 +343,8 @@ function SearchPageInner() {
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
                 style={{
-                  padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
-                  border: '1px solid #2a2a3a', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                 }}
               >
                 <option value="All">All Statuses</option>
@@ -357,7 +357,7 @@ function SearchPageInner() {
                 onClick={() => { handleContentTypeToggle('all'); setGenreFilter('All'); setLanguageFilter('All'); setStatusFilter('All'); setSortBy('newest'); }}
                 style={{
                   padding: '9px 14px', borderRadius: '8px', background: 'transparent',
-                  border: '1px solid #2a2a3a', color: '#9ca3af', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  border: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                 }}
               >
                 Clear filters ✕
@@ -367,13 +367,13 @@ function SearchPageInner() {
 
           {/* Sort dropdown */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>Sort:</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>Sort:</span>
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as SortOption)}
               style={{
-                padding: '9px 12px', borderRadius: '8px', background: '#0d0d14',
-                border: '1px solid #2a2a3a', color: '#d97706', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)', color: '#d97706', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
               }}
             >
               {SORT_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -385,21 +385,21 @@ function SearchPageInner() {
 
         {/* ── RESULTS ── */}
         {loading ? (
-          <div style={{ padding: '80px 0', textAlign: 'center', color: '#374151' }}>
+          <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
             <div style={{ fontSize: '14px' }}>Loading stories...</div>
           </div>
         ) : results.length === 0 ? (
-          <div style={{ padding: '80px 0', textAlign: 'center', color: '#374151' }}>
+          <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
-            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '6px' }}>
+            <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
               {query.trim()
                 ? <>No results found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.</>
                 : 'No series match these filters.'}
             </div>
             {query.trim() && (
               <>
-                <div style={{ fontSize: '13px', color: '#4b5563', marginBottom: '20px' }}>Be the first to create it!</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>Be the first to create it!</div>
                 <a href={createHref} style={{
                   display: 'inline-block', padding: '10px 20px', borderRadius: '8px',
                   background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
@@ -410,7 +410,7 @@ function SearchPageInner() {
           </div>
         ) : (
           <>
-            <div style={{ fontSize: '12px', color: '#4b5563', marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               {results.length} series found
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
@@ -438,7 +438,7 @@ function ResultCard({ series, creatorUsername, rank }: { series: Series; creator
       onMouseLeave={() => setHovered(false)}>
       <div style={{
         borderRadius: '12px', overflow: 'hidden', position: 'relative',
-        background: '#0d0d14', border: `1px solid ${hovered ? '#d97706' : '#1a1a26'}`,
+        background: 'var(--bg-card)', border: `1px solid ${hovered ? '#d97706' : 'var(--border-color)'}`,
         transition: 'border-color 0.2s, transform 0.2s',
         transform: hovered ? 'translateY(-3px)' : 'none',
       }}>
@@ -454,7 +454,7 @@ function ResultCard({ series, creatorUsername, rank }: { series: Series; creator
             <div style={{
               position: 'absolute', top: '6px', left: '6px',
               width: '22px', height: '22px', borderRadius: '6px',
-              background: rank === 1 ? '#d97706' : rank === 2 ? '#9ca3af' : '#92400e',
+              background: rank === 1 ? '#d97706' : rank === 2 ? 'var(--text-secondary)' : '#92400e',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '11px', fontWeight: 900, color: '#0d0d14',
             }}>#{rank}</div>
@@ -487,23 +487,23 @@ function ResultCard({ series, creatorUsername, rank }: { series: Series; creator
           </div>
         </div>
         <div style={{ padding: '10px 10px 12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px',
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '4px',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {series.title}
           </div>
           {creatorUsername && (
             <div
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/creator/${creatorUsername}`); }}
-              style={{ fontSize: '10px', color: '#6b7280', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+              style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
               onMouseEnter={e => { (e.target as HTMLElement).style.color = '#d97706'; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = '#6b7280'; }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-tertiary)'; }}
             >
               by @{creatorUsername}
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: '#4b5563' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
       </div>
