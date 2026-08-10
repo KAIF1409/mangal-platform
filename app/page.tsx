@@ -672,9 +672,29 @@ export default function LandingPage() {
                   />
                   <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)' }}>MANGAL</span>
                 </div>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px', lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px', lineHeight: 1.6, margin: '0 0 16px' }}>
                   India&apos;s home for original comics &amp; novels. Made with ❤️ in Bharat.
                 </p>
+                {/* Social icons — accounts aren't live yet, so these are
+                    non-clickable placeholders (title tooltip explains why)
+                    rather than dead links to nowhere. Swap the <span> for
+                    an <a href="..."> the moment each account exists. */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {SOCIAL_ICONS.map(({ name, path }) => (
+                    <span
+                      key={name}
+                      title={`${name} — coming soon`}
+                      style={{
+                        width: '30px', height: '30px', borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                        color: 'var(--text-muted)', cursor: 'default',
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d={path} /></svg>
+                    </span>
+                  ))}
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
@@ -797,6 +817,16 @@ function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc:
 
 
 /* ── FOOTER COLUMN ── */
+// WebNovel-style footer social icons — Instagram, TikTok/X, Facebook, YouTube.
+// Simple single-path glyphs so they render crisp at 14px without an icon library.
+const SOCIAL_ICONS = [
+  { name: 'Instagram', path: 'M12 2c2.7 0 3.06.01 4.12.06 1.06.05 1.79.22 2.43.47.66.26 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.25.64.42 1.37.47 2.43C21.99 8.94 22 9.3 22 12s-.01 3.06-.06 4.12c-.05 1.06-.22 1.79-.47 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.25-1.37.42-2.43.47C15.06 21.99 14.7 22 12 22s-3.06-.01-4.12-.06c-1.06-.05-1.79-.22-2.43-.47a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.25-.64-.42-1.37-.47-2.43C2.01 15.06 2 14.7 2 12s.01-3.06.06-4.12c.05-1.06.22-1.79.47-2.43.26-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.45 2.53c.64-.25 1.37-.42 2.43-.47C8.94 2.01 9.3 2 12 2Zm0 3.24a6.76 6.76 0 1 0 0 13.52 6.76 6.76 0 0 0 0-13.52Zm0 2a4.76 4.76 0 1 1 0 9.52 4.76 4.76 0 0 1 0-9.52Zm6.9-.4a1.58 1.58 0 1 1-3.16 0 1.58 1.58 0 0 1 3.16 0Z' },
+  { name: 'X', path: 'M18.9 2.25h3.68l-8.04 9.19L24 21.75h-7.4l-5.8-7.58-6.64 7.58H.48l8.6-9.83L0 2.25h7.59l5.24 6.93 6.07-6.93Zm-1.29 17.28h2.04L6.5 4.35H4.31l13.3 15.18Z' },
+  { name: 'Facebook', path: 'M13.5 21v-7.5h2.52l.38-2.93h-2.9V8.7c0-.85.24-1.43 1.45-1.43h1.55V4.66c-.27-.04-1.2-.11-2.27-.11-2.25 0-3.79 1.37-3.79 3.89v2.17H7.9v2.93h2.54V21h3.06Z' },
+  { name: 'YouTube', path: 'M23.5 6.5s-.23-1.64-.94-2.36c-.9-.94-1.9-.95-2.36-1C17 3 12 3 12 3h-.01s-5 0-8.19.14c-.46.05-1.46.06-2.36 1C.73 4.86.5 6.5.5 6.5S.26 8.42.26 10.35v1.79c0 1.93.24 3.85.24 3.85s.23 1.64.94 2.36c.9.95 2.08.92 2.6 1.02C5.9 19.55 12 19.6 12 19.6s5.01-.01 8.2-.15c.46-.06 1.46-.07 2.36-1.02.71-.72.94-2.36.94-2.36s.24-1.92.24-3.85v-1.79c0-1.93-.24-3.85-.24-3.85ZM9.68 14.27V8.4l5.4 2.94-5.4 2.93Z' },
+  { name: 'Pinterest', path: 'M12 2C6.48 2 2 6.48 2 12c0 4.24 2.63 7.86 6.35 9.32-.09-.79-.16-2.01.03-2.87.18-.79 1.15-5.01 1.15-5.01s-.29-.59-.29-1.45c0-1.36.79-2.38 1.77-2.38.84 0 1.24.63 1.24 1.38 0 .84-.53 2.1-.81 3.27-.23.98.49 1.78 1.46 1.78 1.75 0 2.94-2.25 2.94-4.91 0-2.02-1.36-3.54-3.84-3.54-2.8 0-4.54 2.09-4.54 4.43 0 .81.24 1.38.61 1.82.17.2.2.29.13.52-.04.17-.15.6-.19.77-.06.24-.25.33-.46.24-1.28-.52-1.88-1.92-1.88-3.5 0-2.6 2.19-5.72 6.53-5.72 3.49 0 5.79 2.53 5.79 5.24 0 3.59-1.99 6.27-4.92 6.27-.98 0-1.91-.53-2.22-1.13l-.63 2.44c-.19.75-.71 1.68-1.06 2.25.79.24 1.63.37 2.5.37 5.52 0 10-4.48 10-10S17.52 2 12 2Z' },
+];
+
 function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div>
