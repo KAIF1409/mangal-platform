@@ -5,10 +5,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../components/ThemeToggle';
 
-// ── AnimeTube — demo/mockup page ──
-// Step 2 of the AnimeTube build plan: a static video-grid UI with placeholder
-// data so the concept can be seen and felt before any real backend, upload
-// flow, or YouTube-embed wiring goes in. No live data, no Supabase calls yet.
+// ── Kalpanaverse — demo/mockup page (renamed from AnimeTube) ──
+// Step 2 of the build plan: a static video-grid UI with placeholder data so
+// the concept can be seen and felt before any real backend, upload flow, or
+// YouTube-embed wiring goes in. No live data, no Supabase calls yet.
+//
+// Brand: white + blue (per founder request), distinct from Kalpana Circle's
+// purple identity — the two doors should read as related but visually
+// distinguishable products.
 
 interface DemoVideo {
   id: string;
@@ -22,12 +26,12 @@ interface DemoVideo {
 }
 
 const DEMO_VIDEOS: DemoVideo[] = [
-  { id: '1', title: 'Aryavarta Rising — Episode 1 (AI Trailer)', creator: 'Kaif', basedOn: 'Aryavarta Chronicles', views: '2.4K', duration: '1:12', gradient: 'linear-gradient(135deg, #db2777, #7b2cbf)', emoji: '⚔️' },
-  { id: '2', title: 'The Last Panchayat — Cold Open', creator: 'Kaif', basedOn: 'The Last Panchayat', views: '1.1K', duration: '0:48', gradient: 'linear-gradient(135deg, #7b2cbf, #4f46e5)', emoji: '🏯' },
-  { id: '3', title: 'Street Life Mumbai — Opening Sequence', creator: 'MANGAL Studio', basedOn: 'Street Life Mumbai', views: '3.8K', duration: '1:34', gradient: 'linear-gradient(135deg, #ea580c, #db2777)', emoji: '🌆' },
-  { id: '4', title: 'Desi Horror Anthology — Teaser', creator: 'MANGAL Studio', basedOn: 'Desi Horror Anthology', views: '890', duration: '0:55', gradient: 'linear-gradient(135deg, #1e1b4b, #7b2cbf)', emoji: '👻' },
-  { id: '5', title: 'Folk Tale: The Banyan Spirit', creator: 'Kaif', basedOn: 'Folk Tales of Bharat', views: '5.2K', duration: '2:03', gradient: 'linear-gradient(135deg, #059669, #7b2cbf)', emoji: '🌳' },
-  { id: '6', title: 'School Life Chronicles — Ep. 1 Recap', creator: 'MANGAL Studio', basedOn: 'School Life Chronicles', views: '1.6K', duration: '1:20', gradient: 'linear-gradient(135deg, #d97706, #db2777)', emoji: '🎒' },
+  { id: '1', title: 'Aryavarta Rising — Episode 1 (AI Trailer)', creator: 'Kaif', basedOn: 'Aryavarta Chronicles', views: '2.4K', duration: '1:12', gradient: 'linear-gradient(135deg, #2563eb, #0ea5e9)', emoji: '⚔️' },
+  { id: '2', title: 'The Last Panchayat — Cold Open', creator: 'Kaif', basedOn: 'The Last Panchayat', views: '1.1K', duration: '0:48', gradient: 'linear-gradient(135deg, #1d4ed8, #38bdf8)', emoji: '🏯' },
+  { id: '3', title: 'Street Life Mumbai — Opening Sequence', creator: 'MANGAL Studio', basedOn: 'Street Life Mumbai', views: '3.8K', duration: '1:34', gradient: 'linear-gradient(135deg, #0369a1, #2563eb)', emoji: '🌆' },
+  { id: '4', title: 'Desi Horror Anthology — Teaser', creator: 'MANGAL Studio', basedOn: 'Desi Horror Anthology', views: '890', duration: '0:55', gradient: 'linear-gradient(135deg, #1e3a8a, #0ea5e9)', emoji: '👻' },
+  { id: '5', title: 'Folk Tale: The Banyan Spirit', creator: 'Kaif', basedOn: 'Folk Tales of Bharat', views: '5.2K', duration: '2:03', gradient: 'linear-gradient(135deg, #0891b2, #2563eb)', emoji: '🌳' },
+  { id: '6', title: 'School Life Chronicles — Ep. 1 Recap', creator: 'MANGAL Studio', basedOn: 'School Life Chronicles', views: '1.6K', duration: '1:20', gradient: 'linear-gradient(135deg, #2563eb, #7dd3fc)', emoji: '🎒' },
 ];
 
 const CATEGORY_PILLS = ['All', 'Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Trailers'];
@@ -41,12 +45,12 @@ interface DemoShort {
 }
 
 const DEMO_SHORTS: DemoShort[] = [
-  { id: 's1', title: 'Aryavarta in 30 seconds', views: '12K', gradient: 'linear-gradient(160deg, #db2777, #4f46e5)', emoji: '⚡' },
-  { id: 's2', title: 'That plot twist though 😱', views: '8.7K', gradient: 'linear-gradient(160deg, #7b2cbf, #1e1b4b)', emoji: '😱' },
-  { id: 's3', title: 'Banyan Spirit — best frame', views: '15K', gradient: 'linear-gradient(160deg, #059669, #7b2cbf)', emoji: '🌳' },
-  { id: 's4', title: 'Street Life Mumbai vibes', views: '6.1K', gradient: 'linear-gradient(160deg, #ea580c, #db2777)', emoji: '🌆' },
-  { id: 's5', title: 'POV: exam week hits different', views: '21K', gradient: 'linear-gradient(160deg, #d97706, #db2777)', emoji: '🎒' },
-  { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #1e1b4b, #db2777)', emoji: '👻' },
+  { id: 's1', title: 'Aryavarta in 30 seconds', views: '12K', gradient: 'linear-gradient(160deg, #2563eb, #0ea5e9)', emoji: '⚡' },
+  { id: 's2', title: 'That plot twist though 😱', views: '8.7K', gradient: 'linear-gradient(160deg, #1e3a8a, #1d4ed8)', emoji: '😱' },
+  { id: 's3', title: 'Banyan Spirit — best frame', views: '15K', gradient: 'linear-gradient(160deg, #0891b2, #2563eb)', emoji: '🌳' },
+  { id: 's4', title: 'Street Life Mumbai vibes', views: '6.1K', gradient: 'linear-gradient(160deg, #0369a1, #38bdf8)', emoji: '🌆' },
+  { id: 's5', title: 'POV: exam week hits different', views: '21K', gradient: 'linear-gradient(160deg, #2563eb, #7dd3fc)', emoji: '🎒' },
+  { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #1e3a8a, #0ea5e9)', emoji: '👻' },
 ];
 
 function ShortCard({ short }: { short: DemoShort }) {
@@ -60,7 +64,7 @@ function ShortCard({ short }: { short: DemoShort }) {
         position: 'relative', aspectRatio: '9/16', background: short.gradient,
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
-        boxShadow: hover ? '0 12px 24px rgba(219,39,119,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
+        boxShadow: hover ? '0 12px 24px rgba(37,99,235,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
         transition: 'transform 0.15s, box-shadow 0.2s',
       }}
     >
@@ -91,7 +95,7 @@ function VideoCard({ video }: { video: DemoVideo }) {
         background: 'var(--bg-card)', border: '1px solid var(--border-color)',
         transition: 'transform 0.15s, box-shadow 0.2s',
         transform: hover ? 'translateY(-4px)' : 'none',
-        boxShadow: hover ? '0 12px 28px rgba(219,39,119,0.22)' : 'none',
+        boxShadow: hover ? '0 12px 28px rgba(37,99,235,0.20)' : 'none',
       }}
     >
       {/* Thumbnail */}
@@ -129,8 +133,8 @@ function VideoCard({ video }: { video: DemoVideo }) {
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{video.creator}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
           <Link href="#" style={{
-            fontSize: '10.5px', fontWeight: 700, color: '#f472b6', textDecoration: 'none',
-            background: 'rgba(219,39,119,0.12)', border: '1px solid rgba(219,39,119,0.3)',
+            fontSize: '10.5px', fontWeight: 700, color: '#2563eb', textDecoration: 'none',
+            background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.28)',
             padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
           }}>
             📖 {video.basedOn}
@@ -142,7 +146,7 @@ function VideoCard({ video }: { video: DemoVideo }) {
   );
 }
 
-export default function AnimeTubePage() {
+export default function KalpanaversePage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
@@ -163,22 +167,22 @@ export default function AnimeTubePage() {
           <span style={{ fontSize: '20px' }}>🎬</span>
           <span style={{
             fontWeight: 900, fontSize: '20px', letterSpacing: '-0.03em',
-            background: 'linear-gradient(135deg, #f472b6, #a78bfa)',
+            background: 'linear-gradient(135deg, #2563eb, #0ea5e9)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-          }}>AnimeTube</span>
+          }}>Kalpanaverse</span>
           <span style={{
-            fontSize: '9.5px', fontWeight: 800, color: '#f472b6',
-            background: 'rgba(219,39,119,0.15)', border: '1px solid rgba(219,39,119,0.35)',
+            fontSize: '9.5px', fontWeight: 800, color: '#2563eb',
+            background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.32)',
             padding: '2px 7px', borderRadius: '20px', marginLeft: '4px',
           }}>DEMO</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Link href="/anime-chat" style={{
+          <Link href="/kalpana-circle" style={{
             padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
-            color: '#c4b5fd', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
+            color: '#7c3aed', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
             whiteSpace: 'nowrap',
-          }}>💬 Anime Chat</Link>
+          }}>💬 Kalpana Circle</Link>
           <ThemeToggle size={30} />
           <Link href="/" style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
@@ -190,7 +194,7 @@ export default function AnimeTubePage() {
       {/* ── HERO STRIP ── */}
       <div style={{
         padding: '36px 20px 24px', textAlign: 'center',
-        background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgba(219,39,119,0.14) 0%, transparent 70%)',
+        background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgba(37,99,235,0.10) 0%, transparent 70%)',
       }}>
         <h1 style={{
           fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.03em',
@@ -207,7 +211,7 @@ export default function AnimeTubePage() {
           <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
             ⚡ Shorts
           </h2>
-          <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#f472b6' }}>See all →</span>
+          <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#2563eb' }}>See all →</span>
         </div>
         <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
           {DEMO_SHORTS.map(s => <ShortCard key={s.id} short={s} />)}
@@ -222,7 +226,7 @@ export default function AnimeTubePage() {
         {CATEGORY_PILLS.map((c, i) => (
           <span key={c} style={{
             flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-            background: i === 0 ? 'linear-gradient(135deg, #db2777, #7b2cbf)' : 'var(--bg-card)',
+            background: i === 0 ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
             color: i === 0 ? '#fff' : 'var(--text-secondary)',
             border: i === 0 ? 'none' : '1px solid var(--border-color)',
             cursor: 'pointer', whiteSpace: 'nowrap',

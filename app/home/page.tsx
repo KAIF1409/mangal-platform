@@ -254,22 +254,22 @@ export default function HomePage() {
               onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
             >{link.label}</a>
           ))}
-          <a href="/animetube" style={{
+          <a href="/kalpanaverse" style={{
             padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-            color: '#f472b6', textDecoration: 'none', whiteSpace: 'nowrap',
+            color: '#2563eb', textDecoration: 'none', whiteSpace: 'nowrap',
             transition: 'color 0.15s, background 0.15s',
           }}
-            onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(219,39,119,0.12)'; }}
+            onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
             onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
-          >🎬 AnimeTube</a>
-          <a href="/anime-chat" style={{
+          >🎬 Kalpanaverse</a>
+          <a href="/kalpana-circle" style={{
             padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
             color: '#c4b5fd', textDecoration: 'none', whiteSpace: 'nowrap',
             transition: 'color 0.15s, background 0.15s',
           }}
             onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
             onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
-          >💬 Anime Chat</a>
+          >💬 Kalpana Circle</a>
         </div>
 
         {/* Right side */}
