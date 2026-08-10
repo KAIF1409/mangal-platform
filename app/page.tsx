@@ -446,79 +446,73 @@ export default function LandingPage() {
         {/* ── SHOWCASE ── */}
         <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
           {/* ── THREE DOORS: MangaNovels / KaTube / Kalpana Circle ── */}
-          <div style={{
-            display: 'flex', flexDirection: 'column', gap: '10px',
-            maxWidth: '760px', margin: '0 auto 40px',
-          }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <Link href="/search" style={{
-              textDecoration: 'none', borderRadius: '16px',
+              textDecoration: 'none', borderRadius: '20px',
               background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-              display: 'flex', alignItems: 'center', gap: '14px',
-              padding: '12px',
-              transition: 'transform 0.15s, box-shadow 0.2s, border-color 0.2s',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '32px',
+              minHeight: '88vh', padding: '48px 24px', textAlign: 'center',
+              transition: 'border-color 0.2s',
             }}
-              onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(217,119,6,0.22)'; el.style.borderColor = '#d97706'; }}
-              onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'; el.style.borderColor = 'var(--border-color)'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#d97706'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
             >
-              <div style={{ flexShrink: 0, width: '90px', height: '130px', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
+              <div style={{ width: 'min(340px, 70vw)', height: 'min(480px, 55vh)', borderRadius: '20px', overflow: 'hidden', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
                 <Image src="/comics.jpg" alt="MangaNovels" fill style={{ objectFit: 'cover' }} />
               </div>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 900, fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '16px' }}>📖</span> MangaNovels
+              <div style={{ maxWidth: '560px' }}>
+                <div style={{ fontWeight: 900, fontSize: 'clamp(24px,4vw,36px)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '32px' }}>📖</span> MangaNovels
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.45 }}>
+                <div style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: 'var(--text-secondary)', marginTop: '14px', lineHeight: 1.6 }}>
                   Read manga, comics, and novels made by Desi creators — free forever, no ads, no gatekeepers. Bookmark series, track your reading progress, and discover new stories across mythology, action, romance, and more.
                 </div>
               </div>
             </Link>
 
             <Link href="/katube" style={{
-              textDecoration: 'none', borderRadius: '16px',
+              textDecoration: 'none', borderRadius: '20px',
               background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-              display: 'flex', alignItems: 'center', gap: '14px',
-              padding: '12px',
-              transition: 'transform 0.15s, box-shadow 0.2s, border-color 0.2s',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '32px',
+              minHeight: '88vh', padding: '48px 24px', textAlign: 'center',
+              transition: 'border-color 0.2s',
             }}
-              onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(37,99,235,0.25)'; el.style.borderColor = '#2563eb'; }}
-              onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'; el.style.borderColor = 'var(--border-color)'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
             >
-              <div style={{ textAlign: 'left', flex: 1 }}>
-                <div style={{ fontWeight: 900, fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <Image src="/katube-logo.png" alt="KaTube" width={90} height={45} style={{ height: '17px', width: 'auto', objectFit: 'contain' }} />
-                  <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(217,119,6,0.18)', border: '1px solid rgba(217,119,6,0.45)', color: '#b45309' }}>COMING SOON</span>
+              <div style={{ width: 'min(560px, 80vw)', height: 'min(340px, 45vh)', borderRadius: '20px', overflow: 'hidden', position: 'relative', background: '#000', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+                <video src="/videos/katube-preview.mp4" autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div style={{ maxWidth: '560px' }}>
+                <div style={{ fontWeight: 900, fontSize: 'clamp(24px,4vw,36px)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <Image src="/katube-logo.png" alt="KaTube" width={200} height={100} style={{ height: 'clamp(32px,5vw,44px)', width: 'auto', objectFit: 'contain' }} />
+                  <span style={{ fontSize: '13px', fontWeight: 800, padding: '4px 12px', borderRadius: '20px', background: 'rgba(217,119,6,0.18)', border: '1px solid rgba(217,119,6,0.45)', color: '#b45309' }}>COMING SOON</span>
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.45 }}>
+                <div style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: 'var(--text-secondary)', marginTop: '14px', lineHeight: 1.6 }}>
                   A YouTube-style discovery space for AI-generated anime — made with today's popular AI video tools, from quick Shorts to full videos. Focused only on the anime niche, so MANGAL creators can bring their series to life visually.
                 </div>
-              </div>
-              <div style={{ flexShrink: 0, width: '150px', height: '95px', borderRadius: '12px', overflow: 'hidden', position: 'relative', background: '#000' }}>
-                <video src="/videos/katube-preview.mp4" autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </Link>
 
             <Link href="/kalpana-circle" style={{
-              textDecoration: 'none', borderRadius: '16px',
+              textDecoration: 'none', borderRadius: '20px',
               background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-              display: 'flex', alignItems: 'center', gap: '14px',
-              padding: '12px',
-              transition: 'transform 0.15s, box-shadow 0.2s, border-color 0.2s',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '32px',
+              minHeight: '88vh', padding: '48px 24px', textAlign: 'center',
+              transition: 'border-color 0.2s',
             }}
-              onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(124,58,237,0.25)'; el.style.borderColor = '#7c3aed'; }}
-              onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'; el.style.borderColor = 'var(--border-color)'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
             >
-              <div style={{ flexShrink: 0, width: '90px', height: '130px', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
+              <div style={{ width: 'min(340px, 70vw)', height: 'min(480px, 55vh)', borderRadius: '20px', overflow: 'hidden', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
                 <Image src="/kcommunity-preview.jpg" alt="K Community" fill style={{ objectFit: 'cover' }} />
               </div>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 900, fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <Image src="/kcircle-logo.png" alt="K Circle" width={100} height={43} style={{ height: '17px', width: 'auto', objectFit: 'contain' }} />
-                  <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(217,119,6,0.18)', border: '1px solid rgba(217,119,6,0.45)', color: '#b45309' }}>COMING SOON</span>
+              <div style={{ maxWidth: '560px' }}>
+                <div style={{ fontWeight: 900, fontSize: 'clamp(24px,4vw,36px)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <Image src="/kcircle-logo.png" alt="K Circle" width={200} height={86} style={{ height: 'clamp(32px,5vw,44px)', width: 'auto', objectFit: 'contain' }} />
+                  <span style={{ fontSize: '13px', fontWeight: 800, padding: '4px 12px', borderRadius: '20px', background: 'rgba(217,119,6,0.18)', border: '1px solid rgba(217,119,6,0.45)', color: '#b45309' }}>COMING SOON</span>
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.45 }}>
+                <div style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: 'var(--text-secondary)', marginTop: '14px', lineHeight: 1.6 }}>
                   Groups and chats for people into the anime niche — post, react, and talk about MANGAL series with fellow creators and readers.
                 </div>
               </div>
