@@ -712,7 +712,7 @@ function FeaturedCard({ series }: { series: Series }) {
             }}>{series.synopsis}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {series.language && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: '#08080c', padding: '2px 7px', borderRadius: '4px' }}>{series.language}</span>}
+            {series.language && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg-input)', padding: '2px 7px', borderRadius: '4px' }}>{series.language}</span>}
             <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
             <span style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginLeft: 'auto' }}>Read →</span>
           </div>
