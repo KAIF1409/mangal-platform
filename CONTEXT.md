@@ -260,6 +260,47 @@ re-deriving the business case from scratch.
   and rebase cleanly rather than force-pushing over unrelated concurrent commits
   (e.g. dashboard/analytics work happens independently of KaTube work).
 
+## 6a. Fixed: Google login randomly failing (`session_exchange_failed`)
+
+Founder reported Google sign-in failing with the URL landing on
+`/login?error=session_exchange_failed`, with **no visible error message on
+screen** — looked like the page just silently reloaded.
+
+**Root cause (confirmed via Vercel runtime error logs, not guessed):**
+`[auth/callback] exchangeCodeForSession failed: PKCE code verifier not found
+in storage` — 17 occurrences, 2 users, `2026-08-09` through `2026-08-10`,
+**before** any of this session's KaTube work started. So this was **not**
+caused by the KaTube rename/upload/Shorts work — same `/login` page, same
+`handleGoogleLogin`, used everywhere regardless of which page the "Log in"
+link was clicked from. It happened to surface while testing the new KaTube
+upload page's login link, but would have failed identically from any entry
+point.
+
+**What was actually wrong (two separate bugs, both fixed):**
+1. **The cookie loss itself:** `app/lib/supabase.ts`'s `createBrowserClient`
+   and `app/auth/callback/route.ts`'s `createServerClient` had no explicit
+   `cookieOptions`, relying on library defaults. Added matching
+   `{ sameSite: 'lax', secure: true, path: '/' }` on both — `sameSite: 'lax'`
+   specifically because the PKCE `code_verifier` cookie must survive Google's
+   cross-site top-level redirect back to `/auth/callback`. **Do not add a
+   short `maxAge` here** — these options apply to *every* cookie the client
+   sets, including the long-lived session/auth-token cookie, not just the
+   verifier.
+2. **The silent failure:** `/login` never read the `?error=...` query param
+   `/auth/callback` redirects back with on failure, and — separately — the
+   `Banner` error component was only rendered in the email/password `login`
+   mode, never in the default `landing` view (the one with the "Continue with
+   Google" button, i.e. what the founder was actually looking at). Fixed both:
+   added a `useEffect` that reads the error param, maps known codes
+   (`session_exchange_failed`, `missing_code`) to a friendly message, cleans
+   the URL via `history.replaceState`, and added the `Banner` render to the
+   `landing` view too.
+- If this recurs after the cookie fix, it's most likely browser-specific
+  (aggressive cookie-clearing extension, or an incognito/private window that
+  clears storage mid-redirect) rather than an app bug — the runtime logs are
+  the fastest way to confirm one way or the other (`Vercel:get_runtime_errors`
+  scoped to `/auth/callback`).
+
 ## 7. Session TODO — theme regressions + Upload page redesign (in progress)
 
 > Logged before starting work, per founder's request, so a fresh chat session

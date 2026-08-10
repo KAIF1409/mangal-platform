@@ -544,6 +544,32 @@ export default function AuthPage() {
     setDobError(null);
   };
 
+  // Surface errors that /auth/callback redirects back with (e.g. Google
+  // sign-in was cancelled, or exchangeCodeForSession failed) — previously
+  // this arrived as a silent ?error=... query param with nothing shown to
+  // the user, so a real failure just looked like the login page reloading.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('error');
+    if (!oauthError) return;
+
+    const FRIENDLY_ERRORS: Record<string, string> = {
+      session_exchange_failed:
+        "Google sign-in didn't finish — this can happen if your browser blocked or cleared cookies during the redirect. Try again, or sign in with email below.",
+      missing_code:
+        'Something interrupted the Google sign-in before it could finish. Please try again.',
+    };
+    const t = setTimeout(() => {
+      setError(FRIENDLY_ERRORS[oauthError] || decodeURIComponent(oauthError));
+    }, 0);
+
+    // Clean the URL so a refresh or back-navigation doesn't re-show the
+    // error or resubmit it.
+    window.history.replaceState({}, '', '/login');
+
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -846,6 +872,8 @@ export default function AuthPage() {
             {/* Main card */}
             <GlassCard maxWidth={420} visible={cardVisible}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {error && <Banner tone="error" icon={<IconAlert />}>{error}</Banner>}
+
                 {/* Google — primary CTA */}
                 <button
                   onClick={handleGoogleLogin}

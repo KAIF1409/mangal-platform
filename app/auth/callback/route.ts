@@ -37,6 +37,11 @@ export async function GET(request: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: {
+        sameSite: 'lax',
+        secure: true,
+        path: '/',
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll();
