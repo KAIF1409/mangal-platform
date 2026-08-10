@@ -95,7 +95,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
             transition: 'filter 0.3s ease 0.1s',
           }}>
             <Image
-              src="/mangal-flame-icon.png"
+              src="/mangal-flame-icon-black.jpg"
               alt="M"
               width={80}
               height={80}
