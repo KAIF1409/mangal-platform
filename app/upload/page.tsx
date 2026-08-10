@@ -84,6 +84,10 @@ function UploadFlow() {
   // tables from the Step 25 tags system (previously only editable after
   // creation, via the dashboard's Edit Series modal).
   const [seriesTagsInput, setSeriesTagsInput] = useState('');
+  // Step 30 — Mature content toggle. Handled defensively in handleCreateSeries
+  // (falls back to an insert without this field) until the founder runs the
+  // matching migration — see supabase/migrations/20260810_series_is_mature.sql.
+  const [isMature, setIsMature] = useState(false);
 
   // Chapter fields
   const [chapterNumber, setChapterNumber] = useState(1);
@@ -296,21 +300,35 @@ function UploadFlow() {
       coverUrl = urlData.publicUrl;
     }
 
-    const { data, error } = await supabase
+    const seriesPayload = {
+      creator_id: userId,
+      title: title.trim(),
+      synopsis: synopsis.trim(),
+      genre,
+      language,
+      cover_url: coverUrl,
+      reading_mode: readingMode,
+      content_type: contentType,
+      status: 'draft' as const,
+    };
+
+    // Step 30 — is_mature is a new column (see the 20260810 migration). Try
+    // with it first; if that migration hasn't been run yet in this Supabase
+    // project, Postgres returns "column does not exist" (42703) — retry
+    // without the field so creating a series never breaks on this.
+    let { data, error } = await supabase
       .from('series')
-      .insert({
-        creator_id: userId,
-        title: title.trim(),
-        synopsis: synopsis.trim(),
-        genre,
-        language,
-        cover_url: coverUrl,
-        reading_mode: readingMode,
-        content_type: contentType,
-        status: 'draft',
-      })
+      .insert({ ...seriesPayload, is_mature: isMature })
       .select()
       .single();
+
+    if (error?.code === '42703') {
+      ({ data, error } = await supabase
+        .from('series')
+        .insert(seriesPayload)
+        .select()
+        .single());
+    }
 
     if (error) { setError(error.message); setLoading(false); return; }
 
@@ -967,6 +985,33 @@ function UploadFlow() {
                   <span style={{ display: 'block', marginTop: '4px', fontSize: '10px', color: 'var(--text-tertiary)' }}>
                     Comma-separated. Helps readers find your series by trope/theme — you can always add more later from your dashboard.
                   </span>
+                </div>
+
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-light)', background: 'var(--bg-input)',
+                }}>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>Mature Content</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px' }}>Violence, disturbing themes, or other mature content</div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isMature}
+                    onClick={() => setIsMature(v => !v)}
+                    style={{
+                      width: '42px', height: '24px', borderRadius: '999px', border: 'none', cursor: 'pointer',
+                      background: isMature ? '#dc2626' : 'var(--border-color)', position: 'relative', flexShrink: 0,
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    <span style={{
+                      position: 'absolute', top: '3px', left: isMature ? '21px' : '3px',
+                      width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
+                      transition: 'left 0.15s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    }} />
+                  </button>
                 </div>
 
                 {contentType === 'mangal' && (
