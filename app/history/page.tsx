@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import Link from 'next/link';
+import ThemeToggle from '../components/ThemeToggle';
 
 // Reading History — pulls from reading_progress table.
 // One row per reader+series (UNIQUE constraint), holds the last-read chapter + page.
@@ -181,9 +182,9 @@ export default function HistoryPage() {
   const pillStyle = (type: FilterType): React.CSSProperties => {
     const isActive = activeContentType === type;
     const colors: Record<FilterType, { bg: string; border: string; color: string }> = {
-      all:    { bg: isActive ? '#d97706' : 'transparent',           border: isActive ? '#d97706' : '#1a1a26',          color: isActive ? '#fff' : '#6b7280' },
-      mangal: { bg: isActive ? 'rgba(127,29,29,0.9)' : 'transparent', border: isActive ? '#7f1d1d' : '#1a1a26',        color: isActive ? '#fff' : '#6b7280' },
-      novel:  { bg: isActive ? 'rgba(76,29,149,0.9)' : 'transparent', border: isActive ? '#4c1d95' : '#1a1a26',        color: isActive ? '#fff' : '#6b7280' },
+      all:    { bg: isActive ? '#d97706' : 'transparent',           border: isActive ? '#d97706' : 'var(--border-color)',          color: isActive ? '#fff' : 'var(--text-tertiary)' },
+      mangal: { bg: isActive ? 'rgba(127,29,29,0.9)' : 'transparent', border: isActive ? '#7f1d1d' : 'var(--border-color)',        color: isActive ? '#fff' : 'var(--text-tertiary)' },
+      novel:  { bg: isActive ? 'rgba(76,29,149,0.9)' : 'transparent', border: isActive ? '#4c1d95' : 'var(--border-color)',        color: isActive ? '#fff' : 'var(--text-tertiary)' },
     };
     const c = colors[type];
     return {
@@ -202,32 +203,35 @@ export default function HistoryPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#07070a', color: '#f9fafb', }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
 
       {/* NAV */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(7,7,10,0.97)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid #1a1a26',
+        background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
-            <span style={{ fontWeight: 900, fontSize: '17px', color: '#fff' }}>MANGAL</span>
+            <span style={{ fontWeight: 900, fontSize: '17px', color: 'var(--text-primary)' }}>MANGAL</span>
           </Link>
-          <span style={{ color: '#374151' }}>›</span>
-          <span style={{ fontSize: '13px', color: '#6b7280' }}>Reading History</span>
+          <span style={{ color: 'var(--text-faint)' }}>›</span>
+          <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>Reading History</span>
         </div>
-        <Link href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: '#6b7280', textDecoration: 'none', border: '1px solid #1a1a26' }}>Browse</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <ThemeToggle size={30} />
+          <Link href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)' }}>Browse</Link>
+        </div>
       </nav>
 
       {/* HEADER */}
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🕐 Reading History</h1>
-          <p style={{ fontSize: '13px', color: '#4b5563', margin: 0 }}>{counterText()}</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>{counterText()}</p>
         </div>
         {!loading && history.length > 0 && (
           confirmClear ? (
@@ -241,7 +245,7 @@ export default function HistoryPage() {
               </button>
               <button
                 onClick={() => setConfirmClear(false)}
-                style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', background: '#08080c', border: '1px solid #1a1a26', color: '#6b7280' }}
+                style={{ padding: '8px 14px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-tertiary)' }}
               >
                 Cancel
               </button>
@@ -249,7 +253,7 @@ export default function HistoryPage() {
           ) : (
             <button
               onClick={() => setConfirmClear(true)}
-              style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', background: 'transparent', border: '1px solid #1a1a26', color: '#4b5563' }}
+              style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }}
             >
               🗑 Clear History
             </button>
@@ -271,16 +275,16 @@ export default function HistoryPage() {
       {/* CONTENT */}
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#4b5563' }}>
+          <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '36px', marginBottom: '12px' }}>🕐</div>
             <div>Loading history...</div>
           </div>
         ) : history.length === 0 ? (
           /* Empty — no history at all */
-          <div style={{ textAlign: 'center', padding: '80px 40px', background: '#0d0d14', borderRadius: '16px', border: '1px solid #1a1a26' }}>
+          <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📖</div>
-            <p style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Nothing read yet</p>
-            <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 24px' }}>
+            <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Nothing read yet</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 24px' }}>
               Start reading a series and it&apos;ll appear here automatically.
             </p>
             <Link href="/" style={{
@@ -293,21 +297,21 @@ export default function HistoryPage() {
           </div>
         ) : filteredHistory.length === 0 ? (
           /* Empty — filter returned zero results */
-          <div style={{ textAlign: 'center', padding: '60px 40px', background: '#0d0d14', borderRadius: '16px', border: '1px solid #1a1a26' }}>
+          <div style={{ textAlign: 'center', padding: '60px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '40px', marginBottom: '14px' }}>
               {activeContentType === 'novel' ? '📕' : '📜'}
             </div>
-            <p style={{ fontSize: '15px', fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>
+            <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
               No {activeContentType === 'novel' ? 'novels' : 'mangal'} in history
             </p>
-            <p style={{ fontSize: '13px', color: '#4b5563', margin: '0 0 20px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 20px' }}>
               You haven&apos;t read any {activeContentType === 'novel' ? 'novels' : 'mangal'} yet.
             </p>
             <button
               onClick={() => handleContentTypeToggle('all')}
               style={{
                 padding: '9px 22px', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                cursor: 'pointer', background: 'transparent', border: '1px solid #1a1a26', color: '#9ca3af',
+                cursor: 'pointer', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)',
               }}
             >
               Show All
@@ -328,15 +332,15 @@ export default function HistoryPage() {
       </div>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: '1px solid #1a1a26', padding: '32px 24px', textAlign: 'center' }}>
+      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '10px' }}>
           <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '15px', color: '#fff' }}>MANGAL</span>
+          <span style={{ fontWeight: 900, fontSize: '15px', color: 'var(--text-primary)' }}>MANGAL</span>
         </div>
-        <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 12px' }}>Made with ❤️ in India · Free to read, forever.</p>
+        <p style={{ fontSize: '12px', color: 'var(--text-faint)', margin: '0 0 12px' }}>Made with ❤️ in India · Free to read, forever.</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
           {['/privacy', '/terms', '/grievance'].map(href => (
-            <a key={href} href={href} style={{ fontSize: '11px', color: '#4b5563', textDecoration: 'none' }}>
+            <a key={href} href={href} style={{ fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'none' }}>
               {href === '/privacy' ? 'Privacy Policy' : href === '/terms' ? 'Terms of Service' : 'Grievance Officer'}
             </a>
           ))}
@@ -383,12 +387,12 @@ function HistoryRow({
   return (
     <div style={{
       display: 'flex', gap: '14px', alignItems: 'center',
-      background: '#0d0d14', border: `1px solid ${isNovel ? 'rgba(76,29,149,0.25)' : '#1a1a26'}`,
+      background: 'var(--bg-card)', border: `1px solid ${isNovel ? 'rgba(76,29,149,0.25)' : 'var(--border-color)'}`,
       borderRadius: '12px', padding: '14px 16px',
     }}>
       {/* Cover thumbnail */}
       <a href={`/series/${entry.series_id}`} style={{ flexShrink: 0, textDecoration: 'none', position: 'relative' }}>
-        <div style={{ width: '52px', height: '70px', borderRadius: '7px', overflow: 'hidden', background: coverBg, border: '1px solid #1a1a26', position: 'relative' }}>
+        <div style={{ width: '52px', height: '70px', borderRadius: '7px', overflow: 'hidden', background: coverBg, border: '1px solid var(--border-color)', position: 'relative' }}>
           {entry.series_cover ? (
             <Image src={entry.series_cover} alt={entry.series_title} fill sizes="52px" style={{ objectFit: 'cover' }} />
           ) : (
@@ -409,11 +413,11 @@ function HistoryRow({
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <a href={`/series/${entry.series_id}`} style={{ textDecoration: 'none' }}>
-          <div style={{ fontSize: '14px', fontWeight: 800, color: '#fff', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {entry.series_title}
           </div>
         </a>
-        <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '8px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '8px' }}>
           {entry.chapter_number != null && (
             <span>Ch.{entry.chapter_number}{entry.chapter_title ? ` — ${entry.chapter_title}` : ''}{!isNovel && ` · p.${entry.page_number}`} · </span>
           )}
@@ -422,10 +426,10 @@ function HistoryRow({
         {/* Progress bar */}
         {progressPct > 0 && (
           <div style={{ marginBottom: '2px' }}>
-            <div style={{ height: '3px', background: '#1a1a26', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ height: '3px', background: 'var(--border-color)', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${progressPct}%`, background: progressGradient, borderRadius: '2px' }} />
             </div>
-            <div style={{ fontSize: '10px', color: '#374151', marginTop: '3px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-faint)', marginTop: '3px' }}>
               {progressPct}% · Ch.{entry.chapter_number} of {entry.total_chapters}
             </div>
           </div>
@@ -454,7 +458,7 @@ function HistoryRow({
             </button>
             <button
               onClick={() => setConfirmRemove(false)}
-              style={{ padding: '5px 9px', borderRadius: '6px', fontSize: '10px', background: '#08080c', border: '1px solid #1a1a26', color: '#6b7280', cursor: 'pointer' }}
+              style={{ padding: '5px 9px', borderRadius: '6px', fontSize: '10px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-tertiary)', cursor: 'pointer' }}
             >
               ✕
             </button>
@@ -462,7 +466,7 @@ function HistoryRow({
         ) : (
           <button
             onClick={() => setConfirmRemove(true)}
-            style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'transparent', border: '1px solid #1a1a26', color: '#374151', cursor: 'pointer' }}
+            style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-faint)', cursor: 'pointer' }}
           >
             🗑
           </button>
