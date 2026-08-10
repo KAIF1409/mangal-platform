@@ -65,10 +65,17 @@ export default function RootLayout({
       <head>
         {/* Runs before paint so the saved theme applies immediately —
             avoids a flash of the wrong theme on load. White/light is now
-            the default; dark only applies if the user explicitly chose it. */}
+            the default; dark only applies if the user explicitly chose it
+            AFTER the light-default redesign shipped.
+
+            Migration note: browsers that saved 'dark' before this redesign
+            existed would otherwise be stuck on dark forever (that old value
+            was never a real choice under the current design, it was just
+            whatever the old dark-only build wrote). mangal_theme_migrated_v1
+            runs this reset exactly once per browser, then gets out of the way. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('mangal_theme');if(t!=='dark'){document.documentElement.setAttribute('data-theme','light');}}catch(e){document.documentElement.setAttribute('data-theme','light');}`,
+            __html: `try{if(!localStorage.getItem('mangal_theme_migrated_v1')){localStorage.removeItem('mangal_theme');localStorage.setItem('mangal_theme_migrated_v1','1');}var t=localStorage.getItem('mangal_theme');if(t!=='dark'){document.documentElement.setAttribute('data-theme','light');}}catch(e){document.documentElement.setAttribute('data-theme','light');}`,
           }}
         />
       </head>
