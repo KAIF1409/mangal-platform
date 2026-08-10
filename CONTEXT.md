@@ -311,6 +311,35 @@ Every remaining page in the app (`/`, `/home`, `/tags`, `/rankings`,
 `/settings`, `/about`, `/help`) already had theme coverage from earlier
 sessions. No known hardcoded-dark pages left.
 
+### Theme rollout — follow-up pass (new session, ran a fresh repo-wide audit)
+
+Grepped every `.tsx` file for the known hardcoded dark hex values vs
+`var(--...)` usage — found 4 shared components that had **zero** theme
+coverage (would show a black popup on the now-white-default site whenever
+opened, even though the page underneath them was already themed):
+
+| Component | Where it's used | Status |
+|---|---|---|
+| `app/components/EditSeriesModal.tsx` | Dashboard → Edit Series | ✅ done |
+| `app/components/ManagePagesModal.tsx` | Dashboard → Manage chapter pages | ✅ done |
+| `app/components/ReportButton.tsx` | Series/reader "Report" flow | ✅ done |
+| `app/components/ShareButton.tsx` | Series/reader "Share" dropdown | ✅ done |
+
+Also fixed one stray hardcoded badge background on `/home` (`#08080c` →
+`var(--bg-input)`).
+
+Also extended `dashboard/page.tsx`, `upload/page.tsx`, and
+`creator/[username]/page.tsx` to full `var(--...)` coverage (they had
+partial/no theme support before this pass), and added an Inkstone-style
+per-series analytics detail card + Chapters/Words stat cards to the
+dashboard's Analytics tab.
+
+Re-ran the repo-wide grep after all of the above — the only hardcoded hex
+left anywhere are the 3 already-documented intentional cases (rank-badge
+dark text on gold/silver/bronze backgrounds in `/` and `/search`, and the
+reader's independent `bgColor` picker in `read/[chapterId]/page.tsx`).
+**No unthemed pages or components remain.**
+
 
 ---
 
