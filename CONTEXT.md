@@ -266,7 +266,7 @@ app to find what else still breaks the light-default theme the same way
 | `app/read/[chapterId]/page.tsx` (the reader) | 0 | 229 | ✅ done (`98b3b33`) — chrome only (top bar/sidebar/settings/comments), reading-canvas `bgColor` picker deliberately untouched, see note below |
 | `app/series/[seriesId]/page.tsx` (series detail) | 0 | 158 | ✅ done (`049b623`) |
 | `app/history/page.tsx` | 0 | 75 | ⏳ queued |
-| `app/login/page.tsx` | 0 | 46 | ⏳ queued |
+| `app/login/page.tsx` | 0 | 46 | ✅ reviewed, intentionally left as-is — see note below |
 | `app/search/page.tsx` | 31 | 3 (intentional) | ✅ done this session |
 
 Everything else (`/`, `/home`, `/tags`, `/rankings`, `/library`,
@@ -285,6 +285,31 @@ floating chrome around it (top bar, sidebar, settings panel, comments)
 was hardcoded dark always — founder confirmed this should follow the
 site-wide theme too (default white, dark as an option), same as every
 other page. Fixed in `98b3b33`.
+
+**`/login` — decision made: leave it alone.** Unlike the other 0-var(--...)
+pages, this one isn't a missed spot — it's a deliberately art-directed
+"Aryavarta" branded screen: full-screen cosmic background image, dark
+gradient overlay, custom warm gold/cream palette (`#e0ac5f`, `#f4f1ec`),
+distinct copy ("Read. Create. Rise."). Founder confirmed keep it exactly
+as designed, independent of the site theme toggle — same category as a
+branded splash/login screen on other apps that doesn't follow the
+in-app theme. Not queued for conversion.
+
+### Theme rollout — session status: closed out
+
+All pages identified in the original audit are now resolved one way or
+another:
+- ✅ `/search`, `/read/[chapterId]` (chrome only), `/series/[seriesId]`,
+  `/history` — converted to `var(--...)`, light-default with dark option
+- ✅ Reader's `bgColor` picker — confirmed correct as an independent
+  per-reader preference, left untouched
+- ✅ `/login` — confirmed correct as an intentional branded screen, left
+  untouched
+
+Every remaining page in the app (`/`, `/home`, `/tags`, `/rankings`,
+`/library`, `/bookmarks`, `/dashboard`, `/upload`, `/creator/[username]`,
+`/settings`, `/about`, `/help`) already had theme coverage from earlier
+sessions. No known hardcoded-dark pages left.
 
 
 ---
