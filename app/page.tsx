@@ -292,6 +292,14 @@ export default function LandingPage() {
                 onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
               >{link.label}</a>
             ))}
+            <a href="/animetube" style={{
+              padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+              color: '#f472b6', textDecoration: 'none', whiteSpace: 'nowrap',
+              transition: 'color 0.15s, background 0.15s',
+            }}
+              onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(219,39,119,0.12)'; }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
+            >🎬 AnimeTube</a>
           </div>
 
           {/* Auth buttons */}
@@ -421,6 +429,52 @@ export default function LandingPage() {
                   {g}
                 </a>
               ))}
+            </div>
+
+            {/* ── TWO DOORS: Read vs Watch ── */}
+            <div style={{
+              display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center',
+              maxWidth: '640px', margin: '40px auto 0',
+            }}>
+              <Link href="/search" style={{
+                flex: '1 1 260px', minWidth: '240px', textDecoration: 'none',
+                padding: '20px 22px', borderRadius: '16px',
+                background: 'rgba(7,7,10,0.72)', backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(217,119,6,0.35)',
+                display: 'flex', alignItems: 'center', gap: '14px',
+                transition: 'transform 0.15s, box-shadow 0.2s, border-color 0.2s',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+              }}
+                onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(217,119,6,0.28)'; el.style.borderColor = '#d97706'; }}
+                onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.35)'; el.style.borderColor = 'rgba(217,119,6,0.35)'; }}
+              >
+                <span style={{ fontSize: '30px' }}>📖</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontWeight: 900, fontSize: '16px', color: '#fff' }}>Read MANGAL</div>
+                  <div style={{ fontSize: '12.5px', color: '#d1d5db', marginTop: '2px' }}>Manga &amp; novels, free forever</div>
+                </div>
+              </Link>
+
+              <Link href="/animetube" style={{
+                flex: '1 1 260px', minWidth: '240px', textDecoration: 'none',
+                padding: '20px 22px', borderRadius: '16px',
+                background: 'rgba(7,7,10,0.72)', backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(219,39,119,0.4)',
+                display: 'flex', alignItems: 'center', gap: '14px',
+                transition: 'transform 0.15s, box-shadow 0.2s, border-color 0.2s',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+              }}
+                onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(219,39,119,0.32)'; el.style.borderColor = '#db2777'; }}
+                onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.35)'; el.style.borderColor = 'rgba(219,39,119,0.4)'; }}
+              >
+                <span style={{ fontSize: '30px' }}>🎬</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontWeight: 900, fontSize: '16px', color: '#fff' }}>
+                    Watch AnimeTube <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 7px', borderRadius: '20px', background: 'rgba(219,39,119,0.25)', border: '1px solid rgba(219,39,119,0.5)', color: '#f472b6', marginLeft: '6px', verticalAlign: 'middle' }}>NEW</span>
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: '#d1d5db', marginTop: '2px' }}>AI-anime shorts from Mangal creators</div>
+                </div>
+              </Link>
             </div>
           </div>
         </section>

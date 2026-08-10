@@ -254,6 +254,14 @@ export default function HomePage() {
               onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
             >{link.label}</a>
           ))}
+          <a href="/animetube" style={{
+            padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+            color: '#f472b6', textDecoration: 'none', whiteSpace: 'nowrap',
+            transition: 'color 0.15s, background 0.15s',
+          }}
+            onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(219,39,119,0.12)'; }}
+            onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
+          >🎬 AnimeTube</a>
         </div>
 
         {/* Right side */}
