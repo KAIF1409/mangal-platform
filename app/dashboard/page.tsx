@@ -56,6 +56,13 @@ interface AnalyticsData {
   totalWords: number;
   viewsPerSeries: SeriesViewStat[];
   wordsBySeriesId: Record<string, number>;
+  // Real data, sourced from view_events / reading_progress / pages / profiles.
+  // Empty/zeroed when there simply isn't enough data yet — never estimated.
+  dailyViews: { date: string; count: number }[]; // last 7 days, oldest first
+  hourlyViews: number[]; // 24 buckets, local time, index 0 = 00:00
+  countryCounts: Record<string, number>; // ISO country code -> view count
+  genderCounts: { male: number; female: number; unspecified: number; unknown: number };
+  completion: { started: number; completed: number }; // reading_progress vs last page per chapter
 }
 
 // Step 28 — mirrors formatViews used on homepage/search cards for consistent display
@@ -185,7 +192,13 @@ export default function Dashboard() {
       const seriesIds = stories.map((s) => s.id);
 
       if (seriesIds.length === 0) {
-        setAnalytics({ totalViews: 0, totalFollowers: 0, newFollowersThisWeek: 0, totalComments: 0, totalChapters: 0, totalWords: 0, viewsPerSeries: [], wordsBySeriesId: {} });
+        setAnalytics({
+          totalViews: 0, totalFollowers: 0, newFollowersThisWeek: 0, totalComments: 0,
+          totalChapters: 0, totalWords: 0, viewsPerSeries: [], wordsBySeriesId: {},
+          dailyViews: [], hourlyViews: new Array(24).fill(0), countryCounts: {},
+          genderCounts: { male: 0, female: 0, unspecified: 0, unknown: 0 },
+          completion: { started: 0, completed: 0 },
+        });
         setAnalyticsLoaded(true);
         return;
       }
@@ -197,8 +210,8 @@ export default function Dashboard() {
 
       const weekAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      const [followResult, commentsResult, wordsResult] = await Promise.all([
-        supabase.from('follows').select('created_at').in('series_id', seriesIds),
+      const [followResult, commentsResult, wordsResult, viewEventsResult, progressResult, pagesResult] = await Promise.all([
+        supabase.from('follows').select('created_at, reader_id').in('series_id', seriesIds),
         chapterIds.length > 0
           ? supabase.from('comments').select('id', { count: 'exact', head: true }).in('chapter_id', chapterIds)
           : Promise.resolve({ data: null, count: 0, error: null }),
@@ -208,11 +221,22 @@ export default function Dashboard() {
         chapterIds.length > 0
           ? supabase.from('chapters').select('series_id, word_count').in('id', chapterIds)
           : Promise.resolve({ data: [], error: null }),
+        // Real Reader Trends / Reading Time source — every row is an actual
+        // view, logged server-side with an optional country code.
+        supabase.from('view_events').select('created_at, country_code').in('series_id', seriesIds).gte('created_at', weekAgoIso),
+        // Real Completion Rate source — how far each reader got.
+        supabase.from('reading_progress').select('chapter_id, page_number').in('series_id', seriesIds),
+        chapterIds.length > 0
+          ? supabase.from('pages').select('chapter_id, page_number').in('chapter_id', chapterIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (followResult.error) throw followResult.error;
       if (commentsResult.error) throw commentsResult.error;
       if (wordsResult.error) throw wordsResult.error;
+      if (viewEventsResult.error) throw viewEventsResult.error;
+      if (progressResult.error) throw progressResult.error;
+      if (pagesResult.error) throw pagesResult.error;
 
       const followRows = followResult.data || [];
       const totalFollowers = followRows.length;
@@ -226,6 +250,58 @@ export default function Dashboard() {
         totalWords += words;
       });
 
+      // Real Reader Trends: bucket view_events into the last 7 calendar days
+      // (local time, matching the studio sidebar clock) and 24 hourly buckets.
+      const dailyMap: Record<string, number> = {};
+      const hourlyViews = new Array(24).fill(0);
+      const countryCounts: Record<string, number> = {};
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        dailyMap[d.toISOString().slice(0, 10)] = 0;
+      }
+      (viewEventsResult.data || []).forEach((row: { created_at: string; country_code: string | null }) => {
+        const d = new Date(row.created_at);
+        const dayKey = row.created_at.slice(0, 10);
+        if (dayKey in dailyMap) dailyMap[dayKey]++;
+        hourlyViews[d.getHours()]++;
+        if (row.country_code) {
+          countryCounts[row.country_code] = (countryCounts[row.country_code] || 0) + 1;
+        }
+      });
+      const dailyViews = Object.entries(dailyMap).map(([date, count]) => ({ date, count }));
+
+      // Real Gender split: follower profiles' self-reported gender (Settings).
+      // Unset (null) is counted as "unknown" rather than guessed.
+      const genderCounts = { male: 0, female: 0, unspecified: 0, unknown: 0 };
+      const readerIds = Array.from(new Set(followRows.map((f: { reader_id: string }) => f.reader_id).filter(Boolean)));
+      if (readerIds.length > 0) {
+        const { data: profileRows } = await supabase.from('profiles').select('id, gender').in('id', readerIds);
+        (profileRows || []).forEach((p: { gender: string | null }) => {
+          if (p.gender === 'male') genderCounts.male++;
+          else if (p.gender === 'female') genderCounts.female++;
+          else if (p.gender === 'unspecified') genderCounts.unspecified++;
+          else genderCounts.unknown++;
+        });
+      }
+
+      // Real Completion Rate: a reading_progress row counts as "completed"
+      // once its page_number reaches the last page of that chapter. Only
+      // covers chapters that have entries in `pages` (manga-style content) —
+      // novels aren't measurable this way yet, so they're simply excluded
+      // rather than guessed at.
+      const lastPageByChapter: Record<string, number> = {};
+      (pagesResult.data || []).forEach((p: { chapter_id: string; page_number: number }) => {
+        lastPageByChapter[p.chapter_id] = Math.max(lastPageByChapter[p.chapter_id] || 0, p.page_number);
+      });
+      let started = 0;
+      let completed = 0;
+      (progressResult.data || []).forEach((row: { chapter_id: string; page_number: number }) => {
+        const lastPage = lastPageByChapter[row.chapter_id];
+        if (lastPage === undefined) return; // not a paged (manga) chapter — not measurable
+        started++;
+        if (row.page_number >= lastPage) completed++;
+      });
+
       setAnalytics({
         totalViews,
         totalFollowers,
@@ -235,6 +311,11 @@ export default function Dashboard() {
         totalWords,
         viewsPerSeries,
         wordsBySeriesId,
+        dailyViews,
+        hourlyViews,
+        countryCounts,
+        genderCounts,
+        completion: { started, completed },
       });
     } catch (err) {
       console.error('Error fetching analytics:', err instanceof Error ? err.message : err);
