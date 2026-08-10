@@ -565,13 +565,13 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             transform: 'scale(1.1)',
           }} />
         )}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(7,7,10,0.4), var(--bg-primary))' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(7,7,10,0.45), #0d0d10 90%)' }} />
 
         <div style={{ position: 'relative', maxWidth: '1000px', margin: '0 auto', padding: '48px 24px 40px', display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
           {/* Cover */}
           <div style={{
             width: '200px', flexShrink: 0, borderRadius: '14px', overflow: 'hidden',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6)', border: '1px solid var(--border-color)', aspectRatio: '3/4',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.16)', aspectRatio: '3/4',
             background: '#1a0a0a', position: 'relative',
           }}>
             {series.cover_url ? (
@@ -590,15 +590,15 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 </span>
               )}
               {series.language && (
-                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)', background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '4px 12px', borderRadius: '20px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#c3c7cf', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)', padding: '4px 12px', borderRadius: '20px' }}>
                   {series.language}
                 </span>
               )}
               <span style={{
                 fontSize: '10px', fontWeight: 700, padding: '4px 12px', borderRadius: '20px',
-                border: isNovel ? '1px solid rgba(124,58,237,0.4)' : '1px solid var(--border-color)',
-                background: isNovel ? 'rgba(124,58,237,0.15)' : 'var(--bg-card)',
-                color: isNovel ? '#a78bfa' : 'var(--text-secondary)',
+                border: isNovel ? '1px solid rgba(124,58,237,0.4)' : '1px solid rgba(255,255,255,0.16)',
+                background: isNovel ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.08)',
+                color: isNovel ? '#a78bfa' : '#c3c7cf',
               }}>
                 {isNovel ? '📕 Novel' : (series.reading_mode === 'scroll' ? '📜 Webtoon' : '📖 Mangal')}
               </span>
@@ -618,7 +618,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     series.completion_status === 'hiatus' ? 'rgba(107,114,128,0.15)' : 'rgba(217,119,6,0.15)',
                   color:
                     series.completion_status === 'completed' ? '#10b981' :
-                    series.completion_status === 'hiatus' ? 'var(--text-secondary)' : '#d97706',
+                    series.completion_status === 'hiatus' ? '#c3c7cf' : '#d97706',
                 }}>
                   {series.completion_status === 'completed' && '✓ Completed'}
                   {series.completion_status === 'hiatus' && '⏸ On Hiatus'}
@@ -627,22 +627,22 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
               )}
             </div>
 
-            <h1 style={{ fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 6px', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+            <h1 style={{ fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 6px', letterSpacing: '-0.02em', lineHeight: 1.1, color: '#f9fafb' }}>
               {series.title}
             </h1>
             {/* Step 13 — Public Creator Profile: links to /creator/[username] */}
             {creatorUsername && (
               <a href={`/creator/${creatorUsername}`} style={{
-                fontSize: '13px', color: 'var(--text-tertiary)', textDecoration: 'none',
+                fontSize: '13px', color: '#9aa0ab', textDecoration: 'none',
                 display: 'inline-block', marginBottom: '14px',
               }}
                 onMouseEnter={e => { (e.target as HTMLElement).style.color = '#d97706'; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-tertiary)'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.color = '#9aa0ab'; }}
               >
                 by @{creatorUsername}
               </a>
             )}
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 16px', maxWidth: '540px' }}>
+            <p style={{ fontSize: '14px', color: '#c3c7cf', lineHeight: 1.7, margin: '0 0 16px', maxWidth: '540px' }}>
               {series.synopsis}
             </p>
 
@@ -654,13 +654,13 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     key={tag.id}
                     href={`/tags/${tag.slug}`}
                     style={{
-                      fontSize: '10px', fontWeight: 600, color: 'var(--text-secondary)',
-                      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                      fontSize: '10px', fontWeight: 600, color: '#c3c7cf',
+                      background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
                       padding: '4px 10px', borderRadius: '20px', textDecoration: 'none',
                       transition: 'color 0.15s, border-color 0.15s',
                     }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#d97706'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,119,6,0.4)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-color)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#c3c7cf'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; }}
                   >
                     #{tag.name}
                   </a>
@@ -671,24 +671,24 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             {/* Stats row */}
             <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)' }}>{chapters.length}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Chapters</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#f9fafb' }}>{chapters.length}</div>
+                <div style={{ fontSize: '10px', color: '#8a8f99', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Chapters</div>
               </div>
               {latestChapter && (
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)' }}>Ch.{latestChapter.chapter_number}</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Latest</div>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#f9fafb' }}>Ch.{latestChapter.chapter_number}</div>
+                  <div style={{ fontSize: '10px', color: '#8a8f99', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Latest</div>
                 </div>
               )}
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)' }}>{followCount}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Followers</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#f9fafb' }}>{followCount}</div>
+                <div style={{ fontSize: '10px', color: '#8a8f99', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Followers</div>
               </div>
 
               {/* Step 7 — View count */}
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)' }}>{formatViews(viewCount)}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Views</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#f9fafb' }}>{formatViews(viewCount)}</div>
+                <div style={{ fontSize: '10px', color: '#8a8f99', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Views</div>
               </div>
 
               {/* Step 6 — Star Rating */}
@@ -705,7 +705,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                       style={{
                         background: 'none', border: 'none', cursor: ratingLoading ? 'wait' : 'pointer',
                         fontSize: '20px', padding: '2px', lineHeight: 1,
-                        color: star <= displayStars ? '#d97706' : 'var(--border-color)',
+                        color: star <= displayStars ? '#d97706' : 'rgba(255,255,255,0.16)',
                         transition: 'color 0.1s, transform 0.1s',
                         transform: star <= displayStars ? 'scale(1.15)' : 'scale(1)',
                         opacity: ratingLoading ? 0.5 : 1,
@@ -713,7 +713,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     >★</button>
                   ))}
                 </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>
+                <div style={{ fontSize: '10px', color: '#8a8f99', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>
                   {avgRating !== null
                     ? <span><span style={{ color: '#d97706', fontWeight: 700 }}>{avgRating}</span> / 5 ({ratingCount})</span>
                     : 'Rate this'}
@@ -748,8 +748,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 <a href={`/read/${firstChapter.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
-                  background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                  color: 'var(--text-secondary)', textDecoration: 'none',
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
+                  color: '#c3c7cf', textDecoration: 'none',
                 }}>
                   ↺ Start From Beginning
                 </a>
@@ -758,8 +758,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 <a href={`/read/${latestChapter.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
-                  background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                  color: 'var(--text-secondary)', textDecoration: 'none',
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
+                  color: '#c3c7cf', textDecoration: 'none',
                 }}>
                   ⚡ Latest Chapter
                 </a>
@@ -772,9 +772,9 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
                     padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
                     cursor: followLoading ? 'wait' : 'pointer',
-                    border: isFollowing ? '1px solid rgba(217,119,6,0.5)' : '1px solid var(--border-color)',
-                    background: isFollowing ? 'rgba(217,119,6,0.12)' : 'var(--bg-card)',
-                    color: isFollowing ? '#d97706' : 'var(--text-secondary)',
+                    border: isFollowing ? '1px solid rgba(217,119,6,0.5)' : '1px solid rgba(255,255,255,0.16)',
+                    background: isFollowing ? 'rgba(217,119,6,0.12)' : 'rgba(255,255,255,0.08)',
+                    color: isFollowing ? '#d97706' : '#c3c7cf',
                     transition: 'all 0.2s',
                   }}
                 >
@@ -811,7 +811,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                       disabled={deletingSeries}
                       style={{
                         padding: '12px 16px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                        background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)', color: '#c3c7cf', cursor: 'pointer',
                       }}
                     >
                       Cancel
@@ -1067,8 +1067,8 @@ function ChapterRow({
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 20px',
-        background: hovered ? '#111118' : 'var(--bg-card)',
-        border: `1px solid ${hovered ? 'var(--border-color)' : 'var(--border-color)'}`,
+        background: hovered ? 'rgba(217,119,6,0.08)' : 'var(--bg-card)',
+        border: `1px solid ${hovered ? 'rgba(217,119,6,0.3)' : 'var(--border-color)'}`,
         borderRadius: '10px',
         transition: 'all 0.15s',
         gap: '12px',
