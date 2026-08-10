@@ -855,89 +855,104 @@ function UploadFlow() {
 
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '32px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
 
-          {/* STEP 1: SERIES INFO */}
+          {/* STEP 1: SERIES INFO — two-column layout (cover left, details right),
+              inspired by the reference screenshots the founder shared. Only the
+              *layout pattern* was borrowed — fields stay MANGAL's own (no
+              Copyright/Main Characters/Target Audience, see CONTEXT.md §7). */}
           {step === 'series' && (
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '18px' }}>
+            <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' as const }}>
 
-              {/* Cover Photo */}
-              <div>
+              {/* LEFT — Cover upload, large Wattpad-style click target */}
+              <div style={{ flex: '0 0 200px' }}>
                 <label style={labelStyle}>Cover Photo</label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}>
+                <label style={{ cursor: 'pointer', display: 'block' }}>
                   <div style={{
-                    width: '90px', height: '120px', borderRadius: '10px', overflow: 'hidden' as const,
-                    border: '2px dashed var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'var(--bg-input)', flexShrink: 0, position: 'relative',
+                    width: '200px', height: '266px', borderRadius: '14px', overflow: 'hidden' as const,
+                    border: '2px dashed var(--border-light)', display: 'flex', flexDirection: 'column' as const,
+                    alignItems: 'center', justifyContent: 'center', gap: '10px',
+                    background: 'var(--bg-input)', position: 'relative',
                   }}>
                     {coverPreview ? (
-                      <Image src={coverPreview} alt="Cover" fill sizes="90px" unoptimized style={{ objectFit: 'cover' }} />
+                      <Image src={coverPreview} alt="Cover" fill sizes="200px" unoptimized style={{ objectFit: 'cover' }} />
                     ) : (
-                      <span style={{ fontSize: '22px' }}>📷</span>
+                      <>
+                        <span style={{ fontSize: '32px' }}>📷</span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center' as const, padding: '0 16px' }}>
+                          Click to upload<br />a cover photo
+                        </span>
+                      </>
                     )}
                   </div>
-                  <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
-                    {coverPreview ? 'Change cover photo' : 'Click to upload a cover photo'}
-                  </span>
                   <input type="file" accept="image/*" onChange={handleCoverSelect} style={{ display: 'none' }} />
                 </label>
+                {coverPreview && (
+                  <span style={{ display: 'block', marginTop: '8px', fontSize: '11px', color: 'var(--text-tertiary)', textAlign: 'center' as const }}>
+                    Click cover to change
+                  </span>
+                )}
               </div>
 
-              {/* Step 21 — Content Type selector (Comic vs Novel) */}
-              <div>
-                <label style={labelStyle}>Content Type</label>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button onClick={() => setContentType('mangal')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: contentType === 'mangal' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: contentType === 'mangal' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: contentType === 'mangal' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                    📖 Comic<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Pages with images</span>
-                  </button>
-                  <button onClick={() => setContentType('novel')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: contentType === 'novel' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: contentType === 'novel' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: contentType === 'novel' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                    📕 Novel<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Text chapters</span>
-                  </button>
-                </div>
-              </div>
+              {/* RIGHT — Story Details */}
+              <div style={{ flex: '1 1 320px', minWidth: '280px', display: 'flex', flexDirection: 'column' as const, gap: '18px' }}>
 
-              <div>
-                <label style={labelStyle}>Series Title</label>
-                <input type="text" placeholder="e.g., Krrish Legacy" value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Genre</label>
-                  <select value={genre} onChange={(e) => setGenre(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                    <option value="">Select genre</option>
-                    {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={labelStyle}>Language</label>
-                  <select value={language} onChange={(e) => setLanguage(e.target.value as 'Hindi' | 'English')} style={{ ...inputStyle, cursor: 'pointer' }}>
-                    <option value="English">English</option>
-                    <option value="Hindi">Hindi</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Description</label>
-                <textarea placeholder="Write the cosmic arc..." value={synopsis} onChange={(e) => setSynopsis(e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' as const }} />
-              </div>
-
-              {contentType === 'mangal' && (
+                {/* Step 21 — Content Type selector (Comic vs Novel) */}
                 <div>
-                  <label style={labelStyle}>Reading Mode</label>
+                  <label style={labelStyle}>Content Type</label>
                   <div style={{ display: 'flex', gap: '12px' }}>
-                    <button onClick={() => setReadingMode('scroll')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'scroll' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingMode === 'scroll' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingMode === 'scroll' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                      📜 Vertical Scroll<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Webtoon style</span>
+                    <button onClick={() => setContentType('mangal')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: contentType === 'mangal' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: contentType === 'mangal' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: contentType === 'mangal' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                      📖 Comic<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Pages with images</span>
                     </button>
-                    <button onClick={() => setReadingMode('page')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'page' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingMode === 'page' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingMode === 'page' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                      📖 Page by Page<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Traditional manga</span>
+                    <button onClick={() => setContentType('novel')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: contentType === 'novel' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: contentType === 'novel' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: contentType === 'novel' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                      📕 Novel<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Text chapters</span>
                     </button>
                   </div>
                 </div>
-              )}
 
-              <button onClick={handleCreateSeries} disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', border: '1px solid #7f1d1d', borderRadius: '12px', color: loading ? 'var(--text-tertiary)' : '#fff', fontSize: '13px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px' }}>
-                {loading ? 'Creating...' : contentType === 'novel' ? '➡️ Continue — Write Chapter' : '➡️ Continue — Upload Pages'}
-              </button>
+                <div>
+                  <label style={labelStyle}>Series Title</label>
+                  <input type="text" placeholder="e.g., Krrish Legacy" value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Genre</label>
+                    <select value={genre} onChange={(e) => setGenre(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                      <option value="">Select genre</option>
+                      {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Language</label>
+                    <select value={language} onChange={(e) => setLanguage(e.target.value as 'Hindi' | 'English')} style={{ ...inputStyle, cursor: 'pointer' }}>
+                      <option value="English">English</option>
+                      <option value="Hindi">Hindi</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>Description</label>
+                  <textarea placeholder="Write the cosmic arc..." value={synopsis} onChange={(e) => setSynopsis(e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' as const }} />
+                </div>
+
+                {contentType === 'mangal' && (
+                  <div>
+                    <label style={labelStyle}>Reading Mode</label>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button onClick={() => setReadingMode('scroll')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'scroll' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingMode === 'scroll' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingMode === 'scroll' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                        📜 Vertical Scroll<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Webtoon style</span>
+                      </button>
+                      <button onClick={() => setReadingMode('page')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: readingMode === 'page' ? '1px solid #dc2626' : '1px solid var(--border-light)', background: readingMode === 'page' ? 'rgba(127,29,29,0.2)' : 'var(--bg-input)', color: readingMode === 'page' ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                        📖 Page by Page<br /><span style={{ fontWeight: 400, fontSize: '10px' }}>Traditional manga</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <button onClick={handleCreateSeries} disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', border: '1px solid #7f1d1d', borderRadius: '12px', color: loading ? 'var(--text-tertiary)' : '#fff', fontSize: '13px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px' }}>
+                  {loading ? 'Creating...' : contentType === 'novel' ? '➡️ Continue — Write Chapter' : '➡️ Continue — Upload Pages'}
+                </button>
+              </div>
             </div>
           )}
 
