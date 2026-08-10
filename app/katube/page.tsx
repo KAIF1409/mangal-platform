@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../components/ThemeToggle';
 
-// ── Kalpanaverse — demo/mockup page (renamed from AnimeTube) ──
+// ── KaTube — demo/mockup page (renamed from AnimeTube → Kalpanaverse → KaTube) ──
 // Step 2 of the build plan: a static video-grid UI with placeholder data so
 // the concept can be seen and felt before any real backend, upload flow, or
 // YouTube-embed wiring goes in. No live data, no Supabase calls yet.
@@ -146,7 +146,7 @@ function VideoCard({ video }: { video: DemoVideo }) {
   );
 }
 
-export default function KalpanaversePage() {
+export default function KaTubePage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
