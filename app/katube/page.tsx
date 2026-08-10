@@ -1,38 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../components/ThemeToggle';
+import { supabase } from '../lib/supabase';
 
-// ── KaTube — demo/mockup page (renamed from AnimeTube → Kalpanaverse → KaTube) ──
-// Step 2 of the build plan: a static video-grid UI with placeholder data so
-// the concept can be seen and felt before any real backend, upload flow, or
-// YouTube-embed wiring goes in. No live data, no Supabase calls yet.
+// ── KaTube — Step 2: video grid wired to real Supabase data ──
+// The main grid below now reads from the `videos` table (see
+// supabase/migrations/20260810_katube_videos.sql). Shorts row still uses
+// placeholder data — that's a separate step. No upload flow exists yet, so
+// the grid will legitimately be empty until a creator uploads something.
 //
 // Brand: white + blue (per founder request), distinct from Kalpana Circle's
 // purple identity — the two doors should read as related but visually
 // distinguishable products.
 
-interface DemoVideo {
+interface RealVideo {
   id: string;
   title: string;
+  youtube_id: string;
+  views: number;
   creator: string;
-  basedOn: string;
-  views: string;
-  duration: string;
-  gradient: string;
-  emoji: string;
+  basedOn: string | null;
 }
-
-const DEMO_VIDEOS: DemoVideo[] = [
-  { id: '1', title: 'Aryavarta Rising — Episode 1 (AI Trailer)', creator: 'Kaif', basedOn: 'Aryavarta Chronicles', views: '2.4K', duration: '1:12', gradient: 'linear-gradient(135deg, #2563eb, #0ea5e9)', emoji: '⚔️' },
-  { id: '2', title: 'The Last Panchayat — Cold Open', creator: 'Kaif', basedOn: 'The Last Panchayat', views: '1.1K', duration: '0:48', gradient: 'linear-gradient(135deg, #1d4ed8, #38bdf8)', emoji: '🏯' },
-  { id: '3', title: 'Street Life Mumbai — Opening Sequence', creator: 'MANGAL Studio', basedOn: 'Street Life Mumbai', views: '3.8K', duration: '1:34', gradient: 'linear-gradient(135deg, #0369a1, #2563eb)', emoji: '🌆' },
-  { id: '4', title: 'Desi Horror Anthology — Teaser', creator: 'MANGAL Studio', basedOn: 'Desi Horror Anthology', views: '890', duration: '0:55', gradient: 'linear-gradient(135deg, #1e3a8a, #0ea5e9)', emoji: '👻' },
-  { id: '5', title: 'Folk Tale: The Banyan Spirit', creator: 'Kaif', basedOn: 'Folk Tales of Bharat', views: '5.2K', duration: '2:03', gradient: 'linear-gradient(135deg, #0891b2, #2563eb)', emoji: '🌳' },
-  { id: '6', title: 'School Life Chronicles — Ep. 1 Recap', creator: 'MANGAL Studio', basedOn: 'School Life Chronicles', views: '1.6K', duration: '1:20', gradient: 'linear-gradient(135deg, #2563eb, #7dd3fc)', emoji: '🎒' },
-];
 
 const CATEGORY_PILLS = ['All', 'Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Trailers'];
 
@@ -84,7 +75,7 @@ function ShortCard({ short }: { short: DemoShort }) {
   );
 }
 
-function VideoCard({ video }: { video: DemoVideo }) {
+function RealVideoCard({ video }: { video: RealVideo }) {
   const [hover, setHover] = useState(false);
   return (
     <div
@@ -98,17 +89,12 @@ function VideoCard({ video }: { video: DemoVideo }) {
         boxShadow: hover ? '0 12px 28px rgba(37,99,235,0.20)' : 'none',
       }}
     >
-      {/* Thumbnail */}
-      <div style={{
-        position: 'relative', aspectRatio: '16/9', background: video.gradient,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <span style={{ fontSize: '40px', opacity: 0.9 }}>{video.emoji}</span>
-        <span style={{
-          position: 'absolute', bottom: '8px', right: '8px',
-          fontSize: '11px', fontWeight: 700, color: '#fff',
-          background: 'rgba(0,0,0,0.65)', padding: '2px 7px', borderRadius: '6px',
-        }}>{video.duration}</span>
+      <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000' }}>
+        <img
+          src={`https://img.youtube.com/vi/${video.youtube_id}/hqdefault.jpg`}
+          alt={video.title}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
         {hover && (
           <div style={{
             position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)',
@@ -122,8 +108,6 @@ function VideoCard({ video }: { video: DemoVideo }) {
           </div>
         )}
       </div>
-
-      {/* Info */}
       <div style={{ padding: '12px 14px' }}>
         <div style={{
           fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)',
@@ -132,13 +116,15 @@ function VideoCard({ video }: { video: DemoVideo }) {
         }}>{video.title}</div>
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{video.creator}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-          <Link href="#" style={{
-            fontSize: '10.5px', fontWeight: 700, color: '#2563eb', textDecoration: 'none',
-            background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.28)',
-            padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
-          }}>
-            📖 {video.basedOn}
-          </Link>
+          {video.basedOn && (
+            <Link href="#" style={{
+              fontSize: '10.5px', fontWeight: 700, color: '#2563eb', textDecoration: 'none',
+              background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.28)',
+              padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
+            }}>
+              📖 {video.basedOn}
+            </Link>
+          )}
           <span style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>{video.views} views</span>
         </div>
       </div>
@@ -147,6 +133,41 @@ function VideoCard({ video }: { video: DemoVideo }) {
 }
 
 export default function KaTubePage() {
+  const [videos, setVideos] = useState<RealVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data: rows } = await supabase
+        .from('videos')
+        .select('id, title, youtube_id, views, creator_id, series_id')
+        .eq('is_short', false)
+        .order('created_at', { ascending: false });
+
+      if (!rows || rows.length === 0) { setLoading(false); return; }
+
+      const creatorIds = [...new Set(rows.map(r => r.creator_id))];
+      const seriesIds = [...new Set(rows.map(r => r.series_id).filter(Boolean))];
+
+      const [creatorsRes, seriesRes] = await Promise.all([
+        supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
+        seriesIds.length ? supabase.from('series').select('id, title').in('id', seriesIds) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+      ]);
+      const creatorMap = new Map((creatorsRes.data || []).map(c => [c.user_id, c.username]));
+      const seriesMap = new Map((seriesRes.data || []).map(s => [s.id, s.title]));
+
+      setVideos(rows.map(r => ({
+        id: r.id,
+        title: r.title,
+        youtube_id: r.youtube_id,
+        views: r.views,
+        creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
+        basedOn: r.series_id ? (seriesMap.get(r.series_id) || null) : null,
+      })));
+      setLoading(false);
+    })();
+  }, []);
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
@@ -233,20 +254,29 @@ export default function KaTubePage() {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
         <h2 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 14px', letterSpacing: '-0.02em' }}>🎬 Videos</h2>
       </div>
-      <div style={{
-        padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px',
-      }}>
-        {DEMO_VIDEOS.map(v => <VideoCard key={v.id} video={v} />)}
-      </div>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)', fontSize: '13px' }}>Loading videos…</div>
+      ) : videos.length === 0 ? (
+        <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
+          <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
+            No videos yet — this grid is wired to real Supabase data, but no creator has uploaded a video
+            here yet. Once the upload flow ships, real creator videos will show up here automatically.
+          </p>
+        </div>
+      ) : (
+        <div style={{
+          padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px',
+        }}>
+          {videos.map(v => <RealVideoCard key={v.id} video={v} />)}
+        </div>
+      )}
 
-      {/* Placeholder note */}
+      {/* Placeholder note (Shorts + actions still pending) */}
       <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
         <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-          These are placeholder cards for the demo — thumbnails, Shorts, and view counts are not wired to
-          real data yet, and actions like subscribe, like, and comment aren&apos;t built yet either. The
-          next build step wires this grid to real Supabase data and embeds actual creator-uploaded YouTube
-          videos in place of these gradient tiles.
+          The video grid above is live Supabase data. Shorts and actions like subscribe, like, and
+          comment aren&apos;t built yet — that&apos;s the next step, along with the creator upload flow.
         </p>
       </div>
     </div>
