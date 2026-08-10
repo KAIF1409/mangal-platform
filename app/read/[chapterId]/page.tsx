@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, use } from 'react';
 import { supabase } from '../../lib/supabase';
 import { parseChapterContent, estimateReadTime } from '../../lib/novelEditor';
+import ThemeToggle from '../../components/ThemeToggle';
 
 
 type PageItem = { id: string; page_number: number; image_url: string };
@@ -710,25 +711,25 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#07070a', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', overflowX: 'hidden' }}>
 
       {/* Fake top bar skeleton */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         height: '52px', background: 'rgba(7,7,10,0.98)',
-        borderBottom: '1px solid #1a1a26',
+        borderBottom: '1px solid var(--border-color)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px', gap: '12px',
       }}>
         {/* left: back + title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#1a1a26' }} />
-          <div style={{ width: '120px', height: '14px', borderRadius: '6px', background: '#1a1a26' }} />
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--border-color)' }} />
+          <div style={{ width: '120px', height: '14px', borderRadius: '6px', background: 'var(--border-color)' }} />
         </div>
         {/* right: icons */}
         <div style={{ display: 'flex', gap: '8px' }}>
           {[1,2,3].map(i => (
-            <div key={i} style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#1a1a26' }} />
+            <div key={i} style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--border-color)' }} />
           ))}
         </div>
       </div>
@@ -739,7 +740,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         <div style={{
           width: '100%', maxWidth: '720px',
           height: '60vh',
-          background: 'linear-gradient(90deg, #0d0d14 0%, #1a1a26 50%, #0d0d14 100%)',
+          background: 'linear-gradient(90deg, var(--bg-card) 0%, var(--border-color) 50%, var(--bg-card) 100%)',
           backgroundSize: '200% 100%',
           animation: 'shimmer 1.4s infinite',
         }} />
@@ -747,7 +748,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         <div style={{
           width: '100%', maxWidth: '720px',
           height: '35vh',
-          background: 'linear-gradient(90deg, #0d0d14 0%, #1a1a26 50%, #0d0d14 100%)',
+          background: 'linear-gradient(90deg, var(--bg-card) 0%, var(--border-color) 50%, var(--bg-card) 100%)',
           backgroundSize: '200% 100%',
           animation: 'shimmer 1.4s infinite 0.2s',
         }} />
@@ -756,7 +757,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       {/* Fake bottom progress bar */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        height: '3px', background: '#1a1a26',
+        height: '3px', background: 'var(--border-color)',
       }}>
         <div style={{
           width: '0%', height: '100%',
@@ -768,7 +769,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       {/* Loading label */}
       <div style={{
         position: 'fixed', bottom: '18px', left: 0, right: 0,
-        textAlign: 'center', fontSize: '12px', color: '#374151',
+        textAlign: 'center', fontSize: '12px', color: 'var(--text-faint)',
         letterSpacing: '0.08em',
       }}>
         Loading chapter...
@@ -791,14 +792,14 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // Draft / not-yet-due scheduled chapter — not readable via direct link.
   if (chapterUnavailable) {
     return (
-      <div style={{ width: '100vw', minHeight: '100vh', background: '#07070a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', }}>
+      <div style={{ width: '100vw', minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', }}>
         <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(217,119,6,0.05)', filter: 'blur(100px)' }} />
         <div style={{ maxWidth: '480px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: '64px', marginBottom: '24px' }}>{chapterUnavailable === 'scheduled' ? '🗓️' : '📝'}</div>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
             {chapterUnavailable === 'scheduled' ? 'Not Out Yet' : 'Still a Draft'}
           </h1>
-          <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '32px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.6 }}>
             {chapterUnavailable === 'scheduled' && unavailableUntil
               ? `This chapter is scheduled to publish on ${new Date(unavailableUntil).toLocaleString()}.`
               : "This chapter hasn't been published by its creator yet."}
@@ -806,7 +807,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           <button
             onClick={() => window.history.back()}
             style={{
-              padding: '14px 24px', borderRadius: '10px', border: '1px solid #1a1a26',
+              padding: '14px 24px', borderRadius: '10px', border: '1px solid var(--border-color)',
               background: 'transparent', color: '#d97706', fontSize: '14px', fontWeight: 700,
               cursor: 'pointer', width: '100%',
             }}
@@ -821,7 +822,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // Step 26 — Read Gate screen (appears when free tier limits are hit)
   if (readGate.gated && readGate.reason) {
     return (
-      <div style={{ width: '100vw', minHeight: '100vh', background: '#07070a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', }}>
+      <div style={{ width: '100vw', minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', }}>
         {/* Background accent */}
         <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(217,119,6,0.05)', filter: 'blur(100px)' }} />
         
@@ -830,12 +831,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           <div style={{ fontSize: '64px', marginBottom: '24px' }}>📖</div>
           
           {/* Title */}
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
             {readGate.reason === 'chapter_limit' ? 'Aur Padh Liye?' : 'Kahaniyaan Khatm?'}
           </h1>
           
           {/* Subtitle */}
-          <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '24px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>
             {readGate.reason === 'chapter_limit' 
               ? `Tum ne is kahani ke ${chaptersReadThisSeries} chapters padh liye! Unlimited padhne ke liye upgrade karo.`
               : `Tum ne ${uniqueSeriesRead} kahaniyaan padh li. ${uniqueSeriesRead > 0 ? 'Saari kahaniyaan khojne ke liye' : 'Aur kahaniyaan padne ke liye'} upgrade karo.`
@@ -846,12 +847,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           <div style={{ background: 'linear-gradient(135deg, rgba(217,119,6,0.1), rgba(153,27,27,0.1))', border: '1px solid rgba(217,119,6,0.2)', borderRadius: '12px', padding: '16px', marginBottom: '32px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>Free Tier Limit</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Free Tier Limit</div>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: '#d97706' }}>2 Chapter/Series</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>Tumhare Paas</div>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{chaptersReadThisSeries} Chapter</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tumhare Paas</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{chaptersReadThisSeries} Chapter</div>
               </div>
             </div>
           </div>
@@ -879,7 +880,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             <button
               onClick={() => window.history.back()}
               style={{
-                padding: '14px 24px', borderRadius: '10px', border: '1px solid #1a1a26',
+                padding: '14px 24px', borderRadius: '10px', border: '1px solid var(--border-color)',
                 background: 'transparent', color: '#d97706', fontSize: '14px', fontWeight: 700,
                 cursor: 'pointer', width: '100%',
               }}
@@ -889,7 +890,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           </div>
           
           {/* Footer text */}
-          <p style={{ fontSize: '12px', color: '#4b5563', marginTop: '24px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '24px', lineHeight: 1.5 }}>
             Unlimited reading, unlimited creativity. Sabhi creators ko support karo! 💛
           </p>
         </div>
@@ -938,8 +939,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px', height: '56px',
-        background: 'rgba(7,7,10,0.97)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #1a1a26',
+        background: 'var(--nav-bg)', backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--border-color)',
         transition: 'opacity 0.3s, transform 0.3s',
         opacity: showUI ? 1 : 0,
         transform: showUI ? 'translateY(0)' : 'translateY(-100%)',
@@ -953,15 +954,15 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <a href={series ? `/series/${series.id}` : '/'} style={{
             display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-            background: '#0d0d14', border: '1px solid #1a1a26', borderRadius: '8px',
-            padding: '6px 12px', color: '#9ca3af', textDecoration: 'none', fontSize: '12px',
+            background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px',
+            padding: '6px 12px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px',
           }}>← Back</a>
-          <div style={{ width: '1px', height: '20px', background: '#1a1a26', flexShrink: 0 }} />
+          <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', flexShrink: 0 }} />
           <div style={{ overflow: 'hidden', minWidth: 0 }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {series?.title}
             </div>
-            <div style={{ fontSize: '10px', color: '#4b5563' }}>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
               {currentChapter?.title || `Chapter ${currentChapter?.chapter_number}`}
               {isNovel && (
                 <span style={{ color: '#d97706', marginLeft: '6px' }}>{scrollPercent}%</span>
@@ -983,6 +984,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
         {/* Right controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          <ThemeToggle size={32} />
           {/* Creator-only: Go to Dashboard */}
           {isCreator && (
             <a href="/dashboard" onClick={e => e.stopPropagation()} style={{
@@ -995,7 +997,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           {/* Chapter list toggle */}
           <button
             onClick={e => { e.stopPropagation(); setShowSidebar(s => !s); setShowSettings(false); }}
-            style={{ ...topBtn, background: showSidebar ? '#1a1a26' : '#0d0d14', color: showSidebar ? '#d97706' : '#9ca3af' }}
+            style={{ ...topBtn, background: showSidebar ? 'var(--border-color)' : 'var(--bg-card)', color: showSidebar ? '#d97706' : 'var(--text-secondary)' }}
             title="Chapters"
           >≡</button>
 
@@ -1004,7 +1006,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           {/* Fullscreen toggle (Sprint 3) */}
           <button
             onClick={toggleFullscreen}
-            style={{ ...topBtn, background: isFullscreen ? '#1a1a26' : '#0d0d14', color: isFullscreen ? '#d97706' : '#9ca3af' }}
+            style={{ ...topBtn, background: isFullscreen ? 'var(--border-color)' : 'var(--bg-card)', color: isFullscreen ? '#d97706' : 'var(--text-secondary)' }}
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >{isFullscreen ? '⤡' : '⛶'}</button>
 
@@ -1012,7 +1014,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           {isFullscreen && (
             <button
               onClick={toggleLockScreen}
-              style={{ ...topBtn, background: '#0d0d14', color: '#9ca3af' }}
+              style={{ ...topBtn, background: 'var(--bg-card)', color: 'var(--text-secondary)' }}
               title="Lock Screen"
             >🔒</button>
           )}
@@ -1020,7 +1022,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           {/* Settings */}
           <button
             onClick={e => { e.stopPropagation(); setShowSettings(s => !s); setShowSidebar(false); }}
-            style={{ ...topBtn, background: showSettings ? '#1a1a26' : '#0d0d14', color: showSettings ? '#d97706' : '#9ca3af' }}
+            style={{ ...topBtn, background: showSettings ? 'var(--border-color)' : 'var(--bg-card)', color: showSettings ? '#d97706' : 'var(--text-secondary)' }}
             title="Settings"
           >⚙</button>
         </div>
@@ -1031,7 +1033,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       {!lockScreen && effectiveMode === 'page' && (
         <div style={{
           position: 'fixed', top: showUI ? '56px' : '0', left: 0, right: 0, height: '3px',
-          background: '#1a1a26', zIndex: 199, transition: 'top 0.3s',
+          background: 'var(--border-color)', zIndex: 199, transition: 'top 0.3s',
         }}>
           <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #7f1d1d, #d97706)', transition: 'width 0.2s' }} />
         </div>
@@ -1047,8 +1049,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           style={{
             position: 'fixed', top: '14px', right: '14px', zIndex: 400,
             width: '34px', height: '34px', borderRadius: '17px',
-            border: '1px solid #1a1a26', background: 'rgba(7,7,10,0.85)', backdropFilter: 'blur(8px)',
-            color: '#9ca3af', fontSize: '15px', cursor: 'pointer',
+            border: '1px solid var(--border-color)', background: 'var(--nav-bg-transparent)', backdropFilter: 'blur(8px)',
+            color: 'var(--text-secondary)', fontSize: '15px', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'opacity 0.3s', opacity: showUI ? 1 : 0,
             pointerEvents: showUI ? 'auto' : 'none',
@@ -1062,19 +1064,19 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         onClick={e => e.stopPropagation()}
         style={{
           position: 'fixed', top: 0, right: 0, bottom: 0, width: '280px', zIndex: 300,
-          background: '#07070a', borderLeft: '1px solid #1a1a26',
+          background: 'var(--bg-primary)', borderLeft: '1px solid var(--border-color)',
           transform: showSidebar ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
           display: 'flex', flexDirection: 'column',
           boxShadow: showSidebar ? '-8px 0 40px rgba(0,0,0,0.7)' : 'none',
         }}
       >
-        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #1a1a26', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Chapters</div>
-            <div style={{ fontSize: '10px', color: '#4b5563', marginTop: '2px' }}>{series?.title}</div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Chapters</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{series?.title}</div>
           </div>
-          <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>✕</button>
+          <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>✕</button>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
@@ -1085,7 +1087,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               border: `1px solid ${ch.id === chapterId ? 'rgba(217,119,6,0.25)' : 'transparent'}`,
               marginBottom: '3px', transition: 'background 0.15s',
             }}>
-              <div style={{ fontSize: '13px', fontWeight: ch.id === chapterId ? 700 : 400, color: ch.id === chapterId ? '#d97706' : '#9ca3af' }}>
+              <div style={{ fontSize: '13px', fontWeight: ch.id === chapterId ? 700 : 400, color: ch.id === chapterId ? '#d97706' : 'var(--text-secondary)' }}>
                 Ch.{ch.chapter_number}{ch.title ? ` — ${ch.title}` : ''}
               </div>
             </a>
@@ -1093,9 +1095,9 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         </div>
 
         {/* Prev/Next at bottom of sidebar */}
-        <div style={{ padding: '12px', borderTop: '1px solid #1a1a26', display: 'flex', gap: '8px' }}>
+        <div style={{ padding: '12px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
           {prevChapter ? (
-            <a href={`/read/${prevChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#0d0d14', border: '1px solid #1a1a26', color: '#9ca3af', textDecoration: 'none', fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>
+            <a href={`/read/${prevChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>
               ← Ch.{prevChapter.chapter_number}
             </a>
           ) : <div style={{ flex: 1 }} />}
@@ -1115,31 +1117,31 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         style={{
           position: 'fixed', top: '64px', right: showSettings ? '16px' : '-280px', zIndex: 250,
           width: '240px', maxHeight: 'calc(100vh - 96px)', overflowY: 'auto',
-          background: '#0d0d14', border: '1px solid #1a1a26',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           borderRadius: '12px', padding: '16px',
           transition: 'right 0.2s',
           boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         }}
       >
-        <div style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Settings</div>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Settings</div>
 
         {/* Reading Mode — manga only */}
         {!isNovel && (<>
-        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Reading Mode</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Reading Mode</div>
         <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
           <button onClick={() => setModeOverride('scroll')} style={settingsBtn(effectiveMode === 'scroll')}>📜 Scroll</button>
           <button onClick={() => setModeOverride('page')} style={settingsBtn(effectiveMode === 'page')}>📖 Page</button>
         </div>
         {modeOverride && modeOverride !== series?.reading_mode && (
-          <button onClick={() => setModeOverride(null)} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '10px', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginBottom: '14px', display: 'block' }}>
+          <button onClick={() => setModeOverride(null)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '10px', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginBottom: '14px', display: 'block' }}>
             Reset to creator&#x2019;s default
           </button>
         )}
-        <div style={{ height: '1px', background: '#1a1a26', margin: '14px 0' }} />
+        <div style={{ height: '1px', background: 'var(--border-color)', margin: '14px 0' }} />
         </>)}
 
         {/* Theme */}
-        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Theme</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Theme</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
           {(isNovel ? [
             { c: '#f5f0e0', label: 'Sepia' },
@@ -1161,24 +1163,24 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               border: bgColor === c ? '1px solid rgba(217,119,6,0.3)' : '1px solid transparent',
               cursor: 'pointer',
             }}>
-              <span style={{ width: '16px', height: '16px', borderRadius: '50%', background: c, border: '1px solid #2a2a3a', flexShrink: 0 }} />
-              <span style={{ fontSize: '11px', color: bgColor === c ? '#d97706' : '#9ca3af', fontWeight: bgColor === c ? 700 : 400 }}>{label}</span>
+              <span style={{ width: '16px', height: '16px', borderRadius: '50%', background: c, border: '1px solid var(--border-color)', flexShrink: 0 }} />
+              <span style={{ fontSize: '11px', color: bgColor === c ? '#d97706' : 'var(--text-secondary)', fontWeight: bgColor === c ? 700 : 400 }}>{label}</span>
             </button>
           ))}
         </div>
 
-        <div style={{ height: '1px', background: '#1a1a26', margin: '14px 0' }} />
+        <div style={{ height: '1px', background: 'var(--border-color)', margin: '14px 0' }} />
 
         {/* Font Size — novels only */}
         {isNovel && (<>
-        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Font Size</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Font Size</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
           <button onClick={() => setFontSize(v => Math.max(14, v - 1))} style={{ ...settingsBtn(false), flex: 'none', width: '28px', textAlign: 'center', padding: '6px 0' }}>A−</button>
           <div style={{ flex: 1, textAlign: 'center', fontSize: '13px', color: '#d97706', fontWeight: 700 }}>{fontSize}px</div>
           <button onClick={() => setFontSize(v => Math.min(24, v + 1))} style={{ ...settingsBtn(false), flex: 'none', width: '28px', textAlign: 'center', padding: '6px 0' }}>A+</button>
         </div>
 
-        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Font</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Font</div>
         <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
           {([
             { v: 'serif', label: 'Serif', preview: "'Georgia', 'Noto Serif', serif" },
@@ -1193,7 +1195,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           ))}
         </div>
 
-        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Line Spacing</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Line Spacing</div>
         <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
           {([
             { v: 1.5, label: 'Compact' },
@@ -1206,29 +1208,29 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           ))}
         </div>
 
-        <div style={{ height: '1px', background: '#1a1a26', margin: '14px 0' }} />
+        <div style={{ height: '1px', background: 'var(--border-color)', margin: '14px 0' }} />
         </>)}
 
         {/* Fit mode — manga only */}
         {!isNovel && (<>
-        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Fit</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Fit</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
           <button onClick={() => setFitMode('width')} style={settingsBtn(fitMode === 'width')}>↔ Fit Width</button>
           <button onClick={() => setFitMode('screen')} style={settingsBtn(fitMode === 'screen')}>⛶ Fit Screen</button>
           <button onClick={() => setFitMode('actual')} style={settingsBtn(fitMode === 'actual')}>1:1 Actual Size</button>
         </div>
         {fitMode === 'screen' && effectiveMode === 'scroll' && (
-          <div style={{ fontSize: '10px', color: '#4b5563', marginBottom: '14px', lineHeight: 1.4 }}>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.4 }}>
             Fit Screen behaves like Fit Width in Scroll mode — switch to Page mode to see each image fill the screen.
           </div>
         )}
-        <div style={{ height: '1px', background: '#1a1a26', margin: '14px 0' }} />
+        <div style={{ height: '1px', background: 'var(--border-color)', margin: '14px 0' }} />
 
         {/* Tap zones toggle — manga only */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div>
-            <div style={{ fontSize: '12px', color: '#d1d5db', fontWeight: 600 }}>Tap Zones</div>
-            <div style={{ fontSize: '10px', color: '#4b5563', marginTop: '2px' }}>Tap left/right edges to navigate</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Tap Zones</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>Tap left/right edges to navigate</div>
           </div>
           <button onClick={() => setTapZonesEnabled(v => !v)} style={toggleSwitch(tapZonesEnabled)}>
             <span style={toggleKnob(tapZonesEnabled)} />
@@ -1238,8 +1240,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         {/* Data saver toggle — manga only */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '12px', color: '#d1d5db', fontWeight: 600 }}>Data Saver</div>
-            <div style={{ fontSize: '10px', color: '#4b5563', marginTop: '2px', maxWidth: '160px' }}>Lower-res images for slow connections</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Data Saver</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', maxWidth: '160px' }}>Lower-res images for slow connections</div>
           </div>
           <button onClick={() => setDataSaver(v => !v)} style={toggleSwitch(dataSaver)}>
             <span style={toggleKnob(dataSaver)} />
@@ -1266,15 +1268,15 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           const isDimBg = bgColor === '#1a1a1a' || bgColor === '#0d0d0d';
           // FIX: explicit textColor on every element so bold/italic never inherits
           // browser-default black — that was making bold invisible on dark themes.
-          const textColor = isLightBg ? '#2d2d2d' : isDimBg ? '#c9cdd5' : '#d1d5db';
+          const textColor = isLightBg ? '#2d2d2d' : isDimBg ? '#c9cdd5' : 'var(--text-secondary)';
           const headingColor = isLightBg ? '#111111' : '#f3f4f6';
-          const mutedColor = isLightBg ? '#6b7280' : '#6b7280';
+          const mutedColor = isLightBg ? 'var(--text-tertiary)' : 'var(--text-tertiary)';
           const noteBg = isLightBg ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)';
           const noteBorder = isLightBg ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
-          const dividerColor = isLightBg ? '#e5e7eb' : '#1f1f2e';
-          const navBg = isLightBg ? '#f3f4f6' : '#0d0d14';
-          const navBorder = isLightBg ? '#d1d5db' : '#1f1f2e';
-          const navColor = isLightBg ? '#374151' : '#9ca3af';
+          const dividerColor = isLightBg ? 'var(--text-secondary)' : '#1f1f2e';
+          const navBg = isLightBg ? '#f3f4f6' : 'var(--bg-card)';
+          const navBorder = isLightBg ? 'var(--text-secondary)' : '#1f1f2e';
+          const navColor = isLightBg ? 'var(--text-faint)' : 'var(--text-secondary)';
           return (
             <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh' }}>
               <div style={{
@@ -1460,11 +1462,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 {pages.slice(0, Math.min(pages.length, 14)).map((_, i) => (
                   <button key={i} onClick={() => setCurrentPage(i)} style={{
                     width: i === currentPage ? '20px' : '6px', height: '6px', borderRadius: '3px', border: 'none',
-                    background: i === currentPage ? '#d97706' : '#1a1a26',
+                    background: i === currentPage ? '#d97706' : 'var(--border-color)',
                     cursor: 'pointer', transition: 'all 0.2s', padding: 0,
                   }} />
                 ))}
-                {pages.length > 14 && <span style={{ fontSize: '10px', color: '#4b5563' }}>+{pages.length - 14}</span>}
+                {pages.length > 14 && <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>+{pages.length - 14}</span>}
               </div>
 
               {/* Right button: Next (LTR) / Prev (RTL) */}
@@ -1507,15 +1509,15 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                   style={{
                     display: 'flex', alignItems: 'center', gap: '5px',
                     padding: '8px 14px', borderRadius: '20px', cursor: 'pointer',
-                    border: active ? '1px solid rgba(217,119,6,0.5)' : '1px solid #1a1a26',
-                    background: active ? 'rgba(217,119,6,0.12)' : '#0d0d14',
+                    border: active ? '1px solid rgba(217,119,6,0.5)' : '1px solid var(--border-color)',
+                    background: active ? 'rgba(217,119,6,0.12)' : 'var(--bg-card)',
                     fontSize: '18px', lineHeight: 1, transition: 'all 0.15s',
                     opacity: reactionLoading ? 0.6 : 1,
                   }}
                 >
                   <span>{emoji}</span>
                   {(reactionCounts[key] || 0) > 0 && (
-                    <span style={{ fontSize: '12px', color: active ? '#d97706' : '#6b7280', fontWeight: 700 }}>
+                    <span style={{ fontSize: '12px', color: active ? '#d97706' : 'var(--text-tertiary)', fontWeight: 700 }}>
                       {reactionCounts[key]}
                     </span>
                   )}
@@ -1525,12 +1527,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           </div>
 
           {/* Divider */}
-          <div style={{ height: '1px', background: '#1a1a26', marginBottom: '20px' }} />
+          <div style={{ height: '1px', background: 'var(--border-color)', marginBottom: '20px' }} />
 
           {/* Comments section */}
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#9ca3af', marginBottom: '14px' }}>
-              Comments {comments.length > 0 && <span style={{ color: '#4b5563', fontWeight: 400 }}>({comments.length})</span>}
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '14px' }}>
+              Comments {comments.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({comments.length})</span>}
             </div>
 
             {/* Comment input */}
@@ -1543,8 +1545,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 disabled={!userId || commentSubmitting}
                 rows={2}
                 style={{
-                  flex: 1, background: '#0d0d14', border: '1px solid #1a1a26',
-                  borderRadius: '10px', color: '#d1d5db', fontSize: '13px',
+                  flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                  borderRadius: '10px', color: 'var(--text-secondary)', fontSize: '13px',
                   padding: '10px 12px', resize: 'none', outline: 'none',
                   fontFamily: 'inherit', lineHeight: 1.5,
                   opacity: !userId ? 0.5 : 1,
@@ -1555,8 +1557,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 disabled={!commentBody.trim() || commentSubmitting || !userId}
                 style={{
                   padding: '10px 14px', borderRadius: '10px', border: 'none',
-                  background: commentBody.trim() && userId ? 'linear-gradient(135deg,#7f1d1d,#991b1b)' : '#1a1a26',
-                  color: commentBody.trim() && userId ? '#fff' : '#4b5563',
+                  background: commentBody.trim() && userId ? 'linear-gradient(135deg,#7f1d1d,#991b1b)' : 'var(--border-color)',
+                  color: commentBody.trim() && userId ? '#fff' : 'var(--text-muted)',
                   fontSize: '13px', fontWeight: 700, cursor: commentBody.trim() && userId ? 'pointer' : 'not-allowed',
                   alignSelf: 'flex-end', whiteSpace: 'nowrap',
                   transition: 'background 0.2s',
@@ -1566,16 +1568,16 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
             {/* Char counter */}
             {commentBody.length > 0 && (
-              <div style={{ fontSize: '10px', color: commentBody.length > 450 ? '#d97706' : '#4b5563', textAlign: 'right', marginTop: '-16px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '10px', color: commentBody.length > 450 ? '#d97706' : 'var(--text-muted)', textAlign: 'right', marginTop: '-16px', marginBottom: '12px' }}>
                 {commentBody.length}/500
               </div>
             )}
 
             {/* Comment list */}
             {commentsLoading ? (
-              <div style={{ fontSize: '12px', color: '#4b5563', textAlign: 'center', padding: '16px 0' }}>Loading comments…</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>Loading comments…</div>
             ) : comments.length === 0 ? (
-              <div style={{ fontSize: '12px', color: '#374151', textAlign: 'center', padding: '24px 0' }}>No comments yet. Be the first!</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center', padding: '24px 0' }}>No comments yet. Be the first!</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {comments.map(c => {
@@ -1594,32 +1596,32 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                     <div key={c.id}>
                       {/* Top-level comment */}
                       <div style={{
-                        background: '#0d0d14', border: '1px solid #1a1a26',
+                        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                         borderRadius: '10px', padding: '12px 14px',
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#1a1a26', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#9ca3af', fontWeight: 700, flexShrink: 0 }}>
+                            <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700, flexShrink: 0 }}>
                               {c.full_name.charAt(0).toUpperCase()}
                             </div>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#d1d5db' }}>{c.full_name}</span>
-                            <span style={{ fontSize: '10px', color: '#374151' }}>{timeAgo(c.created_at)}</span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>{c.full_name}</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{timeAgo(c.created_at)}</span>
                           </div>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                             <button
                               onClick={() => { setReplyingTo(isReplyingHere ? null : c.id); setReplyBody(''); }}
-                              style={{ background: 'none', border: 'none', color: isReplyingHere ? '#d97706' : '#4b5563', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                              style={{ background: 'none', border: 'none', color: isReplyingHere ? '#d97706' : 'var(--text-muted)', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
                             >↳ Reply</button>
                             {isOwn && (
                               <button
                                 onClick={() => handleDeleteComment(c.id, null)}
-                                style={{ background: 'none', border: 'none', color: '#374151', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
                                 title="Delete comment"
                               >✕</button>
                             )}
                           </div>
                         </div>
-                        <div style={{ fontSize: '13px', color: '#9ca3af', lineHeight: 1.6, wordBreak: 'break-word' }}>{c.body}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, wordBreak: 'break-word' }}>{c.body}</div>
                       </div>
 
                       {/* Reply input box */}
@@ -1633,8 +1635,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                             rows={2}
                             autoFocus
                             style={{
-                              flex: 1, background: '#08080c', border: '1px solid #1a1a26',
-                              borderRadius: '8px', color: '#d1d5db', fontSize: '12px',
+                              flex: 1, background: 'var(--bg-input)', border: '1px solid var(--border-color)',
+                              borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '12px',
                               padding: '8px 10px', resize: 'none', outline: 'none', fontFamily: 'inherit', lineHeight: 1.5,
                             }}
                           />
@@ -1644,14 +1646,14 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                               disabled={!replyBody.trim() || replySubmitting}
                               style={{
                                 padding: '6px 12px', borderRadius: '8px', border: 'none',
-                                background: replyBody.trim() ? 'linear-gradient(135deg,#7f1d1d,#991b1b)' : '#1a1a26',
-                                color: replyBody.trim() ? '#fff' : '#4b5563',
+                                background: replyBody.trim() ? 'linear-gradient(135deg,#7f1d1d,#991b1b)' : 'var(--border-color)',
+                                color: replyBody.trim() ? '#fff' : 'var(--text-muted)',
                                 fontSize: '12px', fontWeight: 700, cursor: replyBody.trim() ? 'pointer' : 'not-allowed',
                               }}
                             >{replySubmitting ? '…' : 'Post'}</button>
                             <button
                               onClick={() => { setReplyingTo(null); setReplyBody(''); }}
-                              style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #1a1a26', background: 'none', color: '#4b5563', fontSize: '12px', cursor: 'pointer' }}
+                              style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer' }}
                             >Cancel</button>
                           </div>
                         </div>
@@ -1659,28 +1661,28 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
                       {/* Replies */}
                       {(c.replies || []).length > 0 && (
-                        <div style={{ marginLeft: '24px', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '2px solid #1a1a26', paddingLeft: '12px' }}>
+                        <div style={{ marginLeft: '24px', marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '2px solid var(--border-color)', paddingLeft: '12px' }}>
                           {(c.replies || []).map(reply => {
                             const replyOwn = reply.reader_id === userId;
                             return (
-                              <div key={reply.id} style={{ background: '#08080c', border: '1px solid #1a1a26', borderRadius: '8px', padding: '10px 12px' }}>
+                              <div key={reply.id} style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px 12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#1a1a26', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#9ca3af', fontWeight: 700, flexShrink: 0 }}>
+                                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 700, flexShrink: 0 }}>
                                       {reply.full_name.charAt(0).toUpperCase()}
                                     </div>
-                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#d1d5db' }}>{reply.full_name}</span>
-                                    <span style={{ fontSize: '10px', color: '#374151' }}>{timeAgo(reply.created_at)}</span>
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)' }}>{reply.full_name}</span>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{timeAgo(reply.created_at)}</span>
                                   </div>
                                   {replyOwn && (
                                     <button
                                       onClick={() => handleDeleteComment(reply.id, c.id)}
-                                      style={{ background: 'none', border: 'none', color: '#374151', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                                      style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
                                       title="Delete reply"
                                     >✕</button>
                                   )}
                                 </div>
-                                <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.5, wordBreak: 'break-word' }}>{reply.body}</div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, wordBreak: 'break-word' }}>{reply.body}</div>
                               </div>
                             );
                           })}
@@ -1706,23 +1708,23 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
 const topBtn: React.CSSProperties = {
   width: '32px', height: '32px', borderRadius: '8px',
-  border: '1px solid #1a1a26', background: '#0d0d14',
-  color: '#9ca3af', fontSize: '15px', cursor: 'pointer',
+  border: '1px solid var(--border-color)', background: 'var(--bg-card)',
+  color: 'var(--text-secondary)', fontSize: '15px', cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   flexShrink: 0,
 };
 
 const navBtnStyle: React.CSSProperties = {
   padding: '11px 20px', borderRadius: '10px',
-  border: '1px solid #1f1f2e', background: '#0d0d14',
-  color: '#9ca3af', fontSize: '13px', fontWeight: 700,
+  border: '1px solid var(--border-light)', background: 'var(--bg-card)',
+  color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 700,
   cursor: 'pointer', display: 'inline-block',
 };
 
 const pageBtn = (disabled: boolean): React.CSSProperties => ({
-  padding: '11px 20px', borderRadius: '10px', border: '1px solid #1f1f2e',
-  background: disabled ? '#080808' : '#0d0d14',
-  color: disabled ? '#374151' : '#fff',
+  padding: '11px 20px', borderRadius: '10px', border: '1px solid var(--border-light)',
+  background: disabled ? 'var(--bg-input)' : 'var(--bg-card)',
+  color: disabled ? 'var(--text-faint)' : 'var(--text-primary)',
   fontSize: '13px', fontWeight: 700,
   cursor: disabled ? 'not-allowed' : 'pointer',
 });
@@ -1730,14 +1732,14 @@ const pageBtn = (disabled: boolean): React.CSSProperties => ({
 // Sprint 4 — settings panel helpers
 const settingsBtn = (active: boolean): React.CSSProperties => ({
   flex: 1, padding: '8px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
-  background: active ? 'rgba(217,119,6,0.15)' : '#08080c',
-  border: active ? '1px solid rgba(217,119,6,0.4)' : '1px solid #1a1a26',
-  color: active ? '#d97706' : '#9ca3af', cursor: 'pointer', textAlign: 'left',
+  background: active ? 'rgba(217,119,6,0.15)' : 'var(--bg-input)',
+  border: active ? '1px solid rgba(217,119,6,0.4)' : '1px solid var(--border-color)',
+  color: active ? '#d97706' : 'var(--text-secondary)', cursor: 'pointer', textAlign: 'left',
 });
 
 const toggleSwitch = (on: boolean): React.CSSProperties => ({
   width: '38px', height: '22px', borderRadius: '11px', position: 'relative',
-  background: on ? '#d97706' : '#1a1a26', border: 'none', cursor: 'pointer',
+  background: on ? '#d97706' : 'var(--border-color)', border: 'none', cursor: 'pointer',
   flexShrink: 0, padding: 0, transition: 'background 0.2s',
 });
 
