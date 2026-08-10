@@ -263,7 +263,7 @@ app to find what else still breaks the light-default theme the same way
 
 | Page | CSS vars | Hardcoded hex | Status |
 |---|---|---|---|
-| `app/read/[chapterId]/page.tsx` (the reader) | 0 | 229 | ⏳ next up — highest traffic page in the app, fully untouched |
+| `app/read/[chapterId]/page.tsx` (the reader) | 0 | 229 | ✅ done (`98b3b33`) — chrome only (top bar/sidebar/settings/comments), reading-canvas `bgColor` picker deliberately untouched, see note below |
 | `app/series/[seriesId]/page.tsx` (series detail) | 0 | 158 | ⏳ queued after the reader |
 | `app/history/page.tsx` | 0 | 75 | ⏳ queued |
 | `app/login/page.tsx` | 0 | 46 | ⏳ queued |
@@ -276,6 +276,15 @@ Everything else (`/`, `/home`, `/tags`, `/rankings`, `/library`,
 Working through these one file at a time per the usual convention,
 reader and series detail first since they're the two most-visited pages
 and are currently 100% hardcoded dark.
+
+**Reader chrome vs reading-canvas — decision made:** the reader has two
+separate theming layers. (1) The reading canvas itself has its own
+working `bgColor` picker (Black/Dark/Dim/Light/Sepia, saved per content
+type) — deliberately independent of site theme, left untouched. (2) The
+floating chrome around it (top bar, sidebar, settings panel, comments)
+was hardcoded dark always — founder confirmed this should follow the
+site-wide theme too (default white, dark as an option), same as every
+other page. Fixed in `98b3b33`.
 
 
 ---
