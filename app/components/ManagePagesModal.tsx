@@ -179,7 +179,7 @@ export default function ManagePagesModal({
   // a 2-column layout (thumbnails left, preview right on larger screens).
   const panelStyle: React.CSSProperties = {
     width: '100%', maxWidth: '860px', height: '100vh',
-    background: '#0a0a10', borderLeft: '1px solid #1a1a26',
+    background: '#0a0a10', borderLeft: '1px solid var(--border-color)',
     display: 'flex', flexDirection: 'column',
     boxShadow: '-40px 0 120px rgba(0,0,0,0.8)',
     overflowY: 'hidden',
@@ -187,9 +187,9 @@ export default function ManagePagesModal({
 
   const headerStyle: React.CSSProperties = {
     padding: '20px 24px 16px',
-    borderBottom: '1px solid #1a1a26',
+    borderBottom: '1px solid var(--border-color)',
     flexShrink: 0,
-    background: '#0d0d14',
+    background: 'var(--bg-card)',
   };
 
   const bodyStyle: React.CSSProperties = {
@@ -243,12 +243,12 @@ export default function ManagePagesModal({
                   Manage Pages
                 </span>
                 {!loading && (
-                  <span style={{ fontSize: '11px', color: '#4b5563' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                     {pages.length} page{pages.length === 1 ? '' : 's'}
                   </span>
                 )}
               </div>
-              <h2 style={{ fontSize: '16px', fontWeight: 900, color: '#fff', margin: 0 }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
                 {chapterTitle}
               </h2>
             </div>
@@ -260,9 +260,9 @@ export default function ManagePagesModal({
                   disabled={saving}
                   style={{
                     padding: '8px 16px', borderRadius: '8px',
-                    background: saving ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                    background: saving ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
                     border: '1px solid #7f1d1d',
-                    color: saving ? '#4b5563' : '#fff',
+                    color: saving ? 'var(--text-muted)' : '#fff',
                     fontSize: '12px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
                     transition: 'all 0.15s',
                   }}
@@ -273,8 +273,8 @@ export default function ManagePagesModal({
               <button
                 onClick={onClose}
                 style={{
-                  background: '#14141e', border: '1px solid #1f1f2e',
-                  color: '#6b7280', fontSize: '16px', cursor: 'pointer',
+                  background: 'var(--divider)', border: '1px solid var(--border-light)',
+                  color: 'var(--text-tertiary)', fontSize: '16px', cursor: 'pointer',
                   width: '34px', height: '34px', borderRadius: '8px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
@@ -306,8 +306,8 @@ export default function ManagePagesModal({
 
           {/* Reorder hint */}
           {!loading && pages.length > 1 && (
-            <p style={{ margin: '10px 0 0', fontSize: '11px', color: '#4b5563', lineHeight: 1.5 }}>
-              Use ⬅️ ➡️ to reorder · Changes are local until you hit <strong style={{ color: '#9ca3af' }}>Save Order</strong> · Click a thumbnail to preview
+            <p style={{ margin: '10px 0 0', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Use ⬅️ ➡️ to reorder · Changes are local until you hit <strong style={{ color: 'var(--text-secondary)' }}>Save Order</strong> · Click a thumbnail to preview
             </p>
           )}
         </div>
@@ -315,11 +315,11 @@ export default function ManagePagesModal({
         {/* ── Body ── */}
         <div style={bodyStyle}>
           {loading ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4b5563', fontSize: '13px' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
               Loading pages...
             </div>
           ) : pages.length === 0 ? (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#4b5563', gap: '8px' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', gap: '8px' }}>
               <div style={{ fontSize: '32px' }}>📭</div>
               <p style={{ fontSize: '13px', margin: 0 }}>No pages in this chapter yet.</p>
             </div>
@@ -344,8 +344,8 @@ export default function ManagePagesModal({
                           ? '2px solid #d97706'
                           : isConfirming
                           ? '2px solid #ef4444'
-                          : '2px solid #1a1a26',
-                        background: '#08080c',
+                          : '2px solid var(--border-color)',
+                        background: 'var(--bg-input)',
                         cursor: 'pointer',
                         transition: 'border-color 0.15s',
                         animation: isConfirming ? 'mangalDeletePulse 1s ease-in-out infinite' : 'none',
@@ -398,8 +398,8 @@ export default function ManagePagesModal({
                         style={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          background: '#0d0d14',
-                          borderTop: '1px solid #1a1a26',
+                          background: 'var(--bg-card)',
+                          borderTop: '1px solid var(--border-color)',
                           padding: '4px',
                           opacity: isConfirming || isSelected ? 1 : 0.5,
                           transition: 'opacity 0.15s',
@@ -412,7 +412,7 @@ export default function ManagePagesModal({
                           title="Move left"
                           style={{
                             background: 'none', border: 'none',
-                            color: i === 0 ? '#2a2a3a' : '#6b7280',
+                            color: i === 0 ? '#2a2a3a' : 'var(--text-tertiary)',
                             cursor: i === 0 ? 'default' : 'pointer',
                             fontSize: '13px', padding: '2px 4px',
                             transition: 'color 0.1s',
@@ -445,7 +445,7 @@ export default function ManagePagesModal({
                             title="Delete page"
                             style={{
                               background: 'none', border: 'none',
-                              color: '#6b7280', cursor: 'pointer',
+                              color: 'var(--text-tertiary)', cursor: 'pointer',
                               fontSize: '13px', padding: '2px 4px',
                             }}
                           >
@@ -459,7 +459,7 @@ export default function ManagePagesModal({
                           title="Move right"
                           style={{
                             background: 'none', border: 'none',
-                            color: i === pages.length - 1 ? '#2a2a3a' : '#6b7280',
+                            color: i === pages.length - 1 ? '#2a2a3a' : 'var(--text-tertiary)',
                             cursor: i === pages.length - 1 ? 'default' : 'pointer',
                             fontSize: '13px', padding: '2px 4px',
                             transition: 'color 0.1s',
@@ -478,11 +478,11 @@ export default function ManagePagesModal({
                 <div style={{
                   width: '240px', flexShrink: 0,
                   position: 'sticky', top: 0, alignSelf: 'flex-start',
-                  background: '#0d0d14', border: '1px solid #1a1a26',
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                   borderRadius: '12px', overflow: 'hidden',
                 }}>
-                  <div style={{ padding: '10px 14px', borderBottom: '1px solid #1a1a26' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#6b7280', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                       Preview — Page #{pages.findIndex(p => p.id === selectedPage.id) + 1}
                     </span>
                   </div>
@@ -499,8 +499,8 @@ export default function ManagePagesModal({
                       onClick={() => setSelectedPage(null)}
                       style={{
                         width: '100%', padding: '8px', borderRadius: '7px',
-                        background: '#08080c', border: '1px solid #1f1f2e',
-                        color: '#6b7280', fontSize: '11px', cursor: 'pointer',
+                        background: 'var(--bg-input)', border: '1px solid var(--border-light)',
+                        color: 'var(--text-tertiary)', fontSize: '11px', cursor: 'pointer',
                       }}
                     >
                       Close Preview
@@ -516,12 +516,12 @@ export default function ManagePagesModal({
         {!loading && pages.length > 0 && (
           <div style={{
             padding: '14px 24px',
-            borderTop: '1px solid #1a1a26',
-            background: '#0d0d14',
+            borderTop: '1px solid var(--border-color)',
+            background: 'var(--bg-card)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             flexShrink: 0,
           }}>
-            <span style={{ fontSize: '11px', color: '#4b5563' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
               {isDirty ? '⚠️ Unsaved order changes' : `${pages.length} pages · order saved`}
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -530,8 +530,8 @@ export default function ManagePagesModal({
                   onClick={() => setConfirmDeleteId(null)}
                   style={{
                     padding: '7px 14px', borderRadius: '7px',
-                    background: 'none', border: '1px solid #1f1f2e',
-                    color: '#6b7280', fontSize: '11px', cursor: 'pointer',
+                    background: 'none', border: '1px solid var(--border-light)',
+                    color: 'var(--text-tertiary)', fontSize: '11px', cursor: 'pointer',
                   }}
                 >
                   Cancel Delete
@@ -543,9 +543,9 @@ export default function ManagePagesModal({
                   disabled={saving}
                   style={{
                     padding: '7px 16px', borderRadius: '7px',
-                    background: saving ? '#1a1a26' : 'linear-gradient(135deg,#7f1d1d,#991b1b)',
+                    background: saving ? 'var(--border-color)' : 'linear-gradient(135deg,#7f1d1d,#991b1b)',
                     border: '1px solid #7f1d1d',
-                    color: saving ? '#4b5563' : '#fff',
+                    color: saving ? 'var(--text-muted)' : '#fff',
                     fontSize: '11px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
                   }}
                 >
