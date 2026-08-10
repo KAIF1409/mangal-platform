@@ -15,7 +15,7 @@ ecosystem, all under one Next.js app, one Supabase project, one Vercel deploymen
 | Part | Route | What it is | Status |
 |---|---|---|---|
 | **MangaNovels** | `/`, `/search`, `/read/...` | The original MANGAL platform — read manga, comics, and novels. Fully live. | ✅ Live, in active use |
-| **KaTube** | `/katube` | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟡 Backend in progress — `videos` table live, main grid wired to real data; Shorts + upload flow + actions still placeholder/missing |
+| **KaTube** | `/katube` (redirected from `/kalpanaverse`) | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟡 Backend in progress — `videos` table live, main grid wired to real data; Shorts + upload flow + actions still placeholder/missing |
 | **Kalpana Circle** | `/kalpana-circle` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from the video platform, not a tab inside it. Brand: purple/violet. | 🟡 UI demo only — placeholder posts, composer disabled |
 
 The homepage (`app/page.tsx`) shows all three as equal "doors" right under the hero,
@@ -48,7 +48,7 @@ the Hindi/Sanskrit word **"Kalpana"** (imagination) — chosen deliberately over
 | AnimeTube (`/animetube`) | **Kalpanaverse** (`/kalpanaverse`) |
 | Anime Chat (`/anime-chat`) | **Kalpana Circle** (`/kalpana-circle`) |
 
-**Narrative thread across the three:** *"MANGAL writes the story. Kalpanaverse
+**Narrative thread across the three:** *"MANGAL writes the story. KaTube
 brings it to life. Kalpana Circle is where the dreamers gather."*
 
 **What the rename touched (done):**
@@ -66,9 +66,37 @@ brings it to life. Kalpana Circle is where the dreamers gather."*
 - Not yet done: any metadata/OG tags if these pages get their own `metadata`
   export later (neither has one yet, so nothing to update)
 
-### 1b. Kalpanaverse brand colors — white + blue
+### 1a-ii. Second rename — Kalpanaverse → K-Tube → KaTube
 
-Per founder request, Kalpanaverse uses a **white + blue** palette instead of the
+Kalpanaverse was later renamed again, twice in quick succession, to land on a
+shorter product name:
+
+- **Kalpanaverse → K-Tube**: display copy and logo swapped first. Later found to
+  collide with real existing Android apps (KTube, kTube, K Tube by Myanmar
+  Digital Solutions).
+- **K-Tube → KaTube** (`f57c7a2`): collision fix. KaTube only collides with a
+  couple of small personal creator handles, not real products, so it's the
+  cleaner name. Logo swapped to a new chroma-keyed transparent PNG
+  (`public/katube-logo.png`, replacing `public/ktube-logo.png`), all display
+  text/alt-text updated across `kalpanaverse`, `kalpana-circle`, `home`, and the
+  landing page.
+- **Route + internal naming fix** (`80ad97c`): the two commits above only
+  updated *display copy* — the route folder, component name, hrefs, and code
+  comments still said `kalpanaverse`/`Kalpanaverse` under the hood. Fixed:
+  `app/kalpanaverse/` → `app/katube/` (`git mv`), `KalpanaversePage` →
+  `KaTubePage`, all `href="/kalpanaverse"` → `href="/katube"` (landing page ×2,
+  `/home`, Kalpana Circle cross-link), stale comments updated. A permanent
+  redirect (`/kalpanaverse` → `/katube`) was added in `next.config.ts` via
+  `redirects()` so any old bookmarks/shares don't 404.
+- **Current canonical name: KaTube, route `/katube`.** Brand colors (white +
+  blue, §1b) are unchanged by this rename — only the name changed, not the
+  visual identity.
+
+
+
+### 1b. KaTube brand colors — white + blue
+
+Per founder request, KaTube uses a **white + blue** palette instead of the
 pink/purple it launched with, to read as its own distinct product line rather than
 a variant of Kalpana Circle. Kalpana Circle keeps its original purple/violet
 identity unchanged — the two should feel related (same MANGAL ecosystem) but
@@ -83,23 +111,23 @@ visually distinguishable.
 - Background stays `var(--bg-primary)` (white by default per the site-wide light
   theme), unchanged — the "white" half of the brief was already handled by the
   site's existing light-default theme, this section only needed the accent swap
-- Cross-link colors: on Kalpanaverse, the "Kalpana Circle" nav link stays purple
+- Cross-link colors: on KaTube, the "Kalpana Circle" nav link stays purple
   (`#7c3aed`) to represent that destination's own brand; on Kalpana Circle, the
-  "Kalpanaverse" nav link is now blue (`#2563eb`) for the same reason
+  "KaTube" nav link is now blue (`#2563eb`) for the same reason
 
-## 2. Why Kalpanaverse(now KaTube) exists (the actual idea, so it doesn't get re-explained from scratch)
+## 2. Why KaTube exists (the actual idea, so it doesn't get re-explained from scratch)
 
-- **Not a pirated-anime site.** Every Kalpanaverse video is meant to be an *original*
+- **Not a pirated-anime site.** Every KaTube video is meant to be an *original*
   AI-generated adaptation (Runway/Kling/Pika/Hailuo-style tools) made by a MANGAL
   creator of their own series. This avoids copyright risk entirely.
-- **Zero-cost architecture, on purpose.** Kalpanaverse will never host video files
+- **Zero-cost architecture, on purpose.** KaTube will never host video files
   itself. Creators upload their AI-anime clips to YouTube (their own channel, or a
-  shared MANGAL channel early on); Kalpanaverse only stores metadata (title, YouTube
+  shared MANGAL channel early on); KaTube only stores metadata (title, YouTube
   video ID, creator, which MANGAL series it's based on, views/likes) in Supabase and
   embeds the YouTube player. This keeps hosting/bandwidth cost at ₹0 regardless of
   scale.
-- **Revenue flows to creators via YouTube, not to Kalpanaverse directly** — that's a
-  conscious trade-off. Kalpanaverse's value is the discovery layer and the funnel back
+- **Revenue flows to creators via YouTube, not to KaTube directly** — that's a
+  conscious trade-off. KaTube's value is the discovery layer and the funnel back
   into MANGAL (readers discover videos → watch → follow the linked series →
   become MANGAL readers), not ad revenue capture. Monetization for the platform
   itself comes later, once there's real traffic (sponsorships, on-page placements,
@@ -135,6 +163,7 @@ re-deriving the business case from scratch.
   watch page — none of that is built yet. Don't imply otherwise to the user
   without checking this file's status table first.
 - Brand: white + blue (`#2563eb`/`#0ea5e9` family) — see §1b
+- Old `/kalpanaverse` URL permanently redirects here via `next.config.ts`
 
 ### `/kalpana-circle` (`app/kalpana-circle/page.tsx`)
 - Placeholder discussion feed (4 sample posts: theory, fan art, request, reaction)
@@ -142,16 +171,16 @@ re-deriving the business case from scratch.
 - Post composer is visibly present but **disabled** ("Post — coming soon") — do not
   make this functional without an explicit request, since there's no posts/comments
   table yet
-- Cross-linked with Kalpanaverse via nav buttons in both directions
+- Cross-linked with KaTube via nav buttons in both directions
 - Brand: unchanged purple/violet (`#7c3aed`/`#c4b5fd` family)
 
 ### Landing page / nav
 - `app/page.tsx` (public landing): three-door section under the hero (MangaNovels /
-  Kalpanaverse / Kalpana Circle), plus nav links for both
+  KaTube / Kalpana Circle), plus nav links for both
 - `app/home/page.tsx` (authenticated landing): same nav links added
 - Theme: the whole site defaults to **light/white** (`data-theme="light"` set by a
   blocking script in `app/layout.tsx` unless the user has explicitly chosen dark via
-  `ThemeToggle`, persisted in `localStorage['mangal_theme']`). Kalpanaverse and
+  `ThemeToggle`, persisted in `localStorage['mangal_theme']`). KaTube and
   Kalpana Circle both use the shared `ThemeToggle` component and CSS vars
   (`var(--bg-primary)`, `var(--nav-bg)`, etc.) — never hardcode dark colors on these
   pages, or they'll ignore the site's light-default theme.
@@ -211,7 +240,7 @@ re-deriving the business case from scratch.
 - The founder frequently works on this repo in parallel from other tools/tabs while
   a session is active — **always `git fetch` + check `origin/main` before pushing**,
   and rebase cleanly rather than force-pushing over unrelated concurrent commits
-  (e.g. dashboard/analytics work happens independently of Kalpanaverse work).
+  (e.g. dashboard/analytics work happens independently of KaTube work).
 
 ## 7. Session TODO — theme regressions + Upload page redesign (in progress)
 
@@ -380,8 +409,7 @@ reader's independent `bgColor` picker in `read/[chapterId]/page.tsx`).
 - `profiles.account_active = false` is how banning is implemented
 
 ---
-*Last updated: applied the Kalpanaverse / Kalpana Circle rename — routes moved to
-`/kalpanaverse` and `/kalpana-circle` (git mv, history preserved), all UI copy and
-nav links updated, Kalpanaverse's brand switched to white + blue (see §1b) while
-Kalpana Circle keeps its original purple. Update this file again whenever scope
-changes further.*
+*Last updated: finished the KaTube rename (§1a-ii) — route moved `/kalpanaverse`
+→ `/katube` (git mv, history preserved), component/hrefs/comments updated, and a
+permanent redirect from `/kalpanaverse` added in `next.config.ts` so old links
+don't 404. Update this file again whenever scope changes further.*

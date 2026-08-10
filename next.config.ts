@@ -59,6 +59,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  async redirects() {
+    return [
+      {
+        source: "/kalpanaverse",
+        destination: "/katube",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
