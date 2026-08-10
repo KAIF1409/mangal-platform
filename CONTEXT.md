@@ -183,7 +183,60 @@ re-deriving the business case from scratch.
   and rebase cleanly rather than force-pushing over unrelated concurrent commits
   (e.g. dashboard/analytics work happens independently of Kalpanaverse work).
 
-## 6. Contact / legal details already in use elsewhere in the app
+## 7. Session TODO — theme regressions + Upload page redesign (in progress)
+
+> Logged before starting work, per founder's request, so a fresh chat session
+> can pick this up without re-deriving it. Update each item's status as it
+> ships; move to a "done" note at the bottom when the whole list is clear.
+
+**Root cause of the "half black half white" look (founder-reported, with
+screenshot of `/home`):** the site-wide light-default redesign (`3d637c7`,
+`f9a48ef`, and the many `Theme: X page uses light-default CSS variables`
+commits) covered most pages, but missed a few spots that still hardcode the
+old dark palette instead of using the `var(--...)` CSS variables from
+`app/globals.css`. Those spots render black no matter what theme is active,
+which is what created the jarring split look.
+
+Confirmed hardcoded-dark spots (checked via `grep -c "var(--"` vs hardcoded
+hex/rgba across every page):
+
+| # | File | Issue | Status |
+|---|---|---|---|
+| 1 | `app/home/page.tsx` line ~220 | Nav bar `background: 'rgba(7,7,10,0.97)'` hardcoded — this is the exact bug in the founder's screenshot (black nav strip over an otherwise white page) | ⏳ |
+| 2 | `app/components/ProfileMenu.tsx` | Entire component hardcoded dark (0 CSS vars) — not yet visibly broken since it sits on a themed background, but will show a black dropdown panel on the light theme once opened. Also: the closed-state button shows the full email inline at all times — founder wants avatar-only until clicked, matching the dropdown-on-click pattern the identity header inside the panel already does correctly | ⏳ |
+| 3 | `app/search/page.tsx` | 0 CSS vars, fully hardcoded dark — my own Step 28 edit only swapped the nav/footer to the shared themed components, the page body (results, filters, cards) was never touched by the theme rollout at all. Will show the same half-black-half-white split as `/home` once visited. **Not yet reported by founder, flagging proactively.** | ⏳ noted, not yet scheduled |
+
+Library (`app/library/page.tsx`) and Bookmarks (`app/bookmarks/page.tsx`) are
+in good shape (18 and 23 `var(--...)` usages, only 1 stray hardcoded color
+each) — low priority, not part of this pass unless it becomes visible.
+
+### Upload page (`app/upload/page.tsx`) redesign
+
+Founder shared Wattpad's story-creation flow as a reference for the
+*layout pattern* (screenshots: cover-upload panel + stacked detail fields,
+Tags input, Mature/Rating toggle) — not a request to clone every Wattpad
+field. Confirmed via the file that **comics and manga already share one
+upload flow** (single `content_type: 'mangal'` step, differentiated only by
+`reading_mode: scroll | page`) — novels already get their own separate
+chapter-writing flow. That part needs no change, just wasn't obvious from
+the UI.
+
+Planned, scoped to what's actually useful for MANGAL (skipping Wattpad's
+Copyright dropdown / Main Characters / Target Audience fields as low-value
+scope creep for now — founder can ask for any of these later):
+
+| # | Change | Needs migration? | Status |
+|---|---|---|---|
+| 4 | Two-column layout for the Series Info step — bigger cover-upload panel on the left (Wattpad-style: large click-to-upload box with icon + label), stacked fields on the right, instead of the current single-column stack with a small 90×120 cover thumbnail | No | ⏳ |
+| 5 | Add a **Tags** field to series creation itself (currently tags can only be added *after* creation, via the dashboard's Edit Series modal) — reuse the existing `tags`/`series_tags` tables from the Step 25 tags system, same upsert pattern already in `EditSeriesModal.tsx` | No (tables already exist) | ⏳ |
+| 6 | Add a **Mature content** toggle to series creation, matching the reference screenshots | Yes — `series.is_mature boolean not null default false`. Migration file will be added to `supabase/migrations/`; founder needs to run it once in the Supabase SQL Editor like every other migration in this repo | ⏳ |
+
+Working one item at a time, committing + pushing after each, updating this
+table's Status column as I go (per §5 working conventions — no sweeping
+multi-file rewrites in one pass).
+
+---
+
 
 - Platform contact: `mangal.indiaplatform@gmail.com`
 - Address on legal pages: PES University, Bangalore, Karnataka, India
