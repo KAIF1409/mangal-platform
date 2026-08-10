@@ -439,27 +439,33 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* ── THREE DOORS: MangaNovels / Kalpanaverse / Kalpana Circle ── */}
+            {/* ── THREE DOORS: MangaNovels / KaTube / Kalpana Circle ── */}
             <div style={{
-              display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center',
+              display: 'flex', flexDirection: 'column', gap: '16px',
               maxWidth: '900px', margin: '40px auto 0',
             }}>
               <Link href="/search" style={{
-                flex: '1 1 240px', minWidth: '220px', textDecoration: 'none',
-                padding: '20px 22px', borderRadius: '16px',
+                textDecoration: 'none', borderRadius: '16px',
                 background: 'rgba(7,7,10,0.72)', backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(217,119,6,0.35)',
-                display: 'flex', alignItems: 'center', gap: '14px',
+                display: 'flex', alignItems: 'center', gap: '20px',
+                padding: '18px',
                 transition: 'transform 0.15s, box-shadow 0.2s, border-color 0.2s',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
               }}
                 onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(217,119,6,0.28)'; el.style.borderColor = '#d97706'; }}
                 onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.35)'; el.style.borderColor = 'rgba(217,119,6,0.35)'; }}
               >
-                <span style={{ fontSize: '28px' }}>📖</span>
+                <div style={{ flexShrink: 0, width: '120px', height: '90px', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
+                  <Image src="/comics.jpg" alt="MangaNovels" fill style={{ objectFit: 'cover' }} />
+                </div>
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontWeight: 900, fontSize: '15px', color: '#fff' }}>MangaNovels</div>
-                  <div style={{ fontSize: '11.5px', color: '#d1d5db', marginTop: '2px' }}>Comics, manga &amp; novels, free forever</div>
+                  <div style={{ fontWeight: 900, fontSize: '17px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '20px' }}>📖</span> MangaNovels
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#d1d5db', marginTop: '6px', lineHeight: 1.5 }}>
+                    Read manga, comics, and novels made by Desi creators — free forever, no ads, no gatekeepers. Bookmark series, track your reading progress, and discover new stories across mythology, action, romance, and more.
+                  </div>
                 </div>
               </Link>
 
