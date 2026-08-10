@@ -1028,7 +1028,8 @@ export default function Dashboard() {
                 )}
 
                 {/* Reading Time Distribution — mirrors inkstone's hourly bar chart.
-                    Flat until we log read timestamps per-hour. */}
+                    Real data: analytics.hourlyViews (24 buckets), sourced from
+                    view_events.created_at in the browser's local time. */}
                 <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
                   🕐 Reading Time Distribution
                 </h3>
@@ -1036,17 +1037,37 @@ export default function Dashboard() {
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
                   padding: '20px', marginBottom: '24px',
                 }}>
-                  <svg viewBox="0 0 700 100" style={{ width: '100%', height: '100px', display: 'block' }}>
-                    <line x1="0" y1="90" x2="700" y2="90" stroke="var(--divider)" strokeWidth="1" />
-                    {Array.from({ length: 12 }).map((_, i) => (
-                      <rect key={i} x={i * 58 + 6} y={88} width="46" height="2" fill="var(--border-light)" />
-                    ))}
-                  </svg>
+                  {(() => {
+                    const hours = analytics.hourlyViews;
+                    const max = Math.max(1, ...hours);
+                    const barW = 700 / 24;
+                    return (
+                      <svg viewBox="0 0 700 100" style={{ width: '100%', height: '100px', display: 'block' }}>
+                        <line x1="0" y1="90" x2="700" y2="90" stroke="var(--divider)" strokeWidth="1" />
+                        {hours.map((count, h) => {
+                          const barH = (count / max) * 80;
+                          return (
+                            <rect
+                              key={h}
+                              x={h * barW + 2}
+                              y={90 - barH}
+                              width={barW - 4}
+                              height={Math.max(barH, count > 0 ? 2 : 0)}
+                              fill={count > 0 ? 'var(--accent)' : 'var(--border-light)'}
+                              rx="1"
+                            />
+                          );
+                        })}
+                      </svg>
+                    );
+                  })()}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-faint)', marginTop: '4px' }}>
                     {['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'].map((t2) => <span key={t2}>{t2}</span>)}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '10px' }}>
-                    Hourly breakdown not tracked yet
+                    {analytics.hourlyViews.reduce((s, c) => s + c, 0) === 0
+                      ? 'No reads logged in the last 7 days yet'
+                      : `Peak hour: ${analytics.hourlyViews.indexOf(Math.max(...analytics.hourlyViews))}:00`}
                   </div>
                 </div>
 
@@ -1086,9 +1107,8 @@ export default function Dashboard() {
                 </div>
 
                 {/* Reader Trends — mirrors inkstone's "Daily Key Metrics" line chart.
-                    Plain inline SVG so we don't pull in a charting library just
-                    for one sparkline. Flat zero line until per-day view logging
-                    exists — same honesty as the "not tracked yet" note below. */}
+                    Plain inline SVG so we don't pull in a charting library.
+                    Real data: analytics.dailyViews, sourced from view_events. */}
                 <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
                   📉 Reader Trends (7 days)
                 </h3>
@@ -1096,18 +1116,33 @@ export default function Dashboard() {
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
                   padding: '20px', marginBottom: '24px',
                 }}>
-                  <svg viewBox="0 0 700 140" style={{ width: '100%', height: '140px', display: 'block' }}>
-                    <line x1="0" y1="110" x2="700" y2="110" stroke="var(--divider)" strokeWidth="1" />
-                    <polyline
-                      points="0,108 116,108 233,108 350,108 466,108 583,108 700,108"
-                      fill="none" stroke="var(--accent)" strokeWidth="2"
-                    />
-                  </svg>
+                  {(() => {
+                    const days = analytics.dailyViews;
+                    const max = Math.max(1, ...days.map((d) => d.count));
+                    const points = days.map((d, i) => {
+                      const x = days.length > 1 ? (i / (days.length - 1)) * 700 : 0;
+                      const y = 110 - (d.count / max) * 90;
+                      return `${x},${y}`;
+                    }).join(' ');
+                    return (
+                      <svg viewBox="0 0 700 140" style={{ width: '100%', height: '140px', display: 'block' }}>
+                        <line x1="0" y1="110" x2="700" y2="110" stroke="var(--divider)" strokeWidth="1" />
+                        <polyline points={points} fill="none" stroke="var(--accent)" strokeWidth="2" />
+                        {days.map((d, i) => {
+                          const x = days.length > 1 ? (i / (days.length - 1)) * 700 : 0;
+                          const y = 110 - (d.count / max) * 90;
+                          return <circle key={d.date} cx={x} cy={y} r="3" fill="var(--accent)" />;
+                        })}
+                      </svg>
+                    );
+                  })()}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-faint)', marginTop: '4px' }}>
-                    {['-6d', '-5d', '-4d', '-3d', '-2d', '-1d', 'Today'].map((d) => <span key={d}>{d}</span>)}
+                    {analytics.dailyViews.map((d) => (
+                      <span key={d.date}>{new Date(d.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+                    ))}
                   </div>
                   <div style={{ display: 'flex', gap: '16px', marginTop: '14px', fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                    <span><span style={{ color: 'var(--accent)' }}>●</span> Reader Count</span>
+                    <span><span style={{ color: 'var(--accent)' }}>●</span> Views ({analytics.dailyViews.reduce((s, d) => s + d.count, 0)} total this week)</span>
                   </div>
                 </div>
 
