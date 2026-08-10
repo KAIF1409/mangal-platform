@@ -95,7 +95,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
             transition: 'filter 0.3s ease 0.1s',
           }}>
             <Image
-              src="/apple-icon.png"
+              src="/mangal-flame-icon.png"
               alt="M"
               width={80}
               height={80}
@@ -480,7 +480,7 @@ export default function LandingPage() {
                   <div style={{ fontWeight: 900, fontSize: '15px', color: '#fff' }}>
                     <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(37,99,235,0.25)', border: '1px solid rgba(37,99,235,0.5)', color: '#60a5fa' }}>NEW</span>
                   </div>
-                  <div style={{ fontSize: '11.5px', color: '#d1d5db', marginTop: '2px' }}>AI-anime shorts from Mangal creators</div>
+                  <div style={{ fontSize: '11.5px', color: '#d1d5db', marginTop: '2px' }}>AI-anime — from shorts to full videos</div>
                 </div>
               </Link>
 
@@ -501,7 +501,7 @@ export default function LandingPage() {
                   <div style={{ fontWeight: 900, fontSize: '15px', color: '#fff' }}>
                     Kalpana Circle <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.5)', color: '#c4b5fd', marginLeft: '5px', verticalAlign: 'middle' }}>NEW</span>
                   </div>
-                  <div style={{ fontSize: '11.5px', color: '#d1d5db', marginTop: '2px' }}>Talk anime with the community</div>
+                  <div style={{ fontSize: '11.5px', color: '#d1d5db', marginTop: '2px' }}>Talk anime with the MANGAL community</div>
                 </div>
               </Link>
             </div>
