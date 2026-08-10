@@ -264,7 +264,7 @@ app to find what else still breaks the light-default theme the same way
 | Page | CSS vars | Hardcoded hex | Status |
 |---|---|---|---|
 | `app/read/[chapterId]/page.tsx` (the reader) | 0 | 229 | ✅ done (`98b3b33`) — chrome only (top bar/sidebar/settings/comments), reading-canvas `bgColor` picker deliberately untouched, see note below |
-| `app/series/[seriesId]/page.tsx` (series detail) | 0 | 158 | ⏳ queued after the reader |
+| `app/series/[seriesId]/page.tsx` (series detail) | 0 | 158 | ✅ done (`049b623`) |
 | `app/history/page.tsx` | 0 | 75 | ⏳ queued |
 | `app/login/page.tsx` | 0 | 46 | ⏳ queued |
 | `app/search/page.tsx` | 31 | 3 (intentional) | ✅ done this session |
