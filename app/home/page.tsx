@@ -257,7 +257,7 @@ export default function HomePage() {
           }}
             onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
             onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
-          >🎬 K-Tube</a>
+          >🎬 KaTube</a>
           <a href="/kalpana-circle" style={{
             padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
             color: '#c4b5fd', textDecoration: 'none', whiteSpace: 'nowrap',
