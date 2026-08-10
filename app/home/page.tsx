@@ -7,6 +7,8 @@ import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/ProfileMenu';
 import ThemeToggle from '../components/ThemeToggle';
+import SeriesCard from '../components/SeriesCard';
+import { formatViews } from '../lib/format';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
 import Link from 'next/link';
@@ -62,12 +64,6 @@ const GENRE_KEYS: Record<string, string> = {
 const DESI_GENRES = ['Mythology', 'Folk Tale', 'Desi Horror', 'Street Life', 'School Life', 'Independence Era'];
 
 // Step 7 — format large view numbers nicely (e.g. 12000 -> "12.0K")
-function formatViews(n: number): string {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return n.toString();
-}
-
 export default function HomePage() {
   const router = useRouter();
   const { lang, setLang, t } = useUiLanguage();
@@ -715,90 +711,6 @@ function FeaturedCard({ series }: { series: Series }) {
             {series.language && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg-input)', padding: '2px 7px', borderRadius: '4px' }}>{series.language}</span>}
             <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
             <span style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginLeft: 'auto' }}>Read →</span>
-          </div>
-        </div>
-      </div>
-    </a>
-  );
-}
-
-/* ── SERIES CARD (portrait/grid) ── */
-// Step 24 — `rank` is optional: when passed (Trending row), renders a
-// numbered badge over the top-left corner of the cover. Also now shows the
-// chapter count next to the view count, since that's a key trust signal
-// Webnovel-style sites always surface up front.
-function SeriesCard({ series, rank }: { series: Series; rank?: number }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <a href={`/series/${series.id}`} style={{ textDecoration: 'none', position: 'relative', display: 'block' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}>
-      <div style={{
-        borderRadius: '12px', overflow: 'hidden',
-        background: 'var(--bg-card)', border: `1px solid ${hovered ? '#d97706' : 'var(--border-color)'}`,
-        transition: 'border-color 0.2s, transform 0.2s',
-        transform: hovered ? 'translateY(-3px)' : 'none',
-      }}>
-        {/* Cover */}
-        <div style={{ position: 'relative', aspectRatio: '3/4', background: '#1a0a0a' }}>
-          {series.cover_url ? (
-            <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
-          ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
-          )}
-
-          {/* Step 24 — rank badge, top-left, only when rank is passed */}
-          {rank && (
-            <div style={{
-              position: 'absolute', top: '8px', left: '8px',
-              width: '24px', height: '24px', borderRadius: '6px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '12px', fontWeight: 900, color: '#fff',
-              background: rank <= 3 ? 'linear-gradient(135deg, #d97706, #ef4444)' : 'rgba(0,0,0,0.75)',
-              boxShadow: rank <= 3 ? '0 2px 8px rgba(217,119,6,0.5)' : 'none',
-              border: rank <= 3 ? 'none' : '1px solid var(--border-color)',
-            }}>
-              {rank}
-            </div>
-          )}
-
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
-            padding: '20px 8px 6px',
-            display: 'flex', alignItems: 'center', gap: '4px',
-          }}>
-            <span style={{
-              fontSize: '9px', fontWeight: 700, color: '#fff',
-              background: series.content_type === 'novel' ? 'rgba(109,40,217,0.9)' : 'rgba(127,29,29,0.9)',
-              padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
-            }}>
-              {series.content_type === 'novel' ? '📕 Novel' : '📖 Mangal'}
-            </span>
-            {series.content_type !== 'novel' && (
-              <span style={{
-                fontSize: '9px', fontWeight: 700, color: '#d1d5db',
-                background: 'rgba(0,0,0,0.6)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
-              }}>
-                {series.reading_mode === 'scroll' ? 'Scroll' : 'Page'}
-              </span>
-            )}
-          </div>
-        </div>
-        {/* Title + genre */}
-        <div style={{ padding: '10px 10px 12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '4px',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {series.title}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {typeof series.chapter_count === 'number' && (
-                <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{series.chapter_count} ch</span>
-              )}
-              <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
-            </div>
           </div>
         </div>
       </div>

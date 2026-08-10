@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/ProfileMenu';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import SharedSeriesCard from '../components/SeriesCard';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 
 interface Series {
@@ -75,12 +75,6 @@ function fuzzyMatch(target: string, query: string, threshold = 0.3): boolean {
   let matches = 0;
   tQ.forEach(tg => { if (tT.has(tg)) matches++; });
   return matches / tQ.size >= threshold;
-}
-
-function formatViews(n: number): string {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return n.toString();
 }
 
 function SearchPageInner() {
@@ -415,7 +409,7 @@ function SearchPageInner() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
               {results.map((s, i) => (
-                <ResultCard key={s.id} series={s} creatorUsername={creatorUsernames[s.creator_id]} rank={sortBy === 'views' ? i + 1 : undefined} />
+                <SharedSeriesCard key={s.id} series={s} creatorUsername={creatorUsernames[s.creator_id]} rank={sortBy === 'views' ? i + 1 : undefined} />
               ))}
             </div>
           </>
@@ -425,89 +419,6 @@ function SearchPageInner() {
       {/* ── FOOTER (shared component) ── */}
       <Footer />
     </div>
-  );
-}
-
-/* ── RESULT CARD (portrait, shows creator username, rank badge, rating) ── */
-function ResultCard({ series, creatorUsername, rank }: { series: Series; creatorUsername?: string; rank?: number }) {
-  const router = useRouter();
-  const [hovered, setHovered] = useState(false);
-  return (
-    <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}>
-      <div style={{
-        borderRadius: '12px', overflow: 'hidden', position: 'relative',
-        background: 'var(--bg-card)', border: `1px solid ${hovered ? '#d97706' : 'var(--border-color)'}`,
-        transition: 'border-color 0.2s, transform 0.2s',
-        transform: hovered ? 'translateY(-3px)' : 'none',
-      }}>
-        <div style={{ position: 'relative', aspectRatio: '3/4', background: '#1a0a0a' }}>
-          {series.cover_url ? (
-            <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
-          ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
-          )}
-
-          {/* Rank badge — only shown when sorting by Most Viewed */}
-          {rank && rank <= 3 && (
-            <div style={{
-              position: 'absolute', top: '6px', left: '6px',
-              width: '22px', height: '22px', borderRadius: '6px',
-              background: rank === 1 ? '#d97706' : rank === 2 ? 'var(--text-secondary)' : '#92400e',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '11px', fontWeight: 900, color: '#0d0d14',
-            }}>#{rank}</div>
-          )}
-
-          {/* Rating badge, top-right, only if data present */}
-          {typeof series.avg_rating === 'number' && series.avg_rating > 0 && (
-            <div style={{
-              position: 'absolute', top: '6px', right: '6px',
-              display: 'flex', alignItems: 'center', gap: '3px',
-              background: 'rgba(0,0,0,0.65)', borderRadius: '5px', padding: '2px 6px',
-              fontSize: '10px', fontWeight: 700, color: '#fbbf24',
-            }}>
-              ★ {series.avg_rating.toFixed(1)}
-            </div>
-          )}
-
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%)',
-            padding: '20px 8px 6px',
-          }}>
-            <span style={{
-              fontSize: '9px', fontWeight: 700, color: '#fff',
-              background: series.content_type === 'novel' ? 'rgba(124,58,237,0.9)' : 'rgba(127,29,29,0.9)',
-              padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
-            }}>
-              {series.content_type === 'novel' ? 'NOVEL' : (series.reading_mode === 'scroll' ? 'SCROLL' : 'PAGE')}
-            </span>
-          </div>
-        </div>
-        <div style={{ padding: '10px 10px 12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '4px',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {series.title}
-          </div>
-          {creatorUsername && (
-            <div
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/creator/${creatorUsername}`); }}
-              style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.color = '#d97706'; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-tertiary)'; }}
-            >
-              by @{creatorUsername}
-            </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
-          </div>
-        </div>
-      </div>
-    </a>
   );
 }
 
