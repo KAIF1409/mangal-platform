@@ -47,6 +47,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // Step 21 — Novel reader state
   const [novelContent, setNovelContent] = useState<string | null>(null);
   const [novelWordCount, setNovelWordCount] = useState(0);
+  const [fontFamily, setFontFamily] = useState<'serif' | 'sans' | 'dyslexic'>('serif');
+  const [lineHeight, setLineHeight] = useState<1.5 | 2 | 2.4>(2);
   const [fontSize, setFontSize] = useState(16); // px, range 14–24
 
   // Author's Note (before/after) + Tags — read-only display for readers.
@@ -152,6 +154,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         if (typeof saved.tapZonesEnabled === 'boolean') setTapZonesEnabled(saved.tapZonesEnabled);
         if (typeof saved.dataSaver === 'boolean') setDataSaver(saved.dataSaver);
         if (saved.fontSize && saved.fontSize >= 14 && saved.fontSize <= 24) setFontSize(saved.fontSize);
+        if (saved.fontFamily === 'serif' || saved.fontFamily === 'sans' || saved.fontFamily === 'dyslexic') setFontFamily(saved.fontFamily);
+        if (saved.lineHeight === 1.5 || saved.lineHeight === 2 || saved.lineHeight === 2.4) setLineHeight(saved.lineHeight);
         // Novel and manga have separate bgColor prefs so they don't bleed into each other.
         // Applied below in the series-load effect once content_type is known.
       }
@@ -186,11 +190,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       // Save bgColor under a type-specific key so novel and manga prefs don't overwrite each other.
       const existing = (() => { try { return JSON.parse(localStorage.getItem('mangal_reader_prefs') || '{}'); } catch { return {}; } })();
       const bgKey = isNovel ? 'novelBgColor' : 'mangaBgColor';
-      localStorage.setItem('mangal_reader_prefs', JSON.stringify({ ...existing, modeOverride, fitMode, tapZonesEnabled, dataSaver, [bgKey]: bgColor, fontSize }));
+      localStorage.setItem('mangal_reader_prefs', JSON.stringify({ ...existing, modeOverride, fitMode, tapZonesEnabled, dataSaver, [bgKey]: bgColor, fontSize, fontFamily, lineHeight }));
     } catch {
       // ignore storage errors (private browsing, quota, etc.)
     }
-  }, [modeOverride, fitMode, tapZonesEnabled, dataSaver, bgColor, prefsLoaded]);
+  }, [modeOverride, fitMode, tapZonesEnabled, dataSaver, bgColor, prefsLoaded, fontSize, fontFamily, lineHeight]);
 
   // Effective reading mode = reader's override if set, else the series' default.
   // Novels are always scroll — page-by-page navigation doesn't apply to text.
@@ -1161,6 +1165,35 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           <div style={{ flex: 1, textAlign: 'center', fontSize: '13px', color: '#d97706', fontWeight: 700 }}>{fontSize}px</div>
           <button onClick={() => setFontSize(v => Math.min(24, v + 1))} style={{ ...settingsBtn(false), flex: 'none', width: '28px', textAlign: 'center', padding: '6px 0' }}>A+</button>
         </div>
+
+        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Font</div>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+          {([
+            { v: 'serif', label: 'Serif', preview: "'Georgia', 'Noto Serif', serif" },
+            { v: 'sans', label: 'Sans', preview: "'Inter', 'Helvetica Neue', sans-serif" },
+            { v: 'dyslexic', label: 'Easy-Read', preview: "'Comic Sans MS', 'Comic Sans', cursive" },
+          ] as const).map((f) => (
+            <button key={f.v} onClick={() => setFontFamily(f.v)} style={{
+              ...settingsBtn(fontFamily === f.v), flex: 1, fontFamily: f.preview, fontSize: '12px', padding: '8px 4px',
+            }}>
+              Aa
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Line Spacing</div>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+          {([
+            { v: 1.5, label: 'Compact' },
+            { v: 2, label: 'Normal' },
+            { v: 2.4, label: 'Relaxed' },
+          ] as const).map((l) => (
+            <button key={l.v} onClick={() => setLineHeight(l.v)} style={{ ...settingsBtn(lineHeight === l.v), flex: 1, fontSize: '11px', padding: '8px 4px' }}>
+              {l.label}
+            </button>
+          ))}
+        </div>
+
         <div style={{ height: '1px', background: '#1a1a26', margin: '14px 0' }} />
         </>)}
 
@@ -1234,8 +1267,10 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh' }}>
               <div style={{
                 width: '100%', maxWidth: '760px', padding: '40px 28px 60px',
-                fontFamily: "'Georgia', 'Noto Serif', 'Lora', serif",
-                fontSize: `${fontSize}px`, lineHeight: 2, color: textColor,
+                fontFamily: fontFamily === 'serif' ? "'Georgia', 'Noto Serif', 'Lora', serif"
+                  : fontFamily === 'sans' ? "'Inter', 'Helvetica Neue', Arial, sans-serif"
+                  : "'Comic Sans MS', 'Comic Sans', cursive",
+                fontSize: `${fontSize}px`, lineHeight, color: textColor,
               }}>
 
                 {/* Chapter title + meta row */}
