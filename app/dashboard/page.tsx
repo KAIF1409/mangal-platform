@@ -442,7 +442,8 @@ export default function Dashboard() {
     fontWeight: active ? 700 : 500,
     textDecoration: 'none',
     borderBottom: active ? '2px solid #d97706' : '2px solid transparent',
-    paddingBottom: '2px',
+    padding: '4px 6px 2px',
+    borderRadius: '6px',
     whiteSpace: 'nowrap' as const,
   });
 
@@ -594,9 +595,9 @@ export default function Dashboard() {
         }
         centerSlot={
           <div className="mangal-dash-nav-links">
-            <Link href="/" style={navLinkStyle(false)}>{t('readerView')}</Link>
-            <a href="/dashboard" style={navLinkStyle(true)}>{t('dashboard')}</a>
-            <a href="/upload" style={navLinkStyle(false)}>{t('createNew')}</a>
+            <Link href="/" className="mangal-clickable" style={navLinkStyle(false)}>{t('readerView')}</Link>
+            <a href="/dashboard" className="mangal-clickable" style={navLinkStyle(true)}>{t('dashboard')}</a>
+            <a href="/upload" className="mangal-clickable" style={navLinkStyle(false)}>{t('createNew')}</a>
           </div>
         }
       />
