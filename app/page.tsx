@@ -496,23 +496,28 @@ export default function LandingPage() {
               </Link>
 
               <Link href="/kalpana-circle" style={{
-                flex: '1 1 240px', minWidth: '220px', textDecoration: 'none',
-                padding: '20px 22px', borderRadius: '16px',
+                textDecoration: 'none', borderRadius: '16px',
                 background: 'rgba(7,7,10,0.72)', backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(124,58,237,0.4)',
-                display: 'flex', alignItems: 'center', gap: '14px',
+                display: 'flex', alignItems: 'center', gap: '20px',
+                padding: '18px',
                 transition: 'transform 0.15s, box-shadow 0.2s, border-color 0.2s',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
               }}
                 onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 10px 30px rgba(124,58,237,0.32)'; el.style.borderColor = '#7c3aed'; }}
                 onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.35)'; el.style.borderColor = 'rgba(124,58,237,0.4)'; }}
               >
-                <Image src="/kcircle-logo.png" alt="K Circle" width={140} height={60} style={{ height: '30px', width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
+                <div style={{ flexShrink: 0, width: '120px', height: '90px', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
+                  <Image src="/kcommunity-preview.jpg" alt="K Community" fill style={{ objectFit: 'cover' }} />
+                </div>
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontWeight: 900, fontSize: '15px', color: '#fff' }}>
-                    <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.5)', color: '#c4b5fd' }}>NEW</span>
+                  <div style={{ fontWeight: 900, fontSize: '17px', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <Image src="/kcircle-logo.png" alt="K Circle" width={100} height={43} style={{ height: '22px', width: 'auto', objectFit: 'contain' }} />
+                    <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '20px', background: 'rgba(217,119,6,0.25)', border: '1px solid rgba(217,119,6,0.5)', color: '#fbbf24' }}>COMING SOON</span>
                   </div>
-                  <div style={{ fontSize: '11.5px', color: '#d1d5db', marginTop: '2px' }}>Talk anime with the MANGAL community</div>
+                  <div style={{ fontSize: '13px', color: '#d1d5db', marginTop: '6px', lineHeight: 1.5 }}>
+                    Groups and chats for people into the anime niche — post, react, and talk about MANGAL series with fellow creators and readers.
+                  </div>
                 </div>
               </Link>
             </div>
