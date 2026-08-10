@@ -1229,8 +1229,16 @@ export default function Dashboard() {
                     <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px' }}>
                       Chapter Completion Rate
                     </div>
-                    <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--text-primary)' }}>—</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>Not tracked yet</div>
+                    <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--text-primary)' }}>
+                      {analytics.completion.started > 0
+                        ? `${Math.round((analytics.completion.completed / analytics.completion.started) * 100)}%`
+                        : '—'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>
+                      {analytics.completion.started > 0
+                        ? `${analytics.completion.completed} of ${analytics.completion.started} readers reached the last page`
+                        : 'No page-tracked reads yet (manga chapters only)'}
+                    </div>
                   </div>
                   <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '18px' }}>
                     <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px' }}>
