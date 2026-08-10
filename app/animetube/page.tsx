@@ -143,8 +143,6 @@ function VideoCard({ video }: { video: DemoVideo }) {
 }
 
 export default function AnimeTubePage() {
-  const [tab, setTab] = useState<'videos' | 'community'>('videos');
-
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
@@ -176,6 +174,11 @@ export default function AnimeTubePage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Link href="/anime-chat" style={{
+            padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+            color: '#c4b5fd', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
+            whiteSpace: 'nowrap',
+          }}>💬 Anime Chat</Link>
           <ThemeToggle size={30} />
           <Link href="/" style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
@@ -196,87 +199,57 @@ export default function AnimeTubePage() {
           Every video here is an original AI-generated adaptation of a MANGAL series. This is an early demo —
           real uploads and a working watch page are coming next.
         </p>
+      </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'inline-flex', gap: '4px', marginTop: '22px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '4px' }}>
-          {(['videos', 'community'] as const).map(id => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              style={{
-                padding: '8px 18px', borderRadius: '7px', border: 'none', cursor: 'pointer',
-                fontSize: '12.5px', fontWeight: 700,
-                background: tab === id ? 'linear-gradient(135deg, #db2777, #7b2cbf)' : 'transparent',
-                color: tab === id ? '#fff' : 'var(--text-secondary)',
-                transition: 'background 0.15s',
-              }}
-            >
-              {id === 'videos' ? '🎬 Videos' : '💬 Community Tube'}
-            </button>
-          ))}
+      {/* Shorts row */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            ⚡ Shorts
+          </h2>
+          <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#f472b6' }}>See all →</span>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
+          {DEMO_SHORTS.map(s => <ShortCard key={s.id} short={s} />)}
         </div>
       </div>
 
-      {tab === 'videos' ? (
-        <>
-          {/* Shorts row */}
-          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                ⚡ Shorts
-              </h2>
-              <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#f472b6' }}>See all →</span>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-              {DEMO_SHORTS.map(s => <ShortCard key={s.id} short={s} />)}
-            </div>
-          </div>
+      {/* Category pills */}
+      <div style={{
+        display: 'flex', gap: '8px', overflowX: 'auto', padding: '20px 20px 20px',
+        maxWidth: '1200px', margin: '0 auto',
+      }}>
+        {CATEGORY_PILLS.map((c, i) => (
+          <span key={c} style={{
+            flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
+            background: i === 0 ? 'linear-gradient(135deg, #db2777, #7b2cbf)' : 'var(--bg-card)',
+            color: i === 0 ? '#fff' : 'var(--text-secondary)',
+            border: i === 0 ? 'none' : '1px solid var(--border-color)',
+            cursor: 'pointer', whiteSpace: 'nowrap',
+          }}>{c}</span>
+        ))}
+      </div>
 
-          {/* Category pills */}
-          <div style={{
-            display: 'flex', gap: '8px', overflowX: 'auto', padding: '20px 20px 20px',
-            maxWidth: '1200px', margin: '0 auto',
-          }}>
-            {CATEGORY_PILLS.map((c, i) => (
-              <span key={c} style={{
-                flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-                background: i === 0 ? 'linear-gradient(135deg, #db2777, #7b2cbf)' : 'var(--bg-card)',
-                color: i === 0 ? '#fff' : 'var(--text-secondary)',
-                border: i === 0 ? 'none' : '1px solid var(--border-color)',
-                cursor: 'pointer', whiteSpace: 'nowrap',
-              }}>{c}</span>
-            ))}
-          </div>
+      {/* Video grid */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 14px', letterSpacing: '-0.02em' }}>🎬 Videos</h2>
+      </div>
+      <div style={{
+        padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px',
+      }}>
+        {DEMO_VIDEOS.map(v => <VideoCard key={v.id} video={v} />)}
+      </div>
 
-          {/* Video grid */}
-          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 14px', letterSpacing: '-0.02em' }}>🎬 Videos</h2>
-          </div>
-          <div style={{
-            padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px',
-          }}>
-            {DEMO_VIDEOS.map(v => <VideoCard key={v.id} video={v} />)}
-          </div>
-
-          {/* Placeholder note */}
-          <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
-            <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-              These are placeholder cards for the demo. The next build step wires this grid to real Supabase
-              data and embeds actual creator-uploaded YouTube videos in place of these gradient tiles.
-            </p>
-          </div>
-        </>
-      ) : (
-        <div style={{ maxWidth: '560px', margin: '40px auto 80px', padding: '40px 28px', textAlign: 'center', borderRadius: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-          <div style={{ fontSize: '38px', marginBottom: '12px' }}>💬</div>
-          <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 8px' }}>Community Tube — Coming Soon</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-            A dedicated space for anime talk — theories, fan art, reactions to new uploads, and requests for
-            what creators should adapt next from MANGAL. Launching after the core video experience is live.
-          </p>
-        </div>
-      )}
+      {/* Placeholder note */}
+      <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
+        <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
+          These are placeholder cards for the demo — thumbnails, Shorts, and view counts are not wired to
+          real data yet, and actions like subscribe, like, and comment aren&apos;t built yet either. The
+          next build step wires this grid to real Supabase data and embeds actual creator-uploaded YouTube
+          videos in place of these gradient tiles.
+        </p>
+      </div>
     </div>
   );
 }

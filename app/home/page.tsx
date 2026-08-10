@@ -262,6 +262,14 @@ export default function HomePage() {
             onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(219,39,119,0.12)'; }}
             onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
           >🎬 AnimeTube</a>
+          <a href="/anime-chat" style={{
+            padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+            color: '#c4b5fd', textDecoration: 'none', whiteSpace: 'nowrap',
+            transition: 'color 0.15s, background 0.15s',
+          }}
+            onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
+            onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
+          >💬 Anime Chat</a>
         </div>
 
         {/* Right side */}
