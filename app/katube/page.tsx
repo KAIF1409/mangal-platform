@@ -3,14 +3,17 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
 import { supabase } from '../lib/supabase';
 
-// ── KaTube — Step 2: video grid wired to real Supabase data ──
-// The main grid below now reads from the `videos` table (see
-// supabase/migrations/20260810_katube_videos.sql). Shorts row still uses
-// placeholder data — that's a separate step. No upload flow exists yet, so
-// the grid will legitimately be empty until a creator uploads something.
+// ── KaTube — Step 3: video grid + watch page ──
+// The main grid below reads from the `videos` table (see
+// supabase/migrations/20260810_katube_videos.sql). Clicking a card now opens
+// /katube/watch/[videoId], which embeds the real YouTube player — completes
+// Step 3. Shorts row still uses placeholder data — that's a separate step.
+// No upload flow exists yet, so the grid will legitimately be empty until a
+// creator uploads something.
 //
 // Brand: white + blue (per founder request), distinct from Kalpana Circle's
 // purple identity — the two doors should read as related but visually
@@ -77,10 +80,12 @@ function ShortCard({ short }: { short: DemoShort }) {
 
 function RealVideoCard({ video }: { video: RealVideo }) {
   const [hover, setHover] = useState(false);
+  const router = useRouter();
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onClick={() => router.push(`/katube/watch/${video.id}`)}
       style={{
         borderRadius: '14px', overflow: 'hidden', cursor: 'pointer',
         background: 'var(--bg-card)', border: '1px solid var(--border-color)',
@@ -117,11 +122,14 @@ function RealVideoCard({ video }: { video: RealVideo }) {
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{video.creator}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
           {video.basedOn && (
-            <Link href="#" style={{
-              fontSize: '10.5px', fontWeight: 700, color: '#2563eb', textDecoration: 'none',
-              background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.28)',
-              padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
-            }}>
+            <Link
+              href="#"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                fontSize: '10.5px', fontWeight: 700, color: '#2563eb', textDecoration: 'none',
+                background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.28)',
+                padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
+              }}>
               📖 {video.basedOn}
             </Link>
           )}
@@ -216,8 +224,8 @@ export default function KaTubePage() {
           fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.03em',
         }}>AI-Anime, Made by MANGAL Creators</h1>
         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto' }}>
-          Every video here is an original AI-generated adaptation of a MANGAL series. This is an early demo —
-          real uploads and a working watch page are coming next.
+          Every video here is an original AI-generated adaptation of a MANGAL series. Click a video to watch it —
+          the creator upload flow is coming next.
         </p>
       </div>
 
@@ -275,8 +283,9 @@ export default function KaTubePage() {
       {/* Placeholder note (Shorts + actions still pending) */}
       <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
         <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-          The video grid above is live Supabase data. Shorts and actions like subscribe, like, and
-          comment aren&apos;t built yet — that&apos;s the next step, along with the creator upload flow.
+          The video grid above is live Supabase data with a working watch page. Shorts and actions like
+          subscribe, like, and comment aren&apos;t built yet — that&apos;s the next step, along with the
+          creator upload flow.
         </p>
       </div>
     </div>
