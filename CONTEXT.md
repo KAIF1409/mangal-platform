@@ -231,12 +231,14 @@ scope creep for now — founder can ask for any of these later):
 | 5 | Add a **Tags** field to series creation itself (currently tags can only be added *after* creation, via the dashboard's Edit Series modal) — reuse the existing `tags`/`series_tags` tables from the Step 25 tags system, same upsert pattern already in `EditSeriesModal.tsx` | No (tables already exist) | ✅ done |
 | 6 | Add a **Mature content** toggle to series creation, matching the reference screenshots | Yes — `series.is_mature boolean not null default false`. Migration file will be added to `supabase/migrations/`; founder needs to run it once in the Supabase SQL Editor like every other migration in this repo | ✅ done (code ships either way — see note below) |
 
-**⚠️ Action needed from founder:** run `supabase/migrations/20260810_series_is_mature.sql`
-once in the Supabase SQL Editor. The toggle UI is live now regardless — `handleCreateSeries`
-tries the insert with `is_mature` first, and if that column doesn't exist yet
-(Postgres error `42703`), it silently retries without the field, so series
-creation was never at risk of breaking either way. But the toggle's value
-won't actually *persist* anywhere until the migration runs.
+**✅ Migration applied.** `supabase/migrations/20260810_series_is_mature.sql`
+was run directly against the live project (`rfxlavwzhpnbhwoumaha`) via the
+Supabase MCP connector — confirmed via `information_schema.columns`:
+`is_mature boolean NOT NULL default false` exists on `series`. The Mature
+Content toggle now persists for real; the defensive insert-retry logic in
+`handleCreateSeries` is harmless dead code at this point (kept — costs
+nothing, and protects against ever running this code against a
+project/branch where the column doesn't exist for some other reason).
 
 ### Session status: all 6 items done, pushed to `main`
 
