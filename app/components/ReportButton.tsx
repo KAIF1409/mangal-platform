@@ -79,18 +79,18 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
           variant === 'icon'
             ? {
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '13px', color: '#4b5563', padding: '4px',
+                fontSize: '13px', color: 'var(--text-muted)', padding: '4px',
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
               }
             : {
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '11px', color: '#4b5563', padding: '4px 8px',
+                fontSize: '11px', color: 'var(--text-muted)', padding: '4px 8px',
                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                 fontWeight: 600, textDecoration: 'none',
               }
         }
         onMouseEnter={e => { (e.target as HTMLElement).style.color = '#ef4444'; }}
-        onMouseLeave={e => { (e.target as HTMLElement).style.color = '#4b5563'; }}
+        onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-muted)'; }}
       >
         🚩 {variant === 'text' ? 'Report' : ''}
       </button>
@@ -109,15 +109,15 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: '360px',
-              background: '#0d0d14', border: '1px solid #1a1a26',
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
               borderRadius: '14px', padding: '24px',
-              color: '#f9fafb',
+              color: 'var(--text-primary)',
             }}
           >
             {submitted ? (
               <div style={{ textAlign: 'center', padding: '12px 0' }}>
                 <div style={{ fontSize: '32px', marginBottom: '10px' }}>✅</div>
-                <p style={{ fontSize: '14px', color: '#9ca3af', margin: '0 0 18px' }}>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 18px' }}>
                   Thanks — your report has been submitted for review.
                 </p>
                 <button
@@ -134,7 +134,7 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
             ) : (
               <>
                 <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px' }}>Report content</h3>
-                <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 18px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 18px' }}>
                   Let us know what&#x2019;s wrong. Our team will review this.
                 </p>
 
@@ -147,9 +147,9 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
                         textAlign: 'left',
                         padding: '10px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
                         cursor: 'pointer',
-                        border: reason === r ? '1px solid #d97706' : '1px solid #1a1a26',
-                        background: reason === r ? 'rgba(217,119,6,0.12)' : '#08080c',
-                        color: reason === r ? '#d97706' : '#9ca3af',
+                        border: reason === r ? '1px solid #d97706' : '1px solid var(--border-color)',
+                        background: reason === r ? 'rgba(217,119,6,0.12)' : 'var(--bg-input)',
+                        color: reason === r ? '#d97706' : 'var(--text-secondary)',
                         transition: 'all 0.15s',
                       }}
                     >
@@ -167,7 +167,7 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
                   style={{
                     width: '100%', resize: 'none', boxSizing: 'border-box',
                     padding: '10px 12px', borderRadius: '8px', fontSize: '13px',
-                    background: '#08080c', border: '1px solid #1a1a26', color: '#f9fafb',
+                    background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-primary)',
                     fontFamily: 'inherit', marginBottom: '14px',
                   }}
                 />
@@ -181,7 +181,7 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
                     onClick={reset}
                     style={{
                       flex: 1, padding: '10px', borderRadius: '8px', fontWeight: 700, fontSize: '13px',
-                      background: '#08080c', border: '1px solid #1a1a26', color: '#9ca3af', cursor: 'pointer',
+                      background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer',
                     }}
                   >
                     Cancel
@@ -191,8 +191,8 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
                     disabled={!reason || submitting}
                     style={{
                       flex: 1, padding: '10px', borderRadius: '8px', fontWeight: 700, fontSize: '13px',
-                      background: !reason ? '#1a1a26' : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
-                      color: !reason ? '#4b5563' : '#fff',
+                      background: !reason ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                      color: !reason ? 'var(--text-muted)' : '#fff',
                       border: 'none', cursor: !reason || submitting ? 'not-allowed' : 'pointer',
                       opacity: submitting ? 0.7 : 1,
                     }}
