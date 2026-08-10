@@ -516,15 +516,59 @@ export default function LandingPage() {
               🔥 Trending Now
             </h2>
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-faint)' }}>Loading stories...</div>
-            ) : showcaseItems.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '14px' }}>
-                {showcaseItems.map((s, i) => (
-                  <ShowcaseCard key={s.id} series={s} rank={i + 1} />
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} style={{ aspectRatio: '3/4.6', borderRadius: '10px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }} />
                 ))}
               </div>
+            ) : showcaseItems.length > 0 ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '14px' }}>
+                  {showcaseItems.map((s, i) => (
+                    <ShowcaseCard key={s.id} series={s} rank={i + 1} />
+                  ))}
+                </div>
+                {showcaseItems.length < 6 && (
+                  <div style={{
+                    marginTop: '20px', padding: '18px 22px', borderRadius: '14px',
+                    background: 'var(--bg-card)', border: '1px dashed var(--border-color)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px',
+                  }}>
+                    <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
+                      MANGAL just launched — {showcaseItems.length === 1 ? 'this is our first published story' : `these are our first ${showcaseItems.length} published stories`}. Early creators get the most visibility here.
+                    </p>
+                    <a href="/login?creator=1" style={{
+                      flexShrink: 0, fontSize: '13px', fontWeight: 700, color: '#fff', textDecoration: 'none',
+                      padding: '9px 18px', borderRadius: '9px',
+                      background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      Publish yours →
+                    </a>
+                  </div>
+                )}
+              </>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-faint)' }}>No series yet</div>
+              <div style={{
+                textAlign: 'center', padding: '56px 24px', borderRadius: '16px',
+                background: 'var(--bg-card)', border: '1px dashed var(--border-color)',
+              }}>
+                <div style={{ fontSize: '32px', marginBottom: '14px' }}>📜</div>
+                <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-secondary)', margin: '0 0 6px' }}>
+                  No stories published yet
+                </p>
+                <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 20px', maxWidth: '360px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
+                  MANGAL is a new platform — the first creators to publish here will be featured right in this spot.
+                </p>
+                <a href="/login?creator=1" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  fontSize: '13px', fontWeight: 700, color: '#fff', textDecoration: 'none',
+                  padding: '10px 20px', borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
+                }}>
+                  Become a Creator →
+                </a>
+              </div>
             )}
           </div>
         </section>
