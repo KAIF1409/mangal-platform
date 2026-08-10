@@ -292,7 +292,7 @@ export default function LandingPage() {
                 onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
               >{link.label}</a>
             ))}
-            <a href="/kalpanaverse" style={{
+            <a href="/katube" style={{
               padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
               color: '#2563eb', textDecoration: 'none', whiteSpace: 'nowrap',
               transition: 'color 0.15s, background 0.15s',
@@ -469,7 +469,7 @@ export default function LandingPage() {
                 </div>
               </Link>
 
-              <Link href="/kalpanaverse" style={{
+              <Link href="/katube" style={{
                 flex: '1 1 240px', minWidth: '220px', textDecoration: 'none',
                 padding: '20px 22px', borderRadius: '16px',
                 background: 'rgba(7,7,10,0.72)', backdropFilter: 'blur(10px)',

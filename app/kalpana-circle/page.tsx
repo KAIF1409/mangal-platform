@@ -6,7 +6,7 @@ import Image from 'next/image';
 import ThemeToggle from '../components/ThemeToggle';
 
 // ── Kalpana Circle — demo/mockup page (renamed from Anime Chat) ──
-// A standalone community space for anime talk, separate from Kalpanaverse's
+// A standalone community space for anime talk, separate from KaTube's
 // video feed. Placeholder posts only — no real posting/comment backend yet.
 
 interface DemoPost {
@@ -90,7 +90,7 @@ export default function KalpanaCirclePage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Link href="/kalpanaverse" style={{
+          <Link href="/katube" style={{
             padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)',
             whiteSpace: 'nowrap',
