@@ -15,7 +15,7 @@ ecosystem, all under one Next.js app, one Supabase project, one Vercel deploymen
 | Part | Route | What it is | Status |
 |---|---|---|---|
 | **MangaNovels** | `/`, `/search`, `/read/...` | The original MANGAL platform — read manga, comics, and novels. Fully live. | ✅ Live, in active use |
-| **Kalpanaverse** | `/kalpanaverse` | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟡 UI demo only — placeholder data, no backend |
+| **KaTube** | `/katube` | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟡 Backend in progress — `videos` table live, main grid wired to real data; Shorts + upload flow + actions still placeholder/missing |
 | **Kalpana Circle** | `/kalpana-circle` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from the video platform, not a tab inside it. Brand: purple/violet. | 🟡 UI demo only — placeholder posts, composer disabled |
 
 The homepage (`app/page.tsx`) shows all three as equal "doors" right under the hero,
@@ -114,16 +114,27 @@ re-deriving the business case from scratch.
 
 ## 3. Current build status (detailed)
 
-### `/kalpanaverse` (`app/kalpanaverse/page.tsx`)
-- Video grid with 6 placeholder cards (gradient tiles standing in for thumbnails,
-  title, creator, "based on: [series]" tag, view count, duration)
-- Horizontally-scrolling **Shorts** row above the grid — vertical 9:16 cards styled
-  like YouTube Shorts, with a SHORTS badge
-- Category pills (All, Action, Mythology, Horror, Slice of Life, Fantasy, Trailers)
+### `/katube` (`app/katube/page.tsx`) — route renamed from `/kalpanaverse`
+- **Backend (Supabase), Step 1 — done:** `videos` and `video_likes` tables live
+  (`supabase/migrations/20260810_katube_videos.sql`). `videos` has creator_id,
+  optional series_id, title, youtube_id, is_short, views, likes, created_at, with
+  RLS (public read, owner-only write). `video_likes` is a join table for future
+  like functionality, RLS public read / owner-only insert-delete.
+- **Main grid, Step 2 — done:** the video grid now fetches real rows from
+  `videos` (`is_short = false`) instead of placeholder data, resolving creator
+  username via `creator_profiles` and series title via `series` in two follow-up
+  queries. Thumbnails use the real YouTube thumbnail
+  (`img.youtube.com/vi/{youtube_id}/hqdefault.jpg`) instead of gradient/emoji
+  tiles. Has a loading state and an honest empty state ("no videos yet") since
+  there's no upload flow yet — the grid is legitimately empty until a creator
+  uploads something.
+- **Still placeholder / not built:** the horizontally-scrolling **Shorts** row
+  above the grid still uses demo data (not yet reading `is_short = true` rows —
+  that's the natural next step alongside/after the upload flow). Category pills
+  are static/non-functional. No subscribe, no like, no comment, no upload UI, no
+  watch page — none of that is built yet. Don't imply otherwise to the user
+  without checking this file's status table first.
 - Brand: white + blue (`#2563eb`/`#0ea5e9` family) — see §1b
-- **Nothing here is functional yet** — no subscribe, no like, no comment, no real
-  video playback. This is explicitly noted in an on-page placeholder disclaimer.
-  Don't imply otherwise to the user without checking this file's status table first.
 
 ### `/kalpana-circle` (`app/kalpana-circle/page.tsx`)
 - Placeholder discussion feed (4 sample posts: theory, fan art, request, reaction)
