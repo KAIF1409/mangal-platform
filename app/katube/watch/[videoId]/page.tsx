@@ -162,8 +162,7 @@ export default function KaTubeWatchPage() {
               padding: '14px 16px', borderRadius: '12px', background: 'var(--bg-card)',
               border: '1px solid var(--border-color)', fontSize: '12.5px', color: 'var(--text-tertiary)', lineHeight: 1.6,
             }}>
-              Like, comment, and subscribe aren&apos;t built yet — that&apos;s the next step, along with the
-              creator upload flow.
+              Like, comment, and subscribe aren&apos;t built yet — that&apos;s the next step.
             </div>
           </>
         )}

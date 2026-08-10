@@ -7,13 +7,13 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
 import { supabase } from '../lib/supabase';
 
-// ── KaTube — Step 3: video grid + watch page ──
+// ── KaTube — Step 3 (video grid + watch page) + Step 4 (upload flow) ──
 // The main grid below reads from the `videos` table (see
-// supabase/migrations/20260810_katube_videos.sql). Clicking a card now opens
+// supabase/migrations/20260810_katube_videos.sql). Clicking a card opens
 // /katube/watch/[videoId], which embeds the real YouTube player — completes
 // Step 3. Shorts row still uses placeholder data — that's a separate step.
-// No upload flow exists yet, so the grid will legitimately be empty until a
-// creator uploads something.
+// Upload flow lives at /katube/upload (Step 4) — paste a YouTube link, pick
+// a series you own, submit.
 //
 // Brand: white + blue (per founder request), distinct from Kalpana Circle's
 // purple identity — the two doors should read as related but visually
@@ -202,6 +202,11 @@ export default function KaTubePage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Link href="/katube/upload" style={{
+            padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+            color: '#fff', textDecoration: 'none', background: '#2563eb',
+            whiteSpace: 'nowrap',
+          }}>⬆ Upload</Link>
           <Link href="/kalpana-circle" style={{
             padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: '#7c3aed', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
@@ -224,8 +229,8 @@ export default function KaTubePage() {
           fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.03em',
         }}>AI-Anime, Made by MANGAL Creators</h1>
         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto' }}>
-          Every video here is an original AI-generated adaptation of a MANGAL series. Click a video to watch it —
-          the creator upload flow is coming next.
+          Every video here is an original AI-generated adaptation of a MANGAL series. Click a video to watch it,
+          or upload your own.
         </p>
       </div>
 
@@ -267,8 +272,8 @@ export default function KaTubePage() {
       ) : videos.length === 0 ? (
         <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
           <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-            No videos yet — this grid is wired to real Supabase data, but no creator has uploaded a video
-            here yet. Once the upload flow ships, real creator videos will show up here automatically.
+            No videos yet — be the first! <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>Upload a video</Link> and
+            it&apos;ll show up here automatically.
           </p>
         </div>
       ) : (
@@ -280,12 +285,11 @@ export default function KaTubePage() {
         </div>
       )}
 
-      {/* Placeholder note (Shorts + actions still pending) */}
+      {/* Placeholder note (Shorts + engagement actions still pending) */}
       <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
         <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-          The video grid above is live Supabase data with a working watch page. Shorts and actions like
-          subscribe, like, and comment aren&apos;t built yet — that&apos;s the next step, along with the
-          creator upload flow.
+          The video grid above is live Supabase data with a working watch page and upload flow. Shorts and
+          actions like subscribe, like, and comment aren&apos;t built yet — that&apos;s the next step.
         </p>
       </div>
     </div>
