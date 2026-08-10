@@ -368,7 +368,7 @@ export default function HomePage() {
             <span style={{ color: '#fff' }}>{t('heroTitleWhite')}</span>{' '}
             <span style={{ background: 'linear-gradient(90deg, #d97706, #ef4444)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('heroTitleOrange')}</span>
           </h1>
-          <p style={{ fontSize: '16px', color: 'var(--text-secondary)', maxWidth: '480px', margin: '0 auto 32px', lineHeight: 1.6, textShadow: '0 1px 12px rgba(0,0,0,0.9)' }}>
+          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.82)', maxWidth: '480px', margin: '0 auto 32px', lineHeight: 1.6, textShadow: '0 1px 12px rgba(0,0,0,0.9)' }}>
             {t('heroSubtitle')}
           </p>
 
