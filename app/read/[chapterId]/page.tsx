@@ -49,6 +49,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const [novelWordCount, setNovelWordCount] = useState(0);
   const [fontFamily, setFontFamily] = useState<'serif' | 'sans' | 'dyslexic'>('serif');
   const [lineHeight, setLineHeight] = useState<1.5 | 2 | 2.4>(2);
+  const [scrollPercent, setScrollPercent] = useState(0);
   const [fontSize, setFontSize] = useState(16); // px, range 14–24
 
   // Author's Note (before/after) + Tags — read-only display for readers.
@@ -638,14 +639,17 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // Step 21 — Novel Reading Progress: tracks scroll % through the text container.
   // page_number is repurposed as a 1–100 integer (percent complete) for novels
   // since novels have no discrete pages array to track via IntersectionObserver.
+  // Also drives the visual progress bar at the top of the screen — that part
+  // runs regardless of login state, so guests still see it.
   useEffect(() => {
-    if (!isNovel || !userId || !series || !currentChapter || !containerRef.current) return;
+    if (!isNovel || !containerRef.current) return;
     const el = containerRef.current;
     const onScroll = () => {
       const scrollable = el.scrollHeight - el.clientHeight;
       if (scrollable <= 0) return;
       const pct = Math.round((el.scrollTop / scrollable) * 100);
-      scheduleUpsert(pct);
+      setScrollPercent(pct);
+      if (userId && series && currentChapter) scheduleUpsert(pct);
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
@@ -940,6 +944,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         opacity: showUI ? 1 : 0,
         transform: showUI ? 'translateY(0)' : 'translateY(-100%)',
       }}>
+        {isNovel && (
+          <div style={{ position: 'absolute', bottom: '-2px', left: 0, right: 0, height: '2px', background: 'rgba(255,255,255,0.08)' }}>
+            <div style={{ width: `${scrollPercent}%`, height: '100%', background: '#d97706', transition: 'width 0.15s linear' }} />
+          </div>
+        )}
         {/* Left: Back + title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <a href={series ? `/series/${series.id}` : '/'} style={{
@@ -954,6 +963,9 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             </div>
             <div style={{ fontSize: '10px', color: '#4b5563' }}>
               {currentChapter?.title || `Chapter ${currentChapter?.chapter_number}`}
+              {isNovel && (
+                <span style={{ color: '#d97706', marginLeft: '6px' }}>{scrollPercent}%</span>
+              )}
               {effectiveMode === 'page' && pages.length > 0 && (
                 <span style={{ color: '#d97706', marginLeft: '6px' }}>{currentPage + 1}/{pages.length}</span>
               )}
