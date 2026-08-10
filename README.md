@@ -36,6 +36,8 @@ India has 500M+ smartphone users and a fast-growing base of indie comic/manga ar
 
 In active development. Core publishing, reading, and compliance flows are live in production. Monetization (UPI creator tips, premium chapter unlocks) is planned for after the platform reaches consistent reader traffic.
 
+The platform is also expanding into a small ecosystem — **AnimeTube** (AI-generated anime videos from MANGAL creators) and **Anime Chat** (community discussion) are in early UI-demo stages. See [`CONTEXT.md`](./CONTEXT.md) for the full current build status, architecture reasoning, and next steps on that expansion.
+
 ## Author
 
 **Mohammed Kaif** — B.Tech CSE, PES University (2026)
