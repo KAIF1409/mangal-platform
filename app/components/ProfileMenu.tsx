@@ -52,7 +52,7 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
   const itemStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: '10px',
     padding: '10px 12px', borderRadius: '8px',
-    fontSize: '13px', fontWeight: 600, color: '#d1d5db',
+    fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)',
     textDecoration: 'none', width: '100%', textAlign: 'left' as const,
     background: 'none', border: 'none', cursor: 'pointer',
   };
@@ -61,10 +61,11 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
     <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(v => !v)}
+        aria-label="Account menu"
         style={{
-          display: 'flex', alignItems: 'center', gap: '10px',
-          background: open ? '#13131c' : 'transparent',
-          border: '1px solid #1a1a26',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          background: open ? 'var(--bg-input)' : 'transparent',
+          border: '1px solid var(--border-color)',
           borderRadius: '10px',
           padding: '6px 10px 6px 6px',
           cursor: 'pointer',
@@ -80,26 +81,22 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
           {initials}
         </div>
         <span style={{
-          fontSize: '12px', color: '#9ca3af', maxWidth: '160px',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
-        }}>
-          {user.email}
-        </span>
-        <span style={{
-          fontSize: '10px', color: '#6b7280',
+          fontSize: '10px', color: 'var(--text-tertiary)',
           transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
           transition: 'transform 0.15s',
         }}>▾</span>
       </button>
 
-      {/* Sliding dropdown panel */}
+      {/* Sliding dropdown panel — email/name only shown here, on click,
+          per founder request (was previously always visible in the closed
+          button, taking up nav space) */}
       <div style={{
         position: 'absolute', top: 'calc(100% + 10px)', right: 0,
         width: '270px',
-        background: '#0d0d14',
-        border: '1px solid #1f1f2e',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
         borderRadius: '14px',
-        boxShadow: '0 16px 48px rgba(0,0,0,0.55)',
+        boxShadow: '0 16px 48px rgba(0,0,0,0.25)',
         overflow: 'hidden',
         transformOrigin: 'top right',
         transform: open ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(-8px)',
@@ -109,7 +106,7 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
         zIndex: 100,
       }}>
         {/* Identity header */}
-        <div style={{ padding: '18px 18px 16px', borderBottom: '1px solid #1a1a26', display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ padding: '18px 18px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{
             width: '42px', height: '42px', borderRadius: '50%',
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
@@ -119,10 +116,10 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
             {initials}
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
               {user?.user_metadata?.full_name || (isCreator ? t('roleCreator') : t('roleReader'))}
             </div>
-            <div style={{ fontSize: '11px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
               {user?.email}
             </div>
             <span style={{
@@ -130,7 +127,7 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
               fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px',
               textTransform: 'uppercase' as const, letterSpacing: '0.06em',
               background: isDeveloper ? 'rgba(168,85,247,0.18)' : isCreator ? 'rgba(217,119,6,0.15)' : 'rgba(107,114,128,0.15)',
-              color: isDeveloper ? '#c084fc' : isCreator ? '#d97706' : '#9ca3af',
+              color: isDeveloper ? '#c084fc' : isCreator ? '#d97706' : 'var(--text-tertiary)',
             }}>
               {isDeveloper ? t('roleDeveloper') : isCreator ? t('roleCreator') : t('roleReader')}
             </span>
@@ -143,12 +140,12 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
               <a href="/dashboard" style={itemStyle}>{t('pmDashboard')}</a>
               <Link href="/" style={itemStyle}>{t('pmReaderView')}</Link>
               <a href="/upload" style={itemStyle}>{t('pmCreateNewSeries')}</a>
-              <div style={{ height: '1px', background: '#1a1a26', margin: '6px 4px' }} />
+              <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
               <a href="/history" style={itemStyle}>{t('pmReadingHistory')}</a>
               <a href="/bookmarks" style={itemStyle}>{t('pmBookmarks')}</a>
               {isDeveloper && (
                 <>
-                  <div style={{ height: '1px', background: '#1a1a26', margin: '6px 4px' }} />
+                  <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
                   <a href="/admin/reports" style={{ ...itemStyle, color: '#c084fc' }}>{t('pmAdminReports')}</a>
                 </>
               )}
@@ -157,7 +154,7 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
             <>
               <a href="/history" style={itemStyle}>{t('pmReadingHistory')}</a>
               <a href="/bookmarks" style={itemStyle}>{t('pmBookmarks')}</a>
-              <div style={{ height: '1px', background: '#1a1a26', margin: '6px 4px' }} />
+              <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
               {/* The ONLY path from reader to creator tools — no shortcuts elsewhere */}
               <a href="/become-creator" style={{
                 ...itemStyle,
@@ -167,11 +164,11 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
           )}
 
           {/* Settings — available to all roles */}
-          <div style={{ height: '1px', background: '#1a1a26', margin: '6px 4px' }} />
+          <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
           <a href="/settings" style={itemStyle}>{t('pmSettings')}</a>
         </div>
 
-        <div style={{ height: '1px', background: '#1a1a26', margin: '4px 8px' }} />
+        <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 8px' }} />
 
         <div style={{ padding: '8px' }}>
           <button
