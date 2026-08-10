@@ -7,13 +7,15 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
 import { supabase } from '../lib/supabase';
 
-// ── KaTube — Step 3 (video grid + watch page) + Step 4 (upload flow) ──
-// The main grid below reads from the `videos` table (see
-// supabase/migrations/20260810_katube_videos.sql). Clicking a card opens
-// /katube/watch/[videoId], which embeds the real YouTube player — completes
-// Step 3. Shorts row still uses placeholder data — that's a separate step.
-// Upload flow lives at /katube/upload (Step 4) — paste a YouTube link, pick
-// a series you own, submit.
+// ── KaTube — Step 3 (video grid + watch page) + Step 4 (upload flow,
+// including Shorts) ──
+// The main grid and Shorts row both read from the `videos` table (see
+// supabase/migrations/20260810_katube_videos.sql), split on `is_short`.
+// Clicking a card opens /katube/watch/[videoId], which embeds the real
+// YouTube player. Shorts row falls back to demo placeholder cards only when
+// there are zero real is_short=true rows yet.
+// Upload flow lives at /katube/upload — paste a YouTube link, mark it as a
+// Short or not, optionally pick a series you own, submit.
 //
 // Brand: white + blue (per founder request), distinct from Kalpana Circle's
 // purple identity — the two doors should read as related but visually
@@ -26,6 +28,13 @@ interface RealVideo {
   views: number;
   creator: string;
   basedOn: string | null;
+}
+
+interface RealShort {
+  id: string;
+  title: string;
+  youtube_id: string;
+  views: number;
 }
 
 const CATEGORY_PILLS = ['All', 'Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Trailers'];
@@ -47,7 +56,7 @@ const DEMO_SHORTS: DemoShort[] = [
   { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #1e3a8a, #0ea5e9)', emoji: '👻' },
 ];
 
-function ShortCard({ short }: { short: DemoShort }) {
+function DemoShortCard({ short }: { short: DemoShort }) {
   const [hover, setHover] = useState(false);
   return (
     <div
@@ -73,6 +82,46 @@ function ShortCard({ short }: { short: DemoShort }) {
       }}>
         <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px' }}>{short.title}</div>
         <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>{short.views} views</div>
+      </div>
+    </div>
+  );
+}
+
+function RealShortCard({ short }: { short: RealShort }) {
+  const [hover, setHover] = useState(false);
+  const router = useRouter();
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={() => router.push(`/katube/watch/${short.id}`)}
+      style={{
+        flexShrink: 0, width: '190px', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer',
+        position: 'relative', aspectRatio: '9/16', background: '#000',
+        display: 'flex', alignItems: 'flex-end',
+        transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
+        boxShadow: hover ? '0 12px 24px rgba(37,99,235,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
+        transition: 'transform 0.15s, box-shadow 0.2s',
+      }}
+    >
+      <img
+        src={`https://img.youtube.com/vi/${short.youtube_id}/hqdefault.jpg`}
+        alt={short.title}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+      />
+      <span style={{
+        position: 'absolute', top: '10px', left: '10px', fontSize: '11px', fontWeight: 800, color: '#fff',
+        background: 'rgba(0,0,0,0.5)', padding: '3px 9px', borderRadius: '20px', letterSpacing: '0.02em',
+      }}>⚡ SHORTS</span>
+      <div style={{
+        position: 'relative', width: '100%', padding: '24px 14px 14px',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
+      }}>
+        <div style={{
+          fontSize: '14px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>{short.title}</div>
+        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>{short.views.toLocaleString()} views</div>
       </div>
     </div>
   );
@@ -142,16 +191,21 @@ function RealVideoCard({ video }: { video: RealVideo }) {
 
 export default function KaTubePage() {
   const [videos, setVideos] = useState<RealVideo[]>([]);
+  const [shorts, setShorts] = useState<RealShort[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const { data: rows } = await supabase
-        .from('videos')
-        .select('id, title, youtube_id, views, creator_id, series_id')
-        .eq('is_short', false)
-        .order('created_at', { ascending: false });
+      const [videosRes, shortsRes] = await Promise.all([
+        supabase.from('videos').select('id, title, youtube_id, views, creator_id, series_id')
+          .eq('is_short', false).order('created_at', { ascending: false }),
+        supabase.from('videos').select('id, title, youtube_id, views')
+          .eq('is_short', true).order('created_at', { ascending: false }).limit(12),
+      ]);
 
+      setShorts(shortsRes.data || []);
+
+      const rows = videosRes.data;
       if (!rows || rows.length === 0) { setLoading(false); return; }
 
       const creatorIds = [...new Set(rows.map(r => r.creator_id))];
@@ -243,8 +297,15 @@ export default function KaTubePage() {
           <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#2563eb' }}>See all →</span>
         </div>
         <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
-          {DEMO_SHORTS.map(s => <ShortCard key={s.id} short={s} />)}
+          {shorts.length > 0
+            ? shorts.map(s => <RealShortCard key={s.id} short={s} />)
+            : DEMO_SHORTS.map(s => <DemoShortCard key={s.id} short={s} />)}
         </div>
+        {shorts.length === 0 && (
+          <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '6px 0 0' }}>
+            Demo placeholders — <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>upload a Short</Link> to replace these.
+          </p>
+        )}
       </div>
 
       {/* Category pills */}
@@ -285,11 +346,11 @@ export default function KaTubePage() {
         </div>
       )}
 
-      {/* Placeholder note (Shorts + engagement actions still pending) */}
+      {/* Placeholder note (engagement actions still pending) */}
       <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
         <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-          The video grid above is live Supabase data with a working watch page and upload flow. Shorts and
-          actions like subscribe, like, and comment aren&apos;t built yet — that&apos;s the next step.
+          The video grid and Shorts row above are live Supabase data with a working watch page and upload
+          flow. Subscribe, like, and comment aren&apos;t built yet — that&apos;s the next step.
         </p>
       </div>
     </div>

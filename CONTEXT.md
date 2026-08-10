@@ -15,7 +15,7 @@ ecosystem, all under one Next.js app, one Supabase project, one Vercel deploymen
 | Part | Route | What it is | Status |
 |---|---|---|---|
 | **MangaNovels** | `/`, `/search`, `/read/...` | The original MANGAL platform — read manga, comics, and novels. Fully live. | ✅ Live, in active use |
-| **KaTube** | `/katube` (redirected from `/kalpanaverse`) | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟡 Grid, watch page, and upload flow live on real Supabase data (Steps 1–4 of the roadmap); Shorts real data, ranking, and engagement actions still pending |
+| **KaTube** | `/katube` (redirected from `/kalpanaverse`) | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟡 Grid, Shorts, watch page, and upload flow all live on real Supabase data (Steps 1–4); ranking and engagement actions still pending |
 | **Kalpana Circle** | `/kalpana-circle` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from the video platform, not a tab inside it. Brand: purple/violet. | 🟡 UI demo only — placeholder posts, composer disabled |
 
 The homepage (`app/page.tsx`) shows all three as equal "doors" right under the hero,
@@ -163,19 +163,23 @@ re-deriving the business case from scratch.
 - **Upload flow, Step 4 — done:** `app/katube/upload/page.tsx`. Logged-in
   creators paste a YouTube link (accepts `youtube.com/watch?v=`, `youtu.be/`,
   `/shorts/`, `/embed/`, or a bare 11-char video ID — parsed client-side by
-  `extractYoutubeId()`), give it a title, and optionally pick one of *their
+  `extractYoutubeId()`), give it a title, check a "This is a Short" box if it
+  belongs in the Shorts row (`is_short`), and optionally pick one of *their
   own* series (`series` where `creator_id = auth.uid()`) to link it to.
   Submits straight to `videos` (RLS already allowed owner-insert, no migration
-  needed) with `is_short: false`, then redirects to the new video's watch
-  page. No `creator_profiles` gating — matches the existing MangaNovels
-  upload page's convention of "logged in is enough." Reachable via the
-  blue "⬆ Upload" nav button on `/katube`.
-- **Still placeholder / not built:** the horizontally-scrolling **Shorts** row
-  above the grid still uses demo data (not yet reading `is_short = true` rows,
-  and the upload form doesn't yet expose a Short/regular toggle — it always
-  inserts `is_short: false`). Category pills are static/non-functional. No
-  subscribe, no like, no comment. Don't imply otherwise to the user without
-  checking this file's status table first.
+  needed), then redirects to the new video's watch page. No `creator_profiles`
+  gating — matches the existing MangaNovels upload page's convention of
+  "logged in is enough." Reachable via the blue "⬆ Upload" nav button on
+  `/katube`.
+- **Shorts row — real data:** the Shorts row now fetches `videos` where
+  `is_short = true` (real YouTube thumbnails via `RealShortCard`, click-through
+  to the watch page) and only falls back to the original 6 `DEMO_SHORTS`
+  gradient/emoji placeholders when there are zero real Shorts yet — with a
+  small "demo placeholders, upload one to replace these" note shown in that
+  case. Once any creator uploads a Short, demo cards disappear automatically.
+- **Still placeholder / not built:** category pills are static/non-functional.
+  No subscribe, no like, no comment, no ranking. Don't imply otherwise to the
+  user without checking this file's status table first.
 - Brand: white + blue (`#2563eb`/`#0ea5e9` family) — see §1b
 - Old `/kalpanaverse` URL permanently redirects here via `next.config.ts`
 
@@ -423,8 +427,10 @@ reader's independent `bgColor` picker in `read/[chapterId]/page.tsx`).
 - `profiles.account_active = false` is how banning is implemented
 
 ---
-*Last updated: shipped KaTube Step 3 (watch page, `app/katube/watch/[videoId]`)
-and Step 4 (creator upload flow, `app/katube/upload`) — roadmap Steps 1–4 are
-now done. Next up per the roadmap: Shorts real data, ranking, and Community
-Tube (Kalpana Circle) integration (Step 5). Update this file again whenever
-scope changes further.*
+*Last updated: wired the KaTube Shorts row to real `videos` data
+(`is_short = true`, with demo-placeholder fallback when there are zero real
+Shorts) and added a Short/regular toggle to the upload form. Roadmap Steps
+1–4 are now fully done, including Shorts. Next up: ranking + Community Tube
+(Kalpana Circle) integration (Step 5), then formal LLP/DPIIT registration
+(Step 6, business side). Update this file again whenever scope changes
+further.*

@@ -63,6 +63,7 @@ export default function KaTubeUploadPage() {
   const [youtubeLink, setYoutubeLink] = useState('');
   const [title, setTitle] = useState('');
   const [seriesId, setSeriesId] = useState('');
+  const [isShort, setIsShort] = useState(false);
   const [ownSeries, setOwnSeries] = useState<OwnSeries[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -103,7 +104,7 @@ export default function KaTubeUploadPage() {
         series_id: seriesId || null,
         title: title.trim(),
         youtube_id: youtubeId,
-        is_short: false,
+        is_short: isShort,
       })
       .select('id')
       .single();
@@ -232,6 +233,23 @@ export default function KaTubeUploadPage() {
             <p style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', marginBottom: '20px' }}>
               {ownSeries.length === 0 ? "You don't have any published series yet — you can still upload without linking one." : 'Only series you created show up here.'}
             </p>
+
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px',
+              padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)',
+              background: 'var(--bg-card)', cursor: 'pointer',
+            }}>
+              <input
+                type="checkbox"
+                checked={isShort}
+                onChange={e => setIsShort(e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '13px' }}>
+                <span style={{ fontWeight: 700 }}>⚡ This is a Short</span>
+                <span style={{ color: 'var(--text-tertiary)' }}> — vertical/short-form, shows in the Shorts row instead of the main grid</span>
+              </span>
+            </label>
 
             {error && (
               <div style={{
