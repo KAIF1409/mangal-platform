@@ -15,11 +15,54 @@ ecosystem, all under one Next.js app, one Supabase project, one Vercel deploymen
 | Part | Route | What it is | Status |
 |---|---|---|---|
 | **MangaNovels** | `/`, `/search`, `/read/...` | The original MANGAL platform — read manga, comics, and novels. Fully live. | ✅ Live, in active use |
-| **AnimeTube** | `/animetube` | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row. | 🟡 UI demo only — placeholder data, no backend |
-| **Anime Chat** | `/anime-chat` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from AnimeTube, not a tab inside it. | 🟡 UI demo only — placeholder posts, composer disabled |
+| **AnimeTube** → **Kalpanaverse** (rename pending, see §1a) | `/animetube` | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row. | 🟡 UI demo only — placeholder data, no backend |
+| **Anime Chat** → **Kalpana Circle** (rename pending, see §1a) | `/anime-chat` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from the video platform, not a tab inside it. | 🟡 UI demo only — placeholder posts, composer disabled |
 
 The homepage (`app/page.tsx`) shows all three as equal "doors" right under the hero,
 plus nav links on both the public landing page and the authenticated `/home` page.
+
+### 1a. Naming decision — pending rename (confirmed with founder, not yet applied to code)
+
+The founder locked in a new brand direction, built around
+the Hindi/Sanskrit word **"Kalpana"** (imagination) — chosen deliberately over
+"AnimeTube"/"KalaTube"/"Imagine Tube" because:
+
+- **"-Tube" as a suffix is globally saturated** (YouTube, RedTube, SchoolTube,
+  FilesTube, JewTube all exist) and reads as a knockoff name rather than an
+  independent brand — bad for a platform that wants to "shine globally"
+- **"KalaTube" has an exact prior-use collision** — an existing iOS karaoke app is
+  already called KalaTube, so that direction was dropped
+- **"Kalpana"** was checked and is clean — no existing "Kalpanaverse" or
+  "KalpanaTube" product anywhere; it's just a common Indian word/first name, never
+  claimed in tech/video/media. It also directly matches the founder's own framing
+  of the idea: *"an imaginary world where everything imaginary — dreams, power,
+  everything unreal — becomes real."* (Note: standard trademark/domain-registration
+  caveats apply — a quick web check is not a substitute for a real legal clearance
+  before formal company/trademark registration.)
+
+**Confirmed naming, to be applied in a future session:**
+
+| Current (in code today) | New name (not yet applied) |
+|---|---|
+| MANGAL (reading platform) | **Unchanged** — stays MANGAL, it's the established/live brand |
+| AnimeTube (`/animetube`) | **Kalpanaverse** |
+| Anime Chat (`/anime-chat`) | **Kalpana Circle** |
+
+**Narrative thread across the three:** *"MANGAL writes the story. Kalpanaverse
+brings it to life. Kalpana Circle is where the dreamers gather."*
+
+**What the rename touches when it's actually done** (not done yet — this is a
+scope note for whoever picks this up):
+- All UI copy/branding text in `app/animetube/page.tsx` → rename file/route to
+  `app/kalpanaverse/page.tsx` or similar, decide on final route slug with founder
+- All UI copy/branding text in `app/anime-chat/page.tsx` → same, route rename TBD
+- Nav links and the three-door landing section in `app/page.tsx` and
+  `app/home/page.tsx`
+- `README.md`'s reference to "AnimeTube"/"Anime Chat" in the Status section
+- Any metadata/OG tags if those pages get their own `metadata` export later
+- Ask the founder for the final route slugs before renaming — don't assume
+  `/kalpanaverse` and `/kalpana-circle` without confirming, since URL changes are
+  harder to walk back once shared/indexed
 
 ## 2. Why AnimeTube exists (the actual idea, so it doesn't get re-explained from scratch)
 
@@ -79,13 +122,17 @@ re-deriving the business case from scratch.
 
 ## 4. Not built yet (the real next steps, roughly in order)
 
-1. Real Supabase `videos` table (title, youtube_id, creator_id, series_id, views,
-   likes, created_at) + wire the AnimeTube grid to real data
-2. Creator upload flow — paste a YouTube link, tag the MANGAL series it's based on
-3. Ranking (sort by views/likes/recency) — same SQL pattern as existing
+1. **Apply the Kalpanaverse / Kalpana Circle rename** (see §1a) — confirm final
+   route slugs with founder first, then rename files, routes, and all UI copy
+2. Real Supabase `videos` table (title, youtube_id, creator_id, series_id, views,
+   likes, created_at) + wire the video-platform grid to real data
+3. Creator upload flow — paste a YouTube link, tag the MANGAL series it's based on
+4. Ranking (sort by views/likes/recency) — same SQL pattern as existing
    follows/reading_progress features
-4. Real Supabase `posts` / `comments` tables for Anime Chat, wire up the composer
-5. Subscribe/like/comment interactions across AnimeTube once the above exist
+5. Real Supabase `posts` / `comments` tables for the community platform, wire up
+   the composer
+6. Subscribe/like/comment interactions across the video platform once the above
+   exist
 
 ## 5. Working conventions (carried over from the original MANGAL build)
 
@@ -121,5 +168,6 @@ re-deriving the business case from scratch.
 - `profiles.account_active = false` is how banning is implemented
 
 ---
-*Last updated: this file was created alongside the initial AnimeTube + Anime Chat
-demo build. Update the status table and "not built yet" list whenever scope changes.*
+*Last updated: added the confirmed Kalpanaverse / Kalpana Circle naming decision
+(§1a) — rename is confirmed but not yet applied to code/routes. Update this file
+again once the rename is actually done, and whenever scope changes further.*
