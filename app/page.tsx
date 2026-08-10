@@ -443,18 +443,17 @@ export default function LandingPage() {
         </section>
 
 
-        {/* ── SHOWCASE ── */}
-        <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
-          {/* ── THREE DOORS: MangaNovels / KaTube / Kalpana Circle ── */}
+        {/* ── THREE DOORS: MangaNovels / KaTube / Kalpana Circle (full width, no container constraint) ── */}
+        <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <Link href="/search" style={{
-              textDecoration: 'none', borderRadius: '20px',
-              background: '#0a0a0f', border: '1px solid rgba(255,255,255,0.08)',
+              textDecoration: 'none', borderRadius: '0',
+              background: '#0a0a0f', border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)',
               display: 'flex', alignItems: 'stretch', overflow: 'hidden',
               minHeight: '88vh', transition: 'border-color 0.2s', flexWrap: 'wrap',
             }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#d97706'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderTopColor = '#d97706'; e.currentTarget.style.borderBottomColor = '#d97706'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderTopColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
             >
               <div style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
                 <div style={{ fontWeight: 900, fontSize: 'clamp(28px,4.5vw,48px)', color: '#fff', display: 'flex', alignItems: 'center', gap: '12px', lineHeight: 1.1 }}>
@@ -470,13 +469,13 @@ export default function LandingPage() {
             </Link>
 
             <Link href="/katube" style={{
-              textDecoration: 'none', borderRadius: '20px',
-              background: '#0a0a0f', border: '1px solid rgba(255,255,255,0.08)',
+              textDecoration: 'none', borderRadius: '0',
+              background: '#0a0a0f', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.08)',
               display: 'flex', alignItems: 'stretch', overflow: 'hidden',
               minHeight: '88vh', transition: 'border-color 0.2s', flexWrap: 'wrap',
             }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderBottomColor = '#2563eb'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
             >
               <div style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
                 <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
@@ -493,13 +492,13 @@ export default function LandingPage() {
             </Link>
 
             <Link href="/kalpana-circle" style={{
-              textDecoration: 'none', borderRadius: '20px',
-              background: '#0a0a0f', border: '1px solid rgba(255,255,255,0.08)',
+              textDecoration: 'none', borderRadius: '0',
+              background: '#0a0a0f', border: 'none',
               display: 'flex', alignItems: 'stretch', overflow: 'hidden',
-              minHeight: '88vh', transition: 'border-color 0.2s', flexWrap: 'wrap',
+              minHeight: '88vh', transition: 'background 0.2s', flexWrap: 'wrap',
             }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#7c3aed'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#0d0a14'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#0a0a0f'; }}
             >
               <div style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
                 <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
@@ -515,7 +514,10 @@ export default function LandingPage() {
               </div>
             </Link>
           </div>
+        </section>
 
+        {/* ── SHOWCASE ── */}
+        <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ marginBottom: '48px' }}>
             <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
               🔥 Trending Now
