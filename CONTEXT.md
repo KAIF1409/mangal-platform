@@ -941,3 +941,32 @@ unlike the reference screenshots (YouTube's right-column recommendations).
    per-user/private.
 
 **Status: design agreed, not built. Do not start until founder says go.**
+
+## 9. Top nav rebuilt to match YouTube exactly + working theme toggle (`f3525d3`)
+
+Founder shared YouTube reference screenshots (signed-out and signed-in
+views) and asked for the KaTube nav to match exactly — search bar
+included, "powered by MANGAL" instead of a MANGAL icon link, and a
+profile-avatar slot left empty for a logo to be added later.
+
+**Nav is now:** hamburger + KaTube logo + "powered by MANGAL" text |
+centered search bar (visual only — no search backend/results page yet,
+submitting does nothing) | **+ Create** button (renamed from "Upload",
+same destination `/katube/upload`) + K Circle link + theme toggle + a
+placeholder circular avatar (shows "K" for now — swap for the founder's
+real logo image whenever it's ready). The "DEMO" badge and the old
+"← Back to MANGAL" nav link were dropped from the top bar to match
+YouTube's header exactly; the MANGAL link still exists, just moved to the
+bottom of the left sidebar instead.
+
+**Theme toggle bug fixed:** previously the page hardcoded
+`data-theme="dark"` and dark-only CSS vars directly on its root div, so
+clicking `ThemeToggle` changed the `<html>` attribute but the KaTube page
+itself never re-rendered with light colors — a silent no-op. Fixed by
+adding an `onChange` callback prop to `ThemeToggle`
+(`app/components/ThemeToggle.tsx`) and wiring KaTube's root div to a local
+`isLight` state that switches between a real light and dark CSS-var set.
+KaTube still **defaults to dark** per the founder's original call — this
+only fixes the toggle so switching to light actually works for anyone who
+wants it.
+
