@@ -25,6 +25,12 @@ interface WatchVideo {
   isShort: boolean;
 }
 
+// ── §4 item 5, step 1: Like ──
+// video_likes join table + RLS already existed (20260810_katube_videos.sql).
+// This wires it up: toggles a row in video_likes and keeps videos.likes in
+// sync so existing view-count-style reads (grid cards, this page) stay
+// correct without needing a join everywhere.
+
 interface RecommendedVideo {
   id: string;
   title: string;
@@ -70,6 +76,9 @@ export default function KaTubeWatchPage() {
   const [recommended, setRecommended] = useState<RecommendedVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [liked, setLiked] = useState(false);
+  const [likeBusy, setLikeBusy] = useState(false);
 
   useEffect(() => {
     if (!videoId) return;
@@ -130,6 +139,52 @@ export default function KaTubeWatchPage() {
       }
     })();
   }, [videoId]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id || null));
+  }, []);
+
+  useEffect(() => {
+    if (!videoId || !userId) return;
+    supabase
+      .from('video_likes')
+      .select('video_id')
+      .eq('video_id', videoId)
+      .eq('liker_id', userId)
+      .maybeSingle()
+      .then(({ data }) => setLiked(!!data));
+  }, [videoId, userId]);
+
+  async function handleLike() {
+    if (!video) return;
+    if (!userId) {
+      window.location.href = '/login';
+      return;
+    }
+    if (likeBusy) return;
+    setLikeBusy(true);
+
+    const wasLiked = liked;
+    const prevLikes = video.likes;
+    const nextLikes = prevLikes + (wasLiked ? -1 : 1);
+
+    // optimistic UI
+    setLiked(!wasLiked);
+    setVideo(v => v ? { ...v, likes: nextLikes } : v);
+
+    const { error } = wasLiked
+      ? await supabase.from('video_likes').delete().eq('video_id', video.id).eq('liker_id', userId)
+      : await supabase.from('video_likes').insert({ video_id: video.id, liker_id: userId });
+
+    if (!error) {
+      await supabase.from('videos').update({ likes: Math.max(0, nextLikes) }).eq('id', video.id);
+    } else {
+      // roll back optimistic UI on failure
+      setLiked(wasLiked);
+      setVideo(v => v ? { ...v, likes: prevLikes } : v);
+    }
+    setLikeBusy(false);
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
@@ -207,7 +262,21 @@ export default function KaTubeWatchPage() {
                   <span>·</span>
                   <span>{video.views.toLocaleString()} views</span>
                   <span>·</span>
-                  <span>👍 {video.likes.toLocaleString()}</span>
+                  <button
+                    onClick={handleLike}
+                    disabled={likeBusy}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      fontSize: '13px', fontWeight: 700,
+                      color: liked ? '#2563eb' : 'var(--text-secondary)',
+                      background: liked ? 'rgba(37,99,235,0.10)' : 'transparent',
+                      border: liked ? '1px solid rgba(37,99,235,0.28)' : '1px solid var(--border-color)',
+                      borderRadius: '20px', padding: '4px 12px', cursor: likeBusy ? 'default' : 'pointer',
+                      opacity: likeBusy ? 0.6 : 1,
+                    }}
+                  >
+                    {liked ? '👍' : '👍🏻'} {video.likes.toLocaleString()}
+                  </button>
                 </div>
 
                 {video.basedOn && (
@@ -225,7 +294,7 @@ export default function KaTubeWatchPage() {
                 padding: '14px 16px', borderRadius: '12px', background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)', fontSize: '12.5px', color: 'var(--text-tertiary)', lineHeight: 1.6,
               }}>
-                Like, comment, and subscribe aren&apos;t built yet — that&apos;s the next step.
+                Comment and subscribe aren&apos;t built yet — that&apos;s the next step.
               </div>
             </div>
 
