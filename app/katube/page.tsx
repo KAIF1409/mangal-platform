@@ -37,7 +37,7 @@ interface RealShort {
   views: number;
 }
 
-const CATEGORY_PILLS = ['All', 'Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Trailers'];
+const FILTER_PILLS = ['Popular', 'New ranking', 'Category', 'Genre', 'Tools'];
 
 interface DemoShort {
   id: string;
@@ -56,13 +56,10 @@ const DEMO_SHORTS: DemoShort[] = [
   { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #1e3a8a, #0ea5e9)', emoji: '👻' },
 ];
 
-// ── KaTube redesign Step 1 (11 Aug 2026) — left sidebar nav, UI only ──
-// Matches the founder's whiteboard wireframe: Home / Fast tap (9:16) /
-// Slow tap (16:9) / Saved. This step is deliberately UI-only — clicking an
-// item just highlights it, it does NOT filter content or change what's
-// shown yet. That wiring (splitting the grid by ratio, renaming the Shorts
-// row to "Fast tap" and the video grid to "Slow tap") is a separate,
-// later step per CONTEXT.md Section 9.
+// ── KaTube redesign Step 2 (11 Aug 2026) — sidebar now actually filters ──
+// 'home' shows both sections, 'fast' shows only the 9:16 grid (renamed from
+// "Shorts"), 'slow' shows only the 16:9 grid (renamed from "Videos").
+// 'saved' has no backing data yet, so it shows a placeholder message.
 type SidebarItem = 'home' | 'fast' | 'slow' | 'saved';
 
 const SIDEBAR_ITEMS: { id: SidebarItem; label: string; icon: string }[] = [
@@ -265,6 +262,8 @@ export default function KaTubePage() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSidebar, setActiveSidebar] = useState<SidebarItem>('home');
+  const [showAllFastTap, setShowAllFastTap] = useState(false);
+  const [activeFilter, setActiveFilter] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -381,61 +380,102 @@ export default function KaTubePage() {
         </p>
       </div>
 
-      {/* Shorts row */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            ⚡ Shorts
-          </h2>
-          <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#2563eb' }}>See all →</span>
+      {/* Fast tap — renamed from "Shorts" per the wireframe. Grid instead of
+          a horizontal scroll strip so it can collapse/expand via "Show more",
+          matching the wireframe's stacked-sections layout. */}
+      {(activeSidebar === 'home' || activeSidebar === 'fast') && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ▷ Fast tap
+            </h2>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>9:16 · quick swipe-through</span>
+          </div>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px',
+            maxHeight: showAllFastTap ? 'none' : '340px', overflow: 'hidden',
+          }}>
+            {shorts.length > 0
+              ? shorts.map(s => <RealShortCard key={s.id} short={s} />)
+              : DEMO_SHORTS.map(s => <DemoShortCard key={s.id} short={s} />)}
+          </div>
+          {(shorts.length > 6 || (shorts.length === 0 && DEMO_SHORTS.length > 6)) && (
+            <button
+              onClick={() => setShowAllFastTap(v => !v)}
+              style={{
+                display: 'block', margin: '12px auto 0', padding: '8px 20px', borderRadius: '20px',
+                fontSize: '12px', fontWeight: 700, color: '#2563eb', background: 'rgba(37,99,235,0.10)',
+                border: '1px solid rgba(37,99,235,0.28)', cursor: 'pointer',
+              }}
+            >
+              {showAllFastTap ? '▲ Show less' : '▼ Show more'}
+            </button>
+          )}
+          {shorts.length === 0 && (
+            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '10px 0 0' }}>
+              Demo placeholders — <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>upload a Short</Link> to replace these.
+            </p>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
-          {shorts.length > 0
-            ? shorts.map(s => <RealShortCard key={s.id} short={s} />)
-            : DEMO_SHORTS.map(s => <DemoShortCard key={s.id} short={s} />)}
-        </div>
-        {shorts.length === 0 && (
-          <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '6px 0 0' }}>
-            Demo placeholders — <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>upload a Short</Link> to replace these.
-          </p>
-        )}
-      </div>
+      )}
 
-      {/* Category pills */}
+      {/* Filter row — Popular / New ranking / Category / Genre / Tools,
+          YouTube-style horizontal pill chips. Visual/UI only for now — the
+          founder hasn't specified what Category vs Genre vs Tools actually
+          filter by yet (CONTEXT.md Section 9), so clicking just sets the
+          active chip and doesn't change what's shown. */}
       <div style={{
         display: 'flex', gap: '8px', overflowX: 'auto', padding: '20px 20px 20px',
         maxWidth: '1200px', margin: '0 auto',
       }}>
-        {CATEGORY_PILLS.map((c, i) => (
-          <span key={c} style={{
-            flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-            background: i === 0 ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
-            color: i === 0 ? '#fff' : 'var(--text-secondary)',
-            border: i === 0 ? 'none' : '1px solid var(--border-color)',
-            cursor: 'pointer', whiteSpace: 'nowrap',
-          }}>{c}</span>
+        {FILTER_PILLS.map((c, i) => (
+          <span
+            key={c}
+            onClick={() => setActiveFilter(i)}
+            style={{
+              flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
+              background: i === activeFilter ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
+              color: i === activeFilter ? '#fff' : 'var(--text-secondary)',
+              border: i === activeFilter ? 'none' : '1px solid var(--border-color)',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}>{c}</span>
         ))}
       </div>
 
-      {/* Video grid */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 14px', letterSpacing: '-0.02em' }}>🎬 Videos</h2>
-      </div>
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)', fontSize: '13px' }}>Loading videos…</div>
-      ) : videos.length === 0 ? (
-        <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
+      {/* Slow tap — renamed from "Videos" per the wireframe. */}
+      {(activeSidebar === 'home' || activeSidebar === 'slow') && (
+        <>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 14px', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ▷ Slow tap
+            </h2>
+          </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)', fontSize: '13px' }}>Loading videos…</div>
+          ) : videos.length === 0 ? (
+            <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
+              <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
+                No videos yet — be the first! <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>Upload a video</Link> and
+                it&apos;ll show up here automatically.
+              </p>
+            </div>
+          ) : (
+            <div style={{
+              padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px',
+            }}>
+              {videos.map(v => <RealVideoCard key={v.id} video={v} />)}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Saved — no backing data yet */}
+      {activeSidebar === 'saved' && (
+        <div style={{ maxWidth: '600px', margin: '40px auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
           <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-            No videos yet — be the first! <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>Upload a video</Link> and
-            it&apos;ll show up here automatically.
+            🔖 Saved videos aren&apos;t wired up yet — this is a placeholder for the sidebar item. Coming in a later step.
           </p>
-        </div>
-      ) : (
-        <div style={{
-          padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px',
-        }}>
-          {videos.map(v => <RealVideoCard key={v.id} video={v} />)}
         </div>
       )}
 
