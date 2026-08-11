@@ -56,6 +56,75 @@ const DEMO_SHORTS: DemoShort[] = [
   { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #1e3a8a, #0ea5e9)', emoji: '👻' },
 ];
 
+// ── KaTube redesign Step 1 (11 Aug 2026) — left sidebar nav, UI only ──
+// Matches the founder's whiteboard wireframe: Home / Fast tap (9:16) /
+// Slow tap (16:9) / Saved. This step is deliberately UI-only — clicking an
+// item just highlights it, it does NOT filter content or change what's
+// shown yet. That wiring (splitting the grid by ratio, renaming the Shorts
+// row to "Fast tap" and the video grid to "Slow tap") is a separate,
+// later step per CONTEXT.md Section 9.
+type SidebarItem = 'home' | 'fast' | 'slow' | 'saved';
+
+const SIDEBAR_ITEMS: { id: SidebarItem; label: string; icon: string }[] = [
+  { id: 'home', label: 'Home', icon: '🏠' },
+  { id: 'fast', label: 'Fast tap', icon: '▷' },
+  { id: 'slow', label: 'Slow tap', icon: '▷' },
+  { id: 'saved', label: 'Saved', icon: '🔖' },
+];
+
+function SidebarNav({
+  open,
+  active,
+  onSelect,
+}: {
+  open: boolean;
+  active: SidebarItem;
+  onSelect: (id: SidebarItem) => void;
+}) {
+  return (
+    <aside style={{
+      width: open ? '160px' : '0px',
+      flexShrink: 0,
+      overflow: 'hidden',
+      borderRight: open ? '1px solid var(--border-color)' : 'none',
+      transition: 'width 0.2s ease, border-color 0.2s ease',
+      position: 'sticky',
+      top: '64px',
+      alignSelf: 'flex-start',
+      height: 'calc(100vh - 64px)',
+    }}>
+      <nav style={{ width: '160px', padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {SIDEBAR_ITEMS.map(item => (
+          <button
+            key={item.id}
+            onClick={() => onSelect(item.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '10px 12px', borderRadius: '10px', border: 'none',
+              background: active === item.id ? 'rgba(37,99,235,0.12)' : 'transparent',
+              color: active === item.id ? '#2563eb' : 'var(--text-secondary)',
+              fontSize: '13px', fontWeight: active === item.id ? 800 : 600,
+              cursor: 'pointer', textAlign: 'left', whiteSpace: 'nowrap',
+              transition: 'background 0.15s, color 0.15s',
+            }}
+          >
+            <span style={{ fontSize: '15px', width: '18px', textAlign: 'center' }}>{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+      </nav>
+    </aside>
+  );
+}
+
+function HamburgerIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+      <path d="M3 6h18M3 12h18M3 18h18" />
+    </svg>
+  );
+}
+
 function DemoShortCard({ short }: { short: DemoShort }) {
   const [hover, setHover] = useState(false);
   return (
@@ -193,6 +262,8 @@ export default function KaTubePage() {
   const [videos, setVideos] = useState<RealVideo[]>([]);
   const [shorts, setShorts] = useState<RealShort[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeSidebar, setActiveSidebar] = useState<SidebarItem>('home');
 
   useEffect(() => {
     (async () => {
@@ -241,10 +312,26 @@ export default function KaTubePage() {
         padding: '0 20px', height: '64px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <Image src="/icon.png" alt="MANGAL" width={32} height={32} style={{ display: 'block', borderRadius: '8px' }} />
-          <span style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <button
+            onClick={() => setSidebarOpen(v => !v)}
+            aria-label="Toggle sidebar"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '34px', height: '34px', borderRadius: '8px', border: 'none',
+              background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer',
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--border-color)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+          >
+            <HamburgerIcon />
+          </button>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
+            <Image src="/icon.png" alt="MANGAL" width={32} height={32} style={{ display: 'block', borderRadius: '8px' }} />
+            <span style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
+          </Link>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Image src="/katube-logo.png" alt="KaTube" width={140} height={70} style={{ display: 'block', height: '34px', width: 'auto', objectFit: 'contain' }} priority />
@@ -273,6 +360,11 @@ export default function KaTubePage() {
           }}>← Back to MANGAL</Link>
         </div>
       </nav>
+
+      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+        <SidebarNav open={sidebarOpen} active={activeSidebar} onSelect={setActiveSidebar} />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
 
       {/* ── HERO STRIP ── */}
       <div style={{
@@ -352,6 +444,9 @@ export default function KaTubePage() {
           The video grid and Shorts row above are live Supabase data with a working watch page and upload
           flow. Subscribe, like, and comment aren&apos;t built yet — that&apos;s the next step.
         </p>
+      </div>
+
+        </div>
       </div>
     </div>
   );
