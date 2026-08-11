@@ -281,15 +281,15 @@ function SearchPageInner() {
              margin cancels the page container's 12px side padding) instead
              of sitting inset inside the container like before. */
           .mangal-search-toggle-row {
-            gap: 22px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap;
+            gap: 0 !important; overflow-x: visible; -webkit-overflow-scrolling: touch; flex-wrap: nowrap;
             border-bottom: 1px solid #1f1f2a; padding-bottom: 0;
             margin-left: -12px; margin-right: -12px; width: calc(100% + 24px);
-            padding-left: 16px; padding-right: 16px; box-sizing: border-box;
+            padding-left: 0; padding-right: 0; box-sizing: border-box;
           }
           .mangal-search-toggle-btn {
-            flex-shrink: 0; background: transparent !important; border: none !important;
-            border-radius: 0 !important; padding: 10px 2px !important; font-size: 13px !important;
-            color: #9ca3af !important; font-weight: 700 !important;
+            flex: 1 1 0; background: transparent !important; border: none !important;
+            border-radius: 0 !important; padding: 13px 4px !important; font-size: 15px !important;
+            color: #9ca3af !important; font-weight: 700 !important; text-align: center !important;
             border-bottom: 2px solid transparent !important; margin-bottom: -1px;
           }
           .mangal-search-toggle-btn.is-active { color: var(--text-primary) !important; border-bottom: 2px solid #6ee7b7 !important; }
