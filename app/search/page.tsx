@@ -241,6 +241,63 @@ function SearchPageInner() {
   const createHref = isCreator ? '/dashboard' : user ? '/become-creator' : '/login';
   const createLabel = isCreator ? 'Go to Studio' : user ? 'Become a Creator' : 'Log In to Create';
 
+  // Webnovel-style result row (cover left, tags/synopsis/author/ADD on the
+  // right) — shared by the mobile search overlay's live suggestions AND the
+  // main mobile results list below, so results look identical whether the
+  // person is still typing or has already hit Search.
+  const renderResultCard = (s: Series, onNavigate?: () => void) => {
+    const username = creatorUsernames[s.creator_id];
+    const categoryLabel = s.content_type === 'novel' ? 'NOVEL' : 'MANGAL';
+    return (
+      <Link
+        key={s.id}
+        href={`/series/${s.id}`}
+        onClick={onNavigate}
+        style={{
+          display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px',
+          textDecoration: 'none', color: 'var(--text-primary)',
+          borderBottom: '1px solid var(--border-color)',
+        }}
+      >
+        <div style={{ width: '68px', height: '92px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-card)', position: 'relative' }}>
+          {s.cover_url && (
+            <Image src={s.cover_url} alt={s.title} fill sizes="68px" style={{ objectFit: 'cover' }} />
+          )}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {s.genre && (
+            <div style={{ marginBottom: '4px' }}>
+              <span style={{
+                fontSize: '11px', fontWeight: 700, color: '#d97706',
+                background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)',
+                borderRadius: '4px', padding: '2px 6px',
+              }}>#{s.genre}</span>
+            </div>
+          )}
+          <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+            {s.title}
+          </div>
+          {s.synopsis && (
+            <div style={{
+              fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.4, marginBottom: '5px',
+              overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            }}>{s.synopsis}</div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <span style={{ fontSize: '11.5px', color: 'var(--text-faint)' }}>
+              {username ? `@${username}` : 'MANGAL'} · {categoryLabel}
+            </span>
+            <span style={{
+              flexShrink: 0, fontSize: '11px', fontWeight: 800, color: '#052e21',
+              background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)',
+              padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.02em',
+            }}>+ ADD</span>
+          </div>
+        </div>
+      </Link>
+    );
+  };
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
 
@@ -262,6 +319,7 @@ function SearchPageInner() {
         .mangal-search-filters-row { flex-wrap: wrap; }
 
         .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 200px)); }
+        .mangal-search-list-mobile { display: none; }
 
         /* ── Tablet & small laptop ───────────────────────────────────── */
         @media (max-width: 768px) {
@@ -304,11 +362,11 @@ function SearchPageInner() {
           .mangal-search-filters-row select,
           .mangal-search-filters-row button { padding: 8px 10px !important; font-size: 12px !important; }
 
-          /* Bounded card width (matches the same auto-fit/minmax(min,MAX)
-             pattern every other page's series grid already uses) so a
-             single result stays a normal-sized tile instead of stretching
-             to fill the whole screen — that was the "huge image" bug. */
-          .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(105px, 130px)); gap: 10px; justify-content: start; }
+          /* Phones show the Webnovel-style list (cover left, tags/synopsis/
+             author/ADD right) instead of the small grid tiles — matches the
+             search overlay's live results exactly. */
+          .mangal-search-grid { display: none; }
+          .mangal-search-list-mobile { display: flex; flex-direction: column; margin: 0 -12px; }
         }
 
         @media (max-width: 340px) {
@@ -530,58 +588,7 @@ function SearchPageInner() {
                 No results found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.
               </div>
             ) : (
-              results.slice(0, 30).map(s => {
-                const username = creatorUsernames[s.creator_id];
-                const categoryLabel = s.content_type === 'novel' ? 'NOVEL' : 'MANGAL';
-                return (
-                  <Link
-                    key={s.id}
-                    href={`/series/${s.id}`}
-                    onClick={() => setMobileSearchOpen(false)}
-                    style={{
-                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px',
-                      textDecoration: 'none', color: 'var(--text-primary)',
-                      borderBottom: '1px solid var(--border-color)',
-                    }}
-                  >
-                    <div style={{ width: '68px', height: '92px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-card)', position: 'relative' }}>
-                      {s.cover_url && (
-                        <Image src={s.cover_url} alt={s.title} fill sizes="68px" style={{ objectFit: 'cover' }} />
-                      )}
-                    </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      {s.genre && (
-                        <div style={{ marginBottom: '4px' }}>
-                          <span style={{
-                            fontSize: '11px', fontWeight: 700, color: '#d97706',
-                            background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)',
-                            borderRadius: '4px', padding: '2px 6px',
-                          }}>#{s.genre}</span>
-                        </div>
-                      )}
-                      <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
-                        {s.title}
-                      </div>
-                      {s.synopsis && (
-                        <div style={{
-                          fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.4, marginBottom: '5px',
-                          overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                        }}>{s.synopsis}</div>
-                      )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <span style={{ fontSize: '11.5px', color: 'var(--text-faint)' }}>
-                          {username ? `@${username}` : 'MANGAL'} · {categoryLabel}
-                        </span>
-                        <span style={{
-                          flexShrink: 0, fontSize: '11px', fontWeight: 800, color: '#052e21',
-                          background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)',
-                          padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.02em',
-                        }}>+ ADD</span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })
+              results.slice(0, 30).map(s => renderResultCard(s, () => setMobileSearchOpen(false)))
             )}
           </div>
         </div>
@@ -736,6 +743,13 @@ function SearchPageInner() {
               {results.map((s, i) => (
                 <SharedSeriesCard key={s.id} series={s} creatorUsername={creatorUsernames[s.creator_id]} rank={sortBy === 'views' ? i + 1 : undefined} />
               ))}
+            </div>
+            {/* Phone-only list view — same Webnovel-style card (cover left,
+                tags/synopsis/author/ADD right) as the search overlay, so the
+                results look identical whether you're still typing or already
+                hit Search. Desktop/tablet keep the grid above unchanged. */}
+            <div className="mangal-search-list-mobile">
+              {results.map(s => renderResultCard(s))}
             </div>
           </>
         )}
