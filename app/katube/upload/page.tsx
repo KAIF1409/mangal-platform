@@ -28,6 +28,13 @@ interface OwnSeries {
   title: string;
 }
 
+interface ChannelStatus {
+  verifiedChannelId: string | null;
+  pendingChannelId: string | null;
+  pendingCode: string | null;
+  channelHandle: string | null;
+}
+
 // Accepts youtube.com/watch?v=ID, youtu.be/ID, youtube.com/shorts/ID,
 // youtube.com/embed/ID, or a bare 11-char video ID.
 function extractYoutubeId(input: string): string | null {
@@ -76,6 +83,14 @@ export default function KaTubeUploadPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // KaTube §6 — channel-ownership verification, gates the rest of the form
+  const [channelStatus, setChannelStatus] = useState<ChannelStatus | null>(null);
+  const [channelLoading, setChannelLoading] = useState(true);
+  const [channelInput, setChannelInput] = useState('');
+  const [channelBusy, setChannelBusy] = useState(false);
+  const [channelError, setChannelError] = useState('');
+  const [channelTitle, setChannelTitle] = useState('');
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
@@ -95,6 +110,72 @@ export default function KaTubeUploadPage() {
       .then(({ data }) => { if (data) setOwnSeries(data); });
   }, [userId]);
 
+  const refreshChannelStatus = async (uid: string) => {
+    setChannelLoading(true);
+    const { data } = await supabase
+      .from('creator_profiles')
+      .select('verified_youtube_channel_id, pending_youtube_channel_id, youtube_verification_code, youtube_channel_handle')
+      .eq('user_id', uid)
+      .maybeSingle();
+    setChannelStatus({
+      verifiedChannelId: data?.verified_youtube_channel_id ?? null,
+      pendingChannelId: data?.pending_youtube_channel_id ?? null,
+      pendingCode: data?.youtube_verification_code ?? null,
+      channelHandle: data?.youtube_channel_handle ?? null,
+    });
+    setChannelLoading(false);
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+    refreshChannelStatus(userId); // eslint-disable-line react-hooks/set-state-in-effect -- same pattern as ThemeToggle's mount-time state sync
+  }, [userId]);
+
+  async function authHeader() {
+    const { data } = await supabase.auth.getSession();
+    return { Authorization: `Bearer ${data.session?.access_token || ''}` };
+  }
+
+  async function handleConnectChannel(e: React.FormEvent) {
+    e.preventDefault();
+    setChannelError('');
+    if (!channelInput.trim()) { setChannelError('Enter your channel URL or @handle.'); return; }
+    setChannelBusy(true);
+    try {
+      const res = await fetch('/api/katube/channel/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+        body: JSON.stringify({ channelInput: channelInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setChannelError(data.error || 'Something went wrong.'); return; }
+      setChannelTitle(data.channelTitle || '');
+      if (userId) await refreshChannelStatus(userId);
+    } catch {
+      setChannelError('Network error — try again.');
+    } finally {
+      setChannelBusy(false);
+    }
+  }
+
+  async function handleVerifyChannel() {
+    setChannelError('');
+    setChannelBusy(true);
+    try {
+      const res = await fetch('/api/katube/channel/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+      });
+      const data = await res.json();
+      if (!res.ok) { setChannelError(data.error || 'Verification failed.'); return; }
+      if (userId) await refreshChannelStatus(userId);
+    } catch {
+      setChannelError('Network error — try again.');
+    } finally {
+      setChannelBusy(false);
+    }
+  }
+
   const previewId = extractYoutubeId(youtubeLink);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -109,29 +190,26 @@ export default function KaTubeUploadPage() {
 
     setSubmitting(true);
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('videos')
-      .insert({
-        creator_id: userId,
-        series_id: seriesId || null,
-        title: title.trim(),
-        youtube_id: youtubeId,
-        is_short: isShort,
-        category,
-        ai_tool: aiTool,
-      })
-      .select('id')
-      .single();
+    try {
+      const res = await fetch('/api/katube/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+        body: JSON.stringify({
+          youtubeId, title: title.trim(), seriesId: seriesId || null,
+          isShort, category, aiTool,
+        }),
+      });
+      const data = await res.json();
+      setSubmitting(false);
 
-    setSubmitting(false);
+      if (!res.ok) { setError(data.error || 'Something went wrong saving the video.'); return; }
 
-    if (insertError || !inserted) {
-      setError(insertError?.message || 'Something went wrong saving the video.');
-      return;
+      setSuccess(true);
+      setTimeout(() => { router.push(`/katube/watch/${data.id}`); }, 900);
+    } catch {
+      setSubmitting(false);
+      setError('Network error — try again.');
     }
-
-    setSuccess(true);
-    setTimeout(() => { router.push(`/katube/watch/${inserted.id}`); }, 900);
   }
 
   return (
@@ -189,7 +267,93 @@ export default function KaTubeUploadPage() {
           }}>
             Uploaded! Taking you to the video…
           </div>
+        ) : channelLoading ? (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px' }}>Checking your channel…</div>
+        ) : !channelStatus?.verifiedChannelId ? (
+          <div style={{
+            padding: '20px', borderRadius: '12px', background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+          }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px' }}>Verify your YouTube channel first</h2>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', marginBottom: '18px', lineHeight: 1.6 }}>
+              This is a one-time check so nobody can upload a video that isn&apos;t actually theirs.
+              Every upload is checked against your verified channel, every time.
+            </p>
+
+            {!channelStatus?.pendingCode ? (
+              <form onSubmit={handleConnectChannel}>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
+                  Your YouTube channel URL or @handle
+                </label>
+                <input
+                  type="text"
+                  value={channelInput}
+                  onChange={e => setChannelInput(e.target.value)}
+                  placeholder="https://youtube.com/@yourhandle"
+                  style={{
+                    width: '100%', padding: '11px 14px', borderRadius: '10px',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-input)',
+                    color: 'var(--text-primary)', fontSize: '13.5px', marginBottom: '12px',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                {channelError && (
+                  <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '12px' }}>{channelError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={channelBusy}
+                  style={{
+                    padding: '10px 18px', borderRadius: '10px', border: 'none',
+                    background: channelBusy ? 'var(--border-color)' : '#2563eb', color: '#fff',
+                    fontSize: '13px', fontWeight: 700, cursor: channelBusy ? 'default' : 'pointer',
+                  }}
+                >{channelBusy ? 'Looking up…' : 'Get verification code'}</button>
+              </form>
+            ) : (
+              <div>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '10px', lineHeight: 1.6 }}>
+                  {channelTitle ? `Found "${channelTitle}". ` : ''}
+                  Paste this code anywhere in your channel&apos;s <strong>About / description</strong> on
+                  YouTube, save it, then come back and hit Verify.
+                </p>
+                <code style={{
+                  display: 'block', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px',
+                  background: 'var(--bg-input)', border: '1px solid var(--border-color)',
+                  fontSize: '13px', fontWeight: 700, color: '#2563eb', wordBreak: 'break-all',
+                }}>{channelStatus.pendingCode}</code>
+                {channelError && (
+                  <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '12px' }}>{channelError}</p>
+                )}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={handleVerifyChannel}
+                    disabled={channelBusy}
+                    style={{
+                      padding: '10px 18px', borderRadius: '10px', border: 'none',
+                      background: channelBusy ? 'var(--border-color)' : '#2563eb', color: '#fff',
+                      fontSize: '13px', fontWeight: 700, cursor: channelBusy ? 'default' : 'pointer',
+                    }}
+                  >{channelBusy ? 'Checking…' : "I've added it — Verify"}</button>
+                  <button
+                    onClick={() => { setChannelInput(''); if (userId) refreshChannelStatus(userId); }}
+                    style={{
+                      padding: '10px 16px', borderRadius: '10px', background: 'transparent',
+                      border: '1px solid var(--border-color)', color: 'var(--text-secondary)',
+                      fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >Use a different channel</button>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
+          <>
+          <div style={{
+            padding: '10px 14px', borderRadius: '10px', marginBottom: '20px',
+            background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.25)',
+            fontSize: '12px', fontWeight: 700, color: '#2563eb',
+          }}>✅ Verified channel — every upload is still checked against it</div>
           <form onSubmit={handleSubmit}>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
               YouTube link
@@ -325,6 +489,7 @@ export default function KaTubeUploadPage() {
               {submitting ? 'Uploading…' : 'Upload video'}
             </button>
           </form>
+          </>
         )}
       </div>
     </div>
