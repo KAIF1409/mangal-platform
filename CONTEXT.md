@@ -940,7 +940,25 @@ unlike the reference screenshots (YouTube's right-column recommendations).
    the function only returns video rows, never exposes anything
    per-user/private.
 
-**Status: design agreed, not built. Do not start until founder says go.**
+**Status: DONE (`d31a5a1`).**
+
+New RPC `related_videos(target_video_id, result_limit)` in
+`supabase/migrations/20260811_related_videos.sql`, same SECURITY DEFINER
+"aggregate output only" pattern as `related_series`. Scores candidate
+videos by shared-tag count between the target video's series and the
+candidate's series (via `series_tags`), then falls back to same-category,
+then most-viewed/most-recent — so the list is never empty even with
+today's low data volume.
+
+`app/katube/watch/[videoId]/page.tsx` now renders a two-column layout for
+long-form videos only (`is_short = false`): player + info on the left,
+"Up next" recommendation list (`RecommendedCard`, small thumbnail + title
++ creator + views) on the right, fetched via `supabase.rpc('related_videos', …)`
+after the main video loads. Shorts watch pages are untouched — still the
+original single-column centered layout (the full-screen Shorts feed from
+§7 is the real Shorts experience now anyway; this watch-page route mostly
+matters for long-form).
+
 
 ## 9. Top nav rebuilt to match YouTube exactly + working theme toggle (`f3525d3`)
 
