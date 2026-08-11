@@ -131,7 +131,7 @@ function DemoShortCard({ short }: { short: DemoShort }) {
       onMouseLeave={() => setHover(false)}
       style={{
         width: '100%', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
-        position: 'relative', aspectRatio: '9/16', background: short.gradient,
+        position: 'relative', aspectRatio: '2/3', background: short.gradient,
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
         boxShadow: hover ? '0 12px 24px rgba(37,99,235,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
@@ -164,7 +164,7 @@ function RealShortCard({ short }: { short: RealShort }) {
       onClick={() => router.push(`/katube/watch/${short.id}`)}
       style={{
         width: '100%', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
-        position: 'relative', aspectRatio: '9/16', background: '#000',
+        position: 'relative', aspectRatio: '2/3', background: '#000',
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
         boxShadow: hover ? '0 12px 24px rgba(37,99,235,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
@@ -392,8 +392,8 @@ export default function KaTubePage() {
             <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>9:16 · quick swipe-through</span>
           </div>
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px',
-            maxHeight: showAllFastTap ? 'none' : '280px', overflow: 'hidden',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: '2px',
+            maxHeight: showAllFastTap ? 'none' : '256px', overflow: 'hidden',
           }}>
             {shorts.length > 0
               ? shorts.map(s => <RealShortCard key={s.id} short={s} />)
