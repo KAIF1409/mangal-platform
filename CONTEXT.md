@@ -740,7 +740,54 @@ Google app review or OAuth consent screen needed since both calls
 **Status: design agreed, implementation on hold pending founder's "go"
 signal — founder wants to finish other design/UI polish first.**
 
-## 7. Next up — Fast Tap → real full-screen Shorts/Reels experience (plan only, not built)
+### 6b. Content moderation — NSFW + non-AI (real footage) uploads (design agreed, on hold)
+
+Same "on hold, do not build until founder says go" status as 6 above.
+Two different problems, two different tactics — one is automatable, one
+isn't:
+
+**1. Adult/NSFW content — automatable.**
+- Run the video's YouTube thumbnail (already fetched for the grid) through
+  **NSFWJS** — a free, open-source TensorFlow.js image classifier. Runs
+  in a Vercel serverless function, zero cost, no paid API.
+- On a flag: do NOT hard-block the upload — send it to a **pending
+  review** queue instead (reuses MANGAL's existing admin
+  moderation/report system rather than building a new one). Hard-blocking
+  risks false positives frustrating legitimate creators.
+- Secondary signal: YouTube's own API also exposes an age-restriction /
+  content-rating flag — worth cross-checking alongside NSFWJS, not
+  instead of it.
+
+**2. Detecting "is this actually AI-generated" (vs. scraped real
+footage) — NOT reliably automatable.** No free/cheap tool can confidently
+tell AI-generated video from real footage today (false positives/negatives
+both common). Solution is policy + a real signal, not a fake detector:
+- **Use YouTube's own official AI-disclosure field.** As of Oct 30 2024,
+  the YouTube Data API's `videos.list` (`part=status`) returns
+  `status.containsSyntheticMedia` — this is YouTube's own "Altered or
+  Synthetic content" disclosure, filled in by the uploader on YouTube
+  itself. Same API call already needed for the channel-ownership check
+  in §6 above, so this is effectively a free additional field on a call
+  we're already making — no extra quota cost.
+  - `true` → creator disclosed AI/synthetic content on YouTube → allow.
+  - `false`/missing → creator did not disclose it → either (a) hard
+    reject with a message to disclose it on YouTube first, or (b) soft
+    warning + pending-review queue (same queue as the NSFW path above).
+    Founder to decide strict vs. soft when this gets built.
+  - **Caveat to remember:** this field is *self-declared by the
+    uploader on YouTube*, not verified by YouTube itself — someone could
+    leave the box unchecked and slip past this check. Still the best
+    available zero-cost signal; a false declaration is the creator's own
+    YouTube ToS violation, not something KaTube can be blamed for.
+- **Required upload-form field:** "Which AI tool did you use?" (Runway /
+  Kling / Pika / Hailuo / Suno / other) — adds accountability and a
+  paper trail even beyond the API signal.
+- **Enforcement layer:** reuse MANGAL's existing report/admin moderation
+  system, extended to cover KaTube videos, plus a strikes policy (e.g.
+  2-3 warnings → account ban) for repeat violations — enforcement via
+  community + policy, not a magic detector.
+
+
 
 **Current state:** "Fast Tap" is just a horizontal row of static 2:3 cards
 on the KaTube home page (`app/katube/page.tsx`, `RealShortCard`). Clicking
