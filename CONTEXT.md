@@ -578,9 +578,11 @@ reader's independent `bgColor` picker in `read/[chapterId]/page.tsx`).
 **Status: Step 1 DONE (11 Aug 2026)** — left sidebar (Home / Fast tap / Slow
 tap / Saved) + hamburger toggle added to `/katube`. UI-only, as scoped:
 clicking a sidebar item just highlights it, does not yet filter/change
-content. Next: rename+split the Shorts row / video grid into the actual
-"Fast tap" (9:16) / "Slow tap" (16:9) sections, then the YouTube-style
-pill-chip filter row (Popular/New ranking/Category/Genre/Tools).
+content. Sized up to match YouTube's own sidebar proportions per founder
+feedback (240px width, 22px icons, 15px text, more padding — was too
+cramped at first pass). Next: rename+split the Shorts row / video grid into
+the actual "Fast tap" (9:16) / "Slow tap" (16:9) sections, then the
+YouTube-style pill-chip filter row (Popular/New ranking/Category/Genre/Tools).
 
 Founder shared a hand-drawn wireframe (11 Aug 2026) for a KaTube layout overhaul.
 Confirmed understanding, documented here so it isn't lost/re-explained next
