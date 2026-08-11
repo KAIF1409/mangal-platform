@@ -103,14 +103,17 @@ interface VideoModerationInfo {
   // Self-declared by the uploader on YouTube itself, not verified by
   // YouTube — still the best zero-cost signal available. See §6b.
   containsSyntheticMedia: boolean;
+  // §6b part 3 — highest-res thumbnail URL available, for the NSFWJS
+  // check. Comes free off the same snippet field already being fetched.
+  thumbnailUrl: string | null;
 }
 
-// §6b part 2 — same videos.list call as fetchVideoChannelId above, just
-// requesting part=snippet,status together so the AI-disclosure check
-// costs zero extra API quota over the existing §6 channel check. Use this
-// instead of fetchVideoChannelId wherever both checks are needed (i.e. the
-// upload route) — fetchVideoChannelId is kept as-is since other callers
-// (e.g. future re-verification flows) may only need the channelId.
+// §6b part 2/3 — same videos.list call as fetchVideoChannelId above, just
+// requesting part=snippet,status together so the AI-disclosure + thumbnail
+// checks cost zero extra API quota over the existing §6 channel check. Use
+// this instead of fetchVideoChannelId wherever these checks are needed
+// (i.e. the upload route) — fetchVideoChannelId is kept as-is since other
+// callers (e.g. future re-verification flows) may only need the channelId.
 export async function fetchVideoModerationInfo(videoId: string): Promise<VideoModerationInfo | null> {
   const apiKey = getApiKey();
   const params = new URLSearchParams({ part: 'snippet,status', id: videoId, key: apiKey });
@@ -119,9 +122,13 @@ export async function fetchVideoModerationInfo(videoId: string): Promise<VideoMo
   const data = await res.json();
   const item = data?.items?.[0];
   if (!item?.snippet?.channelId) return null;
+  const thumbs = item.snippet?.thumbnails;
+  const thumbnailUrl =
+    thumbs?.high?.url ?? thumbs?.medium?.url ?? thumbs?.default?.url ?? null;
   return {
     channelId: item.snippet.channelId,
     containsSyntheticMedia: item.status?.containsSyntheticMedia === true,
+    thumbnailUrl,
   };
 }
 

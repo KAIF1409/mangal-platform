@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '../../../lib/authedServerClient';
 import { fetchVideoModerationInfo } from '../../../lib/youtubeVerify';
+import { checkThumbnailNsfw } from '../../../lib/nsfwCheck';
 
 // KaTube §6 step 4 — the actual fraud check. Verifying a channel once only
 // proves "this channel belongs to me"; it does NOT mean every future
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let moderationInfo: { channelId: string; containsSyntheticMedia: boolean } | null;
+  let moderationInfo: { channelId: string; containsSyntheticMedia: boolean; thumbnailUrl: string | null } | null;
   try {
     moderationInfo = await fetchVideoModerationInfo(youtubeId);
   } catch (err) {
@@ -102,6 +103,26 @@ export async function POST(req: NextRequest) {
         'disclosure box for this video (status.containsSyntheticMedia = false/missing). ' +
         'KaTube requires AI-generated content — review before removing, this may be a ' +
         'creator who forgot to check the box on YouTube rather than real footage.',
+      is_auto_flagged: true,
+    });
+  }
+
+  // §6b part 3 — NSFW thumbnail check (NSFWJS). Same soft, non-blocking
+  // approach: never rejects the upload itself, only routes a flagged
+  // thumbnail into the existing admin review queue. checkThumbnailNsfw
+  // returns null on any failure (network/model/decode), so a broken
+  // classifier can never block a legitimate creator's upload.
+  const nsfwResult = await checkThumbnailNsfw(moderationInfo.thumbnailUrl);
+  if (nsfwResult?.flagged) {
+    await auth.supabase.from('reports').insert({
+      target_type: 'video',
+      target_id: inserted.id,
+      reporter_id: auth.userId,
+      reason: 'Other',
+      details:
+        `Auto-flagged: NSFWJS classified the thumbnail as "${nsfwResult.topClass}" ` +
+        `(${Math.round(nsfwResult.topProbability * 100)}% confidence). Review before ` +
+        'removing — thumbnail classifiers can false-positive on suggestive but non-explicit images.',
       is_auto_flagged: true,
     });
   }
