@@ -426,51 +426,15 @@ export default function KaTubePage() {
         </p>
       </div>
 
-      {/* Fast tap — renamed from "Shorts" per the wireframe. Grid instead of
-          a horizontal scroll strip so it can collapse/expand via "Show more",
-          matching the wireframe's stacked-sections layout. */}
-      {(activeSidebar === 'home' || activeSidebar === 'fast') && (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              ▷ Fast tap
-            </h2>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>9:16 · quick swipe-through</span>
-          </div>
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: '4px',
-          }}>
-            {shorts.length > 0
-              ? (showAllFastTap ? shorts : shorts.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <RealShortCard key={s.id} short={s} />)
-              : (showAllFastTap ? DEMO_SHORTS : DEMO_SHORTS.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <DemoShortCard key={s.id} short={s} />)}
-          </div>
-          {(shorts.length > 6 || (shorts.length === 0 && DEMO_SHORTS.length > 6)) && (
-            <button
-              onClick={() => setShowAllFastTap(v => !v)}
-              style={{
-                display: 'block', margin: '12px auto 0', padding: '8px 20px', borderRadius: '20px',
-                fontSize: '12px', fontWeight: 700, color: '#2563eb', background: 'rgba(37,99,235,0.10)',
-                border: '1px solid rgba(37,99,235,0.28)', cursor: 'pointer',
-              }}
-            >
-              {showAllFastTap ? '▲ Show less' : '▼ Show more'}
-            </button>
-          )}
-          {shorts.length === 0 && (
-            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '10px 0 0' }}>
-              Demo placeholders — <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>upload a Short</Link> to replace these.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Filter row — Popular / New / Rankings / Categories, matching the
-          founder's DramaBox reference. Popular = views desc, New =
-          created_at desc, Rankings = likes desc. Categories reveals a
-          YouTube-style genre pill sub-row (GENRE_PILLS) that filters
-          Slow tap by the `category` column instead of re-sorting. */}
+      {/* Filter row — Popular / New / Rankings / Categories / Tools,
+          matching the founder's DramaBox/YouTube reference: sits right
+          under the hero, above Fast tap — not buried between the two
+          content sections. Popular = views desc, New = created_at desc,
+          Rankings = likes desc. Categories/Tools each reveal their own
+          pill sub-row (GENRE_PILLS / TOOL_PILLS) that filter Slow tap by
+          `category` / `ai_tool` instead of re-sorting. */}
       <div style={{
-        display: 'flex', gap: '8px', overflowX: 'auto', padding: '20px 20px 8px',
+        display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 20px 8px',
         maxWidth: '1200px', margin: '0 auto',
       }}>
         {FILTER_PILLS.map((c, i) => (
@@ -524,6 +488,44 @@ export default function KaTubePage() {
                 cursor: 'pointer', whiteSpace: 'nowrap',
               }}>{t}</span>
           ))}
+        </div>
+      )}
+
+      {/* Fast tap — renamed from "Shorts" per the wireframe. Grid instead of
+          a horizontal scroll strip so it can collapse/expand via "Show more",
+          matching the wireframe's stacked-sections layout. */}
+      {(activeSidebar === 'home' || activeSidebar === 'fast') && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ▷ Fast tap
+            </h2>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>9:16 · quick swipe-through</span>
+          </div>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: '4px',
+          }}>
+            {shorts.length > 0
+              ? (showAllFastTap ? shorts : shorts.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <RealShortCard key={s.id} short={s} />)
+              : (showAllFastTap ? DEMO_SHORTS : DEMO_SHORTS.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <DemoShortCard key={s.id} short={s} />)}
+          </div>
+          {(shorts.length > 6 || (shorts.length === 0 && DEMO_SHORTS.length > 6)) && (
+            <button
+              onClick={() => setShowAllFastTap(v => !v)}
+              style={{
+                display: 'block', margin: '12px auto 0', padding: '8px 20px', borderRadius: '20px',
+                fontSize: '12px', fontWeight: 700, color: '#2563eb', background: 'rgba(37,99,235,0.10)',
+                border: '1px solid rgba(37,99,235,0.28)', cursor: 'pointer',
+              }}
+            >
+              {showAllFastTap ? '▲ Show less' : '▼ Show more'}
+            </button>
+          )}
+          {shorts.length === 0 && (
+            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '10px 0 0' }}>
+              Demo placeholders — <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>upload a Short</Link> to replace these.
+            </p>
+          )}
         </div>
       )}
 
