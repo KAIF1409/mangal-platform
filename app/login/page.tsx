@@ -725,6 +725,8 @@ export default function AuthPage() {
     // the localhost one above, also confirmed 11 Aug 2026. `next` goes
     // through a short-lived cookie instead (see app/lib/authRedirect.ts).
     if (nextPath && nextPath !== '/home') setPostLoginRedirect(nextPath);
+    // TEMP DEBUG (11 Aug 2026) — visible without DevTools. Remove once diagnosed.
+    alert(`[debug] nextPath="${nextPath}"\ndocument.cookie="${document.cookie}"`);
     const callbackUrl = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callbackUrl } });
     if (error) { setError(error.message); setIsGoogleLoading(false); }
