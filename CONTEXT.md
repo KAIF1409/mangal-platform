@@ -784,9 +784,26 @@ it comfortably fits the zero-cost architecture. Until the key is set,
 crashing, but creators can't actually verify or upload.
 
 
-### 6b. Content moderation — NSFW + non-AI (real footage) uploads (design agreed, on hold)
+### 6b. Content moderation — NSFW + non-AI (real footage) uploads — DONE (`87b352f`, `e62ed92`, `6df89b7`)
 
-Same "on hold, do not build until founder says go" status as 6 above.
+Built in 3 parts, each committed/pushed separately:
+- **Part 1** (`87b352f`) — `is_auto_flagged` column on `reports` (reuses the
+  existing report/admin system rather than a new one), admin UI badge to
+  visually distinguish system auto-flags from real user reports.
+- **Part 2** (`e62ed92`) — AI-disclosure check via YouTube's
+  `status.containsSyntheticMedia` field, piggybacked on the videos.list
+  call §6 already makes (zero extra quota). Soft enforcement: undisclosed
+  uploads get auto-flagged into the reports queue, not hard-rejected.
+- **Part 3** (`6df89b7`) — NSFW thumbnail check via NSFWJS. New
+  `app/lib/nsfwCheck.ts`, using pure `@tensorflow/tfjs` +
+  `@tensorflow/tfjs-backend-cpu` (NOT `@tensorflow/tfjs-node` — its
+  postinstall downloads a native binary, a common source of broken
+  serverless builds) with `sharp` for image decode/resize instead of
+  `tf.node.decodeImage`. Model is a module-level singleton reused across
+  warm invocations. Same soft-enforcement pattern as Part 2: flags
+  (Porn/Hentai/Sexy ≥ 60% confidence) route to the reports queue, never
+  block the upload; any check failure (network/decode/model) fails open.
+
 Two different problems, two different tactics — one is automatable, one
 isn't:
 
