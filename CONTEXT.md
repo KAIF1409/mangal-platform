@@ -178,8 +178,8 @@ re-deriving the business case from scratch.
   small "demo placeholders, upload one to replace these" note shown in that
   case. Once any creator uploads a Short, demo cards disappear automatically.
 - **Still placeholder / not built:** category pills are static/non-functional.
-  No subscribe, no like, no comment, no ranking. Don't imply otherwise to the
-  user without checking this file's status table first.
+  No subscribe, no comment, no ranking on Shorts. Like is done (§11) — don't
+  imply otherwise to the user without checking this file's status table first.
 - Brand: white + blue (`#2563eb`/`#0ea5e9` family) — see §1b
 - Old `/kalpanaverse` URL permanently redirects here via `next.config.ts`
 
@@ -216,7 +216,8 @@ re-deriving the business case from scratch.
 4. Real Supabase `posts` / `comments` tables for the community platform, wire up
    the composer
 5. Subscribe/like/comment interactions across the video platform once the above
-   exist
+   exist — **Like: DONE (`17eb400`)**, see §11 for the approach. Comment and
+   subscribe still pending.
 6. **Kalpanaverse sponsorship/ad monetization (documented future step, not started —
    gated behind real traffic).** Founder wants a revenue layer for Kalpanaverse
    itself, not just discovery-for-MANGAL. Direction agreed:
@@ -1095,3 +1096,38 @@ channel) — nothing above changes that. What changed is *where* it lives:
 a profile setting under the dashboard/KaTube avatar, not a step inside
 the upload form. Second and later uploads were already frictionless
 before this change and remain so.
+
+## 11. KaTube like button (`17eb400`) — one genuine like per user
+
+**Approach:** no custom "algorithm" — the one-like-per-user guarantee comes
+from the database schema itself, not application logic, so it can't be
+bypassed by calling the API directly or from a buggy client.
+
+- `video_likes` has a **composite primary key** `(video_id, liker_id)`
+  (from the original `20260810_katube_videos.sql` migration). A primary key
+  can't have duplicate rows, so it's structurally impossible for the same
+  signed-in user to insert a second like row for the same video — Postgres
+  itself rejects the second insert, not client-side code.
+- **"Genuine" = tied to a real authenticated user**, not an anonymous
+  counter. RLS on `video_likes` only allows insert/delete where
+  `auth.uid() = liker_id` (already in place from the same migration), so a
+  like can only ever be recorded as coming from the signed-in user making
+  the request — no spoofing someone else's like, no unauthenticated
+  like-spam.
+- **Toggle, not increment:** the watch page checks for an existing
+  `(video_id, userId)` row on load to set the initial liked/unliked state,
+  then insert (like) or delete (unlike) that single row on click — so a
+  user can only ever contribute 0 or 1 to a video's like count, and
+  clicking again removes their like rather than adding another.
+- **Denormalized counter:** `videos.likes` is kept in sync on every
+  toggle (`+1`/`-1`) so existing reads (grid cards, Rankings sort, watch
+  page header) stay a simple column read with no join/count query needed.
+  Source of truth for *whether a specific user liked a video* is still the
+  `video_likes` rows; `videos.likes` is just a fast cached total.
+- Not signed in → clicking Like redirects to `/login` instead of silently
+  failing or allowing an anonymous like.
+
+**Not handled by this (future hardening, not asked for yet):** no rate
+limiting or bot/fraud detection beyond "must be a real logged-in
+`auth.users` row" — same trust model as the rest of the app (e.g. view
+counts) for now.
