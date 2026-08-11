@@ -15,7 +15,7 @@ ecosystem, all under one Next.js app, one Supabase project, one Vercel deploymen
 | Part | Route | What it is | Status |
 |---|---|---|---|
 | **MangaNovels** | `/`, `/search`, `/read/...` | The original MANGAL platform — read manga, comics, and novels. Fully live. | ✅ Live, in active use |
-| **KaTube** | `/katube` (redirected from `/kalpanaverse`) | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟡 Grid, Shorts, watch page, and upload flow all live on real Supabase data (Steps 1–4); ranking and engagement actions still pending |
+| **KaTube** | `/katube` (redirected from `/kalpanaverse`) | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row and full-screen Shorts feed. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟢 Grid, Shorts (row + full-screen feed), watch page (incl. tag-based recommendations), upload flow, channel verification, content moderation, and ranking/filtering (Popular/New/Rankings/Categories/Tools) all live on real Supabase data; only like/comment/subscribe engagement actions still pending (see §4) |
 | **Kalpana Circle** | `/kalpana-circle` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from the video platform, not a tab inside it. Brand: purple/violet. | 🟡 UI demo only — placeholder posts, composer disabled |
 
 The homepage (`app/page.tsx`) shows all three as equal "doors" right under the hero,
@@ -208,8 +208,11 @@ re-deriving the business case from scratch.
 1. Real Supabase `videos` table (title, youtube_id, creator_id, series_id, views,
    likes, created_at) + wire the video-platform grid to real data
 2. Creator upload flow — paste a YouTube link, tag the MANGAL series it's based on
-3. Ranking (sort by views/likes/recency) — same SQL pattern as existing
-   follows/reading_progress features
+3. ~~Ranking (sort by views/likes/recency)~~ — **DONE** (`76d4636`, `2669e82`,
+   `8137e81`, `c3c81ae`). Filter pills `['Popular', 'New', 'Rankings',
+   'Categories', 'Tools']`: Popular = `views` desc, New = `created_at` desc,
+   Rankings = `likes` desc, Categories/Tools filter by `videos.category` /
+   `videos.ai_tool` (AND'd together regardless of active sort chip).
 4. Real Supabase `posts` / `comments` tables for the community platform, wire up
    the composer
 5. Subscribe/like/comment interactions across the video platform once the above
