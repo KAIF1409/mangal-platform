@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -114,6 +114,9 @@ function SearchPageInner() {
 
   // Mobile hamburger menu — phones only, see .mangal-search-navbar-mobile below.
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Lets the mobile header's search icon (Webnovel-style) jump straight to
+  // the real search input further down the page instead of duplicating it.
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Step 21 — Dual Content Mode: restore the reader's last toggle choice
@@ -324,42 +327,58 @@ function SearchPageInner() {
         />
       </div>
 
-      {/* ── PHONE-ONLY NAV — hamburger + centered logo + compact auth,
-          matching the Webnovel-style mobile pattern the founder wants.
-          Fully independent of the desktop <Navbar/> above so nothing here
-          can ever touch laptop/desktop rendering. ── */}
+      {/* ── PHONE-ONLY NAV — cloned to match Webnovel's mobile header exactly:
+          always-dark bar (not tied to the site's light/dark toggle, same as
+          Webnovel's header never goes light), hamburger + search icon
+          cluster on the left, centered bold wordmark, mint pill button on
+          the right. Fully independent of the desktop <Navbar/> above so
+          nothing here can ever touch laptop/desktop rendering. ── */}
       <div className="mangal-search-navbar-mobile" style={{ position: 'sticky', top: 0, zIndex: 50 }}>
         <nav style={{
-          background: 'var(--nav-bg)', backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid var(--border-color)',
+          background: '#0b0b10', backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid #1f1f2a',
           padding: '0 10px', height: '54px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px',
         }}>
-          <button
-            onClick={() => setMobileMenuOpen(o => !o)}
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileMenuOpen}
-            style={{
-              width: '38px', height: '38px', borderRadius: '8px', border: '1px solid var(--border-color)',
-              background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '17px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer',
-            }}
-          >
-            {mobileMenuOpen ? '✕' : '☰'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <button
+              onClick={() => setMobileMenuOpen(o => !o)}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
+              style={{
+                width: '36px', height: '36px', borderRadius: '8px', border: 'none',
+                background: 'transparent', color: '#f9fafb', fontSize: '18px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              }}
+            >
+              {mobileMenuOpen ? '✕' : '☰'}
+            </button>
+            <button
+              onClick={() => { searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); searchInputRef.current?.focus(); }}
+              aria-label="Search"
+              style={{
+                width: '36px', height: '36px', borderRadius: '8px', border: 'none',
+                background: 'transparent', color: '#f9fafb', fontSize: '16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              }}
+            >
+              🔍
+            </button>
+          </div>
 
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', minWidth: 0 }}>
-            <Image src="/icon.png" alt="MANGAL" width={24} height={24} style={{ display: 'block', flexShrink: 0 }} />
-            <span style={{ fontWeight: 900, fontSize: '15px', color: 'var(--text-primary)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>MANGAL</span>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', minWidth: 0, flex: 1, justifyContent: 'center' }}>
+            <Image src="/icon.png" alt="MANGAL" width={22} height={22} style={{ display: 'block', flexShrink: 0 }} />
+            <span style={{ fontWeight: 900, fontSize: '16px', color: '#f9fafb', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>MANGAL</span>
           </Link>
 
           {user ? (
             <div style={{ flexShrink: 0 }}><ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} /></div>
           ) : (
             <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{
-              flexShrink: 0, padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-              background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
-            }}>Log in</a>
+              flexShrink: 0, padding: '8px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: 800,
+              background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)', color: '#052e21', textDecoration: 'none',
+              whiteSpace: 'nowrap', letterSpacing: '0.03em',
+            }}>LOG IN</a>
           )}
         </nav>
 
@@ -368,24 +387,24 @@ function SearchPageInner() {
             {/* Tap-outside-to-close backdrop */}
             <div
               onClick={() => setMobileMenuOpen(false)}
-              style={{ position: 'fixed', inset: 0, top: '54px', zIndex: 48, background: 'rgba(0,0,0,0.35)' }}
+              style={{ position: 'fixed', inset: 0, top: '54px', zIndex: 48, background: 'rgba(0,0,0,0.5)' }}
             />
             <div style={{
               position: 'absolute', top: '54px', left: 0, right: 0, zIndex: 49,
-              background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)',
+              background: '#0b0b10', borderBottom: '1px solid #1f1f2a',
               padding: '10px', display: 'flex', flexDirection: 'column', gap: '2px',
-              boxShadow: '0 12px 24px rgba(0,0,0,0.25)',
+              boxShadow: '0 12px 24px rgba(0,0,0,0.4)',
             }}>
               {NAV_LINKS.map(link => (
                 <a
                   key={link.label}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  style={{ padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}
+                  style={{ padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: '#f9fafb', textDecoration: 'none' }}
                 >{link.label}</a>
               ))}
 
-              <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
+              <div style={{ height: '1px', background: '#1f1f2a', margin: '6px 4px' }} />
 
               {isCreator && (
                 <a
@@ -400,11 +419,11 @@ function SearchPageInner() {
                   href={`/login?next=${encodeURIComponent(loginNext)}`}
                   onClick={() => setMobileMenuOpen(false)}
                   style={{
-                    marginTop: '4px', padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 700,
-                    textAlign: 'center', background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
-                    color: '#d97706', textDecoration: 'none',
+                    marginTop: '4px', padding: '12px 14px', borderRadius: '20px', fontSize: '14px', fontWeight: 800,
+                    textAlign: 'center', background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)',
+                    color: '#052e21', textDecoration: 'none', letterSpacing: '0.03em',
                   }}
-                >Get Started</a>
+                >SIGN UP</a>
               )}
             </div>
           </>
@@ -417,6 +436,7 @@ function SearchPageInner() {
         <div style={{ position: 'relative', marginBottom: '20px' }}>
           <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', pointerEvents: 'none' }}>🔍</span>
           <input
+            ref={searchInputRef}
             type="text"
             autoFocus
             placeholder="Search series, genres, creators..."
