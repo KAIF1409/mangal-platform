@@ -697,3 +697,45 @@ Shorts) and added a Short/regular toggle to the upload form. Roadmap Steps
 (Kalpana Circle) integration (Step 5), then formal LLP/DPIIT registration
 (Step 6, business side). Update this file again whenever scope changes
 further.*
+
+## 6. Not built yet — KaTube channel-ownership verification (design agreed, on hold)
+
+**The problem:** nothing currently stops a creator from pasting a YouTube
+link that belongs to someone else's channel — they could upload a
+stranger's video/short as if it were their own.
+
+**Design agreed with founder (do NOT build until founder says "continue" —
+design was still being finalized as of this note):**
+
+1. **One-time channel connect.** Creator enters their YouTube channel
+   URL/handle in their KaTube profile. Server calls the YouTube Data API
+   (public `channels.list`, no OAuth needed) to resolve the real
+   `channelId` and current channel description.
+2. **Verification code.** Server generates a unique code (e.g.
+   `MANGAL-VERIFY-x7k2p9`) and shows it to the creator, who pastes it
+   into their channel's About/description on YouTube.
+3. **Verify button.** Creator clicks "Verify" — server re-fetches that
+   channel's description via the API and checks the code is present.
+   Only the real channel owner can edit the description, so a match is
+   proof of ownership. On success, `verified_youtube_channel_id` is saved
+   to the creator's MANGAL profile.
+4. **Per-upload enforcement (the actual fraud check — this is the part
+   that matters, not step 3).** Verifying once only proves "this channel
+   belongs to me" — it does NOT mean every future upload is trusted by
+   default. On every single video/short upload: extract the `videoId`
+   from the pasted link, call `videos.list` on it to read the video's
+   real `snippet.channelId` (public metadata, works for any video), and
+   compare it against the creator's `verified_youtube_channel_id`.
+   Mismatch → reject the upload with a clear error ("This video isn't
+   from your verified channel"), regardless of the creator's verified
+   status. This check runs every time, with no skip/bypass once verified
+   — verification only establishes the baseline channelId to check
+   against, it never exempts a creator from the per-video check.
+
+**Cost/complexity:** YouTube Data API free tier (10,000 units/day, this
+check costs ~1-2 units per action) — fits the zero-cost architecture, no
+Google app review or OAuth consent screen needed since both calls
+(`channels.list`, `videos.list`) are public read-only endpoints.
+
+**Status: design agreed, implementation on hold pending founder's "go"
+signal — founder wants to finish other design/UI polish first.**
