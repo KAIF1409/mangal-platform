@@ -588,6 +588,19 @@ instead of just highlighting. Next: decide Category vs Genre vs Tools
 filtering logic, then wire it; after that, ranking + Kalpana Circle
 integration (Step 5 in the older roadmap numbering above).
 
+**Filter pills — Popular / New ranking wired (`76d4636`, `2669e82`)** —
+Popular sorts the Slow tap grid by `views` desc, New ranking sorts by
+`created_at` desc, both real columns on `videos`. Category/Genre/Tools
+remain visual-only (title tooltip says so) since there's no backing
+column and the founder still hasn't specified what each should filter
+by — clicking them now falls back to default order instead of doing
+nothing. Also fixed the same session: Fast tap grid used to collapse via
+a fixed `maxHeight: 256px` + `overflow: hidden`, which sliced through
+whatever card sat at that pixel boundary and cut off rounded corners
+(worse on wide screens where auto-fill columns stretch taller). Now
+collapses by item count (`FAST_TAP_COLLAPSED_COUNT = 6`) instead, so
+there's nothing to crop.
+
 Founder shared a hand-drawn wireframe (11 Aug 2026) for a KaTube layout overhaul.
 Original image saved at `docs/design/katube-sidebar-wireframe.png` — refer to
 it directly for layout/spacing questions instead of re-deriving from this
