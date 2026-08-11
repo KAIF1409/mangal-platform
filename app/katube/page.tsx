@@ -39,6 +39,13 @@ interface RealShort {
 
 const FILTER_PILLS = ['Popular', 'New ranking', 'Category', 'Genre', 'Tools'];
 
+// Fast tap "collapsed" state now caps by item count, not a fixed pixel
+// maxHeight — a pixel cap clips whatever card happens to sit at that height
+// (worse at wider screens, where auto-fill columns stretch and cards get
+// taller), cutting off rounded corners mid-card. Capping the item count
+// means we simply never render the extra cards, so there's nothing to crop.
+const FAST_TAP_COLLAPSED_COUNT = 6;
+
 interface DemoShort {
   id: string;
   title: string;
@@ -395,11 +402,10 @@ export default function KaTubePage() {
           </div>
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: '4px',
-            maxHeight: showAllFastTap ? 'none' : '256px', overflow: 'hidden',
           }}>
             {shorts.length > 0
-              ? shorts.map(s => <RealShortCard key={s.id} short={s} />)
-              : DEMO_SHORTS.map(s => <DemoShortCard key={s.id} short={s} />)}
+              ? (showAllFastTap ? shorts : shorts.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <RealShortCard key={s.id} short={s} />)
+              : (showAllFastTap ? DEMO_SHORTS : DEMO_SHORTS.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <DemoShortCard key={s.id} short={s} />)}
           </div>
           {(shorts.length > 6 || (shorts.length === 0 && DEMO_SHORTS.length > 6)) && (
             <button
