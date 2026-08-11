@@ -203,9 +203,14 @@ function SearchPageInner() {
     if (q) {
       r = r.filter(s => {
         const username = (creatorUsernames[s.creator_id] ?? '').toLowerCase();
+        // Synopsis is long prose — for 1–2 char queries almost every series'
+        // synopsis contains that letter somewhere, which made searches like
+        // "H" match series that have nothing to do with the query. Only
+        // check synopsis once the query is specific enough (3+ chars).
+        const synopsisMatch = q.length >= 3 && fuzzyMatch(s.synopsis ?? '', q);
         return (
           fuzzyMatch(s.title, q) ||
-          fuzzyMatch(s.synopsis ?? '', q) ||
+          synopsisMatch ||
           fuzzyMatch(s.genre ?? '', q) ||
           username.includes(q)
         );
@@ -469,10 +474,12 @@ function SearchPageInner() {
           aria-modal="true"
           style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}
         >
-          <form
-            onSubmit={e => { e.preventDefault(); setMobileSearchOpen(false); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderBottom: '1px solid var(--border-color)' }}
-          >
+          {/* Plain div, not a <form> — a native form submit (e.g. triggered
+              by the Android keyboard's own "Go"/search action key) was
+              causing this to occasionally fall through to a full page
+              navigation on some mobile browsers instead of just closing the
+              overlay. Explicit click/Enter handlers avoid that path entirely. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderBottom: '1px solid var(--border-color)' }}>
             <button
               type="button"
               onClick={() => setMobileSearchOpen(false)}
@@ -489,6 +496,9 @@ function SearchPageInner() {
               placeholder="Search series, genres, creators..."
               value={query}
               onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); setMobileSearchOpen(false); }
+              }}
               style={{
                 flex: 1, padding: '11px 14px', borderRadius: '10px',
                 background: 'var(--bg-card)', border: '1px solid var(--border-color)',
@@ -496,14 +506,15 @@ function SearchPageInner() {
               }}
             />
             <button
-              type="submit"
+              type="button"
+              onClick={() => setMobileSearchOpen(false)}
               style={{
                 flexShrink: 0, padding: '11px 18px', borderRadius: '10px', border: 'none',
                 background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)', color: '#052e21',
                 fontSize: '13px', fontWeight: 800, cursor: 'pointer',
               }}
             >Search</button>
-          </form>
+          </div>
 
           {/* Live results list — the overlay was previously a dead end because
               the full-screen background hid the results grid underneath it,
