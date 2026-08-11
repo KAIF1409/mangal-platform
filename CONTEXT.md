@@ -355,6 +355,25 @@ Environment Variables → `NEXT_PUBLIC_APP_URL` (Production) and set it to
 exists), then redeploy — this file has no tool access to edit Vercel env
 vars directly.
 
+**Follow-up (same day): the "return to /katube/upload after login" fix
+worked only occasionally, mostly landed on `/home` anyway.** Root cause was
+a timing race, not a config issue this time. `nextPath` was set via
+`useEffect` + `setTimeout(0)` (deferred to the next macrotask). If the user
+clicked "Continue with Google" before that timeout fired —
+which, empirically, turned out to be *most* clicks, not a rare edge case —
+`handleGoogleLogin` closed over the still-default `'/home'` and silently
+dropped the intended return path. **Fix:** `nextPath` is now read via
+`useState`'s lazy initializer (`useState(() => ...)`), which runs
+synchronously as part of the render that mounts/hydrates the component —
+guaranteed to complete before the button is even interactive, no race
+possible. The separate error-banner effect still uses `setTimeout(0)` (that
+one's fine — errors aren't read by a click handler racing against it) and
+still cleans the URL via `history.replaceState` afterward. General lesson
+for this file: don't use `useEffect` + deferred `setState` for anything a
+click handler might read before the effect fires — use a lazy `useState`
+initializer instead when the value only depends on things available at
+mount (URL, `window`, etc.).
+
 ## 7. Session TODO — theme regressions + Upload page redesign (in progress)
 
 > Logged before starting work, per founder's request, so a fresh chat session

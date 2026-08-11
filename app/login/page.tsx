@@ -550,7 +550,21 @@ export default function AuthPage() {
   // email/password login, so e.g. clicking "Log in" from /katube/upload
   // actually returns you to /katube/upload instead of always landing on
   // /home.
-  const [nextPath, setNextPath] = useState('/home');
+  //
+  // IMPORTANT: read via useState's lazy initializer (runs synchronously
+  // during the client render, before any paint), NOT inside a useEffect.
+  // The previous version set this via useEffect + setTimeout(0), which is
+  // asynchronous — if the user clicked "Continue with Google" before that
+  // timeout fired (which turned out to happen most of the time in
+  // practice, not just occasionally), handleGoogleLogin would close over
+  // the still-default '/home' and silently drop the intended return path.
+  // A lazy initializer has no such window: it's guaranteed to have run
+  // before the button is even interactive.
+  const [nextPath] = useState(() => {
+    if (typeof window === 'undefined') return '/home';
+    const raw = new URLSearchParams(window.location.search).get('next');
+    return raw && /^\/(?!\/|\\)/.test(raw) ? raw : '/home';
+  });
 
   // Surface errors that /auth/callback redirects back with (e.g. Google
   // sign-in was cancelled, or exchangeCodeForSession failed) — previously
@@ -558,11 +572,9 @@ export default function AuthPage() {
   // the user, so a real failure just looked like the login page reloading.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-
-    const rawNext = params.get('next');
-    const validNext = rawNext && /^\/(?!\/|\\)/.test(rawNext) ? rawNext : null;
-
+    const hadNext = !!params.get('next');
     const oauthError = params.get('error');
+
     const FRIENDLY_ERRORS: Record<string, string> = {
       session_exchange_failed:
         "Google sign-in didn't finish — this can happen if your browser blocked or cleared cookies during the redirect. Try again, or sign in with email below.",
@@ -573,13 +585,13 @@ export default function AuthPage() {
     };
 
     const t = setTimeout(() => {
-      if (validNext) setNextPath(validNext);
       if (oauthError) setError(FRIENDLY_ERRORS[oauthError] || decodeURIComponent(oauthError));
     }, 0);
 
     // Clean the URL so a refresh or back-navigation doesn't re-show the
-    // error or resubmit it. (next was already captured into state above.)
-    if (oauthError || validNext) window.history.replaceState({}, '', '/login');
+    // error or resubmit it. (next was already captured into state above via
+    // the lazy initializer, so it's safe to strip here.)
+    if (oauthError || hadNext) window.history.replaceState({}, '', '/login');
 
     return () => clearTimeout(t);
   }, []);
