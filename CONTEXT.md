@@ -739,3 +739,48 @@ Google app review or OAuth consent screen needed since both calls
 
 **Status: design agreed, implementation on hold pending founder's "go"
 signal — founder wants to finish other design/UI polish first.**
+
+## 7. Next up — Fast Tap → real full-screen Shorts/Reels experience (plan only, not built)
+
+**Current state:** "Fast Tap" is just a horizontal row of static 2:3 cards
+on the KaTube home page (`app/katube/page.tsx`, `RealShortCard`). Clicking
+one goes to the normal watch page with a vertical-aspect embed (see §
+above) — there's no actual swipeable feed.
+
+**What founder wants instead (reference: YouTube Shorts, Instagram
+Reels):** a dedicated full-screen vertical feed — one short fills the
+whole viewport, swipe/scroll up or down moves to the next/previous short,
+autoplay on the active one, like/comment/share as floating icons on the
+right edge, creator info + caption overlaid at the bottom-left, matching
+the two reference screenshots the founder shared (YouTube Shorts UI and
+Instagram Reels UI).
+
+**Planned build steps, in order (do NOT start until founder says go):**
+
+1. **New route `/katube/shorts/[shortId]`** — full-screen (`100vh`)
+   single-short player, `iframe` embed sized to fill the viewport at
+   9:16 (letterboxed on wider screens, same idea as the watch-page fix
+   above but full-bleed instead of a centered card).
+2. **Vertical snap-scroll feed** — CSS `scroll-snap-type: y mandatory`
+   container holding all shorts (or a windowed subset), each short a
+   `scroll-snap-align: start` full-height section. This gets swipe/scroll
+   navigation for free without hand-rolled touch-gesture JS.
+3. **Autoplay-on-active only** — use an `IntersectionObserver` to detect
+   which short is >50% in view and only that one's iframe gets
+   `autoplay=1` in its src (YouTube embeds autoplay via URL param); others
+   stay paused/unloaded so the page doesn't try to autoplay 10 videos at
+   once.
+4. **Overlay UI** — absolutely-positioned right-edge icon column (like,
+   comment, share — reuse the existing like logic from the current watch
+   page) and bottom-left creator/caption block, both floating over the
+   video, matching the reference screenshots' layout.
+5. **Entry points** — "Fast Tap" row on the KaTube home page and its
+   individual cards should route into this new feed (starting at the
+   clicked short) instead of the current normal watch page.
+6. **Lazy-load / windowing** — don't mount iframes for every short in the
+   whole table at once; fetch a page of shorts and mount only nearby ones
+   (e.g. current ± 1) to keep the DOM light as the shorts table grows.
+
+**Not addressed yet:** comment/subscribe backend (still not built per §4
+item 4-5), so the overlay's comment button can open the existing
+"not built yet" state for now rather than blocking this whole feature.
