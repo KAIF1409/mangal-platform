@@ -130,7 +130,7 @@ function DemoShortCard({ short }: { short: DemoShort }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        flexShrink: 0, width: '190px', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer',
+        width: '100%', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
         position: 'relative', aspectRatio: '9/16', background: short.gradient,
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
@@ -163,7 +163,7 @@ function RealShortCard({ short }: { short: RealShort }) {
       onMouseLeave={() => setHover(false)}
       onClick={() => router.push(`/katube/watch/${short.id}`)}
       style={{
-        flexShrink: 0, width: '190px', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer',
+        width: '100%', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
         position: 'relative', aspectRatio: '9/16', background: '#000',
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
@@ -392,8 +392,8 @@ export default function KaTubePage() {
             <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>9:16 · quick swipe-through</span>
           </div>
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px',
-            maxHeight: showAllFastTap ? 'none' : '340px', overflow: 'hidden',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px',
+            maxHeight: showAllFastTap ? 'none' : '280px', overflow: 'hidden',
           }}>
             {shorts.length > 0
               ? shorts.map(s => <RealShortCard key={s.id} short={s} />)
@@ -462,7 +462,7 @@ export default function KaTubePage() {
           ) : (
             <div style={{
               padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
-              display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px',
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px',
             }}>
               {videos.map(v => <RealVideoCard key={v.id} video={v} />)}
             </div>
