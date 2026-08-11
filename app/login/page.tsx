@@ -696,7 +696,15 @@ export default function AuthPage() {
     if (isGoogleLoading) return;
     setIsGoogleLoading(true);
     setError('');
-    const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+    // Always use the actual browser origin, not NEXT_PUBLIC_APP_URL — this
+    // only ever runs client-side (inside a click handler), so
+    // window.location.origin is guaranteed correct for whatever domain the
+    // user is actually on. NEXT_PUBLIC_APP_URL is a build-time env var on
+    // Vercel; if it's set to something stale (e.g. http://localhost:3000,
+    // left over from local dev), it would silently override this and send
+    // every production OAuth redirect to localhost instead of the live
+    // site — which is exactly what was happening (confirmed 11 Aug 2026).
+    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callbackUrl } });
     if (error) { setError(error.message); setIsGoogleLoading(false); }
     // On success this navigates away, so no need to reset isGoogleLoading.

@@ -329,6 +329,32 @@ added `flow_state_already_used` to the friendly-error map on the off chance
 it does reach `/login` via `/auth/callback` instead of landing on Supabase's
 raw Site URL.
 
+**Follow-up (same day, the real root cause): OAuth redirect was going to
+`localhost:3000` from the live Vercel site.** Confirmed by the founder
+testing on `mangal-platform.vercel.app` and landing on
+`http://localhost:3000/?code=...` after picking a Google account — i.e. not
+a code bug tied to any specific page, but every Google login on production
+was sending the OAuth `redirectTo` to `localhost:3000`. Cause:
+`app/login/page.tsx`'s `handleGoogleLogin` built the callback URL as
+`process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin` — `NEXT_PUBLIC_*`
+vars are baked in at **build time** on Vercel, and this one is very likely
+still set to `http://localhost:3000` (leftover from local dev config),
+silently overriding the correct `window.location.origin` on every
+production build. **Fix:** dropped `NEXT_PUBLIC_APP_URL` from this call
+entirely — it now always uses `window.location.origin`, which is guaranteed
+correct since this code only ever runs client-side inside a click handler.
+**Still needs a founder-side fix, not code:** three server-side API routes
+(`app/api/notify-followers/route.ts`, `app/api/confirm-parent-consent/route.ts`,
+`app/api/send-parent-consent/route.ts`) still read `NEXT_PUBLIC_APP_URL` to
+build absolute links for **emails** — those can't fall back to
+`window.location.origin` (no browser on the server). If the Vercel env var
+really is set to `localhost:3000`, those emails are almost certainly
+embedding broken `localhost` links too. Check Vercel → Project Settings →
+Environment Variables → `NEXT_PUBLIC_APP_URL` (Production) and set it to
+`https://mangal-platform.vercel.app` (or the real custom domain once one
+exists), then redeploy — this file has no tool access to edit Vercel env
+vars directly.
+
 ## 7. Session TODO — theme regressions + Upload page redesign (in progress)
 
 > Logged before starting work, per founder's request, so a fresh chat session
