@@ -22,6 +22,7 @@ interface WatchVideo {
   creatorUsername: string | null;
   seriesId: string | null;
   basedOn: string | null;
+  isShort: boolean;
 }
 
 export default function KaTubeWatchPage() {
@@ -38,7 +39,7 @@ export default function KaTubeWatchPage() {
     (async () => {
       const { data: row } = await supabase
         .from('videos')
-        .select('id, title, youtube_id, views, likes, creator_id, series_id')
+        .select('id, title, youtube_id, views, likes, creator_id, series_id, is_short')
         .eq('id', videoId)
         .single();
 
@@ -65,6 +66,7 @@ export default function KaTubeWatchPage() {
         creatorUsername: creatorRes.data?.username || null,
         seriesId: row.series_id,
         basedOn: seriesRes.data?.title || null,
+        isShort: row.is_short,
       });
       setLoading(false);
 
@@ -114,7 +116,7 @@ export default function KaTubeWatchPage() {
           <>
             {/* Player */}
             <div style={{
-              position: 'relative', width: '100%', aspectRatio: '16/9',
+              position: 'relative', width: '100%', aspectRatio: video.isShort ? '9/16' : '16/9', maxWidth: video.isShort ? '420px' : 'none', margin: video.isShort ? '0 auto' : '0',
               borderRadius: '14px', overflow: 'hidden', background: '#000',
               boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
             }}>
