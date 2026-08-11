@@ -96,6 +96,35 @@ export async function fetchVideoChannelId(videoId: string): Promise<string | nul
   return item?.snippet?.channelId ?? null;
 }
 
+interface VideoModerationInfo {
+  channelId: string;
+  // YouTube's own "Altered or Synthetic content" self-disclosure field
+  // (status.containsSyntheticMedia, live on the Data API since Oct 30 2024).
+  // Self-declared by the uploader on YouTube itself, not verified by
+  // YouTube — still the best zero-cost signal available. See §6b.
+  containsSyntheticMedia: boolean;
+}
+
+// §6b part 2 — same videos.list call as fetchVideoChannelId above, just
+// requesting part=snippet,status together so the AI-disclosure check
+// costs zero extra API quota over the existing §6 channel check. Use this
+// instead of fetchVideoChannelId wherever both checks are needed (i.e. the
+// upload route) — fetchVideoChannelId is kept as-is since other callers
+// (e.g. future re-verification flows) may only need the channelId.
+export async function fetchVideoModerationInfo(videoId: string): Promise<VideoModerationInfo | null> {
+  const apiKey = getApiKey();
+  const params = new URLSearchParams({ part: 'snippet,status', id: videoId, key: apiKey });
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const item = data?.items?.[0];
+  if (!item?.snippet?.channelId) return null;
+  return {
+    channelId: item.snippet.channelId,
+    containsSyntheticMedia: item.status?.containsSyntheticMedia === true,
+  };
+}
+
 export function generateVerificationCode(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let code = '';
