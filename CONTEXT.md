@@ -629,6 +629,17 @@ form has a tool pill-picker. `FILTER_PILLS` is now `['Popular', 'New',
 their own sub-row (`GENRE_PILLS` / `TOOL_PILLS`) and both filters apply
 together (AND) regardless of which sort chip is active.
 
+**Filter row moved above Fast tap (`6da285b`)** — was sandwiched between
+Fast tap and Slow tap; founder wants it right under the hero as a
+page-wide filter, matching DramaBox's top tabs / YouTube's topic row.
+
+**KaTube forced dark by default (`f4e904f`)** — founder confirmed dark
+is the right look for this page specifically (independent of the
+site-wide light-default). Root div overrides the CSS vars locally
+(same pattern as `/login`'s intentional dark screen) so a first-time
+visitor sees dark immediately; `ThemeToggle` still sits in the nav if
+someone wants to flip to light for a visit.
+
 Founder shared a hand-drawn wireframe (11 Aug 2026) for a KaTube layout overhaul.
 Original image saved at `docs/design/katube-sidebar-wireframe.png` — refer to
 it directly for layout/spacing questions instead of re-deriving from this
