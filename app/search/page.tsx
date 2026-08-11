@@ -504,6 +504,45 @@ function SearchPageInner() {
               }}
             >Search</button>
           </form>
+
+          {/* Live results list — the overlay was previously a dead end because
+              the full-screen background hid the results grid underneath it,
+              so nothing visibly happened while typing. This shows matches as
+              you type; tapping one goes straight to that series. */}
+          <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            {query.trim() === '' ? (
+              <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
+                Start typing to search series, genres, or creators…
+              </div>
+            ) : results.length === 0 ? (
+              <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
+                No results found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.
+              </div>
+            ) : (
+              results.slice(0, 30).map(s => (
+                <Link
+                  key={s.id}
+                  href={`/series/${s.id}`}
+                  onClick={() => setMobileSearchOpen(false)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px',
+                    textDecoration: 'none', color: 'var(--text-primary)',
+                    borderBottom: '1px solid var(--border-color)',
+                  }}
+                >
+                  <div style={{ width: '42px', height: '58px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-card)', position: 'relative' }}>
+                    {s.cover_url && (
+                      <Image src={s.cover_url} alt={s.title} fill sizes="42px" style={{ objectFit: 'cover' }} />
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.genre ?? (s.content_type === 'novel' ? 'Novel' : 'Mangal')}</div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
         </div>
       )}
 
