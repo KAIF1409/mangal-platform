@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { isMinor, isPlausibleDateOfBirth, PARENT_CONSENT_PENDING_COPY } from '../lib/dpdp';
+import { setPostLoginRedirect } from '../lib/authRedirect';
 
 // 'dob'     = Google OAuth new users — skipped register form so no DOB yet
 // 'pending' = minor whose parent hasn't confirmed yet
@@ -716,7 +717,15 @@ export default function AuthPage() {
     // left over from local dev), it would silently override this and send
     // every production OAuth redirect to localhost instead of the live
     // site — which is exactly what was happening (confirmed 11 Aug 2026).
-    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+    //
+    // callbackUrl must stay query-string-free: Supabase's Redirect URL
+    // allowlist matches redirectTo EXACTLY, so appending ?next=... here
+    // makes it fail that match and silently fall back to the Site URL
+    // (root) with the code still attached — a second, separate bug from
+    // the localhost one above, also confirmed 11 Aug 2026. `next` goes
+    // through a short-lived cookie instead (see app/lib/authRedirect.ts).
+    if (nextPath && nextPath !== '/home') setPostLoginRedirect(nextPath);
+    const callbackUrl = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callbackUrl } });
     if (error) { setError(error.message); setIsGoogleLoading(false); }
     // On success this navigates away, so no need to reset isGoogleLoading.

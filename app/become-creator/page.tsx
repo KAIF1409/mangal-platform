@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
+import { setPostLoginRedirect } from '../lib/authRedirect';
 
 type Step = 'loading' | 'confirm-account' | 'details' | 'submitting' | 'done';
 
@@ -67,10 +68,18 @@ export default function BecomeCreatorPage() {
     // Re-run Google OAuth so the creator explicitly picks/confirms the
     // account this creator identity will be tied to going forward.
     setError('');
+    // Was: redirectTo pointed straight at /become-creator, a URL that's
+    // very likely not in Supabase's exact-match Redirect URL allowlist —
+    // Supabase would silently fall back to the Site URL (root) with the
+    // code still attached instead of completing login. Same root cause
+    // confirmed on /login (11 Aug 2026). Fixed: always redirect through
+    // the one allowlisted /auth/callback, and store "come back here after"
+    // in a short-lived cookie instead — see app/lib/authRedirect.ts.
+    setPostLoginRedirect('/become-creator');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/become-creator`,
+        redirectTo: `${window.location.origin}/auth/callback`,
         queryParams: { prompt: 'select_account' },
       },
     });
