@@ -834,12 +834,43 @@ rules that must be respected in *every* future KaTube change.
 this list before shipping it**, the same way copyright/safety rules get
 checked — this is a standing constraint, not a phase to complete once.
 
-## 7. Next up — Fast Tap → real full-screen Shorts/Reels experience (plan only, not built)
+## 7. Fast Tap → full-screen Shorts/Reels experience — DONE (`f73a8b8`)
 
-**Current state:** "Fast Tap" is just a horizontal row of static 2:3 cards
-on the KaTube home page (`app/katube/page.tsx`, `RealShortCard`). Clicking
-one goes to the normal watch page with a vertical-aspect embed (see §
-above) — there's no actual swipeable feed.
+**New route `app/katube/shorts/[shortId]/page.tsx`.** Clicking a Fast Tap
+card on the KaTube home page now opens a full-screen (`100vh`), vertical
+snap-scroll feed (`scroll-snap-type: y mandatory`) of all `is_short = true`
+videos instead of the normal watch page. Scrolling/swiping moves between
+shorts; an `IntersectionObserver` tracks which short is >50% in view and
+only that one gets `autoplay=1&mute=1` in its YouTube embed URL (muted
+autoplay, since unmuted autoplay is blocked by browsers anyway). Windowing:
+only the active short ± 1 mount a real `iframe` — everything else renders
+just the YouTube thumbnail — so the DOM/network stays light as the shorts
+table grows past the current `limit(50)` fetch. Overlay UI matches the
+YouTube Shorts/Instagram Reels reference: bottom-left creator handle +
+caption, right-edge like/comment/share icons. Like/comment/share aren't
+wired to real functionality yet (no like or comment tables/backend exist),
+so tapping any of them shows a small "isn't built yet" toast instead of
+doing nothing silently.
+
+**`RealShortCard` in `app/katube/page.tsx`** now routes to
+`/katube/shorts/${short.id}` instead of `/katube/watch/${short.id}`.
+`DemoShortCard` (the zero-real-shorts fallback) is unchanged — it has no
+click handler since demo shorts have no real ID to route to.
+
+**Not done / left for later:** view-count increment on shorts (the normal
+watch page increments `views` on load; the shorts feed intentionally does
+not, since a fast-scrolling feed would spam increments — needs a proper
+"watched N seconds" or "N% viewed" threshold before incrementing, not
+built yet). Real like/comment backend (see §4 below) will replace the
+toast once it exists.
+
+## 7b. (superseded above) Original plan — Fast Tap → real full-screen Shorts/Reels experience
+
+**Current state (historical, before `f73a8b8`):** "Fast Tap" is just a
+horizontal row of static 2:3 cards on the KaTube home page
+(`app/katube/page.tsx`, `RealShortCard`). Clicking one goes to the normal
+watch page with a vertical-aspect embed (see § above) — there's no actual
+swipeable feed.
 
 **What founder wants instead (reference: YouTube Shorts, Instagram
 Reels):** a dedicated full-screen vertical feed — one short fills the
