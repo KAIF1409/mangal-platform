@@ -218,11 +218,59 @@ function SearchPageInner() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
 
+      {/* Responsive rules — same pattern as /dashboard's mangal-dash-nav
+          (plain <style> tag: media queries can't be expressed via inline
+          styles). Fixes the nav overflowing/overlapping on phones, the
+          search bar + filters row squeezing, and the results grid
+          crowding on narrow screens. */}
+      <style>{`
+        .mangal-search-nav-links { display: flex; gap: 4px; align-items: center; }
+
+        .mangal-search-container { padding: 32px 24px 60px; }
+
+        .mangal-search-toggle-row,
+        .mangal-search-filters-row { flex-wrap: wrap; }
+
+        .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 200px)); }
+
+        /* ── Tablet & small laptop ───────────────────────────────────── */
+        @media (max-width: 768px) {
+          .mangal-search-container { padding: 20px 16px 48px; }
+        }
+
+        /* ── Phones ───────────────────────────────────────────────────── */
+        @media (max-width: 640px) {
+          .mangal-search-nav { padding: 0 12px !important; height: auto !important; flex-wrap: wrap; row-gap: 8px; padding-top: 10px !important; padding-bottom: 10px !important; }
+          .mangal-search-nav-brand { gap: 12px !important; }
+          .mangal-search-nav-links { gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; flex-wrap: nowrap; }
+          .mangal-search-nav-links a { font-size: 11px !important; padding: 6px 10px !important; white-space: nowrap; }
+          .mangal-search-nav-right { flex-wrap: wrap; justify-content: flex-end; }
+          .mangal-search-nav-right a { font-size: 12px !important; padding: 7px 12px !important; white-space: nowrap; }
+
+          .mangal-search-container { padding: 16px 12px 40px; }
+
+          .mangal-search-toggle-row { gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+          .mangal-search-toggle-row button { flex-shrink: 0; padding: 7px 12px !important; font-size: 12px !important; }
+
+          .mangal-search-filters-row { justify-content: flex-start !important; }
+          .mangal-search-filters-row select,
+          .mangal-search-filters-row button { padding: 8px 10px !important; font-size: 12px !important; }
+
+          .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+        }
+
+        @media (max-width: 380px) {
+          .mangal-search-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+      `}</style>
+
       {/* ── NAV (shared component — same header as Home/Dashboard) ── */}
       <Navbar
         variant="custom"
+        navClassName="mangal-search-nav"
+        brandWrapperClassName="mangal-search-nav-brand"
         centerSlot={
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <div className="mangal-search-nav-links">
             {[
               { label: 'Browse', href: '/' },
               { label: '🏆 Rankings', href: '/rankings' },
@@ -244,7 +292,7 @@ function SearchPageInner() {
         }
         rightSlot={
           user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="mangal-search-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {isCreator && (
                 <a href="/dashboard" style={{
                   padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
@@ -255,7 +303,7 @@ function SearchPageInner() {
               <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="mangal-search-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>Log in</a>
               <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{
                 padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
@@ -267,7 +315,7 @@ function SearchPageInner() {
         }
       />
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px 60px', flex: 1, width: '100%', boxSizing: 'border-box' }}>
+      <div className="mangal-search-container" style={{ maxWidth: '1100px', margin: '0 auto', flex: 1, width: '100%', boxSizing: 'border-box' }}>
 
         {/* ── SEARCH BAR ── */}
         <div style={{ position: 'relative', marginBottom: '20px' }}>
@@ -287,7 +335,7 @@ function SearchPageInner() {
         </div>
 
         {/* ── CONTENT TYPE TOGGLE (Step 21) ── */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+        <div className="mangal-search-toggle-row" style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
           {([
             { value: 'all' as ContentTypeFilter, label: '✨ All' },
             { value: 'mangal' as ContentTypeFilter, label: '📖 Mangal' },
@@ -310,7 +358,7 @@ function SearchPageInner() {
         </div>
 
         {/* ── FILTERS + SORT ── */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="mangal-search-filters-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <select
               value={genreFilter}
@@ -409,7 +457,7 @@ function SearchPageInner() {
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               {results.length} series found
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
+            <div className="mangal-search-grid" style={{ display: 'grid', gap: '16px' }}>
               {results.map((s, i) => (
                 <SharedSeriesCard key={s.id} series={s} creatorUsername={creatorUsernames[s.creator_id]} rank={sortBy === 'views' ? i + 1 : undefined} />
               ))}
