@@ -166,7 +166,7 @@ export default function KaTubeUploadPage() {
             border: '1px solid var(--border-color)', fontSize: '13px', lineHeight: 1.6,
           }}>
             You need to be logged in to upload a video.{' '}
-            <Link href="/login" style={{ color: '#2563eb', fontWeight: 700 }}>Log in</Link>
+            <Link href="/login?next=/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>Log in</Link>
           </div>
         ) : success ? (
           <div style={{

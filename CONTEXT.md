@@ -301,6 +301,20 @@ point.
   the fastest way to confirm one way or the other (`Vercel:get_runtime_errors`
   scoped to `/auth/callback`).
 
+**Follow-up (same day): login always landed on `/home` regardless of where it
+started.** There was no "return to this page after login" mechanism anywhere
+— `/auth/callback` hardcoded `/home` as the only destination. Fixed by
+threading a `next` path end-to-end: `/login?next=/katube/upload` -> read into
+`nextPath` state on the login page -> passed as a query param on Google
+OAuth's `redirectTo` (`/auth/callback?next=...`) -> read there and used as
+the post-exchange redirect target (validated as a same-origin relative path
+via `safeNextPath()` to avoid an open-redirect) -> also used for the
+email/password login success path and the reader-onboarding-choice redirect
+(creator-choice still always goes to `/become-creator`, since that's a
+required setup step, not a "return to where you were" case). The KaTube
+upload page's "Log in" link now points to `/login?next=/katube/upload`; any
+other page that wants "return here after login" should do the same.
+
 ## 7. Session TODO — theme regressions + Upload page redesign (in progress)
 
 > Logged before starting work, per founder's request, so a fresh chat session

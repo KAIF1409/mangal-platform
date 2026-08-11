@@ -544,28 +544,40 @@ export default function AuthPage() {
     setDobError(null);
   };
 
+  // Where to send the user after a successful login — read from
+  // /login?next=..., defaults to /home. Threaded through Google OAuth's
+  // redirectTo (as a query param on /auth/callback) and used directly for
+  // email/password login, so e.g. clicking "Log in" from /katube/upload
+  // actually returns you to /katube/upload instead of always landing on
+  // /home.
+  const [nextPath, setNextPath] = useState('/home');
+
   // Surface errors that /auth/callback redirects back with (e.g. Google
   // sign-in was cancelled, or exchangeCodeForSession failed) — previously
   // this arrived as a silent ?error=... query param with nothing shown to
   // the user, so a real failure just looked like the login page reloading.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const oauthError = params.get('error');
-    if (!oauthError) return;
 
+    const rawNext = params.get('next');
+    const validNext = rawNext && /^\/(?!\/|\\)/.test(rawNext) ? rawNext : null;
+
+    const oauthError = params.get('error');
     const FRIENDLY_ERRORS: Record<string, string> = {
       session_exchange_failed:
         "Google sign-in didn't finish — this can happen if your browser blocked or cleared cookies during the redirect. Try again, or sign in with email below.",
       missing_code:
         'Something interrupted the Google sign-in before it could finish. Please try again.',
     };
+
     const t = setTimeout(() => {
-      setError(FRIENDLY_ERRORS[oauthError] || decodeURIComponent(oauthError));
+      if (validNext) setNextPath(validNext);
+      if (oauthError) setError(FRIENDLY_ERRORS[oauthError] || decodeURIComponent(oauthError));
     }, 0);
 
     // Clean the URL so a refresh or back-navigation doesn't re-show the
-    // error or resubmit it.
-    window.history.replaceState({}, '', '/login');
+    // error or resubmit it. (next was already captured into state above.)
+    if (oauthError || validNext) window.history.replaceState({}, '', '/login');
 
     return () => clearTimeout(t);
   }, []);
@@ -587,10 +599,10 @@ export default function AuthPage() {
         setMode(profile.date_of_birth ? 'role' : 'dob');
         return;
       }
-      window.location.href = '/home';
+      window.location.href = nextPath;
     };
     checkSession();
-  }, []);
+  }, [nextPath]);
 
   const handleRegister = async () => {
     if (!email || !password || !name) {
@@ -668,13 +680,14 @@ export default function AuthPage() {
       return;
     }
     if (profile && !profile.onboarded) setMode('role');
-    else window.location.href = '/home';
+    else window.location.href = nextPath;
     setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
     setError('');
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/auth/callback` } });
+    const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callbackUrl } });
     if (error) setError(error.message);
   };
 
@@ -709,7 +722,7 @@ export default function AuthPage() {
   const finishOnboarding = async (choice: 'reader' | 'creator') => {
     const { data: u } = await supabase.auth.getUser();
     if (u.user) await supabase.from('profiles').update({ onboarded: true }).eq('id', u.user.id);
-    window.location.assign(choice === 'creator' ? '/become-creator' : '/home');
+    window.location.assign(choice === 'creator' ? '/become-creator' : nextPath);
   };
 
   // ── PENDING CONSENT SCREEN ────────────────────────────────────────────────
