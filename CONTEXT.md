@@ -737,8 +737,52 @@ check costs ~1-2 units per action) — fits the zero-cost architecture, no
 Google app review or OAuth consent screen needed since both calls
 (`channels.list`, `videos.list`) are public read-only endpoints.
 
-**Status: design agreed, implementation on hold pending founder's "go"
-signal — founder wants to finish other design/UI polish first.**
+**Status: DONE (`1fd16bb`), but needs one manual step from the founder to
+actually work in production — see "ACTION NEEDED" below.**
+
+**What shipped:**
+- `creator_profiles` gained `youtube_channel_handle`, `pending_youtube_channel_id`,
+  `youtube_verification_code`, `verified_youtube_channel_id`, `channel_verified_at`
+  (`supabase/migrations/20260811_katube_channel_verification.sql`).
+- `app/lib/youtubeVerify.ts` — server-only helpers wrapping the public
+  `channels.list` / `videos.list` endpoints (resolve a channel from any
+  URL/handle format, re-fetch a channel's description, resolve a video's
+  real owning channelId). Throws a clear error if `YOUTUBE_API_KEY` isn't set.
+- `app/lib/authedServerClient.ts` — shared helper that turns a request's
+  `Authorization: Bearer <token>` header into a Supabase client acting AS
+  that user, so existing RLS ("auth.uid() = user_id") does the access
+  control — no service-role key needed for this feature.
+- `POST /api/katube/channel/connect` — step 1+2: resolves the channel,
+  generates `MANGAL-VERIFY-xxxxxxxx`, saves it pending (creates a
+  `creator_profiles` row with a fallback username if the user doesn't have
+  one yet, since KaTube upload never required "becoming a creator" first).
+- `POST /api/katube/channel/verify` — step 3: re-fetches the channel
+  description, checks the code is present, sets `verified_youtube_channel_id`.
+- `POST /api/katube/upload` — step 4, **the check that actually matters**.
+  Replaces the old direct client-side `supabase.from('videos').insert(...)`
+  entirely (that path is gone) — this route runs server-side, so the
+  channelId check can't be skipped or bypassed from the browser. Every
+  upload: resolve the pasted video's real `channelId` via `videos.list`,
+  compare against the creator's `verified_youtube_channel_id`, reject on
+  mismatch regardless of verified status.
+- `app/katube/upload/page.tsx` now gates the whole upload form behind
+  verification: if unverified, shows a connect-channel input → displays the
+  code → "I've added it, Verify" button; once verified, shows a small
+  "✅ Verified channel" banner above the (now unlocked) existing form. Form
+  submission now calls `/api/katube/upload` instead of inserting directly.
+
+**⚠️ ACTION NEEDED (founder, not code) — nothing above works until this is
+done:** `YOUTUBE_API_KEY` must be set as an environment variable in Vercel
+(Project Settings → Environment Variables) and locally in `.env.local`.
+Get a free key from Google Cloud Console: create/select a project → APIs &
+Services → Library → enable "YouTube Data API v3" → Credentials → Create
+Credentials → API key. No OAuth consent screen or app review needed since
+both endpoints used (`channels.list`, `videos.list`) are public read-only.
+Free tier is 10,000 units/day; this feature costs ~1-2 units per action, so
+it comfortably fits the zero-cost architecture. Until the key is set,
+`/katube/upload`'s connect step will show a clear error instead of
+crashing, but creators can't actually verify or upload.
+
 
 ### 6b. Content moderation — NSFW + non-AI (real footage) uploads (design agreed, on hold)
 
