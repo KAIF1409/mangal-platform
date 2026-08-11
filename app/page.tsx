@@ -249,14 +249,53 @@ export default function LandingPage() {
         transition: 'opacity 0.5s ease',
       }}>
 
+        {/* Responsive rules for the landing nav — plain <style> tag (same
+            pattern as app/dashboard/page.tsx's .mangal-dash-* rules) since
+            media queries can't be expressed via React inline style objects.
+            Mobile: center nav links become a horizontally-scrollable row
+            (nothing gets silently clipped), the "Log in" text link is
+            dropped in favor of just the primary CTA, and paddings/text
+            shrink so the whole bar fits a 360–414px phone without any
+            horizontal page scroll. */}
+        <style>{`
+          .mangal-landing-nav-center { display: flex; gap: 4px; align-items: center; }
+          .mangal-landing-login-link { display: inline-block; }
+
+          @media (max-width: 860px) {
+            .mangal-landing-nav { padding: 0 16px !important; }
+            .mangal-landing-nav-center {
+              gap: 2px;
+              overflow-x: auto;
+              -webkit-overflow-scrolling: touch;
+              scrollbar-width: none;
+              max-width: 34vw;
+            }
+            .mangal-landing-nav-center::-webkit-scrollbar { display: none; }
+            .mangal-landing-nav-center a { padding: 6px 9px !important; font-size: 12px !important; }
+          }
+
+          @media (max-width: 640px) {
+            .mangal-landing-nav-center { display: none; }
+            .mangal-landing-login-link { display: none; }
+            .mangal-landing-nav { padding: 0 12px !important; height: 56px !important; }
+            .mangal-landing-brand-text { font-size: 17px !important; }
+            .mangal-landing-cta { padding: 8px 14px !important; font-size: 12px !important; }
+          }
+
+          @media (max-width: 380px) {
+            .mangal-landing-brand-text { display: none; }
+          }
+        `}</style>
+
         {/* ── NAV ── */}
-        <nav style={{
+        <nav className="mangal-landing-nav" style={{
           position: 'sticky', top: 0, zIndex: 100,
           background: scrolled ? 'var(--nav-bg)' : 'var(--nav-bg-transparent)',
           backdropFilter: 'blur(20px)',
           borderBottom: scrolled ? '1px solid var(--border-color)' : '1px solid transparent',
           padding: '0 24px', height: '64px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: '8px',
           transition: 'background 0.3s, border-color 0.3s',
         }}>
           {/* Logo */}
@@ -272,11 +311,11 @@ export default function LandingPage() {
               }}
               priority
             />
-            <span style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
+            <span className="mangal-landing-brand-text" style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
           </Link>
 
           {/* Center links */}
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <div className="mangal-landing-nav-center">
             {[
               { label: 'Browse', href: '/search' },
               { label: 'Rankings', href: '/rankings' },
@@ -311,19 +350,19 @@ export default function LandingPage() {
           </div>
 
           {/* Auth buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <ThemeToggle size={32} />
-            <a href="/login" style={{
+            <a href="/login" className="mangal-landing-login-link" style={{
               padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
               color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s',
             }}
               onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text-primary)'}
               onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-secondary)'}
             >Log in</a>
-            <a href="/login" style={{
+            <a href="/login" className="mangal-landing-cta" style={{
               padding: '9px 20px', borderRadius: '9px', fontSize: '13px', fontWeight: 700,
               background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
-              color: '#fff', textDecoration: 'none',
+              color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
               boxShadow: '0 2px 16px rgba(127,29,29,0.4)',
               transition: 'box-shadow 0.2s, transform 0.15s',
             }}
@@ -389,7 +428,7 @@ export default function LandingPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 style={{
-                  flex: 1, minWidth: '260px', padding: '12px 18px', borderRadius: '10px',
+                  flex: 1, minWidth: '200px', padding: '12px 18px', borderRadius: '10px',
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-primary)',
                   fontSize: '14px', fontFamily: 'inherit',
                 }}
