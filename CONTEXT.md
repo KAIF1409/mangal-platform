@@ -601,6 +601,21 @@ whatever card sat at that pixel boundary and cut off rounded corners
 collapses by item count (`FAST_TAP_COLLAPSED_COUNT = 6`) instead, so
 there's nothing to crop.
 
+**Filter pills — simplified to 4 + Categories genre sub-row (`8137e81`)**
+— founder shared reference screenshots (DramaBox: Popular/New/Rankings/
+Categories tabs; YouTube: horizontal topic-pill row under search).
+Resolved the open Category/Genre/Tools question from the previous entry:
+dropped the separate Genre and Tools chips, `FILTER_PILLS` is now
+`['Popular', 'New', 'Rankings', 'Categories']`. Added `videos.category`
+(text, default `'Trailers'`) via `20260811_videos_category.sql`; upload
+form (`/katube/upload`) now has a category pill-picker
+(`CATEGORY_OPTIONS` = Action/Mythology/Horror/Slice of Life/Fantasy/
+Trailers). On `/katube`: Popular = `views` desc, New = `created_at`
+desc, Rankings = `likes` desc (a distinct leaderboard metric from
+Popular, matching DramaBox having both as separate tabs). Clicking
+Categories reveals `GENRE_PILLS` (same option list, plus "All") as a
+sub-row that filters Slow tap by `category` instead of re-sorting.
+
 Founder shared a hand-drawn wireframe (11 Aug 2026) for a KaTube layout overhaul.
 Original image saved at `docs/design/katube-sidebar-wireframe.png` — refer to
 it directly for layout/spacing questions instead of re-deriving from this
