@@ -784,3 +784,35 @@ Instagram Reels UI).
 **Not addressed yet:** comment/subscribe backend (still not built per §4
 item 4-5), so the overlay's comment button can open the existing
 "not built yet" state for now rather than blocking this whole feature.
+
+## 8. Next up — long-video watch page: two-column layout + tag-based recommendations (plan only, not built)
+
+**Current state:** the KaTube watch page for regular (non-short) videos is
+just the player + title/creator/description, no recommended-videos list —
+unlike the reference screenshots (YouTube's right-column recommendations).
+
+**Design agreed with founder:**
+
+1. **Two-column layout for long videos only** (16:9, `is_short = false`) —
+   player + info on the left, a scrollable recommended-videos list on the
+   right, matching the YouTube reference screenshots. Shorts watch
+   experience (§7 plan) is untouched by this — this is specifically the
+   long-form layout.
+2. **Recommendation logic is tag-based, not YouTube's algorithm/not just
+   views.** Reuses the same architecture already proven for MANGAL's
+   "Readers Also Liked" (`related_series` SQL RPC, `SECURITY DEFINER`,
+   single query, no N+1):
+   - Every KaTube video links to a MANGAL `series_id`, and every series
+     already has tags via the existing `series_tags` table.
+   - New RPC `related_videos(target_video_id, result_limit)`: find the
+     target video's series' tags, then find other videos whose linked
+     series share any of those tags, ranked by shared-tag count
+     (`ORDER BY shared_tag_count DESC`).
+   - **Fallback chain** when there's no tag overlap (expected early on,
+     low data volume): same category → most-viewed/most-recent overall.
+     The sidebar should never render empty.
+3. Same "aggregate output only" security pattern as `related_series` —
+   the function only returns video rows, never exposes anything
+   per-user/private.
+
+**Status: design agreed, not built. Do not start until founder says go.**
