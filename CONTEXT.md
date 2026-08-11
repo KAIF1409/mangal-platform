@@ -787,7 +787,54 @@ both common). Solution is policy + a real signal, not a fake detector:
   2-3 warnings → account ban) for repeat violations — enforcement via
   community + policy, not a magic detector.
 
+### 6c. Staying YouTube-friendly — avoiding an API/embed ban (STANDING RULE — applies to every future KaTube change, not a one-time task)
 
+**Why this matters:** KaTube's entire architecture depends on the YouTube
+Data API and embedded player continuing to work. Violating YouTube's API
+Terms of Service is what gets a project's API access revoked or the
+embed blocked — this isn't a single feature to build once, it's a set of
+rules that must be respected in *every* future KaTube change.
+
+**The rules, going forward:**
+
+1. **Never download, store, or rehost video files.** Only ever store
+   `youtube_id` + metadata; playback is always YouTube's own iframe
+   embed. This is already true today (per §2's zero-cost architecture)
+   — it must stay true for anything built later too.
+2. **Never modify or hide the embedded player's YouTube branding.** No
+   removing the YouTube logo, no removing/hiding the "Watch on YouTube"
+   link, no blocking YouTube's own in-player ads. Any future watch-page
+   redesign (§7, §8) must keep the embed itself untouched — style
+   around it, not over/inside it.
+3. **Never add a download button or anything that facilitates
+   downloading YouTube videos.**
+4. **Only use the official Data API — no HTML scraping, no unofficial/
+   reverse-engineered endpoints,** for metadata, thumbnails, channelId
+   verification, or anything else.
+5. **Cache metadata locally, don't hammer the API.** View/like counts
+   live in Supabase (`videos.views`/`videos.likes`) rather than being
+   re-fetched from YouTube on every page load — already the pattern,
+   keep it for anything new.
+6. **Frame KaTube as a discovery layer that sends traffic to YouTube,
+   not a replacement for it** — every embedded play counts as a real
+   YouTube view for the creator's own channel. This positioning should
+   show up in any public-facing copy (`/about`, `/privacy`, landing
+   page) written for KaTube going forward.
+7. **Required legal disclosure:** the privacy policy must state that the
+   app uses YouTube API Services and link to Google's Privacy Policy —
+   this is a hard requirement of YouTube's API ToS, not optional.
+   *(Not yet verified whether `/privacy` currently has this — check
+   before/while building anything that goes live with real YouTube API
+   traffic.)*
+8. **Content moderation (§6b) is partly in service of this rule too** —
+   NSFW or clearly non-original/stolen content on KaTube is a reason for
+   YouTube to flag the API project, not just a site-quality issue.
+
+**Any Claude session working on KaTube should re-check new work against
+this list before shipping it**, the same way copyright/safety rules get
+checked — this is a standing constraint, not a phase to complete once.
+
+## 7. Next up — Fast Tap → real full-screen Shorts/Reels experience (plan only, not built)
 
 **Current state:** "Fast Tap" is just a horizontal row of static 2:3 cards
 on the KaTube home page (`app/katube/page.tsx`, `RealShortCard`). Clicking
