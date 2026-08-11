@@ -29,6 +29,12 @@ interface Short {
   creator: string;
 }
 
+// Sound preference key — shared across every KaTube Shorts session so once
+// someone unmutes, later shorts (and later visits) keep playing with sound,
+// the same way YouTube Shorts remembers your audio choice instead of
+// re-muting every single clip.
+const MUTE_PREF_KEY = 'katube-shorts-muted';
+
 export default function KaTubeShortsFeedPage() {
   const params = useParams();
   const initialShortId = params?.shortId as string;
@@ -39,6 +45,22 @@ export default function KaTubeShortsFeedPage() {
   const [toast, setToast] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
+
+  // Default is UNMUTED (sound on), matching the founder's ask — only falls
+  // back to muted if the person explicitly muted on a previous short/visit.
+  const [muted, setMuted] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(MUTE_PREF_KEY) === 'true';
+  });
+
+  const toggleMuted = useCallback(() => {
+    setMuted(prev => {
+      const next = !prev;
+      window.localStorage.setItem(MUTE_PREF_KEY, String(next));
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -102,6 +124,25 @@ export default function KaTubeShortsFeedPage() {
     setTimeout(() => setToast(null), 1800);
   }, []);
 
+  // Sync audio on the active short: browsers only reliably allow autoplay
+  // when it starts muted, so the iframe always loads with mute=1 in its src
+  // (never remounted/restarted on toggle) — the real on/off happens here via
+  // the YouTube Player postMessage API. Resent a few times shortly after a
+  // short becomes active since the embedded player needs a moment to finish
+  // loading before it'll accept commands.
+  useEffect(() => {
+    const frame = iframeRefs.current[activeIndex];
+    if (!frame) return;
+    const send = () => {
+      frame.contentWindow?.postMessage(
+        JSON.stringify({ event: 'command', func: muted ? 'mute' : 'unMute', args: [] }),
+        '*'
+      );
+    };
+    const timers = [0, 300, 800, 1500].map(delay => setTimeout(send, delay));
+    return () => timers.forEach(clearTimeout);
+  }, [activeIndex, muted, shorts.length]);
+
   return (
     <div style={{ height: '100vh', width: '100vw', background: '#000', position: 'relative', overflow: 'hidden' }}>
       <Link href="/katube" style={{
@@ -146,7 +187,8 @@ export default function KaTubeShortsFeedPage() {
                 <div style={{ position: 'relative', height: '100%', maxWidth: '480px', width: '100%', aspectRatio: '9/16', margin: '0 auto' }}>
                   {isNear ? (
                     <iframe
-                      src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0${isActive ? '&autoplay=1&mute=1' : ''}`}
+                      ref={el => { iframeRefs.current[idx] = el; }}
+                      src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&enablejsapi=1${isActive ? '&autoplay=1&mute=1' : ''}`}
                       title={short.title}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       allowFullScreen
@@ -198,6 +240,17 @@ export default function KaTubeShortsFeedPage() {
                       <span style={{ fontSize: '24px' }}>↗️</span>
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Share</span>
                     </button>
+                    {isActive && (
+                      <button
+                        onClick={toggleMuted}
+                        aria-label={muted ? 'Unmute' : 'Mute'}
+                        title={muted ? 'Unmute' : 'Mute'}
+                        style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
+                      >
+                        <span style={{ fontSize: '24px' }}>{muted ? '🔇' : '🔊'}</span>
+                        <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>{muted ? 'Muted' : 'Sound'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
