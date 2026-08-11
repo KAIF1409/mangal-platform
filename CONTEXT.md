@@ -616,6 +616,19 @@ Popular, matching DramaBox having both as separate tabs). Clicking
 Categories reveals `GENRE_PILLS` (same option list, plus "All") as a
 sub-row that filters Slow tap by `category` instead of re-sorting.
 
+**Genre + Tools brought back, separately from the above (`c3c81ae`)** —
+founder clarified: Genre = detailed genre tags (Dark Fantasy,
+Supernatural, Science Fiction, etc) should just be merged into
+Categories rather than a separate chip (done — `GENRE_PILLS` /
+`CATEGORY_OPTIONS` expanded to include them, one merged list). Tools =
+a genuinely separate axis: which AI video-generation tool made the
+clip (Sora, Kling, Runway, Pika, Hailuo, Veo). Added `videos.ai_tool`
+(text, default `'Other'`) via `20260811_videos_ai_tool.sql`; upload
+form has a tool pill-picker. `FILTER_PILLS` is now `['Popular', 'New',
+'Rankings', 'Categories', 'Tools']` — Categories and Tools each reveal
+their own sub-row (`GENRE_PILLS` / `TOOL_PILLS`) and both filters apply
+together (AND) regardless of which sort chip is active.
+
 Founder shared a hand-drawn wireframe (11 Aug 2026) for a KaTube layout overhaul.
 Original image saved at `docs/design/katube-sidebar-wireframe.png` — refer to
 it directly for layout/spacing questions instead of re-deriving from this
