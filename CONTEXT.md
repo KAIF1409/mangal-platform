@@ -575,14 +575,18 @@ reader's independent `bgColor` picker in `read/[chapterId]/page.tsx`).
 
 ## 9. KaTube redesign — whiteboard wireframe spec (design agreed, build in progress)
 
-**Status: Step 1 DONE (11 Aug 2026)** — left sidebar (Home / Fast tap / Slow
-tap / Saved) + hamburger toggle added to `/katube`. UI-only, as scoped:
-clicking a sidebar item just highlights it, does not yet filter/change
-content. Sized up to match YouTube's own sidebar proportions per founder
-feedback (240px width, 22px icons, 15px text, more padding — was too
-cramped at first pass). Next: rename+split the Shorts row / video grid into
-the actual "Fast tap" (9:16) / "Slow tap" (16:9) sections, then the
-YouTube-style pill-chip filter row (Popular/New ranking/Category/Genre/Tools).
+**Status: Step 1 DONE** — left sidebar (Home / Fast tap / Slow tap / Saved)
++ hamburger toggle, sized to match YouTube's proportions per founder
+feedback.
+
+**Step 2 DONE (11 Aug 2026, `419c3e0`)** — Shorts row renamed "Fast tap"
+(now a wrapping grid with Show more/less instead of horizontal scroll),
+Videos grid renamed "Slow tap", filter pills swapped to Popular/New
+ranking/Category/Genre/Tools (visual-only, no filtering logic yet — see
+open question below), sidebar now actually filters which section renders
+instead of just highlighting. Next: decide Category vs Genre vs Tools
+filtering logic, then wire it; after that, ranking + Kalpana Circle
+integration (Step 5 in the older roadmap numbering above).
 
 Founder shared a hand-drawn wireframe (11 Aug 2026) for a KaTube layout overhaul.
 Original image saved at `docs/design/katube-sidebar-wireframe.png` — refer to
