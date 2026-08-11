@@ -18,6 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/boost', label: 'Boost', icon: '🚀' },
   { href: '/dashboard/perks', label: 'Perks', icon: '🎁' },
   { href: '/dashboard/academy', label: 'Academy', icon: '🎓' },
+  { href: '/dashboard/katube', label: 'KaTube', icon: '🎬' },
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [

@@ -1032,3 +1032,46 @@ KaTube still **defaults to dark** per the founder's original call — this
 only fixes the toggle so switching to light actually works for anyone who
 wants it.
 
+## 10. KaTube channel verification moved into a real profile page (`/dashboard/katube`)
+
+**The problem this fixes:** channel connect/verify used to live inline on
+`/katube/upload` itself. Functionally it was already one-time (the form
+only showed for creators without a `verified_youtube_channel_id`), but UX-
+wise it read like a gate on the upload flow rather than a profile setting,
+and the nav's "K" avatar (top-right on `/katube`) was a dead placeholder
+`<div>` with nowhere to go.
+
+**What shipped:**
+- **New route `/dashboard/katube`** (`app/dashboard/katube/page.tsx`) —
+  lives inside the existing MANGAL dashboard (picked over a standalone
+  KaTube-only profile system so there's still one MANGAL profile / one
+  login per creator, per the founder's "one email, one channel, one
+  profile" framing). Auto-gets the `StudioSidebar` via
+  `app/dashboard/layout.tsx`. Contains: the channel connect → paste-code →
+  verify flow (moved here verbatim from the upload page, same API routes
+  `/api/katube/channel/connect` + `/verify`), a "connect a different
+  channel" option once verified, and three metric tiles (video count,
+  total views, total likes) queried from `videos` for the signed-in
+  creator.
+- **`StudioSidebar` NAV_ITEMS** gained a `🎬 KaTube` entry
+  (`/dashboard/katube`) alongside Workspace/Earnings/Perks/etc.
+- **`app/katube/upload/page.tsx` simplified** — the inline
+  connect/paste-code/verify UI and its handlers are gone. Unverified
+  creators now see a short explainer + a single "Go to my KaTube
+  profile →" button linking to `/dashboard/katube`; verified creators see
+  the same "✅ Verified channel" banner as before (now also linking to the
+  profile page) and the unlocked upload form, unchanged. The per-upload
+  server-side channelId check (`POST /api/katube/upload`, the real fraud
+  check) is untouched — this was a UI relocation only, not a behavior
+  change to the actual verification logic.
+- **KaTube nav's "K" avatar** (`app/katube/page.tsx`) is now a real
+  `Link` to `/dashboard/katube` instead of a non-interactive placeholder
+  `<div>`. Still visually just a "K" circle — swap for the founder's real
+  logo/avatar image whenever it's ready, same note as before.
+
+**Net effect on the verification UX:** still exactly one verification
+per creator, ever (until they deliberately reconnect a different
+channel) — nothing above changes that. What changed is *where* it lives:
+a profile setting under the dashboard/KaTube avatar, not a step inside
+the upload form. Second and later uploads were already frictionless
+before this change and remain so.

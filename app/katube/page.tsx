@@ -455,17 +455,22 @@ export default function KaTubePage() {
             whiteSpace: 'nowrap',
           }}>💬 K Circle</Link>
           <ThemeToggle size={30} onChange={setIsLight} />
-          {/* Reserved for the founder's profile/logo image — placeholder circle for now */}
-          <div
-            aria-label="Profile"
-            title="Profile"
+          {/* KaTube profile — channel verification + metrics live at
+              /dashboard/katube (part of the main MANGAL dashboard, see
+              CONTEXT.md §6). Swap for the founder's real logo image whenever
+              it's ready; still just a "K" placeholder visually. */}
+          <Link
+            href="/dashboard/katube"
+            aria-label="KaTube profile"
+            title="KaTube profile"
             style={{
               width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
               background: 'var(--bg-card)', border: '1px solid var(--border-color)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '13px', color: 'var(--text-tertiary)', fontWeight: 700,
+              textDecoration: 'none',
             }}
-          >K</div>
+          >K</Link>
         </div>
       </nav>
 

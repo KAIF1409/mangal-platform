@@ -83,13 +83,13 @@ export default function KaTubeUploadPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  // KaTube §6 — channel-ownership verification, gates the rest of the form
+  // KaTube §6 — channel-ownership verification, gates the rest of the form.
+  // The one-time connect/verify flow itself now lives at /dashboard/katube
+  // (a creator's KaTube profile) — this page only reads the status to decide
+  // whether to show the upload form or point them there. Nobody is asked to
+  // verify twice; this is a read-only check every visit, not a re-ask.
   const [channelStatus, setChannelStatus] = useState<ChannelStatus | null>(null);
   const [channelLoading, setChannelLoading] = useState(true);
-  const [channelInput, setChannelInput] = useState('');
-  const [channelBusy, setChannelBusy] = useState(false);
-  const [channelError, setChannelError] = useState('');
-  const [channelTitle, setChannelTitle] = useState('');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -134,46 +134,6 @@ export default function KaTubeUploadPage() {
   async function authHeader() {
     const { data } = await supabase.auth.getSession();
     return { Authorization: `Bearer ${data.session?.access_token || ''}` };
-  }
-
-  async function handleConnectChannel(e: React.FormEvent) {
-    e.preventDefault();
-    setChannelError('');
-    if (!channelInput.trim()) { setChannelError('Enter your channel URL or @handle.'); return; }
-    setChannelBusy(true);
-    try {
-      const res = await fetch('/api/katube/channel/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-        body: JSON.stringify({ channelInput: channelInput.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setChannelError(data.error || 'Something went wrong.'); return; }
-      setChannelTitle(data.channelTitle || '');
-      if (userId) await refreshChannelStatus(userId);
-    } catch {
-      setChannelError('Network error — try again.');
-    } finally {
-      setChannelBusy(false);
-    }
-  }
-
-  async function handleVerifyChannel() {
-    setChannelError('');
-    setChannelBusy(true);
-    try {
-      const res = await fetch('/api/katube/channel/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
-      });
-      const data = await res.json();
-      if (!res.ok) { setChannelError(data.error || 'Verification failed.'); return; }
-      if (userId) await refreshChannelStatus(userId);
-    } catch {
-      setChannelError('Network error — try again.');
-    } finally {
-      setChannelBusy(false);
-    }
   }
 
   const previewId = extractYoutubeId(youtubeLink);
@@ -274,78 +234,17 @@ export default function KaTubeUploadPage() {
             padding: '20px', borderRadius: '12px', background: 'var(--bg-card)',
             border: '1px solid var(--border-color)',
           }}>
-            <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px' }}>Verify your YouTube channel first</h2>
+            <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px' }}>Verify your channel first — just once</h2>
             <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', marginBottom: '18px', lineHeight: 1.6 }}>
-              This is a one-time check so nobody can upload a video that isn&apos;t actually theirs.
-              Every upload is checked against your verified channel, every time.
+              Connect and verify your YouTube channel in your KaTube profile. It&apos;s a
+              one-time step — after that, every upload here is checked automatically
+              and you won&apos;t be asked again.
             </p>
-
-            {!channelStatus?.pendingCode ? (
-              <form onSubmit={handleConnectChannel}>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
-                  Your YouTube channel URL or @handle
-                </label>
-                <input
-                  type="text"
-                  value={channelInput}
-                  onChange={e => setChannelInput(e.target.value)}
-                  placeholder="https://youtube.com/@yourhandle"
-                  style={{
-                    width: '100%', padding: '11px 14px', borderRadius: '10px',
-                    border: '1px solid var(--border-color)', background: 'var(--bg-input)',
-                    color: 'var(--text-primary)', fontSize: '13.5px', marginBottom: '12px',
-                    boxSizing: 'border-box',
-                  }}
-                />
-                {channelError && (
-                  <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '12px' }}>{channelError}</p>
-                )}
-                <button
-                  type="submit"
-                  disabled={channelBusy}
-                  style={{
-                    padding: '10px 18px', borderRadius: '10px', border: 'none',
-                    background: channelBusy ? 'var(--border-color)' : '#2563eb', color: '#fff',
-                    fontSize: '13px', fontWeight: 700, cursor: channelBusy ? 'default' : 'pointer',
-                  }}
-                >{channelBusy ? 'Looking up…' : 'Get verification code'}</button>
-              </form>
-            ) : (
-              <div>
-                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '10px', lineHeight: 1.6 }}>
-                  {channelTitle ? `Found "${channelTitle}". ` : ''}
-                  Paste this code anywhere in your channel&apos;s <strong>About / description</strong> on
-                  YouTube, save it, then come back and hit Verify.
-                </p>
-                <code style={{
-                  display: 'block', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px',
-                  background: 'var(--bg-input)', border: '1px solid var(--border-color)',
-                  fontSize: '13px', fontWeight: 700, color: '#2563eb', wordBreak: 'break-all',
-                }}>{channelStatus.pendingCode}</code>
-                {channelError && (
-                  <p style={{ fontSize: '12px', color: '#ef4444', marginBottom: '12px' }}>{channelError}</p>
-                )}
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    onClick={handleVerifyChannel}
-                    disabled={channelBusy}
-                    style={{
-                      padding: '10px 18px', borderRadius: '10px', border: 'none',
-                      background: channelBusy ? 'var(--border-color)' : '#2563eb', color: '#fff',
-                      fontSize: '13px', fontWeight: 700, cursor: channelBusy ? 'default' : 'pointer',
-                    }}
-                  >{channelBusy ? 'Checking…' : "I've added it — Verify"}</button>
-                  <button
-                    onClick={() => { setChannelInput(''); if (userId) refreshChannelStatus(userId); }}
-                    style={{
-                      padding: '10px 16px', borderRadius: '10px', background: 'transparent',
-                      border: '1px solid var(--border-color)', color: 'var(--text-secondary)',
-                      fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-                    }}
-                  >Use a different channel</button>
-                </div>
-              </div>
-            )}
+            <Link href="/dashboard/katube" style={{
+              display: 'inline-block', padding: '10px 18px', borderRadius: '10px',
+              background: '#2563eb', color: '#fff', fontSize: '13px', fontWeight: 700,
+              textDecoration: 'none',
+            }}>Go to my KaTube profile →</Link>
           </div>
         ) : (
           <>
@@ -353,7 +252,7 @@ export default function KaTubeUploadPage() {
             padding: '10px 14px', borderRadius: '10px', marginBottom: '20px',
             background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.25)',
             fontSize: '12px', fontWeight: 700, color: '#2563eb',
-          }}>✅ Verified channel — every upload is still checked against it</div>
+          }}>✅ Verified channel — every upload is still checked against it. <Link href="/dashboard/katube" style={{ color: '#2563eb' }}>View KaTube profile</Link></div>
           <form onSubmit={handleSubmit}>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
               YouTube link
