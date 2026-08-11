@@ -357,7 +357,7 @@ export default function KaTubePage() {
   // to light per-visit if someone prefers that.
   const katubeVars = {
     '--bg-primary': '#07070a', '--bg-card': '#0d0d14', '--bg-input': '#08080c',
-    '--border-color': '#1a1a26', '--text-primary': '#f9fafb',
+    '--border-color': 'rgba(255, 255, 255, 0.18)', '--text-primary': '#f9fafb',
     '--text-secondary': '#9ca3af', '--text-tertiary': '#6b7280',
     '--nav-bg': 'rgba(7, 7, 10, 0.97)', '--nav-bg-transparent': 'rgba(7, 7, 10, 0.85)',
   } as CSSProperties;
