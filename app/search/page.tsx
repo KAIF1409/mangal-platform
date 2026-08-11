@@ -364,14 +364,8 @@ function SearchPageInner() {
 
           /* Phones show the Webnovel-style list (cover left, tags/synopsis/
              author/ADD right) instead of the small grid tiles — matches the
-             search overlay's live results exactly.
-             !important is required here: the grid div also carries an
-             inline style={{ display: 'grid' }}, and inline styles always
-             beat plain CSS rules regardless of media query — without
-             !important the grid kept rendering underneath the list, which
-             is why both an old-style card AND the new list card were
-             showing at once. */
-          .mangal-search-grid { display: none !important; }
+             search overlay's live results exactly. */
+          .mangal-search-grid { display: none; }
           .mangal-search-list-mobile { display: flex; flex-direction: column; margin: 0 -12px; }
         }
 
