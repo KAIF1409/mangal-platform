@@ -530,28 +530,58 @@ function SearchPageInner() {
                 No results found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.
               </div>
             ) : (
-              results.slice(0, 30).map(s => (
-                <Link
-                  key={s.id}
-                  href={`/series/${s.id}`}
-                  onClick={() => setMobileSearchOpen(false)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px',
-                    textDecoration: 'none', color: 'var(--text-primary)',
-                    borderBottom: '1px solid var(--border-color)',
-                  }}
-                >
-                  <div style={{ width: '42px', height: '58px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-card)', position: 'relative' }}>
-                    {s.cover_url && (
-                      <Image src={s.cover_url} alt={s.title} fill sizes="42px" style={{ objectFit: 'cover' }} />
-                    )}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.genre ?? (s.content_type === 'novel' ? 'Novel' : 'Mangal')}</div>
-                  </div>
-                </Link>
-              ))
+              results.slice(0, 30).map(s => {
+                const username = creatorUsernames[s.creator_id];
+                const categoryLabel = s.content_type === 'novel' ? 'NOVEL' : 'MANGAL';
+                return (
+                  <Link
+                    key={s.id}
+                    href={`/series/${s.id}`}
+                    onClick={() => setMobileSearchOpen(false)}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px',
+                      textDecoration: 'none', color: 'var(--text-primary)',
+                      borderBottom: '1px solid var(--border-color)',
+                    }}
+                  >
+                    <div style={{ width: '68px', height: '92px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-card)', position: 'relative' }}>
+                      {s.cover_url && (
+                        <Image src={s.cover_url} alt={s.title} fill sizes="68px" style={{ objectFit: 'cover' }} />
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      {s.genre && (
+                        <div style={{ marginBottom: '4px' }}>
+                          <span style={{
+                            fontSize: '11px', fontWeight: 700, color: '#d97706',
+                            background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)',
+                            borderRadius: '4px', padding: '2px 6px',
+                          }}>#{s.genre}</span>
+                        </div>
+                      )}
+                      <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+                        {s.title}
+                      </div>
+                      {s.synopsis && (
+                        <div style={{
+                          fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.4, marginBottom: '5px',
+                          overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                        }}>{s.synopsis}</div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <span style={{ fontSize: '11.5px', color: 'var(--text-faint)' }}>
+                          {username ? `@${username}` : 'MANGAL'} · {categoryLabel}
+                        </span>
+                        <span style={{
+                          flexShrink: 0, fontSize: '11px', fontWeight: 800, color: '#052e21',
+                          background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)',
+                          padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.02em',
+                        }}>+ ADD</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
             )}
           </div>
         </div>
