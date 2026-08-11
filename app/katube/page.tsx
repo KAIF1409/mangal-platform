@@ -20,6 +20,17 @@ import { supabase } from '../lib/supabase';
 // Brand: white + blue (per founder request), distinct from Kalpana Circle's
 // purple identity — the two doors should read as related but visually
 // distinguishable products.
+//
+// Mobile compatibility (Aug 2026): the left sidebar and top nav were built
+// desktop-first with no responsive behavior — on narrow/mobile viewports the
+// 240px sidebar ate most of the screen and the nav (hamburger + logo +
+// search + Create + K Circle + theme toggle + avatar) had no room to fit,
+// causing overflow/squeeze. Fixed via an `isMobile` flag (<=768px):
+// sidebar becomes a fixed overlay drawer with a tap-to-close backdrop
+// instead of pushing the content column, and the nav sheds
+// non-essential elements (search bar, "powered by MANGAL" subtitle,
+// K Circle label text) at that breakpoint. See SidebarNav and the nav JSX
+// below.
 
 interface RealVideo {
   id: string;
@@ -93,52 +104,73 @@ function SidebarNav({
   open,
   active,
   onSelect,
+  isMobile,
+  onClose,
 }: {
   open: boolean;
   active: SidebarItem;
   onSelect: (id: SidebarItem) => void;
+  isMobile: boolean;
+  onClose: () => void;
 }) {
   return (
-    <aside style={{
-      width: open ? '240px' : '0px',
-      flexShrink: 0,
-      overflow: 'hidden',
-      borderRight: open ? '1px solid var(--border-color)' : 'none',
-      transition: 'width 0.2s ease, border-color 0.2s ease',
-      position: 'sticky',
-      top: '64px',
-      alignSelf: 'flex-start',
-      height: 'calc(100vh - 64px)',
-    }}>
-      <nav style={{ width: '240px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {SIDEBAR_ITEMS.map(item => (
-          <button
-            key={item.id}
-            onClick={() => onSelect(item.id)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '20px',
-              padding: '12px 20px', borderRadius: '10px', border: 'none',
-              background: active === item.id ? 'rgba(37,99,235,0.12)' : 'transparent',
-              color: active === item.id ? '#2563eb' : 'var(--text-secondary)',
-              fontSize: '15px', fontWeight: active === item.id ? 800 : 600,
-              cursor: 'pointer', textAlign: 'left', whiteSpace: 'nowrap',
-              transition: 'background 0.15s, color 0.15s',
-            }}
-          >
-            <span style={{ fontSize: '22px', width: '24px', textAlign: 'center' }}>{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </nav>
+    <>
+      {/* Tap-to-close backdrop — only exists as an overlay drawer on mobile */}
+      {isMobile && open && (
+        <div
+          onClick={onClose}
+          aria-hidden="true"
+          style={{
+            position: 'fixed', inset: '64px 0 0 0', background: 'rgba(0,0,0,0.5)',
+            zIndex: 150,
+          }}
+        />
+      )}
+      <aside style={{
+        width: open ? '240px' : '0px',
+        flexShrink: 0,
+        overflow: 'hidden',
+        borderRight: open && !isMobile ? '1px solid var(--border-color)' : 'none',
+        transition: 'width 0.2s ease, border-color 0.2s ease',
+        position: isMobile ? 'fixed' : 'sticky',
+        top: '64px',
+        left: 0,
+        alignSelf: 'flex-start',
+        height: 'calc(100vh - 64px)',
+        zIndex: isMobile ? 200 : 'auto',
+        background: isMobile ? 'var(--bg-primary)' : 'transparent',
+        boxShadow: isMobile && open ? '4px 0 24px rgba(0,0,0,0.35)' : 'none',
+      }}>
+        <nav style={{ width: '240px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          {SIDEBAR_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => { onSelect(item.id); if (isMobile) onClose(); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '20px',
+                padding: '12px 20px', borderRadius: '10px', border: 'none',
+                background: active === item.id ? 'rgba(37,99,235,0.12)' : 'transparent',
+                color: active === item.id ? '#2563eb' : 'var(--text-secondary)',
+                fontSize: '15px', fontWeight: active === item.id ? 800 : 600,
+                cursor: 'pointer', textAlign: 'left', whiteSpace: 'nowrap',
+                transition: 'background 0.15s, color 0.15s',
+              }}
+            >
+              <span style={{ fontSize: '22px', width: '24px', textAlign: 'center' }}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </nav>
 
-      <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-color)' }}>
-        <Link href="/" style={{
-          display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none',
-          fontSize: '12.5px', fontWeight: 700, color: 'var(--text-tertiary)', whiteSpace: 'nowrap',
-        }}>← Back to MANGAL</Link>
-      </div>
+        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-color)' }}>
+          <Link href="/" style={{
+            display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none',
+            fontSize: '12.5px', fontWeight: 700, color: 'var(--text-tertiary)', whiteSpace: 'nowrap',
+          }}>← Back to MANGAL</Link>
+        </div>
 
-    </aside>
+      </aside>
+    </>
   );
 }
 
@@ -289,7 +321,13 @@ export default function KaTubePage() {
   const [videos, setVideos] = useState<RealVideo[]>([]);
   const [shorts, setShorts] = useState<RealShort[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Mobile detection: read synchronously via a lazy useState initializer
+  // (same pattern used elsewhere in this app for values only known at
+  // mount, e.g. login's nextPath — guaranteed correct before first paint,
+  // no flash of the wrong layout). Breakpoint matches typical
+  // phone/small-tablet width.
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window === 'undefined' || window.innerWidth > 768);
   const [activeSidebar, setActiveSidebar] = useState<SidebarItem>('home');
   const [showAllFastTap, setShowAllFastTap] = useState(false);
   const [activeFilter, setActiveFilter] = useState(0);
@@ -297,6 +335,12 @@ export default function KaTubePage() {
   const [activeTool, setActiveTool] = useState('All');
   const [isLight, setIsLight] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -382,15 +426,20 @@ export default function KaTubePage() {
   return (
     <div data-theme={isLight ? 'light' : 'dark'} style={{ ...katubeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
-      {/* ── NAV — YouTube layout: hamburger + logo | search | create + avatar ── */}
+      {/* ── NAV — YouTube layout: hamburger + logo | search | create + avatar ──
+          Responsive: below 768px the search bar and "powered by MANGAL"
+          subtitle are dropped and K Circle collapses to its icon, so the
+          essential controls (menu, logo, Create, theme, profile) always
+          fit without horizontal overflow. */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
-        padding: '0 20px', height: '64px',
-        display: 'flex', alignItems: 'center', gap: '16px',
+        padding: isMobile ? '0 12px' : '0 20px', height: '64px',
+        display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px',
+        justifyContent: isMobile ? 'space-between' : 'flex-start',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '14px', flexShrink: 0, minWidth: 0 }}>
           <button
             onClick={() => setSidebarOpen(v => !v)}
             aria-label="Toggle sidebar"
@@ -405,56 +454,64 @@ export default function KaTubePage() {
           >
             <HamburgerIcon />
           </button>
-          <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
+          <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
             <Image src="/katube-logo.png" alt="KaTube" width={140} height={70} style={{ display: 'block', height: '32px', width: 'auto', objectFit: 'contain' }} priority />
-            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
-              powered by MANGAL
-            </span>
+            {!isMobile && (
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
+                powered by MANGAL
+              </span>
+            )}
           </Link>
         </div>
 
-        {/* Search — visual only for now, no search backend/results page yet */}
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: '640px', margin: '0 auto' }}
-        >
-          <div style={{ display: 'flex', width: '100%', maxWidth: '560px' }}>
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search"
-              style={{
-                flex: 1, height: '38px', padding: '0 16px', borderRadius: '20px 0 0 20px',
-                border: '1px solid var(--border-color)', borderRight: 'none',
-                background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13.5px', outline: 'none',
-              }}
-            />
-            <button
-              type="submit"
-              aria-label="Search"
-              title="Search isn't wired to real results yet"
-              style={{
-                width: '52px', height: '38px', borderRadius: '0 20px 20px 0',
-                border: '1px solid var(--border-color)', borderLeft: 'none',
-                background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px',
-              }}
-            >🔍</button>
-          </div>
-        </form>
+        {/* Search — visual only for now, no search backend/results page yet.
+            Dropped below 768px: with the nav's other elements shrink-0,
+            there's no room for a search bar on a phone-width screen, and
+            it doesn't do anything yet anyway. */}
+        {!isMobile && (
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: '640px', margin: '0 auto', minWidth: 0 }}
+          >
+            <div style={{ display: 'flex', width: '100%', maxWidth: '560px' }}>
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search"
+                style={{
+                  flex: 1, height: '38px', padding: '0 16px', borderRadius: '20px 0 0 20px',
+                  border: '1px solid var(--border-color)', borderRight: 'none',
+                  background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13.5px', outline: 'none',
+                  minWidth: 0,
+                }}
+              />
+              <button
+                type="submit"
+                aria-label="Search"
+                title="Search isn't wired to real results yet"
+                style={{
+                  width: '52px', height: '38px', borderRadius: '0 20px 20px 0',
+                  border: '1px solid var(--border-color)', borderLeft: 'none',
+                  background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px',
+                }}
+              >🔍</button>
+            </div>
+          </form>
+        )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '10px', flexShrink: 0 }}>
           <Link href="/katube/upload" style={{
-            padding: '8px 14px', borderRadius: '18px', fontSize: '12.5px', fontWeight: 700,
+            padding: isMobile ? '8px 12px' : '8px 14px', borderRadius: '18px', fontSize: '12.5px', fontWeight: 700,
             color: '#fff', textDecoration: 'none', background: '#2563eb',
             whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px',
-          }}>+ Create</Link>
+          }}>{isMobile ? '+' : '+ Create'}</Link>
           <Link href="/kalpana-circle" style={{
-            padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+            padding: isMobile ? '8px 10px' : '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: '#7c3aed', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
             whiteSpace: 'nowrap',
-          }}>💬 K Circle</Link>
-          <ThemeToggle size={30} onChange={setIsLight} />
+          }}>{isMobile ? '💬' : '💬 K Circle'}</Link>
+          {!isMobile && <ThemeToggle size={30} onChange={setIsLight} />}
           {/* KaTube profile — channel verification + metrics live at
               /dashboard/katube (part of the main MANGAL dashboard, see
               CONTEXT.md §6). Swap for the founder's real logo image whenever
@@ -475,7 +532,13 @@ export default function KaTubePage() {
       </nav>
 
       <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-        <SidebarNav open={sidebarOpen} active={activeSidebar} onSelect={setActiveSidebar} />
+        <SidebarNav
+          open={sidebarOpen}
+          active={activeSidebar}
+          onSelect={setActiveSidebar}
+          isMobile={isMobile}
+          onClose={() => setSidebarOpen(false)}
+        />
 
         <div style={{ flex: 1, minWidth: 0 }}>
 
