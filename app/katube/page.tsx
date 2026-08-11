@@ -26,6 +26,7 @@ interface RealVideo {
   title: string;
   youtube_id: string;
   views: number;
+  created_at: string;
   creator: string;
   basedOn: string | null;
 }
@@ -277,7 +278,7 @@ export default function KaTubePage() {
   useEffect(() => {
     (async () => {
       const [videosRes, shortsRes] = await Promise.all([
-        supabase.from('videos').select('id, title, youtube_id, views, creator_id, series_id')
+        supabase.from('videos').select('id, title, youtube_id, views, created_at, creator_id, series_id')
           .eq('is_short', false).order('created_at', { ascending: false }),
         supabase.from('videos').select('id, title, youtube_id, views')
           .eq('is_short', true).order('created_at', { ascending: false }).limit(12),
@@ -303,12 +304,25 @@ export default function KaTubePage() {
         title: r.title,
         youtube_id: r.youtube_id,
         views: r.views,
+        created_at: r.created_at,
         creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
         basedOn: r.series_id ? (seriesMap.get(r.series_id) || null) : null,
       })));
       setLoading(false);
     })();
   }, []);
+
+  // Popular / New ranking sort using columns that actually exist on
+  // `videos` (views, created_at). Category/Genre/Tools have no backing
+  // column yet — founder hasn't specified what each should filter by
+  // (CONTEXT.md §9), so those three chips stay visual-only for now and
+  // fall back to the default order rather than silently filtering out
+  // real uploads.
+  const sortedVideos = (() => {
+    if (activeFilter === 0) return [...videos].sort((a, b) => b.views - a.views); // Popular
+    if (activeFilter === 1) return [...videos].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // New ranking
+    return videos;
+  })();
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
@@ -428,10 +442,12 @@ export default function KaTubePage() {
       )}
 
       {/* Filter row — Popular / New ranking / Category / Genre / Tools,
-          YouTube-style horizontal pill chips. Visual/UI only for now — the
-          founder hasn't specified what Category vs Genre vs Tools actually
-          filter by yet (CONTEXT.md Section 9), so clicking just sets the
-          active chip and doesn't change what's shown. */}
+          YouTube-style horizontal pill chips. Popular sorts Slow tap by
+          views desc, New ranking sorts by created_at desc — both wired to
+          real columns on `videos`. Category/Genre/Tools stay visual-only:
+          founder hasn't specified what each should filter by (CONTEXT.md
+          §9), so clicking them just clears back to default order rather
+          than guessing a filter and hiding real uploads. */}
       <div style={{
         display: 'flex', gap: '8px', overflowX: 'auto', padding: '20px 20px 20px',
         maxWidth: '1200px', margin: '0 auto',
@@ -440,6 +456,7 @@ export default function KaTubePage() {
           <span
             key={c}
             onClick={() => setActiveFilter(i)}
+            title={i >= 2 ? 'Not wired to a filter yet' : undefined}
             style={{
               flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
               background: i === activeFilter ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
@@ -472,7 +489,7 @@ export default function KaTubePage() {
               padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
               display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px',
             }}>
-              {videos.map(v => <RealVideoCard key={v.id} video={v} />)}
+              {sortedVideos.map(v => <RealVideoCard key={v.id} video={v} />)}
             </div>
           )}
         </>
