@@ -114,8 +114,10 @@ function SearchPageInner() {
 
   // Mobile hamburger menu — phones only, see .mangal-search-navbar-mobile below.
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // Lets the mobile header's search icon (Webnovel-style) jump straight to
-  // the real search input further down the page instead of duplicating it.
+  // Webnovel-style full-screen search overlay — the ONLY search input shown
+  // on phones. The inline search bar further down the page is hidden on
+  // mobile (see .mangal-search-bar-inline) so there's never a duplicate.
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -268,12 +270,21 @@ function SearchPageInner() {
 
           .mangal-search-container { padding: 16px 12px 40px; }
 
+          /* Only one search UI on phones — the header icon opens the
+             full-screen overlay instead, so the inline bar is hidden here. */
+          .mangal-search-bar-inline { display: none; }
+
           /* Webnovel-style plain text tabs instead of pill/chip buttons —
              underline on the active tab, no background/border, emoji hidden
-             so it reads as clean text tabs like Fanfic/Novel/New Novel. */
+             so it reads as clean text tabs like Fanfic/Novel/New Novel.
+             Pulled out to the full screen width edge-to-edge (negative
+             margin cancels the page container's 12px side padding) instead
+             of sitting inset inside the container like before. */
           .mangal-search-toggle-row {
             gap: 22px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap;
             border-bottom: 1px solid #1f1f2a; padding-bottom: 0;
+            margin-left: -12px; margin-right: -12px; width: calc(100% + 24px);
+            padding-left: 16px; padding-right: 16px; box-sizing: border-box;
           }
           .mangal-search-toggle-btn {
             flex-shrink: 0; background: transparent !important; border: none !important;
@@ -371,7 +382,7 @@ function SearchPageInner() {
               {mobileMenuOpen ? '✕' : '☰'}
             </button>
             <button
-              onClick={() => { searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); searchInputRef.current?.focus(); }}
+              onClick={() => setMobileSearchOpen(true)}
               aria-label="Search"
               style={{
                 width: '36px', height: '36px', borderRadius: '8px', border: 'none',
@@ -447,10 +458,60 @@ function SearchPageInner() {
         )}
       </div>
 
+      {/* ── PHONE-ONLY full-screen search overlay (Webnovel-style) ──
+          Opened by the header search icon above. This is the ONLY search
+          UI shown on phones — the inline bar below is hidden on mobile via
+          .mangal-search-bar-inline so there's never a duplicate. */}
+      {mobileSearchOpen && (
+        <div
+          className="mangal-search-mobile-overlay"
+          role="dialog"
+          aria-modal="true"
+          style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}
+        >
+          <form
+            onSubmit={e => { e.preventDefault(); setMobileSearchOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderBottom: '1px solid var(--border-color)' }}
+          >
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(false)}
+              aria-label="Close search"
+              style={{
+                width: '36px', height: '36px', borderRadius: '8px', border: 'none', flexShrink: 0,
+                background: 'transparent', color: 'var(--text-primary)', fontSize: '18px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              }}
+            >←</button>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search series, genres, creators..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              style={{
+                flex: 1, padding: '11px 14px', borderRadius: '10px',
+                background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                flexShrink: 0, padding: '11px 18px', borderRadius: '10px', border: 'none',
+                background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)', color: '#052e21',
+                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+              }}
+            >Search</button>
+          </form>
+        </div>
+      )}
+
       <div className="mangal-search-container" style={{ maxWidth: '1100px', margin: '0 auto', flex: 1, width: '100%', boxSizing: 'border-box' }}>
 
-        {/* ── SEARCH BAR ── */}
-        <div style={{ position: 'relative', marginBottom: '20px' }}>
+        {/* ── SEARCH BAR (desktop/tablet only — phones use the header's
+             full-screen overlay above instead, see .mangal-search-bar-inline) ── */}
+        <div className="mangal-search-bar-inline" style={{ position: 'relative', marginBottom: '20px' }}>
           <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', pointerEvents: 'none' }}>🔍</span>
           <input
             ref={searchInputRef}
