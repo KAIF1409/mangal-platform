@@ -585,6 +585,9 @@ the actual "Fast tap" (9:16) / "Slow tap" (16:9) sections, then the
 YouTube-style pill-chip filter row (Popular/New ranking/Category/Genre/Tools).
 
 Founder shared a hand-drawn wireframe (11 Aug 2026) for a KaTube layout overhaul.
+Original image saved at `docs/design/katube-sidebar-wireframe.png` — refer to
+it directly for layout/spacing questions instead of re-deriving from this
+text description alone.
 Confirmed understanding, documented here so it isn't lost/re-explained next
 session. **Nothing below is implemented yet — this is a design spec only.**
 
