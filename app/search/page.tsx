@@ -268,17 +268,34 @@ function SearchPageInner() {
 
           .mangal-search-container { padding: 16px 12px 40px; }
 
-          .mangal-search-toggle-row { gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
-          .mangal-search-toggle-row button { flex-shrink: 0; padding: 7px 12px !important; font-size: 12px !important; }
+          /* Webnovel-style plain text tabs instead of pill/chip buttons —
+             underline on the active tab, no background/border, emoji hidden
+             so it reads as clean text tabs like Fanfic/Novel/New Novel. */
+          .mangal-search-toggle-row {
+            gap: 22px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap;
+            border-bottom: 1px solid #1f1f2a; padding-bottom: 0;
+          }
+          .mangal-search-toggle-btn {
+            flex-shrink: 0; background: transparent !important; border: none !important;
+            border-radius: 0 !important; padding: 10px 2px !important; font-size: 13px !important;
+            color: #9ca3af !important; font-weight: 700 !important;
+            border-bottom: 2px solid transparent !important; margin-bottom: -1px;
+          }
+          .mangal-search-toggle-btn.is-active { color: var(--text-primary) !important; border-bottom: 2px solid #6ee7b7 !important; }
+          .mangal-search-toggle-emoji { display: none; }
 
           .mangal-search-filters-row { justify-content: flex-start !important; }
           .mangal-search-filters-row select,
           .mangal-search-filters-row button { padding: 8px 10px !important; font-size: 12px !important; }
 
-          .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+          /* Bounded card width (matches the same auto-fit/minmax(min,MAX)
+             pattern every other page's series grid already uses) so a
+             single result stays a normal-sized tile instead of stretching
+             to fill the whole screen — that was the "huge image" bug. */
+          .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(105px, 130px)); gap: 10px; justify-content: start; }
         }
 
-        @media (max-width: 380px) {
+        @media (max-width: 340px) {
           .mangal-search-grid { grid-template-columns: repeat(2, 1fr); }
         }
       `}</style>
@@ -453,13 +470,14 @@ function SearchPageInner() {
         {/* ── CONTENT TYPE TOGGLE (Step 21) ── */}
         <div className="mangal-search-toggle-row" style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
           {([
-            { value: 'all' as ContentTypeFilter, label: '✨ All' },
-            { value: 'mangal' as ContentTypeFilter, label: '📖 Mangal' },
-            { value: 'novel' as ContentTypeFilter, label: '📕 Novel' },
+            { value: 'all' as ContentTypeFilter, emoji: '✨', label: 'All' },
+            { value: 'mangal' as ContentTypeFilter, emoji: '📖', label: 'Mangal' },
+            { value: 'novel' as ContentTypeFilter, emoji: '📕', label: 'Novel' },
           ]).map(opt => (
             <button
               key={opt.value}
               onClick={() => handleContentTypeToggle(opt.value)}
+              className={`mangal-search-toggle-btn${activeContentType === opt.value ? ' is-active' : ''}`}
               style={{
                 padding: '8px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
                 cursor: 'pointer', transition: 'all 0.15s',
@@ -468,7 +486,7 @@ function SearchPageInner() {
                 color: activeContentType === opt.value ? '#d97706' : 'var(--text-secondary)',
               }}
             >
-              {opt.label}
+              <span className="mangal-search-toggle-emoji">{opt.emoji} </span>{opt.label}
             </button>
           ))}
         </div>
