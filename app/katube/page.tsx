@@ -26,7 +26,9 @@ interface RealVideo {
   title: string;
   youtube_id: string;
   views: number;
+  likes: number;
   created_at: string;
+  category: string;
   creator: string;
   basedOn: string | null;
 }
@@ -38,7 +40,13 @@ interface RealShort {
   views: number;
 }
 
-const FILTER_PILLS = ['Popular', 'New ranking', 'Category', 'Genre', 'Tools'];
+// Matches DramaBox's Popular/New/Rankings/Categories tab set (founder
+// reference screenshot) — dropped the earlier separate Genre/Tools chips
+// since Categories covers that ground. Clicking Categories reveals a
+// YouTube-style topic-pill sub-row (see GENRE_PILLS) instead of navigating
+// away.
+const FILTER_PILLS = ['Popular', 'New', 'Rankings', 'Categories'];
+const GENRE_PILLS = ['All', 'Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Trailers'];
 
 // Fast tap "collapsed" state now caps by item count, not a fixed pixel
 // maxHeight — a pixel cap clips whatever card happens to sit at that height
@@ -274,11 +282,12 @@ export default function KaTubePage() {
   const [activeSidebar, setActiveSidebar] = useState<SidebarItem>('home');
   const [showAllFastTap, setShowAllFastTap] = useState(false);
   const [activeFilter, setActiveFilter] = useState(0);
+  const [activeGenre, setActiveGenre] = useState('All');
 
   useEffect(() => {
     (async () => {
       const [videosRes, shortsRes] = await Promise.all([
-        supabase.from('videos').select('id, title, youtube_id, views, created_at, creator_id, series_id')
+        supabase.from('videos').select('id, title, youtube_id, views, likes, created_at, category, creator_id, series_id')
           .eq('is_short', false).order('created_at', { ascending: false }),
         supabase.from('videos').select('id, title, youtube_id, views')
           .eq('is_short', true).order('created_at', { ascending: false }).limit(12),
@@ -304,7 +313,9 @@ export default function KaTubePage() {
         title: r.title,
         youtube_id: r.youtube_id,
         views: r.views,
+        likes: r.likes,
         created_at: r.created_at,
+        category: r.category,
         creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
         basedOn: r.series_id ? (seriesMap.get(r.series_id) || null) : null,
       })));
@@ -312,16 +323,16 @@ export default function KaTubePage() {
     })();
   }, []);
 
-  // Popular / New ranking sort using columns that actually exist on
-  // `videos` (views, created_at). Category/Genre/Tools have no backing
-  // column yet — founder hasn't specified what each should filter by
-  // (CONTEXT.md §9), so those three chips stay visual-only for now and
-  // fall back to the default order rather than silently filtering out
-  // real uploads.
+  // Popular = views desc, New = created_at desc, Rankings = likes desc
+  // (a distinct leaderboard metric from Popular, per the DramaBox reference
+  // where Popular and Rankings are separate tabs). Categories filters by
+  // the `category` column via the genre sub-row below; it doesn't re-sort.
+  const filteredVideos = activeGenre === 'All' ? videos : videos.filter(v => v.category === activeGenre);
   const sortedVideos = (() => {
-    if (activeFilter === 0) return [...videos].sort((a, b) => b.views - a.views); // Popular
-    if (activeFilter === 1) return [...videos].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // New ranking
-    return videos;
+    if (activeFilter === 0) return [...filteredVideos].sort((a, b) => b.views - a.views); // Popular
+    if (activeFilter === 1) return [...filteredVideos].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // New
+    if (activeFilter === 2) return [...filteredVideos].sort((a, b) => b.likes - a.likes); // Rankings
+    return filteredVideos; // Categories
   })();
 
   return (
@@ -441,22 +452,19 @@ export default function KaTubePage() {
         </div>
       )}
 
-      {/* Filter row — Popular / New ranking / Category / Genre / Tools,
-          YouTube-style horizontal pill chips. Popular sorts Slow tap by
-          views desc, New ranking sorts by created_at desc — both wired to
-          real columns on `videos`. Category/Genre/Tools stay visual-only:
-          founder hasn't specified what each should filter by (CONTEXT.md
-          §9), so clicking them just clears back to default order rather
-          than guessing a filter and hiding real uploads. */}
+      {/* Filter row — Popular / New / Rankings / Categories, matching the
+          founder's DramaBox reference. Popular = views desc, New =
+          created_at desc, Rankings = likes desc. Categories reveals a
+          YouTube-style genre pill sub-row (GENRE_PILLS) that filters
+          Slow tap by the `category` column instead of re-sorting. */}
       <div style={{
-        display: 'flex', gap: '8px', overflowX: 'auto', padding: '20px 20px 20px',
+        display: 'flex', gap: '8px', overflowX: 'auto', padding: '20px 20px 8px',
         maxWidth: '1200px', margin: '0 auto',
       }}>
         {FILTER_PILLS.map((c, i) => (
           <span
             key={c}
             onClick={() => setActiveFilter(i)}
-            title={i >= 2 ? 'Not wired to a filter yet' : undefined}
             style={{
               flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
               background: i === activeFilter ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
@@ -466,6 +474,26 @@ export default function KaTubePage() {
             }}>{c}</span>
         ))}
       </div>
+
+      {activeFilter === 3 && (
+        <div style={{
+          display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 20px 20px',
+          maxWidth: '1200px', margin: '0 auto',
+        }}>
+          {GENRE_PILLS.map(g => (
+            <span
+              key={g}
+              onClick={() => setActiveGenre(g)}
+              style={{
+                flexShrink: 0, fontSize: '11.5px', fontWeight: 600, padding: '6px 14px', borderRadius: '20px',
+                background: g === activeGenre ? 'var(--text-primary)' : 'transparent',
+                color: g === activeGenre ? 'var(--bg-primary)' : 'var(--text-tertiary)',
+                border: '1px solid var(--border-color)',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>{g}</span>
+          ))}
+        </div>
+      )}
 
       {/* Slow tap — renamed from "Videos" per the wireframe. */}
       {(activeSidebar === 'home' || activeSidebar === 'slow') && (

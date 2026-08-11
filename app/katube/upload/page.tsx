@@ -8,6 +8,8 @@ import ThemeToggle from '../../components/ThemeToggle';
 import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 
+const CATEGORY_OPTIONS = ['Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Trailers'];
+
 // ── KaTube — Step 4: creator upload flow ──
 // Paste a YouTube link, optionally pick which MANGAL series it's based on,
 // submit. Inserts a row into `videos` (see
@@ -65,6 +67,7 @@ export default function KaTubeUploadPage() {
   const [title, setTitle] = useState('');
   const [seriesId, setSeriesId] = useState('');
   const [isShort, setIsShort] = useState(false);
+  const [category, setCategory] = useState('Trailers');
   const [ownSeries, setOwnSeries] = useState<OwnSeries[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -112,6 +115,7 @@ export default function KaTubeUploadPage() {
         title: title.trim(),
         youtube_id: youtubeId,
         is_short: isShort,
+        category,
       })
       .select('id')
       .single();
@@ -240,6 +244,25 @@ export default function KaTubeUploadPage() {
             <p style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', marginBottom: '20px' }}>
               {ownSeries.length === 0 ? "You don't have any published series yet — you can still upload without linking one." : 'Only series you created show up here.'}
             </p>
+
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
+              Category
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+              {CATEGORY_OPTIONS.map(c => (
+                <span
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  style={{
+                    fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
+                    background: category === c ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
+                    color: category === c ? '#fff' : 'var(--text-secondary)',
+                    border: category === c ? 'none' : '1px solid var(--border-color)',
+                    cursor: 'pointer',
+                  }}
+                >{c}</span>
+              ))}
+            </div>
 
             <label style={{
               display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px',
