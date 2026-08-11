@@ -116,7 +116,7 @@ export default function GrievancePage() {
       {/* NAV */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(7,7,10,0.92)', backdropFilter: 'blur(12px)',
+        background: 'var(--nav-bg)', backdropFilter: 'blur(12px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

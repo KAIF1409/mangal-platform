@@ -716,7 +716,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       {/* Fake top bar skeleton */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        height: '52px', background: 'rgba(7,7,10,0.98)',
+        height: '52px', background: 'var(--nav-bg)',
         borderBottom: '1px solid var(--border-color)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px', gap: '12px',
