@@ -131,6 +131,13 @@ function SidebarNav({
         ))}
       </nav>
 
+      <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-color)' }}>
+        <Link href="/" style={{
+          display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none',
+          fontSize: '12.5px', fontWeight: 700, color: 'var(--text-tertiary)', whiteSpace: 'nowrap',
+        }}>← Back to MANGAL</Link>
+      </div>
+
     </aside>
   );
 }
@@ -288,6 +295,8 @@ export default function KaTubePage() {
   const [activeFilter, setActiveFilter] = useState(0);
   const [activeGenre, setActiveGenre] = useState('All');
   const [activeTool, setActiveTool] = useState('All');
+  const [isLight, setIsLight] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -352,28 +361,36 @@ export default function KaTubePage() {
   // site-wide light-default toggle. Same pattern as /login's intentional
   // dark-branded screen: override the CSS vars locally on the root div
   // instead of relying on the global data-theme attribute, so this page
-  // stays dark even for a first-time visitor who's never touched the
-  // ThemeToggle. ThemeToggle stays in the nav so it can still be flipped
-  // to light per-visit if someone prefers that.
-  const katubeVars = {
+  // KaTube defaults to dark (founder's call), but the ThemeToggle can flip
+  // it to light — unlike before, this now actually re-themes the page
+  // (previously the div's own hardcoded dark vars ignored the toggle
+  // entirely). isLight is synced from ThemeToggle's onChange callback.
+  const katubeDarkVars = {
     '--bg-primary': '#07070a', '--bg-card': '#0d0d14', '--bg-input': '#08080c',
     '--border-color': 'rgba(255, 255, 255, 0.18)', '--text-primary': '#f9fafb',
     '--text-secondary': '#9ca3af', '--text-tertiary': '#6b7280',
     '--nav-bg': 'rgba(7, 7, 10, 0.97)', '--nav-bg-transparent': 'rgba(7, 7, 10, 0.85)',
   } as CSSProperties;
+  const katubeLightVars = {
+    '--bg-primary': '#ffffff', '--bg-card': '#f7f7f9', '--bg-input': '#f0f0f3',
+    '--border-color': '#e5e7eb', '--text-primary': '#14141c',
+    '--text-secondary': '#4b5563', '--text-tertiary': '#6b7280',
+    '--nav-bg': 'rgba(255, 255, 255, 0.97)', '--nav-bg-transparent': 'rgba(255, 255, 255, 0.88)',
+  } as CSSProperties;
+  const katubeVars = isLight ? katubeLightVars : katubeDarkVars;
 
   return (
-    <div data-theme="dark" style={{ ...katubeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
+    <div data-theme={isLight ? 'light' : 'dark'} style={{ ...katubeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
-      {/* ── NAV ── */}
+      {/* ── NAV — YouTube layout: hamburger + logo | search | create + avatar ── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 20px', height: '64px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', gap: '16px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
           <button
             onClick={() => setSidebarOpen(v => !v)}
             aria-label="Toggle sidebar"
@@ -388,37 +405,67 @@ export default function KaTubePage() {
           >
             <HamburgerIcon />
           </button>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-            <Image src="/icon.png" alt="MANGAL" width={32} height={32} style={{ display: 'block', borderRadius: '8px' }} />
-            <span style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
+          <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
+            <Image src="/katube-logo.png" alt="KaTube" width={140} height={70} style={{ display: 'block', height: '32px', width: 'auto', objectFit: 'contain' }} priority />
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
+              powered by MANGAL
+            </span>
           </Link>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Image src="/katube-logo.png" alt="KaTube" width={140} height={70} style={{ display: 'block', height: '34px', width: 'auto', objectFit: 'contain' }} priority />
-          <span style={{
-            fontSize: '9.5px', fontWeight: 800, color: '#2563eb',
-            background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.32)',
-            padding: '2px 7px', borderRadius: '20px', marginLeft: '4px',
-          }}>DEMO</span>
-        </div>
+        {/* Search — visual only for now, no search backend/results page yet */}
+        <form
+          onSubmit={(e) => e.preventDefault()}
+          style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: '640px', margin: '0 auto' }}
+        >
+          <div style={{ display: 'flex', width: '100%', maxWidth: '560px' }}>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search"
+              style={{
+                flex: 1, height: '38px', padding: '0 16px', borderRadius: '20px 0 0 20px',
+                border: '1px solid var(--border-color)', borderRight: 'none',
+                background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13.5px', outline: 'none',
+              }}
+            />
+            <button
+              type="submit"
+              aria-label="Search"
+              title="Search isn't wired to real results yet"
+              style={{
+                width: '52px', height: '38px', borderRadius: '0 20px 20px 0',
+                border: '1px solid var(--border-color)', borderLeft: 'none',
+                background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px',
+              }}
+            >🔍</button>
+          </div>
+        </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <Link href="/katube/upload" style={{
-            padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+            padding: '8px 14px', borderRadius: '18px', fontSize: '12.5px', fontWeight: 700,
             color: '#fff', textDecoration: 'none', background: '#2563eb',
-            whiteSpace: 'nowrap',
-          }}>⬆ Upload</Link>
+            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px',
+          }}>+ Create</Link>
           <Link href="/kalpana-circle" style={{
             padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: '#7c3aed', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
             whiteSpace: 'nowrap',
           }}>💬 K Circle</Link>
-          <ThemeToggle size={30} />
-          <Link href="/" style={{
-            padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
-            color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border-color)',
-          }}>← Back to MANGAL</Link>
+          <ThemeToggle size={30} onChange={setIsLight} />
+          {/* Reserved for the founder's profile/logo image — placeholder circle for now */}
+          <div
+            aria-label="Profile"
+            title="Profile"
+            style={{
+              width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '13px', color: 'var(--text-tertiary)', fontWeight: 700,
+            }}
+          >K</div>
         </div>
       </nav>
 

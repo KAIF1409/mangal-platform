@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'mangal_theme';
 
-export default function ThemeToggle({ size = 34 }: { size?: number }) {
+export default function ThemeToggle({ size = 34, onChange }: { size?: number; onChange?: (isLight: boolean) => void }) {
   // Starts null so we don't render a wrong icon before reading localStorage
   // on mount (the blocking <script> in layout.tsx already set the attribute
   // on <html> before paint — this just syncs the button's own state/icon).
@@ -14,12 +14,16 @@ export default function ThemeToggle({ size = 34 }: { size?: number }) {
     // Reads the real theme (set by the blocking script in layout.tsx) after
     // mount so server and client's first paint match; avoids a hydration
     // mismatch that a lazy useState initializer touching `document` would cause.
-    setIsLight(document.documentElement.getAttribute('data-theme') === 'light'); // eslint-disable-line react-hooks/set-state-in-effect
+    const initial = document.documentElement.getAttribute('data-theme') === 'light';
+    setIsLight(initial); // eslint-disable-line react-hooks/set-state-in-effect
+    onChange?.(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggle = () => {
     const next = !isLight;
     setIsLight(next);
+    onChange?.(next);
     if (next) {
       document.documentElement.setAttribute('data-theme', 'light');
     } else {
