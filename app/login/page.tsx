@@ -568,6 +568,8 @@ export default function AuthPage() {
         "Google sign-in didn't finish — this can happen if your browser blocked or cleared cookies during the redirect. Try again, or sign in with email below.",
       missing_code:
         'Something interrupted the Google sign-in before it could finish. Please try again.',
+      flow_state_already_used:
+        'That sign-in attempt already expired — this can happen after a double-click or clicking Continue with Google twice. Please try again.',
     };
 
     const t = setTimeout(() => {
@@ -684,11 +686,20 @@ export default function AuthPage() {
     setLoading(false);
   };
 
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
   const handleGoogleLogin = async () => {
+    // Guard against double-clicks / double-submits — each call generates a
+    // fresh OAuth `state`/PKCE pair, and Supabase's state token can only be
+    // redeemed once. Firing this twice before the first redirect completes
+    // produces "invalid_request: flow_state_already_used" on the way back.
+    if (isGoogleLoading) return;
+    setIsGoogleLoading(true);
     setError('');
     const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callbackUrl } });
-    if (error) setError(error.message);
+    if (error) { setError(error.message); setIsGoogleLoading(false); }
+    // On success this navigates away, so no need to reset isGoogleLoading.
   };
 
   // Google OAuth new users — collect DOB before role selection
@@ -890,6 +901,7 @@ export default function AuthPage() {
                 {/* Google — primary CTA */}
                 <button
                   onClick={handleGoogleLogin}
+                  disabled={isGoogleLoading}
                   style={{
                     width: '100%',
                     padding: '13px 18px',
@@ -899,7 +911,8 @@ export default function AuthPage() {
                     color: '#111',
                     fontSize: '13.5px',
                     fontWeight: 600,
-                    cursor: 'pointer',
+                    cursor: isGoogleLoading ? 'default' : 'pointer',
+                    opacity: isGoogleLoading ? 0.7 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -910,7 +923,7 @@ export default function AuthPage() {
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ''; }}
                 >
-                  <GoogleIcon /> Continue with Google
+                  <GoogleIcon /> {isGoogleLoading ? 'Redirecting…' : 'Continue with Google'}
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
@@ -1112,6 +1125,7 @@ export default function AuthPage() {
           {/* Google */}
           <button
             onClick={handleGoogleLogin}
+            disabled={isGoogleLoading}
             style={{
               width: '100%',
               padding: '12px',
@@ -1121,7 +1135,8 @@ export default function AuthPage() {
               color: '#111',
               fontSize: '13px',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: isGoogleLoading ? 'default' : 'pointer',
+              opacity: isGoogleLoading ? 0.7 : 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1133,7 +1148,7 @@ export default function AuthPage() {
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ''; }}
           >
-            <GoogleIcon /> Continue with Google
+            <GoogleIcon /> {isGoogleLoading ? 'Redirecting…' : 'Continue with Google'}
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>

@@ -315,6 +315,20 @@ required setup step, not a "return to where you were" case). The KaTube
 upload page's "Log in" link now points to `/login?next=/katube/upload`; any
 other page that wants "return here after login" should do the same.
 
+**Follow-up (same day): `flow_state_already_used` on localhost.** Reported
+with the browser showing `ERR_CONNECTION_REFUSED` on `localhost:3000` — two
+separate things: (1) the local dev server wasn't running at that moment, not
+a code bug; (2) neither Google button had a loading/disabled guard, so a
+double-click (or a slow click before the redirect fires) called
+`handleGoogleLogin` twice, generating two different OAuth `state` tokens for
+one flow — Supabase's state can only be redeemed once, hence
+`invalid_request: flow_state_already_used`. Fixed: added `isGoogleLoading`
+state, both Google buttons now disable + show "Redirecting…" after the first
+click and ignore repeat clicks until the redirect actually happens. Also
+added `flow_state_already_used` to the friendly-error map on the off chance
+it does reach `/login` via `/auth/callback` instead of landing on Supabase's
+raw Site URL.
+
 ## 7. Session TODO — theme regressions + Upload page redesign (in progress)
 
 > Logged before starting work, per founder's request, so a fresh chat session
