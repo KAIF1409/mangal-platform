@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
+import { setPostLoginRedirect } from '../lib/authRedirect';
 type TargetType = 'series' | 'chapter' | 'comment';
 
 const REASONS = ['Inappropriate', 'Spam', 'Copyright', 'Other'] as const;
@@ -35,6 +36,7 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
   const handleOpen = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) {
+      setPostLoginRedirect(window.location.pathname);
       window.location.href = '/login';
       return;
     }
@@ -48,6 +50,7 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
 
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) {
+      setPostLoginRedirect(window.location.pathname);
       window.location.href = '/login';
       return;
     }

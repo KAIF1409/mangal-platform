@@ -7,6 +7,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
 
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 interface DraftSeries {
   id: string;
   title: string;
@@ -24,6 +25,7 @@ export default function WorkspacePage() {
     const init = async () => {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
+        setPostLoginRedirect(window.location.pathname);
         window.location.href = '/login';
         return;
       }

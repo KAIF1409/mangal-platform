@@ -7,6 +7,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
 
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 interface Tool {
   icon: string;
   title: string;
@@ -31,6 +32,7 @@ export default function ToolsPage() {
     const init = async () => {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
+        setPostLoginRedirect(window.location.pathname);
         window.location.href = '/login';
         return;
       }

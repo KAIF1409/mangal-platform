@@ -13,6 +13,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Link from 'next/link';
 
+import { setPostLoginRedirect } from '../lib/authRedirect';
 interface Story {
   id: string;
   title: string;
@@ -330,6 +331,7 @@ export default function Dashboard() {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
         // Not logged in at all — send to login
+        setPostLoginRedirect(window.location.pathname);
         window.location.href = '/login';
         return;
       }

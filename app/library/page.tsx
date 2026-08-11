@@ -10,6 +10,7 @@ import Footer from '../components/Footer';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 import Link from 'next/link';
 
+import { setPostLoginRedirect } from '../lib/authRedirect';
 interface FollowedSeries {
   id: string;
   title: string;
@@ -61,7 +62,7 @@ export default function LibraryPage() {
   useEffect(() => {
     const load = async () => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { window.location.href = '/login'; return; }
+      if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
       setUser(u.user);
 
       const { data: profile } = await supabase

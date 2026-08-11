@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div style={{
@@ -29,6 +30,7 @@ export default function EarningsPage() {
     const init = async () => {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
+        setPostLoginRedirect(window.location.pathname);
         window.location.href = '/login';
         return;
       }

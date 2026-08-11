@@ -6,6 +6,7 @@ import { parseChapterContent, estimateReadTime } from '../../lib/novelEditor';
 import ThemeToggle from '../../components/ThemeToggle';
 
 
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 type PageItem = { id: string; page_number: number; image_url: string };
 type SeriesInfo = { id: string; title: string; reading_mode: 'scroll' | 'page'; content_type: 'mangal' | 'novel'; reading_direction: 'ltr' | 'rtl' | null };
 type ChapterNav = { id: string; chapter_number: number; title: string };
@@ -863,6 +864,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               onClick={() => {
                 // Upgrade CTA — for now, navigate to /login or show a message
                 // In the future, this would open a payment flow
+                setPostLoginRedirect(window.location.pathname);
                 window.location.href = '/login';
               }}
               style={{

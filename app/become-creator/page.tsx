@@ -39,6 +39,7 @@ export default function BecomeCreatorPage() {
     const init = async () => {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
+        setPostLoginRedirect(window.location.pathname);
         window.location.href = '/login';
         return;
       }

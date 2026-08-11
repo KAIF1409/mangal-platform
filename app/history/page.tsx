@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import Link from 'next/link';
 import ThemeToggle from '../components/ThemeToggle';
 
+import { setPostLoginRedirect } from '../lib/authRedirect';
 // Reading History — pulls from reading_progress table.
 // One row per reader+series (UNIQUE constraint), holds the last-read chapter + page.
 // Ordered by updated_at DESC so most recently read appears first.
@@ -72,7 +73,7 @@ export default function HistoryPage() {
   useEffect(() => {
     const load = async () => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { window.location.href = '/login'; return; }
+      if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
       setUserId(u.user.id);
 
       // Fetch all reading progress rows, join series (incl. content_type) + chapter

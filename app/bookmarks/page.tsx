@@ -10,6 +10,7 @@ import Footer from '../components/Footer';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 import Link from 'next/link';
 
+import { setPostLoginRedirect } from '../lib/authRedirect';
 // NOTE: "bookmarks" on MANGAL = followed series (follows table).
 // This page is an alias/friendlier entry point to the same data as /library.
 // No separate bookmarks table needed — follows IS the bookmark system.
@@ -88,7 +89,7 @@ export default function BookmarksPage() {
   useEffect(() => {
     const load = async () => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { window.location.href = '/login'; return; }
+      if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
       setUserId(u.user.id);
       setUser(u.user);
 

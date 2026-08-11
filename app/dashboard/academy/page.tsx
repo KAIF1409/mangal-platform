@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 interface Article {
   title: string;
   blurb: string;
@@ -27,6 +28,7 @@ export default function AcademyPage() {
     const init = async () => {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
+        setPostLoginRedirect(window.location.pathname);
         window.location.href = '/login';
         return;
       }
