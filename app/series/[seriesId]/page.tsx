@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
+import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -45,6 +46,7 @@ interface Progress {
 }
 
 function SeriesDetailPage({ seriesId }: { seriesId: string }) {
+  const pathname = usePathname();
   const [series, setSeries] = useState<Series | null>(null);
   const [creatorUsername, setCreatorUsername] = useState<string | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -549,7 +551,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           {user ? (
             <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
           ) : (
-            <a href="/login" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none' }}>Log in</a>
+            <a href={`/login?next=${encodeURIComponent(pathname)}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none' }}>Log in</a>
           )}
         </div>
       </nav>

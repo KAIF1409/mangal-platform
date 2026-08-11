@@ -374,6 +374,39 @@ click handler might read before the effect fires — use a lazy `useState`
 initializer instead when the value only depends on things available at
 mount (URL, `window`, etc.).
 
+**Follow-up (same day): "return to page after login" only worked from
+`/katube/upload`, not from other pages.** The `?next=...` mechanism itself
+was correct — it just wasn't wired into any other "Log in" link, so clicking
+login from e.g. a series detail page or search results still landed on
+`/home` after auth (not a bug, just incomplete rollout). Extended to the
+pages where returning actually matters:
+- `app/series/[seriesId]/page.tsx`: login link now carries
+  `next=<current series path>` via `usePathname()`.
+- `app/search/page.tsx`: both "Log in" and "Get Started" links now carry
+  `next=<pathname + ?q=...>` via `usePathname()` + `searchParams.toString()`,
+  so search results/filters survive the round trip too.
+- **Deliberately left as plain `/login`** (no `next`): `app/page.tsx`
+  (logged-out landing) and `app/home/page.tsx` — both already redirect to
+  `/home` by default after login, so threading `next` there would be a
+  no-op. Don't "fix" these without a reason; they're not bugs.
+- If a new page adds a login link, follow the same `usePathname()` pattern
+  (`useSearchParams().toString()` too if the page has meaningful query
+  state) — plain `href="/login"` will always land on `/home` and requires no
+  update itself, but won't return the user to that page.
+
+**Also same day: profile dropdown menu items had zero hover feedback**
+(`app/components/ProfileMenu.tsx`) — no visual indication of which item the
+cursor was over before clicking. Added a shared `handleItemHover`/
+`handleItemLeave` pair (border appears, background lightens, slight
+`scale(1.03)`) applied to every menu item (Dashboard, Reader View, Create
+New Series, Reading History, Bookmarks, Settings, Become a Creator, Admin
+Reports). Sign Out gets its own `handleSignOutHover`/`handleSignOutLeave`
+since it already has a red border/background at rest — hover intensifies
+that red instead of switching to the neutral style. `itemStyle` now has a
+transparent 1px border by default (reserves the space so the border
+appearing on hover doesn't shift layout) and a `transition` for all three
+properties.
+
 ## 7. Session TODO — theme regressions + Upload page redesign (in progress)
 
 > Logged before starting work, per founder's request, so a fresh chat session

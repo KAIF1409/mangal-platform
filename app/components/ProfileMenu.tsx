@@ -54,7 +54,33 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
     padding: '10px 12px', borderRadius: '8px',
     fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)',
     textDecoration: 'none', width: '100%', textAlign: 'left' as const,
-    background: 'none', border: 'none', cursor: 'pointer',
+    background: 'none', border: '1px solid transparent', cursor: 'pointer',
+    transition: 'transform 0.12s ease, border-color 0.12s ease, background 0.12s ease',
+  };
+
+  // Visible hover feedback so it's clear which item the cursor is over
+  // before clicking — a border appears and the item scales up slightly.
+  const handleItemHover = (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.borderColor = 'var(--text-secondary)';
+    e.currentTarget.style.background = 'var(--bg-input)';
+    e.currentTarget.style.transform = 'scale(1.03)';
+  };
+  const handleItemLeave = (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.borderColor = 'transparent';
+    e.currentTarget.style.background = 'none';
+    e.currentTarget.style.transform = 'scale(1)';
+  };
+  // Sign Out already has a red border/background at rest — hover should
+  // intensify that red rather than switching to the neutral style above.
+  const handleSignOutHover = (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.borderColor = 'rgba(239,68,68,0.6)';
+    e.currentTarget.style.background = 'rgba(239,68,68,0.16)';
+    e.currentTarget.style.transform = 'scale(1.03)';
+  };
+  const handleSignOutLeave = (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)';
+    e.currentTarget.style.background = 'rgba(239,68,68,0.08)';
+    e.currentTarget.style.transform = 'scale(1)';
   };
 
   return (
@@ -137,35 +163,35 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
         <div style={{ padding: '8px' }}>
           {isCreator ? (
             <>
-              <a href="/dashboard" style={itemStyle}>{t('pmDashboard')}</a>
-              <Link href="/" style={itemStyle}>{t('pmReaderView')}</Link>
-              <a href="/upload" style={itemStyle}>{t('pmCreateNewSeries')}</a>
+              <a href="/dashboard" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmDashboard')}</a>
+              <Link href="/" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmReaderView')}</Link>
+              <a href="/upload" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmCreateNewSeries')}</a>
               <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
-              <a href="/history" style={itemStyle}>{t('pmReadingHistory')}</a>
-              <a href="/bookmarks" style={itemStyle}>{t('pmBookmarks')}</a>
+              <a href="/history" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmReadingHistory')}</a>
+              <a href="/bookmarks" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmBookmarks')}</a>
               {isDeveloper && (
                 <>
                   <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
-                  <a href="/admin/reports" style={{ ...itemStyle, color: '#c084fc' }}>{t('pmAdminReports')}</a>
+                  <a href="/admin/reports" style={{ ...itemStyle, color: '#c084fc' }} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmAdminReports')}</a>
                 </>
               )}
             </>
           ) : (
             <>
-              <a href="/history" style={itemStyle}>{t('pmReadingHistory')}</a>
-              <a href="/bookmarks" style={itemStyle}>{t('pmBookmarks')}</a>
+              <a href="/history" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmReadingHistory')}</a>
+              <a href="/bookmarks" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmBookmarks')}</a>
               <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
               {/* The ONLY path from reader to creator tools — no shortcuts elsewhere */}
               <a href="/become-creator" style={{
                 ...itemStyle,
                 color: '#d97706', fontWeight: 700,
-              }}>{t('pmBecomeCreator')}</a>
+              }} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmBecomeCreator')}</a>
             </>
           )}
 
           {/* Settings — available to all roles */}
           <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
-          <a href="/settings" style={itemStyle}>{t('pmSettings')}</a>
+          <a href="/settings" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmSettings')}</a>
         </div>
 
         <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 8px' }} />
@@ -173,6 +199,8 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
         <div style={{ padding: '8px' }}>
           <button
             onClick={handleSignOut}
+            onMouseEnter={handleSignOutHover}
+            onMouseLeave={handleSignOutLeave}
             style={{
               ...itemStyle,
               color: '#f87171',

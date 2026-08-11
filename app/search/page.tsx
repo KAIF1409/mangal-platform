@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/ProfileMenu';
@@ -80,6 +80,8 @@ function fuzzyMatch(target: string, query: string, threshold = 0.3): boolean {
 function SearchPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const loginNext = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   const [series, setSeries] = useState<Series[]>([]);
@@ -254,8 +256,8 @@ function SearchPageInner() {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <a href="/login" style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>Log in</a>
-              <a href="/login" style={{
+              <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>Log in</a>
+              <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{
                 padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
                 background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
                 color: '#fff', textDecoration: 'none',
