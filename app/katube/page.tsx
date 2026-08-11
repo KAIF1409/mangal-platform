@@ -83,7 +83,7 @@ function SidebarNav({
 }) {
   return (
     <aside style={{
-      width: open ? '160px' : '0px',
+      width: open ? '240px' : '0px',
       flexShrink: 0,
       overflow: 'hidden',
       borderRight: open ? '1px solid var(--border-color)' : 'none',
@@ -93,26 +93,27 @@ function SidebarNav({
       alignSelf: 'flex-start',
       height: 'calc(100vh - 64px)',
     }}>
-      <nav style={{ width: '160px', padding: '16px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      <nav style={{ width: '240px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {SIDEBAR_ITEMS.map(item => (
           <button
             key={item.id}
             onClick={() => onSelect(item.id)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '10px 12px', borderRadius: '10px', border: 'none',
+              display: 'flex', alignItems: 'center', gap: '20px',
+              padding: '12px 20px', borderRadius: '10px', border: 'none',
               background: active === item.id ? 'rgba(37,99,235,0.12)' : 'transparent',
               color: active === item.id ? '#2563eb' : 'var(--text-secondary)',
-              fontSize: '13px', fontWeight: active === item.id ? 800 : 600,
+              fontSize: '15px', fontWeight: active === item.id ? 800 : 600,
               cursor: 'pointer', textAlign: 'left', whiteSpace: 'nowrap',
               transition: 'background 0.15s, color 0.15s',
             }}
           >
-            <span style={{ fontSize: '15px', width: '18px', textAlign: 'center' }}>{item.icon}</span>
+            <span style={{ fontSize: '22px', width: '24px', textAlign: 'center' }}>{item.icon}</span>
             {item.label}
           </button>
         ))}
       </nav>
+
     </aside>
   );
 }
