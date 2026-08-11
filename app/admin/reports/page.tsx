@@ -9,13 +9,14 @@ import Link from 'next/link';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 interface Report {
   id: string;
-  target_type: 'series' | 'chapter' | 'comment';
+  target_type: 'series' | 'chapter' | 'comment' | 'video';
   target_id: string;
   reporter_id: string;
   reason: string;
   details: string | null;
   status: 'open' | 'reviewed' | 'dismissed';
   created_at: string;
+  is_auto_flagged: boolean;
 }
 
 interface ActionState {
@@ -91,6 +92,7 @@ export default function AdminReportsPage() {
     const table =
       r.target_type === 'series' ? 'series'
       : r.target_type === 'chapter' ? 'chapters'
+      : r.target_type === 'video' ? 'videos'
       : 'comments';
 
     const { error } = await supabase.from(table).delete().eq('id', r.target_id);
@@ -154,6 +156,13 @@ export default function AdminReportsPage() {
         .eq('id', r.target_id)
         .single();
       userId = data?.reader_id ?? null;  // FIXED
+    } else if (r.target_type === 'video') {
+      const { data } = await supabase
+        .from('videos')
+        .select('creator_id')
+        .eq('id', r.target_id)
+        .single();
+      userId = data?.creator_id ?? null;
     }
 
     if (!userId) {
@@ -249,6 +258,15 @@ export default function AdminReportsPage() {
                       }}>
                         {r.target_type}
                       </span>
+                      {r.is_auto_flagged && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: 700, color: '#a855f7', background: 'rgba(168,85,247,0.12)',
+                          border: '1px solid rgba(168,85,247,0.35)', padding: '3px 9px', borderRadius: '12px',
+                          textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '8px',
+                        }} title="Created automatically by KaTube's upload-time moderation checks, not a user report">
+                          🤖 Auto-flagged
+                        </span>
+                      )}
                       <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.reason}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
