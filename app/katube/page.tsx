@@ -130,7 +130,7 @@ function DemoShortCard({ short }: { short: DemoShort }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        width: '100%', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer',
+        width: '100%', borderRadius: '16px', overflow: 'hidden', clipPath: 'inset(0 round 16px)', cursor: 'pointer',
         position: 'relative', aspectRatio: '2/3', background: short.gradient,
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
@@ -164,7 +164,7 @@ function RealShortCard({ short }: { short: RealShort }) {
       onMouseLeave={() => setHover(false)}
       onClick={() => router.push(`/katube/watch/${short.id}`)}
       style={{
-        width: '100%', borderRadius: '16px', overflow: 'hidden', cursor: 'pointer',
+        width: '100%', borderRadius: '16px', overflow: 'hidden', clipPath: 'inset(0 round 16px)', cursor: 'pointer',
         position: 'relative', aspectRatio: '2/3', background: '#000',
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
