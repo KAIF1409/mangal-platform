@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/ProfileMenu';
@@ -9,6 +11,17 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SharedSeriesCard from '../components/SeriesCard';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
+
+// Same links shown in the desktop nav's centerSlot — reused by the mobile
+// hamburger menu below so there's one source of truth for the nav items.
+const NAV_LINKS = [
+  { label: 'Browse', href: '/' },
+  { label: '🏆 Rankings', href: '/rankings' },
+  { label: 'Genres', href: '/#genres' },
+  { label: 'New Releases', href: '/#new' },
+  { label: '🔔 Library', href: '/library' },
+  { label: '🔖 Bookmarks', href: '/bookmarks' },
+];
 
 interface Series {
   id: string;
@@ -98,6 +111,9 @@ function SearchPageInner() {
   const [user, setUser] = useState<User | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
+
+  // Mobile hamburger menu — phones only, see .mangal-search-navbar-mobile below.
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Step 21 — Dual Content Mode: restore the reader's last toggle choice
@@ -218,12 +234,16 @@ function SearchPageInner() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Responsive rules — same pattern as /dashboard's mangal-dash-nav
-          (plain <style> tag: media queries can't be expressed via inline
-          styles). Fixes the nav overflowing/overlapping on phones, the
-          search bar + filters row squeezing, and the results grid
-          crowding on narrow screens. */}
+      {/* Responsive rules (plain <style> tag: media queries can't be
+          expressed via inline styles).
+          Desktop/laptop nav is 100% UNCHANGED — it just gets hidden below
+          640px and swapped for a compact hamburger header instead of trying
+          to squeeze the same links into a phone-width row (that was the
+          overlapping mess in the earlier attempt). Search bar, toggle row,
+          filters row, and results grid still get their own phone tune-up. */}
       <style>{`
+        .mangal-search-navbar-mobile { display: none; }
+
         .mangal-search-nav-links { display: flex; gap: 4px; align-items: center; }
 
         .mangal-search-container { padding: 32px 24px 60px; }
@@ -238,14 +258,10 @@ function SearchPageInner() {
           .mangal-search-container { padding: 20px 16px 48px; }
         }
 
-        /* ── Phones ───────────────────────────────────────────────────── */
+        /* ── Phones — swap the full desktop nav for the compact header ── */
         @media (max-width: 640px) {
-          .mangal-search-nav { padding: 0 12px !important; height: auto !important; flex-wrap: wrap; row-gap: 8px; padding-top: 10px !important; padding-bottom: 10px !important; }
-          .mangal-search-nav-brand { gap: 12px !important; }
-          .mangal-search-nav-links { gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; flex-wrap: nowrap; }
-          .mangal-search-nav-links a { font-size: 11px !important; padding: 6px 10px !important; white-space: nowrap; }
-          .mangal-search-nav-right { flex-wrap: wrap; justify-content: flex-end; }
-          .mangal-search-nav-right a { font-size: 12px !important; padding: 7px 12px !important; white-space: nowrap; }
+          .mangal-search-navbar-desktop { display: none !important; }
+          .mangal-search-navbar-mobile { display: block; }
 
           .mangal-search-container { padding: 16px 12px 40px; }
 
@@ -264,56 +280,136 @@ function SearchPageInner() {
         }
       `}</style>
 
-      {/* ── NAV (shared component — same header as Home/Dashboard) ── */}
-      <Navbar
-        variant="custom"
-        navClassName="mangal-search-nav"
-        brandWrapperClassName="mangal-search-nav-brand"
-        centerSlot={
-          <div className="mangal-search-nav-links">
-            {[
-              { label: 'Browse', href: '/' },
-              { label: '🏆 Rankings', href: '/rankings' },
-              { label: 'Genres', href: '/#genres' },
-              { label: 'New Releases', href: '/#new' },
-              { label: '🔔 Library', href: '/library' },
-              { label: '🔖 Bookmarks', href: '/bookmarks' },
-            ].map(link => (
-              <a key={link.label} href={link.href} style={{
-                padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                color: 'var(--text-secondary)', textDecoration: 'none',
-                transition: 'color 0.15s, background 0.15s',
-              }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
-              >{link.label}</a>
-            ))}
-          </div>
-        }
-        rightSlot={
-          user ? (
-            <div className="mangal-search-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {isCreator && (
-                <a href="/dashboard" style={{
-                  padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-                  background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
-                  color: '#d97706', textDecoration: 'none',
-                }}>🛠 Studio</a>
-              )}
-              <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
+      {/* ── DESKTOP/LAPTOP NAV — identical to before, just hidden on phones ── */}
+      <div className="mangal-search-navbar-desktop">
+        <Navbar
+          variant="custom"
+          centerSlot={
+            <div className="mangal-search-nav-links">
+              {NAV_LINKS.map(link => (
+                <a key={link.label} href={link.href} style={{
+                  padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                  color: 'var(--text-secondary)', textDecoration: 'none',
+                  transition: 'color 0.15s, background 0.15s',
+                }}
+                  onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
+                  onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
+                >{link.label}</a>
+              ))}
             </div>
+          }
+          rightSlot={
+            user ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {isCreator && (
+                  <a href="/dashboard" style={{
+                    padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                    background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
+                    color: '#d97706', textDecoration: 'none',
+                  }}>🛠 Studio</a>
+                )}
+                <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>Log in</a>
+                <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{
+                  padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                  background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                  color: '#fff', textDecoration: 'none',
+                }}>Get Started</a>
+              </div>
+            )
+          }
+        />
+      </div>
+
+      {/* ── PHONE-ONLY NAV — hamburger + centered logo + compact auth,
+          matching the Webnovel-style mobile pattern the founder wants.
+          Fully independent of the desktop <Navbar/> above so nothing here
+          can ever touch laptop/desktop rendering. ── */}
+      <div className="mangal-search-navbar-mobile" style={{ position: 'sticky', top: 0, zIndex: 50 }}>
+        <nav style={{
+          background: 'var(--nav-bg)', backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid var(--border-color)',
+          padding: '0 10px', height: '54px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+        }}>
+          <button
+            onClick={() => setMobileMenuOpen(o => !o)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+            style={{
+              width: '38px', height: '38px', borderRadius: '8px', border: '1px solid var(--border-color)',
+              background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '17px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer',
+            }}
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
+
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', minWidth: 0 }}>
+            <Image src="/icon.png" alt="MANGAL" width={24} height={24} style={{ display: 'block', flexShrink: 0 }} />
+            <span style={{ fontWeight: 900, fontSize: '15px', color: 'var(--text-primary)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>MANGAL</span>
+          </Link>
+
+          {user ? (
+            <div style={{ flexShrink: 0 }}><ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} /></div>
           ) : (
-            <div className="mangal-search-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>Log in</a>
-              <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{
-                padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-                background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
-                color: '#fff', textDecoration: 'none',
-              }}>Get Started</a>
+            <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{
+              flexShrink: 0, padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+              background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
+            }}>Log in</a>
+          )}
+        </nav>
+
+        {mobileMenuOpen && (
+          <>
+            {/* Tap-outside-to-close backdrop */}
+            <div
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ position: 'fixed', inset: 0, top: '54px', zIndex: 48, background: 'rgba(0,0,0,0.35)' }}
+            />
+            <div style={{
+              position: 'absolute', top: '54px', left: 0, right: 0, zIndex: 49,
+              background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)',
+              padding: '10px', display: 'flex', flexDirection: 'column', gap: '2px',
+              boxShadow: '0 12px 24px rgba(0,0,0,0.25)',
+            }}>
+              {NAV_LINKS.map(link => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', textDecoration: 'none' }}
+                >{link.label}</a>
+              ))}
+
+              <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
+
+              {isCreator && (
+                <a
+                  href="/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, color: '#d97706', textDecoration: 'none' }}
+                >🛠 Studio</a>
+              )}
+
+              {!user && (
+                <a
+                  href={`/login?next=${encodeURIComponent(loginNext)}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    marginTop: '4px', padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 700,
+                    textAlign: 'center', background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
+                    color: '#d97706', textDecoration: 'none',
+                  }}
+                >Get Started</a>
+              )}
             </div>
-          )
-        }
-      />
+          </>
+        )}
+      </div>
 
       <div className="mangal-search-container" style={{ maxWidth: '1100px', margin: '0 auto', flex: 1, width: '100%', boxSizing: 'border-box' }}>
 
