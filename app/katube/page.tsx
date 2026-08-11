@@ -29,6 +29,7 @@ interface RealVideo {
   likes: number;
   created_at: string;
   category: string;
+  ai_tool: string;
   creator: string;
   basedOn: string | null;
 }
@@ -41,12 +42,15 @@ interface RealShort {
 }
 
 // Matches DramaBox's Popular/New/Rankings/Categories tab set (founder
-// reference screenshot) — dropped the earlier separate Genre/Tools chips
-// since Categories covers that ground. Clicking Categories reveals a
-// YouTube-style topic-pill sub-row (see GENRE_PILLS) instead of navigating
-// away.
-const FILTER_PILLS = ['Popular', 'New', 'Rankings', 'Categories'];
-const GENRE_PILLS = ['All', 'Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Trailers'];
+// reference screenshot), plus a Tools chip for filtering by which AI
+// video-generation tool made the clip. Categories and Tools each reveal
+// their own pill sub-row (GENRE_PILLS / TOOL_PILLS) instead of navigating
+// away — Genre is folded into Categories (one merged genre list, per
+// founder), Tools is its own separate axis since it's a different
+// question (what made it) from Categories (what it's about).
+const FILTER_PILLS = ['Popular', 'New', 'Rankings', 'Categories', 'Tools'];
+const GENRE_PILLS = ['All', 'Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Dark Fantasy', 'Supernatural', 'Science Fiction', 'Trailers'];
+const TOOL_PILLS = ['All', 'Sora', 'Kling', 'Runway', 'Pika', 'Hailuo', 'Veo', 'Other'];
 
 // Fast tap "collapsed" state now caps by item count, not a fixed pixel
 // maxHeight — a pixel cap clips whatever card happens to sit at that height
@@ -283,11 +287,12 @@ export default function KaTubePage() {
   const [showAllFastTap, setShowAllFastTap] = useState(false);
   const [activeFilter, setActiveFilter] = useState(0);
   const [activeGenre, setActiveGenre] = useState('All');
+  const [activeTool, setActiveTool] = useState('All');
 
   useEffect(() => {
     (async () => {
       const [videosRes, shortsRes] = await Promise.all([
-        supabase.from('videos').select('id, title, youtube_id, views, likes, created_at, category, creator_id, series_id')
+        supabase.from('videos').select('id, title, youtube_id, views, likes, created_at, category, ai_tool, creator_id, series_id')
           .eq('is_short', false).order('created_at', { ascending: false }),
         supabase.from('videos').select('id, title, youtube_id, views')
           .eq('is_short', true).order('created_at', { ascending: false }).limit(12),
@@ -316,6 +321,7 @@ export default function KaTubePage() {
         likes: r.likes,
         created_at: r.created_at,
         category: r.category,
+        ai_tool: r.ai_tool,
         creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
         basedOn: r.series_id ? (seriesMap.get(r.series_id) || null) : null,
       })));
@@ -327,12 +333,18 @@ export default function KaTubePage() {
   // (a distinct leaderboard metric from Popular, per the DramaBox reference
   // where Popular and Rankings are separate tabs). Categories filters by
   // the `category` column via the genre sub-row below; it doesn't re-sort.
-  const filteredVideos = activeGenre === 'All' ? videos : videos.filter(v => v.category === activeGenre);
+  // Categories filters by `category` (genre — Genre chip merged into this
+  // per founder), Tools filters by `ai_tool` (which AI video tool made the
+  // clip) — separate axes, both applied together regardless of which
+  // sort chip is active.
+  const filteredVideos = videos
+    .filter(v => activeGenre === 'All' || v.category === activeGenre)
+    .filter(v => activeTool === 'All' || v.ai_tool === activeTool);
   const sortedVideos = (() => {
     if (activeFilter === 0) return [...filteredVideos].sort((a, b) => b.views - a.views); // Popular
     if (activeFilter === 1) return [...filteredVideos].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // New
     if (activeFilter === 2) return [...filteredVideos].sort((a, b) => b.likes - a.likes); // Rankings
-    return filteredVideos; // Categories
+    return filteredVideos; // Categories / Tools
   })();
 
   return (
@@ -491,6 +503,26 @@ export default function KaTubePage() {
                 border: '1px solid var(--border-color)',
                 cursor: 'pointer', whiteSpace: 'nowrap',
               }}>{g}</span>
+          ))}
+        </div>
+      )}
+
+      {activeFilter === 4 && (
+        <div style={{
+          display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 20px 20px',
+          maxWidth: '1200px', margin: '0 auto',
+        }}>
+          {TOOL_PILLS.map(t => (
+            <span
+              key={t}
+              onClick={() => setActiveTool(t)}
+              style={{
+                flexShrink: 0, fontSize: '11.5px', fontWeight: 600, padding: '6px 14px', borderRadius: '20px',
+                background: t === activeTool ? 'var(--text-primary)' : 'transparent',
+                color: t === activeTool ? 'var(--bg-primary)' : 'var(--text-tertiary)',
+                border: '1px solid var(--border-color)',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>{t}</span>
           ))}
         </div>
       )}

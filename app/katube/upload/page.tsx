@@ -8,7 +8,8 @@ import ThemeToggle from '../../components/ThemeToggle';
 import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 
-const CATEGORY_OPTIONS = ['Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Trailers'];
+const CATEGORY_OPTIONS = ['Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Dark Fantasy', 'Supernatural', 'Science Fiction', 'Trailers'];
+const AI_TOOL_OPTIONS = ['Sora', 'Kling', 'Runway', 'Pika', 'Hailuo', 'Veo', 'Other'];
 
 // ── KaTube — Step 4: creator upload flow ──
 // Paste a YouTube link, optionally pick which MANGAL series it's based on,
@@ -68,6 +69,7 @@ export default function KaTubeUploadPage() {
   const [seriesId, setSeriesId] = useState('');
   const [isShort, setIsShort] = useState(false);
   const [category, setCategory] = useState('Trailers');
+  const [aiTool, setAiTool] = useState('Other');
   const [ownSeries, setOwnSeries] = useState<OwnSeries[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -116,6 +118,7 @@ export default function KaTubeUploadPage() {
         youtube_id: youtubeId,
         is_short: isShort,
         category,
+        ai_tool: aiTool,
       })
       .select('id')
       .single();
@@ -261,6 +264,25 @@ export default function KaTubeUploadPage() {
                     cursor: 'pointer',
                   }}
                 >{c}</span>
+              ))}
+            </div>
+
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
+              Made with which AI tool?
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+              {AI_TOOL_OPTIONS.map(t => (
+                <span
+                  key={t}
+                  onClick={() => setAiTool(t)}
+                  style={{
+                    fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
+                    background: aiTool === t ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
+                    color: aiTool === t ? '#fff' : 'var(--text-secondary)',
+                    border: aiTool === t ? 'none' : '1px solid var(--border-color)',
+                    cursor: 'pointer',
+                  }}
+                >{t}</span>
               ))}
             </div>
 
