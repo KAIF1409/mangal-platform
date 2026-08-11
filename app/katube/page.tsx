@@ -146,6 +146,7 @@ function DemoShortCard({ short }: { short: DemoShort }) {
       <div style={{
         position: 'relative', width: '100%', padding: '24px 14px 14px',
         background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
+        borderRadius: '0 0 16px 16px',
       }}>
         <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px' }}>{short.title}</div>
         <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>{short.views} views</div>
@@ -183,6 +184,7 @@ function RealShortCard({ short }: { short: RealShort }) {
       <div style={{
         position: 'relative', width: '100%', padding: '24px 14px 14px',
         background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
+        borderRadius: '0 0 16px 16px',
       }}>
         <div style={{
           fontSize: '14px', fontWeight: 700, color: '#fff', lineHeight: 1.3, marginBottom: '4px',
