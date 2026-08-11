@@ -19,6 +19,7 @@ const securityHeaders = [
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com",
       "frame-ancestors 'none'",
+      "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
       "base-uri 'self'",
       "form-action 'self'",
     ].join("; "),
