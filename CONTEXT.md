@@ -573,6 +573,54 @@ reader's independent `bgColor` picker in `read/[chapterId]/page.tsx`).
 - `profiles.role = 'developer'` gates admin/creator-studio access
 - `profiles.account_active = false` is how banning is implemented
 
+## 9. KaTube redesign — whiteboard wireframe spec (design agreed, not built yet)
+
+Founder shared a hand-drawn wireframe (11 Aug 2026) for a KaTube layout overhaul.
+Confirmed understanding, documented here so it isn't lost/re-explained next
+session. **Nothing below is implemented yet — this is a design spec only.**
+
+**Top nav (revised):**
+- Hamburger menu (new — opens the left sidebar below, likely for narrow/mobile)
+- KaTube logo/wordmark
+- Search bar with search icon
+- **"+ Create" / "+ Upload"** button (renamed/re-styled from current Upload link)
+- Profile avatar icon (circle) on the right
+
+**New left sidebar (doesn't exist in current build — net-new):**
+- 🏠 **Home** — mixed feed, supports both 9:16 and 16:9 content together
+- ▷ **Fast tap** — 9:16 (portrait) content only. This is the Shorts-equivalent
+  section, renamed. "Fast tap" = quick swipe-through consumption.
+- ▷ **Slow tap** — 16:9 (landscape) content only. This is the regular
+  long-form video section, renamed. "Slow tap" = deliberate sit-and-watch
+  consumption.
+- **Saved** — saved/bookmarked videos
+
+**Filter row — style clarified via a YouTube screenshot (11 Aug 2026):**
+Labels are **Popular / New ranking / Category / Genre / Tools**, but the
+UI treatment is explicitly **YouTube's horizontal pill-chip row** — a single
+scrollable line of rounded chip buttons directly under the search bar
+(active chip dark/filled, inactive chips light/outlined, horizontally
+scrollable with an arrow at the edge) — **not** styled as separate
+tabs/pages with an underline-active state. Clicking a chip filters the
+current view in place; it does not navigate to a different page layout.
+
+**Home page content layout — two stacked sections, each its own grid:**
+1. **"Fast tap" section (top)** — grid of 9:16 portrait cards (the existing
+   Shorts row concept, restyled/renamed to match this sidebar terminology)
+2. A **"Show more"** expand control between the two sections
+3. **"Slow tap" section (bottom)** — grid of 16:9 landscape cards (the
+   existing main video grid, renamed to match)
+
+**Still open / not yet decided:** exact functional difference (if any)
+between "Category" and "Genre" chips, and what the "Tools" chip is meant to
+surface — founder hadn't specified this as of the wireframe; confirm before
+building the filter row's actual filtering logic.
+
+**Sequencing note:** this is a layout/navigation redesign of what's already
+partially built (Shorts row + video grid from Section 3/4 above already
+ship real data) — treat this as a restyle + rename + sidebar-nav addition on
+top of the existing real `videos` table wiring, not a rebuild from scratch.
+
 ---
 *Last updated: wired the KaTube Shorts row to real `videos` data
 (`is_short = true`, with demo-placeholder fallback when there are zero real
