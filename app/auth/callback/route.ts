@@ -94,12 +94,7 @@ export async function GET(request: Request) {
     return res;
   }
 
-  // TEMP DEBUG (11 Aug 2026) — visible marker of whether the redirect cookie
-  // was actually present at this point, so we can diagnose the
-  // /katube/upload -> /home mislanding without needing DevTools. Remove
-  // once diagnosed.
-  const debugSuffix = `${next.includes('?') ? '&' : '?'}_dbgCookie=${cookieNext ? `found:${encodeURIComponent(cookieNext)}` : 'MISSING'}`;
-  const res = NextResponse.redirect(new URL(next + debugSuffix, requestUrl.origin));
+  const res = NextResponse.redirect(new URL(next, requestUrl.origin));
   res.cookies.delete(POST_LOGIN_REDIRECT_COOKIE);
   return res;
 }

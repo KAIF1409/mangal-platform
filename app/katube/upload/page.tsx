@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '../../components/ThemeToggle';
 import { supabase } from '../../lib/supabase';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 
 // ── KaTube — Step 4: creator upload flow ──
 // Paste a YouTube link, optionally pick which MANGAL series it's based on,
@@ -74,6 +75,12 @@ export default function KaTubeUploadPage() {
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
       setCheckingAuth(false);
+      // Set this eagerly (not only when "Log in" is clicked) — sidesteps a
+      // Next.js Link/prefetch quirk where /login?next=/katube/upload
+      // sometimes renders without ever picking up the ?next= value client-side.
+      // Confirmed via debug logging (11 Aug 2026): nextPath was reading "/home"
+      // even when the Link's href correctly included the query string.
+      if (!data.user) setPostLoginRedirect('/katube/upload');
     });
   }, []);
 
