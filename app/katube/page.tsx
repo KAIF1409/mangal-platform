@@ -182,7 +182,7 @@ function RealShortCard({ short }: { short: RealShort }) {
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={() => router.push(`/katube/watch/${short.id}`)}
+      onClick={() => router.push(`/katube/shorts/${short.id}`)}
       style={{
         width: '100%', borderRadius: '16px', overflow: 'hidden', clipPath: 'inset(0 round 16px)', cursor: 'pointer',
         position: 'relative', aspectRatio: '2/3', background: '#000',
