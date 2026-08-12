@@ -40,7 +40,15 @@ export default function TagsIndexPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px' }}>
+      {/* Mobile pass — page was already close to responsive (flexWrap tag
+          pills, clamp() title) since it has no fixed-width nav; only the
+          outer padding needed tightening on phones. */}
+      <style>{`
+        @media (max-width: 640px) {
+          .mangal-tags-content { padding: 32px 16px !important; }
+        }
+      `}</style>
+      <div className="mangal-tags-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px' }}>
         <a href="/home" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to MANGAL</a>
         <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, margin: '12px 0 8px', letterSpacing: '-0.02em' }}>
           Browse by Tag
