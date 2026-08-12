@@ -524,34 +524,54 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
 
+      {/* Nav had no flexWrap and no responsive rules at all — logo +
+          "MANGAL" + breadcrumb + series title on the left, theme toggle +
+          Browse pill + (Add Chapter) + profile/login on the right, all in
+          one non-wrapping row. On a ~360-375px phone that's easily 500px+
+          of content forced into ~330px, causing horizontal overflow. Same
+          .mangal-* + <style> pattern used on the other pages in this pass. */}
+      <style>{`
+        @media (max-width: 640px) {
+          .mangal-series-nav { padding: 0 12px !important; gap: 6px; }
+          .mangal-series-nav-brand-text { display: none; }
+          .mangal-series-nav-title { max-width: 30vw !important; font-size: 12px !important; }
+          .mangal-series-nav-browse { display: none; }
+          .mangal-series-nav-right { gap: 6px !important; }
+          .mangal-series-nav-right a { padding: 6px 10px !important; font-size: 11px !important; }
+        }
+        @media (max-width: 400px) {
+          .mangal-series-nav-crumb { display: none; }
+        }
+      `}</style>
+
       {/* ── NAV ── */}
-      <nav style={{
+      <nav className="mangal-series-nav" style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
-            <span style={{ fontWeight: 900, fontSize: '17px', color: 'var(--text-primary)' }}>MANGAL</span>
+            <span className="mangal-series-nav-brand-text" style={{ fontWeight: 900, fontSize: '17px', color: 'var(--text-primary)' }}>MANGAL</span>
           </Link>
-          <span style={{ color: 'var(--text-faint)' }}>›</span>
-          <span style={{ fontSize: '13px', color: 'var(--text-tertiary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{series.title}</span>
+          <span className="mangal-series-nav-crumb" style={{ color: 'var(--text-faint)' }}>›</span>
+          <span className="mangal-series-nav-title" style={{ fontSize: '13px', color: 'var(--text-tertiary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{series.title}</span>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="mangal-series-nav-right" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
           <ThemeToggle size={30} />
-          <Link href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)' }}>Browse</Link>
+          <Link href="/" className="mangal-series-nav-browse" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>Browse</Link>
           {isCreator && (
-            <a href={`/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none' }}>
+            <a href={`/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>
               + Add Chapter
             </a>
           )}
           {user ? (
             <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
           ) : (
-            <a href={`/login?next=${encodeURIComponent(pathname)}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none' }}>Log in</a>
+            <a href={`/login?next=${encodeURIComponent(pathname)}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>Log in</a>
           )}
         </div>
       </nav>
