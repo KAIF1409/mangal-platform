@@ -205,33 +205,54 @@ export default function HistoryPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
+      {/* Mobile pass — page had 0 @media rules (custom nav, not the shared
+          Navbar component, so it didn't inherit that fix either). Nav
+          breadcrumb hides on narrow phones since the left side has no
+          wrap/ellipsis and would otherwise silently push past the viewport;
+          header/content padding tightens; history row cover shrinks and its
+          actions column stays compact at 480px, matching the /library row
+          pattern. */}
+      <style>{`
+        @media (max-width: 640px) {
+          .mangal-hist-nav { padding: 0 16px !important; }
+          .mangal-hist-crumb { display: none; }
+          .mangal-hist-header { padding: 28px 16px 16px !important; }
+          .mangal-hist-pills-wrap { padding: 0 16px 20px !important; }
+          .mangal-hist-content { padding: 0 16px 60px !important; }
+        }
+        @media (max-width: 480px) {
+          .mangal-hist-title { font-size: 22px !important; }
+          .mangal-hist-row { padding: 12px !important; gap: 10px !important; }
+          .mangal-hist-cover { width: 44px !important; height: 60px !important; }
+        }
+      `}</style>
 
       {/* NAV */}
-      <nav style={{
+      <nav className="mangal-hist-nav" style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
             <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
             <span style={{ fontWeight: 900, fontSize: '17px', color: 'var(--text-primary)' }}>MANGAL</span>
           </Link>
-          <span style={{ color: 'var(--text-faint)' }}>›</span>
-          <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>Reading History</span>
+          <span className="mangal-hist-crumb" style={{ color: 'var(--text-faint)' }}>›</span>
+          <span className="mangal-hist-crumb" style={{ fontSize: '13px', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>Reading History</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <ThemeToggle size={30} />
           <Link href="/" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)' }}>Browse</Link>
         </div>
       </nav>
 
       {/* HEADER */}
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="mangal-hist-header" style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🕐 Reading History</h1>
+          <h1 className="mangal-hist-title" style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🕐 Reading History</h1>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>{counterText()}</p>
         </div>
         {!loading && history.length > 0 && (
@@ -264,7 +285,7 @@ export default function HistoryPage() {
 
       {/* CONTENT TYPE FILTER PILLS */}
       {!loading && history.length > 0 && (
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 20px' }}>
+        <div className="mangal-hist-pills-wrap" style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 20px' }}>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button onClick={() => handleContentTypeToggle('all')}    style={pillStyle('all')}>All</button>
             <button onClick={() => handleContentTypeToggle('mangal')} style={pillStyle('mangal')}>📜 Mangal</button>
@@ -274,7 +295,7 @@ export default function HistoryPage() {
       )}
 
       {/* CONTENT */}
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
+      <div className="mangal-hist-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '36px', marginBottom: '12px' }}>🕐</div>
@@ -386,14 +407,14 @@ function HistoryRow({
   const badgeBg = isNovel ? 'rgba(109,40,217,0.85)' : 'rgba(153,27,27,0.85)';
 
   return (
-    <div style={{
+    <div className="mangal-hist-row" style={{
       display: 'flex', gap: '14px', alignItems: 'center',
       background: 'var(--bg-card)', border: `1px solid ${isNovel ? 'rgba(76,29,149,0.25)' : 'var(--border-color)'}`,
       borderRadius: '12px', padding: '14px 16px',
     }}>
       {/* Cover thumbnail */}
       <a href={`/series/${entry.series_id}`} style={{ flexShrink: 0, textDecoration: 'none', position: 'relative' }}>
-        <div style={{ width: '52px', height: '70px', borderRadius: '7px', overflow: 'hidden', background: coverBg, border: '1px solid var(--border-color)', position: 'relative' }}>
+        <div className="mangal-hist-cover" style={{ width: '52px', height: '70px', borderRadius: '7px', overflow: 'hidden', background: coverBg, border: '1px solid var(--border-color)', position: 'relative' }}>
           {entry.series_cover ? (
             <Image src={entry.series_cover} alt={entry.series_title} fill sizes="52px" style={{ objectFit: 'cover' }} />
           ) : (
