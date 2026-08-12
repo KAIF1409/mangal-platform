@@ -153,6 +153,34 @@ export default function LibraryPage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
 
+      {/* Mobile pass (§13 sweep): nav itself is already handled globally by
+          the shared Navbar (.mangal-shared-nav-center scroll-strip). What's
+          left here is page-local — the header's sort dropdown wrapping onto
+          its own line under the title on narrow phones (flexWrap already
+          did this, just tightening padding), and the LibraryCard row, which
+          was a fixed-width flex row (cover + info + actions all side by
+          side) that got too tight under ~480px: genre/chapter-count pills
+          and the synopsis line started colliding with the action buttons.
+          Under 480px the card switches to a 2-row layout — cover+info on
+          top, actions (read button + unfollow) full-width below — via
+          .mangal-lib-card-actions switching flex-direction and width. */}
+      <style>{`
+        @media (max-width: 640px) {
+          .mangal-lib-header { padding: 28px 16px 16px !important; }
+          .mangal-lib-content { padding: 0 16px 48px !important; }
+        }
+        @media (max-width: 480px) {
+          .mangal-lib-card { flex-wrap: wrap; padding: 12px !important; }
+          .mangal-lib-card-info { flex: 1 1 100%; order: 2; min-width: 0; }
+          .mangal-lib-card-cover { order: 1; }
+          .mangal-lib-card-actions {
+            order: 3; flex-direction: row !important; width: 100%;
+            align-items: center !important; justify-content: space-between !important;
+            margin-top: 4px;
+          }
+        }
+      `}</style>
+
       {/* ── NAV (shared component) ── */}
       <Navbar
         variant="custom"
@@ -190,7 +218,7 @@ export default function LibraryPage() {
       />
 
       {/* ── HEADER ── */}
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px 20px' }}>
+      <div className="mangal-lib-header" style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px 20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🔔 My Library</h1>
@@ -218,7 +246,7 @@ export default function LibraryPage() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px 60px' }}>
+      <div className="mangal-lib-content" style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px 60px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>📚</div>
@@ -252,13 +280,13 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
   const [confirmUnfollow, setConfirmUnfollow] = useState(false);
 
   return (
-    <div style={{
+    <div className="mangal-lib-card" style={{
       display: 'flex', gap: '16px', alignItems: 'center',
       background: 'var(--bg-card)', border: '1px solid var(--border-color)',
       borderRadius: '12px', padding: '16px', transition: 'border-color 0.15s',
     }}>
       {/* Cover */}
-      <a href={`/series/${series.id}`} style={{ flexShrink: 0, textDecoration: 'none' }}>
+      <a href={`/series/${series.id}`} className="mangal-lib-card-cover" style={{ flexShrink: 0, textDecoration: 'none' }}>
         <div style={{ width: '64px', height: '86px', borderRadius: '8px', overflow: 'hidden', background: '#1a0a0a', border: '1px solid var(--border-color)', position: 'relative' }}>
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="64px" style={{ objectFit: 'cover' }} />
@@ -269,7 +297,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
       </a>
 
       {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="mangal-lib-card-info" style={{ flex: 1, minWidth: 0 }}>
         <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}>
           <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {series.title}
@@ -291,7 +319,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0, alignItems: 'flex-end' }}>
+      <div className="mangal-lib-card-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0, alignItems: 'flex-end' }}>
         {series.latest_chapter_id && (
           <a href={`/read/${series.latest_chapter_id}`} style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
