@@ -1496,6 +1496,37 @@ is its own row/line item for now.
 a later session — they're now built too (§12g), on top of notifications
 rather than instead of them.
 
+### 13c. Close Friends — story audience restriction (DONE)
+
+Wired up `kcircle_close_friends` (schema from §13b, live but unused until
+now) as a story privacy control, Instagram-style: pick "🟢 Close Friends"
+instead of "🌍 Everyone" and only people on your list (plus you) can see
+that story.
+
+- **Migration `20260813150000_kcircle_close_friends_story_audience.sql`**
+  (applied live) — `kcircle_stories.close_friends_only boolean`; rewrote
+  the story SELECT policy to require, when the flag is set, that the
+  viewer is the author or has a matching row in `kcircle_close_friends`
+  (`user_id` = author, `friend_id` = viewer). Unrestricted stories are
+  unaffected — same expiry-only check as before.
+- **New route `app/kalpana-circle/close-friends/page.tsx`** — debounced
+  username search (same pattern as the main search overlay) to add
+  people, plus a remove button on the current list. `kcircle_close_friends`
+  RLS is owner-only for every operation (`auth.uid() = user_id`), so this
+  list is private the same way Instagram's is — nobody, including the
+  people on it, can see who's on your Close Friends list but you.
+- **Story upload flow (`app/kalpana-circle/page.tsx`):** picking a file no
+  longer uploads immediately — it stages the file and shows a small
+  "🌍 Everyone / 🟢 Close Friends" picker first. Close-friends stories get
+  a green ring in the stories bar (in place of the usual gradient ring)
+  and a "🟢 Close Friends" tag in the full-screen viewer. New
+  "🟢 Manage Close Friends" link under the stories bar.
+
+**Not done:** no "who can reply" distinction (anyone who can see a story
+can still... actually stories have no reply feature at all yet, so N/A);
+no bulk-import from existing followers/DM contacts — you add people one
+at a time by username search.
+
 ## 13b. Repo/live-DB drift found this session — flag for follow-up
 
 While applying the notifications migration, `list_migrations` on the live
