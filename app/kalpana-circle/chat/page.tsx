@@ -89,6 +89,14 @@ export default function KCircleChatPage() {
   const [searchResults, setSearchResults] = useState<{ user_id: string; username: string }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // ── group settings: rename, add/remove member, leave ──
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
+  const [members, setMembers] = useState<{ user_id: string; username: string }[]>([]);
+  const [renameValue, setRenameValue] = useState('');
+  const [addMemberQuery, setAddMemberQuery] = useState('');
+  const [addMemberResults, setAddMemberResults] = useState<{ user_id: string; username: string }[]>([]);
+  const [groupBusy, setGroupBusy] = useState(false);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
@@ -237,6 +245,67 @@ export default function KCircleChatPage() {
     resetComposer();
   };
 
+  const openGroupSettings = async () => {
+    if (!active) return;
+    setRenameValue(active.title);
+    setShowGroupSettings(true);
+    const { data } = await supabase.from('kcircle_conversation_participants').select('user_id').eq('conversation_id', active.id);
+    const ids = (data ?? []).map(r => r.user_id);
+    const { data: profiles } = ids.length
+      ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', ids)
+      : { data: [] as { user_id: string; username: string }[] };
+    setMembers((profiles ?? []).filter(p => p.user_id !== userId));
+  };
+
+  const closeGroupSettings = () => {
+    setShowGroupSettings(false); setMembers([]); setAddMemberQuery(''); setAddMemberResults([]);
+  };
+
+  const saveRename = async () => {
+    if (!active || !renameValue.trim()) return;
+    const title = renameValue.trim();
+    setGroupBusy(true);
+    const { error } = await supabase.from('kcircle_conversations').update({ title }).eq('id', active.id);
+    setGroupBusy(false);
+    if (error) return;
+    setActive(prev => prev ? { ...prev, title } : prev);
+    setConversations(prev => prev.map(c => c.id === active.id ? { ...c, title } : c));
+  };
+
+  const searchAddMember = async (q: string) => {
+    setAddMemberQuery(q);
+    if (!q.trim() || !active) { setAddMemberResults([]); return; }
+    const { data } = await supabase.from('creator_profiles').select('user_id, username').ilike('username', `%${q.trim()}%`).limit(8);
+    const existingIds = new Set([userId, ...members.map(m => m.user_id)]);
+    setAddMemberResults((data ?? []).filter(u => !existingIds.has(u.user_id)));
+  };
+
+  const addMember = async (u: { user_id: string; username: string }) => {
+    if (!active) return;
+    const { error } = await supabase.from('kcircle_conversation_participants').insert({ conversation_id: active.id, user_id: u.user_id });
+    if (error) return;
+    setMembers(prev => [...prev, u]);
+    setConversations(prev => prev.map(c => c.id === active.id ? { ...c, memberUsernames: [...c.memberUsernames, u.username] } : c));
+    setAddMemberQuery(''); setAddMemberResults([]);
+  };
+
+  const removeMember = async (u: { user_id: string; username: string }) => {
+    if (!active) return;
+    const { error } = await supabase.from('kcircle_conversation_participants').delete().eq('conversation_id', active.id).eq('user_id', u.user_id);
+    if (error) return;
+    setMembers(prev => prev.filter(m => m.user_id !== u.user_id));
+    setConversations(prev => prev.map(c => c.id === active.id ? { ...c, memberUsernames: c.memberUsernames.filter(n => n !== u.username) } : c));
+  };
+
+  const leaveGroup = async () => {
+    if (!active || !userId) return;
+    const { error } = await supabase.from('kcircle_conversation_participants').delete().eq('conversation_id', active.id).eq('user_id', userId);
+    if (error) return;
+    setConversations(prev => prev.filter(c => c.id !== active.id));
+    closeGroupSettings();
+    setActive(null);
+  };
+
   if (!checkedAuth) return null;
 
   return (
@@ -258,6 +327,11 @@ export default function KCircleChatPage() {
           <Link href="/kalpana-circle" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-primary)' }}>←</Link>
         )}
         <span className="kc-chat-nav-title" style={{ fontWeight: 800, fontSize: '15px' }}>{active ? active.title : 'K Circle Chat'}</span>
+        {active && active.isGroup && (
+          <button onClick={openGroupSettings} style={{
+            marginLeft: 'auto', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)',
+          }} title="Group settings">ⓘ</button>
+        )}
         {!active && (
           <button className="kc-chat-new-btn" onClick={() => { setShowNew(v => !v); if (showNew) resetComposer(); }} style={{
             marginLeft: 'auto', fontSize: '12px', fontWeight: 800, padding: '6px 12px', borderRadius: '8px', border: 'none',
@@ -265,6 +339,80 @@ export default function KCircleChatPage() {
           }}>+ New</button>
         )}
       </nav>
+
+      {showGroupSettings && active && (
+        <div onClick={closeGroupSettings} style={{
+          position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '8vh',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: '92%', maxWidth: '440px', maxHeight: '78vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px',
+            background: 'var(--bg-primary)', borderRadius: '14px', border: '1px solid var(--border-color)', padding: '16px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 800, fontSize: '14px' }}>Group settings</span>
+              <button onClick={closeGroupSettings} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)' }}>✕</button>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>GROUP NAME</label>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                <input value={renameValue} onChange={e => setRenameValue(e.target.value)} style={{
+                  flex: 1, fontSize: '13px', padding: '8px 12px', borderRadius: '8px', boxSizing: 'border-box',
+                  border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none',
+                }} />
+                <button onClick={saveRename} disabled={groupBusy || !renameValue.trim()} style={{
+                  fontSize: '12px', fontWeight: 800, padding: '8px 14px', borderRadius: '8px', border: 'none',
+                  background: RADIANT, color: '#27272a', cursor: 'pointer', flexShrink: 0,
+                }}>Save</button>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>MEMBERS · {members.length + 1}</label>
+              <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 0' }}>
+                  <Avatar name="you" size={28} />
+                  <span style={{ fontSize: '12.5px', fontWeight: 700 }}>You</span>
+                </div>
+                {members.map(m => (
+                  <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 0' }}>
+                    <Avatar name={m.username} size={28} />
+                    <span style={{ fontSize: '12.5px', fontWeight: 700, flex: 1 }}>{m.username}</span>
+                    <button onClick={() => removeMember(m)} style={{
+                      fontSize: '11px', fontWeight: 700, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer',
+                    }}>Remove</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>ADD MEMBER</label>
+              <input
+                value={addMemberQuery}
+                onChange={e => searchAddMember(e.target.value)}
+                placeholder="Search username…"
+                style={{
+                  width: '100%', fontSize: '13px', padding: '8px 12px', borderRadius: '8px', marginTop: '6px', boxSizing: 'border-box',
+                  border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none',
+                }}
+              />
+              {addMemberResults.map(u => (
+                <div key={u.user_id} onClick={() => addMember(u)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 2px', cursor: 'pointer' }}>
+                  <Avatar name={u.username} size={26} />
+                  <span style={{ fontSize: '12.5px', fontWeight: 700 }}>{u.username}</span>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={leaveGroup} style={{
+              fontSize: '12.5px', fontWeight: 800, padding: '10px 0', borderRadius: '8px',
+              border: '1px solid #ef4444', background: 'none', color: '#ef4444', cursor: 'pointer',
+            }}>Leave group</button>
+          </div>
+        </div>
+      )}
 
       {!active && showNew && (
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-color)', maxWidth: '640px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>

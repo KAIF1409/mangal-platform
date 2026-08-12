@@ -1190,12 +1190,59 @@ this repo's existing convention):
 
 **Still not done from this section (backlog, next up):** dedicated group
 settings (add/remove members after creation, leave group, rename), read
-receipts/typing indicators, image/attachment messages, and the still-open
-gaps from §12 above (search tab, realtime, dedicated storage bucket). The
-broader "Instagram + Discord-minus-reels" feature parity the founder wants
-(stories replies, saved posts, close friends, voice/video, channels/roles)
-is intentionally scoped out of this pass — flag which of these to prioritize
+receipts/typing indicators, image/attachment messages. The broader
+"Instagram + Discord-minus-reels" feature parity the founder wants (stories
+replies, saved posts, close friends, voice/video, channels/roles) is
+intentionally scoped out of this pass — flag which of these to prioritize
 next.
+
+### 12b. Stories seen-ring fix, dedicated media bucket, live search (DONE)
+
+Fast follow-ups, done fastest-first:
+
+- **Stories seen-ring bug** (`app/kalpana-circle/page.tsx`, `advanceStory`)
+  — the `kcircle_story_views` upsert's error was silently swallowed, and
+  even on success nothing updated `stories` state, so the seen/unseen ring
+  only ever changed after a full page reload. Now logs upsert failures and
+  flips `seen: true` on the group locally the moment the upsert succeeds.
+- **Dedicated storage bucket** — new public `kcircle-media` bucket (same
+  RLS shape as `manga-pages`: public read, authenticated insert, owner-only
+  update/delete), migration `kcircle_dedicated_media_bucket` applied live.
+  Post uploads now go to `posts/{userId}-{ts}.ext`, story uploads to
+  `stories/{userId}-{ts}.ext` — no more `kcircle/` prefix inside the shared
+  manga bucket.
+- **Live search** — the `🔍 Search — coming soon` placeholder (desktop pill
+  + mobile bottom-nav icon) is now a real overlay: 300ms-debounced search
+  against `creator_profiles.username` and `kcircle_posts.caption`, results
+  grouped as "Dreamers" / "Posts", each linking to `/creator/[username]`
+  (no post-permalink page exists yet, so post results link to the author's
+  profile rather than the specific post).
+
+**Not done yet:** no ranking/relevance beyond `ilike`, no result caching,
+no "recent searches."
+
+### 12c. Group chat settings — rename, add/remove member, leave (DONE)
+
+Migration `20260812120500_kcircle_group_settings_rls.sql` (applied live,
+then committed to the repo) added the two RLS policies this needed:
+- `kcircle_conversations` gets an UPDATE policy so any current participant
+  can rename the group (same "any participant manages membership" trust
+  model as the insert-widening fix in §12a — no owner-only restriction).
+- `kcircle_conversation_participants` gets a DELETE policy: a user can
+  always delete their own row (leave), and any existing participant can
+  delete another's row (remove member) — same trust model as adding.
+
+**UI (`app/kalpana-circle/chat/page.tsx`):** group threads show a ⓘ button
+in the nav (DM threads don't, nothing to configure there) opening a
+settings panel: rename input + Save, a member list with per-member Remove,
+an add-member username search, and a Leave group button. Removing/adding
+updates local state immediately rather than waiting on a poll cycle;
+leaving a group closes the thread and drops it from the conversation list.
+
+**Not done:** no distinct "admin" role — every member has equal
+add/remove/rename rights, matching the open trust model already in place
+for building groups. Tighten this (creator-only rename/remove) if the
+founder wants it later.
 
 ## 13. Site-wide mobile-compatibility sweep (in progress)
 
