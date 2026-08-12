@@ -62,6 +62,7 @@ export default function GroupChannelsPage() {
   const [newChannelName, setNewChannelName] = useState('');
   const [newRoleName, setNewRoleName] = useState('');
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -233,7 +234,9 @@ export default function GroupChannelsPage() {
       <style>{`
         @media (max-width: 700px) {
           .kc-group-sidebar { display: none !important; }
-          .kc-group-sidebar.kc-group-sidebar-open { display: flex !important; position: fixed !important; inset: 56px 0 0 0; z-index: 90; background: var(--bg-primary); }
+          .kc-group-sidebar.kc-group-sidebar-open { display: flex !important; position: fixed !important; inset: 56px 0 0 0; z-index: 90; background: var(--bg-primary); width: 100% !important; }
+          .kc-group-hamburger { display: inline-flex !important; }
+          .kc-group-sidebar-close { display: inline-flex !important; }
         }
       `}</style>
       <nav style={{
@@ -242,8 +245,14 @@ export default function GroupChannelsPage() {
         display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0,
       }}>
         <Link href="/kalpana-circle/chat" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-primary)' }}>←</Link>
-        <span style={{ fontWeight: 800, fontSize: '15px' }}>{groupTitle}</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
+        <button
+          className="kc-group-hamburger"
+          onClick={() => setMobileSidebarOpen(v => !v)}
+          style={{ display: 'none', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)', alignItems: 'center', justifyContent: 'center' }}
+          title="Channels"
+        >☰</button>
+        <span style={{ fontWeight: 800, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{groupTitle}</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px', flexShrink: 0 }}>
           {canManageChannels && (
             <button onClick={() => setPanel(p => p === 'channels' ? null : 'channels')} style={{ background: 'none', border: 'none', fontSize: '12.5px', fontWeight: 700, color: panel === 'channels' ? ACCENT : 'var(--text-tertiary)', cursor: 'pointer' }}>+ Channel</button>
           )}
@@ -254,10 +263,15 @@ export default function GroupChannelsPage() {
       </nav>
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <div className="kc-group-sidebar" style={{ width: '180px', flexShrink: 0, borderRight: '1px solid var(--border-color)', padding: '14px 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <div className={`kc-group-sidebar${mobileSidebarOpen ? ' kc-group-sidebar-open' : ''}`} style={{ width: '180px', flexShrink: 0, borderRight: '1px solid var(--border-color)', padding: '14px 10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <button
+            className="kc-group-sidebar-close"
+            onClick={() => setMobileSidebarOpen(false)}
+            style={{ display: 'none', alignSelf: 'flex-end', background: 'none', border: 'none', fontSize: '13px', color: 'var(--text-tertiary)', cursor: 'pointer', marginBottom: '8px' }}
+          >✕ Close</button>
           {channels.map(c => (
             <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button onClick={() => setActiveChannelId(c.id)} style={{
+              <button onClick={() => { setActiveChannelId(c.id); setMobileSidebarOpen(false); }} style={{
                 flex: 1, textAlign: 'left', background: activeChannelId === c.id ? 'var(--bg-card)' : 'none', border: 'none',
                 borderRadius: '6px', padding: '7px 8px', fontSize: '13px', fontWeight: activeChannelId === c.id ? 700 : 500,
                 color: activeChannelId === c.id ? 'var(--text-primary)' : 'var(--text-tertiary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
