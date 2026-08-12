@@ -128,3 +128,33 @@ a[style*="gradient"]:active,
     transform: none;
   }
 }
+
+/* ── Shared Navbar (app/components/Navbar.tsx) — baseline mobile safety ──
+   Every "custom"-variant page (library, bookmarks, rankings, and any future
+   page) passes its own centerSlot of 2-6 nav links plus a rightSlot of
+   buttons/ProfileMenu, with no per-page responsive handling. Without this,
+   the nav's `justifyContent: space-between` + no wrap forced the whole row
+   to overflow on phones. Fixed once here instead of per-page: the center
+   links become horizontally scrollable at every width (no visible change on
+   desktop where everything already fits; a real scroll strip on phones),
+   and the brand wordmark hides under 420px to free up room. Pages that need
+   something more specific can still pass navClassName/brandWrapperClassName
+   to layer additional rules on top (e.g. app/dashboard/page.tsx's
+   .mangal-dash-* rules already do this). */
+.mangal-shared-nav-center {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.mangal-shared-nav-center::-webkit-scrollbar { display: none; }
+
+@media (max-width: 640px) {
+  .mangal-shared-nav { padding: 0 14px !important; }
+  .mangal-shared-nav-brand { gap: 14px !important; }
+}
+
+@media (max-width: 420px) {
+  .mangal-shared-nav-brand-text { display: none; }
+}

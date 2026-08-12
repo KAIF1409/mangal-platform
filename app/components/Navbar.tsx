@@ -41,7 +41,7 @@ export default function Navbar({
 }: NavbarProps) {
   return (
     <nav
-      className={navClassName}
+      className={`mangal-shared-nav${navClassName ? ` ${navClassName}` : ''}`}
       style={{
         position: 'sticky',
         top: 0,
@@ -58,8 +58,17 @@ export default function Navbar({
         transition: 'background 0.3s, border-color 0.3s',
       }}
     >
+      {/* Every "custom" page that renders this component was passing its own
+          centerSlot (2-6 nav links) with no responsive handling — Navbar
+          itself had no default mobile behavior, so any page that didn't
+          separately wire up its own .mangal-*-nav-center media queries
+          (library, bookmarks, rankings, etc.) silently overflowed on phones.
+          Fixed once, here, instead of per-page: .mangal-shared-nav-center
+          becomes horizontally scrollable at every width (invisible on
+          desktop, a real scroll strip on phones) and the brand wordmark
+          hides under 420px — see the matching rules in globals.css. */}
       <div
-        className={brandWrapperClassName}
+        className={`mangal-shared-nav-brand${brandWrapperClassName ? ` ${brandWrapperClassName}` : ''}`}
         style={{ display: 'flex', alignItems: 'center', gap: '32px', minWidth: 0 }}
       >
         <Link
@@ -73,23 +82,25 @@ export default function Navbar({
             height={logoSize}
             style={{ display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
           />
-          <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+          <span className="mangal-shared-nav-brand-text" style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             {platformName}
           </span>
         </Link>
 
-        {variant === 'custom' && centerSlot}
+        {variant === 'custom' && centerSlot && (
+          <div className="mangal-shared-nav-center">{centerSlot}</div>
+        )}
       </div>
 
       {variant === 'legal' ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
           <ThemeToggle size={30} />
-          <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
+          <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             ← Back to Home
           </Link>
         </div>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div className="mangal-shared-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
           <ThemeToggle size={32} />
           {rightSlot}
         </div>
