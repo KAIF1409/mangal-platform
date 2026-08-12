@@ -189,29 +189,44 @@ export default function KaTubeWatchPage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
+      {/* Nav: MANGAL logo+wordmark, centered KaTube logo, theme toggle + a
+          text "← Back to KaTube" button, in one non-wrapping row — on a
+          ~320-375px phone that's easily 370px+ of content forced into a
+          ~330px available width. Same .mangal-* + <style> pattern used
+          across this sweep. */}
+      <style>{`
+        @media (max-width: 480px) {
+          .mangal-watch-nav { padding: 0 12px !important; gap: 6px; }
+          .mangal-watch-brand-text { display: none; }
+          .mangal-watch-back-text { display: none; }
+          .mangal-watch-back { padding: 8px 10px !important; }
+        }
+      `}</style>
+
       {/* ── NAV ── */}
-      <nav style={{
+      <nav className="mangal-watch-nav" style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 20px', height: '64px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: '8px',
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
           <Image src="/icon.png" alt="MANGAL" width={32} height={32} style={{ display: 'block', borderRadius: '8px' }} />
-          <span style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
+          <span className="mangal-watch-brand-text" style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
           <Image src="/katube-logo.png" alt="KaTube" width={140} height={70} style={{ display: 'block', height: '34px', width: 'auto', objectFit: 'contain' }} priority />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <ThemeToggle size={30} />
-          <Link href="/katube" style={{
+          <Link href="/katube" className="mangal-watch-back" style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
-            color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border-color)',
-          }}>← Back to KaTube</Link>
+            color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap',
+          }}>← <span className="mangal-watch-back-text">Back to KaTube</span></Link>
         </div>
       </nav>
 
