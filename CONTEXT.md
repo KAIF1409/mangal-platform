@@ -15,7 +15,7 @@ ecosystem, all under one Next.js app, one Supabase project, one Vercel deploymen
 | Part | Route | What it is | Status |
 |---|---|---|---|
 | **MangaNovels** | `/`, `/search`, `/read/...` | The original MANGAL platform — read manga, comics, and novels. Fully live. | ✅ Live, in active use |
-| **KaTube** | `/katube` (redirected from `/kalpanaverse`) | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row and full-screen Shorts feed. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟢 Grid, Shorts (row + full-screen feed), watch page (incl. tag-based recommendations), upload flow, channel verification, content moderation, and ranking/filtering (Popular/New/Rankings/Categories/Tools) all live on real Supabase data; only like/comment/subscribe engagement actions still pending (see §4) |
+| **KaTube** | `/katube` (redirected from `/kalpanaverse`) | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row and full-screen Shorts feed. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟢 Grid, Shorts (row + full-screen feed), watch page (incl. tag-based recommendations), upload flow, channel verification, content moderation, ranking/filtering, and like/comment/subscribe engagement all live on real Supabase data (see §4, §11) |
 | **Kalpana Circle** | `/kalpana-circle` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from the video platform, not a tab inside it. Brand: purple/violet. | 🟡 UI demo only — placeholder posts, composer disabled |
 
 The homepage (`app/page.tsx`) shows all three as equal "doors" right under the hero,
@@ -216,8 +216,12 @@ re-deriving the business case from scratch.
 4. Real Supabase `posts` / `comments` tables for the community platform, wire up
    the composer
 5. Subscribe/like/comment interactions across the video platform once the above
-   exist — **Like: DONE (`17eb400`)**, see §11 for the approach. Comment and
-   subscribe still pending.
+   exist — **Like: DONE (`17eb400`)**, see §11. **Comment + Subscribe: DONE
+   (`f9b1388`)** — `video_comments` + `creator_subscriptions` tables were
+   already live in Supabase (applied via MCP as `katube_comments_and_subscriptions`
+   but the migration file was never committed — added retroactively). Watch page
+   now has a real comment box/list and a Subscribe button (composite PK on
+   `creator_subscriptions` prevents double-subscribe, same pattern as likes).
 6. **Kalpanaverse sponsorship/ad monetization (documented future step, not started —
    gated behind real traffic).** Founder wants a revenue layer for Kalpanaverse
    itself, not just discovery-for-MANGAL. Direction agreed:
