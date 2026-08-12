@@ -1634,6 +1634,60 @@ dormant.
 detail). Polls got a real UI this session; close friends, link fields, and
 dreamer-of-week are still schema-only.
 
+## 17. K Circle channels + roles — Discord-style, full scope (DONE, this session)
+
+Founder confirmed full scope (channels + roles + per-channel permission
+overwrites, not the leaner 3-fixed-role MVP that was proposed first).
+
+- **Schema** (`supabase/migrations/20260813170000_kcircle_channels_roles.sql`):
+  `kcircle_group_roles` (bitmask `permissions` column, `is_default` for the
+  auto @everyone-equivalent role), `kcircle_group_role_members`,
+  `kcircle_group_channels`, `kcircle_channel_overwrites` (per-channel
+  allow/deny bitmask per role), `kcircle_channel_messages`. RLS on every
+  table scoped to group participants (`kcircle_is_group_participant`
+  helper). A trigger on `kcircle_conversations` insert auto-bootstraps
+  every new group with an `@everyone` role (view+send), an `Owner` role
+  (all permissions, assigned to the creator), and a `#general` channel —
+  confirmed working via a live test insert.
+- **Permission model** (`app/lib/kcirclePermissions.ts`): bit constants
+  (`VIEW_CHANNEL`, `SEND_MESSAGES`, `MANAGE_MESSAGES`, `MANAGE_CHANNELS`,
+  `MANAGE_ROLES`, `KICK_MEMBERS`, `BAN_MEMBERS`, `ADMINISTRATOR`) +
+  `resolveChannelPermissions()`, which follows Discord's own documented
+  resolution order: base role perms OR'd across all of a member's roles,
+  then channel-level role denies clear bits, then channel-level role
+  allows set bits, with `ADMINISTRATOR` short-circuiting to everything.
+- **UI** (`app/kalpana-circle/group/[conversationId]/page.tsx`): channel
+  sidebar + message view/composer (gated on `VIEW_CHANNEL`/`SEND_MESSAGES`
+  for the current channel), a Channels management panel
+  (create/delete, gated on `MANAGE_CHANNELS`), and a Roles panel
+  (create/delete roles, toggle each permission bit per role, assign/unassign
+  non-default roles per member — gated on `MANAGE_ROLES`). Linked from
+  `app/kalpana-circle/chat/page.tsx`'s group header via a new "# Channels"
+  link next to the existing group-settings (ⓘ) button.
+- **Repo/DB drift found and fixed this session:** a `kcircle_channel_messages`
+  table already existed live on Supabase with a different, undocumented
+  schema (`sender_id` instead of `author_id`, no `image_url`, no migration
+  file, no app code referencing it anywhere) — same pattern as the drift
+  flagged in §13b. It was empty, so it was dropped and recreated to match
+  this feature's schema before the migration file was written.
+
+**Not done (flagged as follow-ups, not started):**
+- No channel reordering UI (position is set at creation time only)
+- No role position/hierarchy enforcement beyond storage — a lower role
+  can still edit another role's permissions if it happens to have
+  `MANAGE_ROLES`, there's no "can't edit a role positioned above your own
+  highest role" guard yet (Discord enforces this; this build doesn't)
+- No voice/stage channels — text-only, per the `kcircle_group_channels`
+  schema (no `type` column yet)
+- No image/attachment support in channel messages on the composer side —
+  `image_url` column exists on `kcircle_channel_messages` but nothing
+  writes to it yet (DM/group-chat image attachments already work
+  elsewhere, per §12d, this just isn't wired for channels yet)
+- Mobile: sidebar is hidden under 700px with no toggle button yet
+  (`.kc-group-sidebar` CSS class exists for this, needs a hamburger/toggle
+  control wired to it)
+- Voice/video calls (separate backlog item, still fully unstarted)
+
 ## 11. KaTube like button (`17eb400`) — one genuine like per user
 
 **Approach:** no custom "algorithm" — the one-like-per-user guarantee comes

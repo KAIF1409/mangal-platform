@@ -488,9 +488,14 @@ export default function KCircleChatPage() {
         )}
         <span className="kc-chat-nav-title" style={{ fontWeight: 800, fontSize: '15px' }}>{active ? active.title : 'K Circle Chat'}</span>
         {active && active.isGroup && (
-          <button onClick={openGroupSettings} style={{
-            marginLeft: 'auto', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)',
-          }} title="Group settings">ⓘ</button>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <Link href={`/kalpana-circle/group/${active.id}`} style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-tertiary)', textDecoration: 'none' }} title="Channels &amp; roles">
+              # Channels
+            </Link>
+            <button onClick={openGroupSettings} style={{
+              background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)',
+            }} title="Group settings">ⓘ</button>
+          </div>
         )}
         {!active && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
