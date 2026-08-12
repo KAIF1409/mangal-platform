@@ -376,6 +376,20 @@ export default function KalpanaCirclePage() {
           .kc-bottom-nav { display: none; }
           .kc-page { padding-bottom: 40px; }
         }
+        /* Very-small-phone tier (same 380px breakpoint app/page.tsx and
+           app/home/page.tsx already use for their own nav bars) — the
+           mobile nav's three chunks (MANGAL icon, K Circle wordmark logo,
+           KaTube pill + theme toggle) were sized only for >=~320px and had
+           no room to give up, so anything narrower silently squeezed the
+           KaTube pill's text against the wordmark logo. Below 380px the
+           KaTube pill drops to icon-only (still a real tappable link, just
+           without the label) and side padding/gap shrink to claim back a
+           few px. */
+        @media (max-width: 380px) {
+          .kc-nav-mobile { padding: 0 10px !important; gap: 4px; }
+          .kc-katube-badge-text { display: none; }
+          .kc-katube-badge { padding: 7px 8px !important; }
+        }
       `}</style>
 
       {/* ── MOBILE NAV (Instagram mobile-web style: compact header, icons live in the bottom tab bar) ── */}
@@ -391,11 +405,11 @@ export default function KalpanaCirclePage() {
         </Link>
         <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={56} style={{ display: 'block', height: '28px', width: 'auto', objectFit: 'contain' }} priority />
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          <Link href="/katube" style={{
+          <Link href="/katube" className="kc-katube-badge" style={{
             padding: '7px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700,
             color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)',
             whiteSpace: 'nowrap',
-          }}>🎬 KaTube</Link>
+          }}>🎬<span className="kc-katube-badge-text"> KaTube</span></Link>
           <ThemeToggle size={28} />
         </div>
       </nav>
