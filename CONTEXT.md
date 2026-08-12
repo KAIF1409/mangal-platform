@@ -1334,22 +1334,12 @@ the series/views stats.
 **Not done:** no way to know which creators are "verified" vs. just have
 a `creator_profiles` row (same open trust model as the rest of Circle —
 anyone who completed `/become-creator` can have a channel); no
-notification when a followed creator posts (depends on §14's
-notifications system, not built yet); no channel discovery feed (a fan
-has to already be on that creator's profile to find the link).
+notification when a followed creator posts (a notifications system now
+exists, see §14 — wiring broadcast posts into it is a small follow-up,
+not done yet); no channel discovery feed (a fan has to already be on that
+creator's profile to find the link).
 
-## 14. Next up (not started)
-
-Founder-prioritized backlog, fastest/highest-impact first per the
-founder's own ranking: **notifications** (bell icon — likes, comments,
-new messages; no notification system exists anywhere on the platform
-yet, the single biggest retention gap) is next, followed by
-lower-effort/medium-value items — polls on posts, a "Dreamer of the
-week" pin, close friends (story audience flag) — then the larger builds
-(voice/video via WebRTC + a paid TURN/STUN provider, Discord-style
-channels/roles data model) once there's time/budget for them.
-
-
+## 13. Site-wide mobile-compatibility sweep (in progress)
 
 **Problem reported by founder:** the entire site was built and tested
 desktop-first — most pages have zero `@media` rules and use inline
@@ -1501,6 +1491,10 @@ somewhere — a notification insert just piggybacks on each).
 **Not done:** no notification preferences/mute, no push notifications
 (in-app only), no "X and 3 others liked your post" grouping — each like
 is its own row/line item for now.
+
+**Update (§12g):** the founder asked for Broadcast Channels after all in
+a later session — they're now built too (§12g), on top of notifications
+rather than instead of them.
 
 ## 13b. Repo/live-DB drift found this session — flag for follow-up
 
