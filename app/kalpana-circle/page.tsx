@@ -1,174 +1,555 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
+import { supabase } from '../lib/supabase';
+import { setPostLoginRedirect } from '../lib/authRedirect';
 
-// ── Kalpana Circle — demo/mockup page (renamed from Anime Chat) ──
-// A standalone community space for anime talk, separate from KaTube's
-// video feed. Placeholder posts only — no real posting/comment backend yet.
+// ── K Circle — Instagram-style social layer for MANGAL ──
+// Posts + likes + comments + stories + DMs (chat is a separate route,
+// /kalpana-circle/chat). Backend: supabase/migrations/20260812_kcircle_social.sql
+// (kcircle_posts, kcircle_post_likes, kcircle_post_comments, kcircle_stories,
+// kcircle_story_views, kcircle_conversations, kcircle_messages).
+// No Reels here on purpose — KaTube already owns short-form video.
+// Brand: radiant grey (not Instagram's pink/orange/purple), see RADIANT below.
+// Images upload to the existing 'manga-pages' storage bucket under a
+// 'kcircle/' prefix — no dedicated bucket exists yet.
 
-interface DemoPost {
-  id: string;
-  author: string;
-  tag: string;
-  text: string;
-  replies: number;
-  likes: number;
-  time: string;
-  avatarGradient: string;
+const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
+const RADIANT_SOLID = '#71717a';
+
+interface AuthorInfo {
+  username: string;
 }
 
-const DEMO_POSTS: DemoPost[] = [
-  { id: '1', author: 'Kaif', tag: 'Theory', text: 'Wild theory: the Banyan Spirit in the Folk Tales series is actually connected to the Panchayat storyline. Anyone else notice the recurring symbol?', replies: 14, likes: 32, time: '2h', avatarGradient: 'linear-gradient(135deg, #db2777, #7b2cbf)' },
-  { id: '2', author: 'ReaderX', tag: 'Fan Art', text: 'Drew a quick fan piece of the Aryavarta protagonist after watching the AI trailer on KaTube 🔥', replies: 8, likes: 51, time: '5h', avatarGradient: 'linear-gradient(135deg, #059669, #7b2cbf)' },
-  { id: '3', author: 'MangaMaya', tag: 'Request', text: 'Can someone adapt Street Life Mumbai next? That series deserves an AI-anime short so bad', replies: 21, likes: 19, time: '8h', avatarGradient: 'linear-gradient(135deg, #ea580c, #db2777)' },
-  { id: '4', author: 'AnimeFan108', tag: 'Reaction', text: 'The Desi Horror Anthology teaser genuinely scared me at 30 seconds long, how', replies: 6, likes: 27, time: '1d', avatarGradient: 'linear-gradient(135deg, #1e1b4b, #7b2cbf)' },
-];
+interface KPost {
+  id: string;
+  author_id: string;
+  caption: string | null;
+  image_url: string | null;
+  tag: string | null;
+  created_at: string;
+  author?: AuthorInfo;
+  likeCount: number;
+  likedByMe: boolean;
+  commentCount: number;
+}
 
-const CHANNEL_PILLS = ['All', 'Theories', 'Fan Art', 'Requests', 'Reactions', 'Introductions'];
+interface KComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  text: string;
+  created_at: string;
+  author?: AuthorInfo;
+}
 
-function PostCard({ post }: { post: DemoPost }) {
+interface StoryGroup {
+  authorId: string;
+  username: string;
+  stories: { id: string; image_url: string; created_at: string }[];
+  seen: boolean;
+}
+
+function initials(name: string) {
+  return name.slice(0, 2).toUpperCase();
+}
+
+function timeAgo(iso: string) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
+}
+
+function Avatar({ name, size = 40 }: { name: string; size?: number }) {
   return (
     <div style={{
-      padding: '16px 18px', borderRadius: '14px', background: 'var(--bg-card)',
-      border: '1px solid var(--border-color)', marginBottom: '12px',
+      width: size, height: size, borderRadius: '50%', flexShrink: 0,
+      background: RADIANT, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.36, fontWeight: 800, color: '#27272a',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-        <div style={{
-          width: '34px', height: '34px', borderRadius: '50%', background: post.avatarGradient,
-          flexShrink: 0,
-        }} />
-        <div>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)' }}>{post.author}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{post.time} ago</div>
-        </div>
-        <span style={{
-          marginLeft: 'auto', fontSize: '10px', fontWeight: 800, color: '#c4b5fd',
-          background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)',
-          padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
-        }}>{post.tag}</span>
-      </div>
-      <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 12px' }}>
-        {post.text}
-      </p>
-      <div style={{ display: 'flex', gap: '18px' }}>
-        <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '5px' }}>💬 {post.replies}</span>
-        <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '5px' }}>❤️ {post.likes}</span>
-      </div>
+      {initials(name)}
     </div>
   );
 }
 
 export default function KalpanaCirclePage() {
+  const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [myUsername, setMyUsername] = useState<string | null>(null);
+
+  const [posts, setPosts] = useState<KPost[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+
+  const [stories, setStories] = useState<StoryGroup[]>([]);
+  const [viewingStory, setViewingStory] = useState<{ groupIdx: number; storyIdx: number } | null>(null);
+
   const [draft, setDraft] = useState('');
+  const [composerImage, setComposerImage] = useState<File | null>(null);
+  const [composerPreview, setComposerPreview] = useState<string | null>(null);
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState('');
+
+  const [openComments, setOpenComments] = useState<string | null>(null);
+  const [comments, setComments] = useState<Record<string, KComment[]>>({});
+  const [commentDraft, setCommentDraft] = useState('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const storyFileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── auth ──
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null); // eslint-disable-line react-hooks/set-state-in-effect -- mirrors katube/upload pattern
+    });
+  }, []);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as katube/upload */
+  useEffect(() => {
+    if (!userId) { setMyUsername(null); return; }
+    supabase.from('creator_profiles').select('username').eq('user_id', userId).maybeSingle()
+      .then(({ data }) => setMyUsername(data?.username ?? null));
+  }, [userId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // ── load feed ──
+  const loadPosts = useCallback(async () => {
+    setLoadingPosts(true);
+    const { data: rows } = await supabase
+      .from('kcircle_posts').select('id, author_id, caption, image_url, tag, created_at')
+      .order('created_at', { ascending: false }).limit(30);
+
+    if (!rows || rows.length === 0) { setPosts([]); setLoadingPosts(false); return; }
+
+    const postIds = rows.map(r => r.id);
+    const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
+
+    const [profilesRes, likesRes, commentsRes, myLikesRes] = await Promise.all([
+      supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds),
+      supabase.from('kcircle_post_likes').select('post_id').in('post_id', postIds),
+      supabase.from('kcircle_post_comments').select('post_id').in('post_id', postIds),
+      userId
+        ? supabase.from('kcircle_post_likes').select('post_id').eq('liker_id', userId).in('post_id', postIds)
+        : Promise.resolve({ data: [] as { post_id: string }[] }),
+    ]);
+
+    const usernameMap = new Map((profilesRes.data ?? []).map(p => [p.user_id, p.username]));
+    const likeCounts = new Map<string, number>();
+    (likesRes.data ?? []).forEach(l => likeCounts.set(l.post_id, (likeCounts.get(l.post_id) ?? 0) + 1));
+    const commentCounts = new Map<string, number>();
+    (commentsRes.data ?? []).forEach(c => commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1));
+    const myLiked = new Set((myLikesRes.data ?? []).map(l => l.post_id));
+
+    setPosts(rows.map(r => ({
+      ...r,
+      author: { username: usernameMap.get(r.author_id) ?? 'dreamer' },
+      likeCount: likeCounts.get(r.id) ?? 0,
+      commentCount: commentCounts.get(r.id) ?? 0,
+      likedByMe: myLiked.has(r.id),
+    })));
+    setLoadingPosts(false);
+  }, [userId]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/userId change, same pattern as katube/upload
+  useEffect(() => { loadPosts(); }, [loadPosts]);
+
+  // ── load stories ──
+  const loadStories = useCallback(async () => {
+    const { data: rows } = await supabase
+      .from('kcircle_stories').select('id, author_id, image_url, created_at')
+      .order('created_at', { ascending: true });
+    if (!rows || rows.length === 0) { setStories([]); return; }
+
+    const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
+    const [profilesRes, viewsRes] = await Promise.all([
+      supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds),
+      userId
+        ? supabase.from('kcircle_story_views').select('story_id').eq('viewer_id', userId)
+        : Promise.resolve({ data: [] as { story_id: string }[] }),
+    ]);
+    const usernameMap = new Map((profilesRes.data ?? []).map(p => [p.user_id, p.username]));
+    const seenIds = new Set((viewsRes.data ?? []).map(v => v.story_id));
+
+    const grouped = new Map<string, StoryGroup>();
+    rows.forEach(r => {
+      const g: StoryGroup = grouped.get(r.author_id) ?? {
+        authorId: r.author_id, username: usernameMap.get(r.author_id) ?? 'dreamer',
+        stories: [] as StoryGroup['stories'], seen: true,
+      };
+      g.stories.push(r);
+      if (!seenIds.has(r.id)) g.seen = false;
+      grouped.set(r.author_id, g);
+    });
+    setStories(Array.from(grouped.values()));
+  }, [userId]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/userId change, same pattern as katube/upload
+  useEffect(() => { loadStories(); }, [loadStories]);
+
+  // ── composer ──
+  const handleComposerFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setComposerImage(file);
+    setComposerPreview(URL.createObjectURL(file));
+  };
+
+  const submitPost = async () => {
+    if (!userId) { setPostError('Log in to post.'); return; }
+    if (!draft.trim() && !composerImage) { setPostError('Write something or add a photo first.'); return; }
+    setPosting(true); setPostError('');
+
+    let imageUrl: string | null = null;
+    if (composerImage) {
+      const ext = composerImage.name.split('.').pop();
+      const path = `kcircle/${userId}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('manga-pages').upload(path, composerImage, { upsert: true });
+      if (upErr) { setPostError(`Upload failed: ${upErr.message}`); setPosting(false); return; }
+      imageUrl = supabase.storage.from('manga-pages').getPublicUrl(path).data.publicUrl;
+    }
+
+    const { error } = await supabase.from('kcircle_posts').insert({
+      author_id: userId, caption: draft.trim() || null, image_url: imageUrl,
+    });
+    if (error) { setPostError(error.message); setPosting(false); return; }
+
+    setDraft(''); setComposerImage(null); setComposerPreview(null);
+    setPosting(false);
+    loadPosts();
+  };
+
+  // ── likes ──
+  const toggleLike = async (post: KPost) => {
+    if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    setPosts(prev => prev.map(p => p.id === post.id
+      ? { ...p, likedByMe: !p.likedByMe, likeCount: p.likeCount + (p.likedByMe ? -1 : 1) }
+      : p));
+    if (post.likedByMe) {
+      await supabase.from('kcircle_post_likes').delete().eq('post_id', post.id).eq('liker_id', userId);
+    } else {
+      await supabase.from('kcircle_post_likes').insert({ post_id: post.id, liker_id: userId });
+    }
+  };
+
+  // ── comments ──
+  const toggleComments = async (postId: string) => {
+    if (openComments === postId) { setOpenComments(null); return; }
+    setOpenComments(postId);
+    if (!comments[postId]) {
+      const { data: rows } = await supabase.from('kcircle_post_comments')
+        .select('id, post_id, author_id, text, created_at').eq('post_id', postId).order('created_at', { ascending: true });
+      const authorIds = Array.from(new Set((rows ?? []).map(r => r.author_id)));
+      const { data: profs } = authorIds.length
+        ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds)
+        : { data: [] as { user_id: string; username: string }[] };
+      const usernameMap = new Map((profs ?? []).map(p => [p.user_id, p.username]));
+      setComments(prev => ({
+        ...prev,
+        [postId]: (rows ?? []).map(r => ({ ...r, author: { username: usernameMap.get(r.author_id) ?? 'dreamer' } })),
+      }));
+    }
+  };
+
+  const submitComment = async (postId: string) => {
+    if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    if (!commentDraft.trim()) return;
+    const text = commentDraft.trim();
+    setCommentDraft('');
+    const { error, data } = await supabase.from('kcircle_post_comments')
+      .insert({ post_id: postId, author_id: userId, text }).select('id, post_id, author_id, text, created_at').single();
+    if (!error && data) {
+      setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), { ...data, author: { username: myUsername ?? 'you' } }] }));
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p));
+    }
+  };
+
+  // ── stories: add + view ──
+  const handleAddStory = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    const ext = file.name.split('.').pop();
+    const path = `kcircle/stories/${userId}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('manga-pages').upload(path, file, { upsert: true });
+    if (upErr) return;
+    const imageUrl = supabase.storage.from('manga-pages').getPublicUrl(path).data.publicUrl;
+    await supabase.from('kcircle_stories').insert({ author_id: userId, image_url: imageUrl });
+    loadStories();
+  };
+
+  const openStoryGroup = (idx: number) => setViewingStory({ groupIdx: idx, storyIdx: 0 });
+
+  const advanceStory = useCallback(async () => {
+    if (!viewingStory) return;
+    const group = stories[viewingStory.groupIdx];
+    if (!group) { setViewingStory(null); return; }
+    const story = group.stories[viewingStory.storyIdx];
+    if (userId && story) {
+      await supabase.from('kcircle_story_views').upsert({ story_id: story.id, viewer_id: userId });
+    }
+    if (viewingStory.storyIdx + 1 < group.stories.length) {
+      setViewingStory({ ...viewingStory, storyIdx: viewingStory.storyIdx + 1 });
+    } else if (viewingStory.groupIdx + 1 < stories.length) {
+      setViewingStory({ groupIdx: viewingStory.groupIdx + 1, storyIdx: 0 });
+    } else {
+      setViewingStory(null);
+      loadStories();
+    }
+  }, [viewingStory, stories, userId, loadStories]);
+
+  useEffect(() => {
+    if (!viewingStory) return;
+    const t = setTimeout(() => { advanceStory(); }, 4000);
+    return () => clearTimeout(t);
+  }, [viewingStory, advanceStory]);
+
+  const navHref = (path: string) => (userId ? path : `/login?next=${encodeURIComponent(path)}`);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden', paddingBottom: '76px' }}>
 
       {/* ── NAV ── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
-        padding: '0 20px', height: '64px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 14px', height: '58px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <Image src="/icon.png" alt="MANGAL" width={32} height={32} style={{ display: 'block', borderRadius: '8px' }} />
-          <span style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
+          <Image src="/icon.png" alt="MANGAL" width={28} height={28} style={{ display: 'block', borderRadius: '7px', flexShrink: 0 }} />
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Image src="/kcircle-logo.png" alt="K Circle" width={140} height={60} style={{ display: 'block', height: '32px', width: 'auto', objectFit: 'contain' }} priority />
-          <span style={{
-            fontSize: '9.5px', fontWeight: 800, color: '#c4b5fd',
-            background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.35)',
-            padding: '2px 7px', borderRadius: '20px', marginLeft: '4px',
-          }}>DEMO</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+          <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={56} style={{ display: 'block', height: '28px', width: 'auto', objectFit: 'contain' }} priority />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           <Link href="/katube" style={{
-            padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+            padding: '7px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700,
             color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)',
             whiteSpace: 'nowrap',
           }}>🎬 KaTube</Link>
-          <ThemeToggle size={30} />
-          <Link href="/" style={{
-            padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
-            color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border-color)',
-          }}>← Back to MANGAL</Link>
+          <ThemeToggle size={28} />
         </div>
       </nav>
 
-      {/* ── HERO STRIP ── */}
+      {/* ── STORIES BAR ── */}
       <div style={{
-        padding: '36px 20px 24px', textAlign: 'center',
-        background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgba(124,58,237,0.14) 0%, transparent 70%)',
+        display: 'flex', gap: '14px', overflowX: 'auto', padding: '14px 14px 10px',
+        maxWidth: '640px', margin: '0 auto', WebkitOverflowScrolling: 'touch',
       }}>
-        <h1 style={{
-          fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.03em',
-        }}>Talk Anime With the Community</h1>
-        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto' }}>
-          Theories, fan art, reactions, and requests for what MANGAL creators should adapt next on KaTube.
-          This is an early demo — posting isn&apos;t live yet.
-        </p>
-      </div>
+        <div onClick={() => storyFileInputRef.current?.click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flexShrink: 0, cursor: 'pointer', width: '62px' }}>
+          <div style={{ position: 'relative', width: '58px', height: '58px' }}>
+            <Avatar name={myUsername ?? 'you'} size={58} />
+            <div style={{
+              position: 'absolute', bottom: -2, right: -2, width: '20px', height: '20px', borderRadius: '50%',
+              background: RADIANT_SOLID, border: '2px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '13px', color: '#fff', fontWeight: 900, lineHeight: 1,
+            }}>+</div>
+          </div>
+          <span style={{ fontSize: '10.5px', color: 'var(--text-tertiary)', fontWeight: 600 }}>Your Story</span>
+        </div>
+        <input ref={storyFileInputRef} type="file" accept="image/*" onChange={handleAddStory} style={{ display: 'none' }} />
 
-      {/* Channel pills */}
-      <div style={{
-        display: 'flex', gap: '8px', overflowX: 'auto', padding: '8px 20px 20px',
-        maxWidth: '640px', margin: '0 auto',
-      }}>
-        {CHANNEL_PILLS.map((c, i) => (
-          <span key={c} style={{
-            flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-            background: i === 0 ? 'linear-gradient(135deg, #7c3aed, #db2777)' : 'var(--bg-card)',
-            color: i === 0 ? '#fff' : 'var(--text-secondary)',
-            border: i === 0 ? 'none' : '1px solid var(--border-color)',
-            cursor: 'pointer', whiteSpace: 'nowrap',
-          }}>{c}</span>
+        {stories.map((g, idx) => (
+          <div key={g.authorId} onClick={() => openStoryGroup(idx)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flexShrink: 0, cursor: 'pointer', width: '62px' }}>
+            <div style={{
+              width: '58px', height: '58px', borderRadius: '50%', padding: '2.5px',
+              background: g.seen ? 'var(--border-color)' : RADIANT,
+            }}>
+              <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '2px solid var(--bg-primary)', overflow: 'hidden' }}>
+                <Avatar name={g.username} size={51} />
+              </div>
+            </div>
+            <span style={{ fontSize: '10.5px', color: 'var(--text-tertiary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '62px' }}>{g.username}</span>
+          </div>
         ))}
       </div>
 
-      {/* Feed */}
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 20px 40px' }}>
+      {/* ── STORY VIEWER ── */}
+      {viewingStory && stories[viewingStory.groupIdx] && (
+        <div onClick={() => advanceStory()} style={{
+          position: 'fixed', inset: 0, zIndex: 300, background: '#000',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+        }}>
+          <button onClick={(e) => { e.stopPropagation(); setViewingStory(null); }} style={{
+            position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.15)', border: 'none',
+            color: '#fff', width: '34px', height: '34px', borderRadius: '50%', fontSize: '18px', cursor: 'pointer', zIndex: 2,
+          }}>✕</button>
+          <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', display: 'flex', gap: '4px' }}>
+            {stories[viewingStory.groupIdx].stories.map((_, i) => (
+              <div key={i} style={{ flex: 1, height: '2.5px', borderRadius: '2px', background: i <= viewingStory.storyIdx ? '#fff' : 'rgba(255,255,255,0.35)' }} />
+            ))}
+          </div>
+          <div style={{ position: 'absolute', top: '22px', left: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Avatar name={stories[viewingStory.groupIdx].username} size={30} />
+            <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>{stories[viewingStory.groupIdx].username}</span>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={stories[viewingStory.groupIdx].stories[viewingStory.storyIdx].image_url}
+            alt="story"
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+          />
+        </div>
+      )}
 
-        {/* Composer (disabled demo state) */}
+      {/* ── COMPOSER ── */}
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 14px' }}>
         <div style={{
           padding: '14px 16px', borderRadius: '14px', background: 'var(--bg-card)',
-          border: '1px dashed var(--border-color)', marginBottom: '20px',
+          border: '1px solid var(--border-color)', marginBottom: '16px',
         }}>
-          <textarea
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            placeholder="Share a theory, fan art, or request... (demo only — posting isn't live yet)"
-            rows={2}
-            style={{
-              width: '100%', border: 'none', outline: 'none', resize: 'none',
-              background: 'transparent', color: 'var(--text-primary)', fontSize: '13.5px',
-              fontFamily: 'inherit', marginBottom: '8px',
-            }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <span style={{
-              fontSize: '12px', fontWeight: 700, padding: '7px 18px', borderRadius: '8px',
-              background: 'var(--border-color)', color: 'var(--text-tertiary)', cursor: 'not-allowed',
-            }}>Post (coming soon)</span>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Avatar name={myUsername ?? 'you'} size={36} />
+            <textarea
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              placeholder={userId ? 'Share a theory, fan art, or request...' : 'Log in to post...'}
+              rows={2}
+              disabled={!userId}
+              style={{
+                flex: 1, minWidth: 0, border: 'none', outline: 'none', resize: 'none',
+                background: 'transparent', color: 'var(--text-primary)', fontSize: '13.5px',
+                fontFamily: 'inherit',
+              }}
+            />
+          </div>
+          {composerPreview && (
+            <div style={{ position: 'relative', marginTop: '10px', borderRadius: '10px', overflow: 'hidden', maxHeight: '260px' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={composerPreview} alt="preview" style={{ width: '100%', maxHeight: '260px', objectFit: 'cover', display: 'block' }} />
+              <button onClick={() => { setComposerImage(null); setComposerPreview(null); }} style={{
+                position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.55)', border: 'none',
+                color: '#fff', width: '26px', height: '26px', borderRadius: '50%', cursor: 'pointer',
+              }}>✕</button>
+            </div>
+          )}
+          {postError && <p style={{ fontSize: '12px', color: '#ef4444', margin: '8px 0 0' }}>{postError}</p>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
+            <button onClick={() => fileInputRef.current?.click()} disabled={!userId} style={{
+              fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', background: 'transparent',
+              border: '1px solid var(--border-color)', borderRadius: '8px', padding: '7px 12px', cursor: userId ? 'pointer' : 'not-allowed',
+            }}>📷 Photo</button>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleComposerFile} style={{ display: 'none' }} />
+            {userId ? (
+              <button onClick={submitPost} disabled={posting} style={{
+                fontSize: '12.5px', fontWeight: 800, padding: '8px 20px', borderRadius: '8px', border: 'none',
+                background: RADIANT, color: '#27272a', cursor: posting ? 'wait' : 'pointer',
+              }}>{posting ? 'Posting…' : 'Post'}</button>
+            ) : (
+              <Link href="/login?next=/kalpana-circle" style={{
+                fontSize: '12.5px', fontWeight: 800, padding: '8px 20px', borderRadius: '8px',
+                background: RADIANT, color: '#27272a', textDecoration: 'none',
+              }}>Log in to post</Link>
+            )}
           </div>
         </div>
 
-        {DEMO_POSTS.map(p => <PostCard key={p.id} post={p} />)}
+        {/* ── FEED ── */}
+        {loadingPosts ? (
+          <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px', padding: '30px 0' }}>Loading feed…</p>
+        ) : posts.length === 0 ? (
+          <div style={{ padding: '16px 20px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
+              No posts yet — be the first to share a theory, fan art, or request.
+            </p>
+          </div>
+        ) : posts.map(post => (
+          <div key={post.id} style={{
+            borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+            marginBottom: '14px', overflow: 'hidden',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}>
+              <Avatar name={post.author?.username ?? 'dreamer'} size={34} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.author?.username}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{timeAgo(post.created_at)} ago</div>
+              </div>
+            </div>
 
-        {/* Placeholder note */}
-        <div style={{ padding: '16px 20px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
-          <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-            These posts are placeholder content for the demo. Posting, replies, and likes aren&apos;t wired to
-            a real backend yet — the next build step adds a Supabase-backed posts/comments table here.
-          </p>
-        </div>
+            {post.caption && (
+              <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 10px', padding: '0 14px' }}>
+                {post.caption}
+              </p>
+            )}
+
+            {post.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }} />
+            )}
+
+            <div style={{ display: 'flex', gap: '18px', padding: '12px 14px' }}>
+              <button onClick={() => toggleLike(post)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontSize: '12.5px', color: post.likedByMe ? '#ef4444' : 'var(--text-tertiary)',
+                display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700,
+              }}>{post.likedByMe ? '❤️' : '🤍'} {post.likeCount}</button>
+              <button onClick={() => toggleComments(post.id)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontSize: '12.5px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700,
+              }}>💬 {post.commentCount}</button>
+            </div>
+
+            {openComments === post.id && (
+              <div style={{ borderTop: '1px solid var(--border-color)', padding: '10px 14px 14px' }}>
+                {(comments[post.id] ?? []).map(c => (
+                  <div key={c.id} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <Avatar name={c.author?.username ?? 'dreamer'} size={24} />
+                    <p style={{ fontSize: '12.5px', margin: 0, lineHeight: 1.5 }}>
+                      <span style={{ fontWeight: 800 }}>{c.author?.username} </span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{c.text}</span>
+                    </p>
+                  </div>
+                ))}
+                {userId ? (
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <input
+                      value={commentDraft}
+                      onChange={e => setCommentDraft(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') submitComment(post.id); }}
+                      placeholder="Add a comment…"
+                      style={{
+                        flex: 1, minWidth: 0, fontSize: '12.5px', padding: '8px 10px', borderRadius: '8px',
+                        border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none',
+                      }}
+                    />
+                    <button onClick={() => submitComment(post.id)} style={{
+                      fontSize: '12px', fontWeight: 800, padding: '8px 14px', borderRadius: '8px', border: 'none',
+                      background: RADIANT, color: '#27272a', cursor: 'pointer', flexShrink: 0,
+                    }}>Send</button>
+                  </div>
+                ) : (
+                  <Link href="/login?next=/kalpana-circle" style={{ fontSize: '12px', color: RADIANT_SOLID, fontWeight: 700 }}>Log in to comment</Link>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* ── BOTTOM NAV (Instagram-style, mobile + desktop) ── */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+        background: 'var(--nav-bg)', backdropFilter: 'blur(16px)', borderTop: '1px solid var(--border-color)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-around', height: '58px', maxWidth: '640px', margin: '0 auto',
+      }}>
+        <Link href="/kalpana-circle" style={{ fontSize: '20px', textDecoration: 'none', color: RADIANT_SOLID }}>🏠</Link>
+        <span style={{ fontSize: '20px', color: 'var(--text-tertiary)', opacity: 0.4, cursor: 'not-allowed' }} title="Search — coming soon">🔍</span>
+        <button onClick={() => fileInputRef.current?.click()} style={{
+          background: RADIANT, border: 'none', width: '34px', height: '34px', borderRadius: '9px',
+          fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>+</button>
+        <Link href={navHref('/kalpana-circle/chat')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
+        <Link href={userId ? (myUsername ? `/creator/${myUsername}` : '/home') : '/login?next=/kalpana-circle'} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>👤</Link>
       </div>
     </div>
   );
