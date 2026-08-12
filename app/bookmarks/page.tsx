@@ -186,6 +186,23 @@ export default function BookmarksPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
+      {/* Mobile pass — same pattern as /library, /dashboard: page had 0 @media
+          rules. Header padding/title, the content-type pill row (needs its own
+          wrap — it didn't have one, could overflow on a ~320px phone), and the
+          sort label all tighten at the standard breakpoints. The card grid
+          itself (`repeat(auto-fill, minmax(280px, 1fr))`) already reflows fine
+          on its own, no change needed there. */}
+      <style>{`
+        @media (max-width: 768px) {
+          .mangal-bm-header { padding: 28px 16px 16px !important; }
+          .mangal-bm-content { padding: 0 16px 60px !important; }
+        }
+        @media (max-width: 560px) {
+          .mangal-bm-title { font-size: 22px !important; }
+          .mangal-bm-pills { flex-wrap: wrap !important; }
+          .mangal-bm-sort-label { display: none; }
+        }
+      `}</style>
 
       {/* NAV (shared component) */}
       <Navbar
@@ -224,8 +241,8 @@ export default function BookmarksPage() {
       />
 
       {/* HEADER */}
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 20px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🔖 Bookmarks</h1>
+      <div className="mangal-bm-header" style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 20px' }}>
+        <h1 className="mangal-bm-title" style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🔖 Bookmarks</h1>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 16px' }}>
           {loading ? '' : series.length === 0
             ? 'No bookmarks yet.'
@@ -236,7 +253,7 @@ export default function BookmarksPage() {
 
         {!loading && series.length > 0 && (
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="mangal-bm-pills" style={{ display: 'flex', gap: '8px' }}>
             {CONTENT_TYPE_OPTIONS.map(opt => {
               const isActive = activeContentType === opt.value;
               const activeStyle = opt.value === 'novel'
@@ -261,7 +278,7 @@ export default function BookmarksPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>Sort:</span>
+            <span className="mangal-bm-sort-label" style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>Sort:</span>
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as BookmarkSortOption)}
@@ -278,7 +295,7 @@ export default function BookmarksPage() {
       </div>
 
       {/* CONTENT */}
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
+      <div className="mangal-bm-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '36px', marginBottom: '12px' }}>🔖</div>
