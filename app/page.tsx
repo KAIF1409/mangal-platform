@@ -285,6 +285,25 @@ export default function LandingPage() {
           @media (max-width: 380px) {
             .mangal-landing-brand-text { display: none; }
           }
+
+          /* ── Three-door section (MangaNovels / KaTube / Kalpana Circle) ──
+             Never touched by the earlier mobile sweep (CONTEXT.md §13 only
+             covered the nav). Built for desktop: minHeight: 88vh per door
+             plus align-items: stretch was fine on wide screens where text
+             and image sit side by side, but on phone widths flexWrap kicks
+             in and stacks text-then-image into two lines. align-content's
+             default 'stretch' then divides the leftover space (container
+             forced to 88vh regardless of actual content) unevenly between
+             those two lines, which is what stretched/distorted the door
+             photos in the founder's screenshot. Fixed by dropping the
+             forced 88vh on mobile so each door is exactly as tall as its
+             real content, and giving the media block a fixed, sane height
+             instead of stretching to fill leftover space. */
+          @media (max-width: 640px) {
+            .mangal-door { min-height: 0 !important; }
+            .mangal-door-media { min-height: 240px !important; height: 240px !important; flex-grow: 0 !important; }
+            .mangal-door-text { padding: 28px 20px !important; }
+          }
         `}</style>
 
         {/* ── NAV ── */}
@@ -491,10 +510,11 @@ export default function LandingPage() {
               display: 'flex', alignItems: 'stretch', overflow: 'hidden',
               minHeight: '88vh', transition: 'border-color 0.2s', flexWrap: 'wrap',
             }}
+              className="mangal-door"
               onMouseEnter={e => { e.currentTarget.style.borderTopColor = '#d97706'; e.currentTarget.style.borderBottomColor = '#d97706'; }}
               onMouseLeave={e => { e.currentTarget.style.borderTopColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
             >
-              <div style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
+              <div className="mangal-door-text" style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
                 <div style={{ fontWeight: 900, fontSize: 'clamp(28px,4.5vw,48px)', color: '#fff', display: 'flex', alignItems: 'center', gap: '12px', lineHeight: 1.1 }}>
                   <span style={{ fontSize: '36px' }}>📖</span> MangaNovels
                 </div>
@@ -502,7 +522,7 @@ export default function LandingPage() {
                   Read manga, comics, and novels made by Desi creators — free forever, no ads, no gatekeepers. Bookmark series, track your reading progress, and discover new stories across mythology, action, romance, and more.
                 </div>
               </div>
-              <div style={{ flex: '1 1 380px', position: 'relative', minHeight: '360px' }}>
+              <div className="mangal-door-media" style={{ flex: '1 1 380px', position: 'relative', minHeight: '360px' }}>
                 <Image src="/comics.jpg" alt="MangaNovels" fill style={{ objectFit: 'cover' }} />
               </div>
             </Link>
@@ -513,10 +533,11 @@ export default function LandingPage() {
               display: 'flex', alignItems: 'stretch', overflow: 'hidden',
               minHeight: '88vh', transition: 'border-color 0.2s', flexWrap: 'wrap',
             }}
+              className="mangal-door"
               onMouseEnter={e => { e.currentTarget.style.borderBottomColor = '#2563eb'; }}
               onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
             >
-              <div style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
+              <div className="mangal-door-text" style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
                 <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                   <Image src="/katube-logo.png" alt="KaTube" width={220} height={110} style={{ height: 'clamp(36px,5.5vw,52px)', width: 'auto', objectFit: 'contain' }} />
                   <span style={{ fontSize: '13px', fontWeight: 800, padding: '4px 12px', borderRadius: '20px', background: 'rgba(217,119,6,0.18)', border: '1px solid rgba(217,119,6,0.45)', color: '#fbbf24' }}>COMING SOON</span>
@@ -525,7 +546,7 @@ export default function LandingPage() {
                   A YouTube-style discovery space for AI-generated anime — made with today's popular AI video tools, from quick Shorts to full videos. Focused only on the anime niche, so MANGAL creators can bring their series to life visually.
                 </div>
               </div>
-              <div style={{ flex: '1 1 380px', position: 'relative', minHeight: '360px', background: '#000' }}>
+              <div className="mangal-door-media" style={{ flex: '1 1 380px', position: 'relative', minHeight: '360px', background: '#000' }}>
                 <video src="/videos/katube-preview.mp4" autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </Link>
@@ -536,10 +557,11 @@ export default function LandingPage() {
               display: 'flex', alignItems: 'stretch', overflow: 'hidden',
               minHeight: '88vh', transition: 'background 0.2s', flexWrap: 'wrap',
             }}
+              className="mangal-door"
               onMouseEnter={e => { e.currentTarget.style.background = '#0d0a14'; }}
               onMouseLeave={e => { e.currentTarget.style.background = '#0a0a0f'; }}
             >
-              <div style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
+              <div className="mangal-door-text" style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
                 <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
                   <Image src="/kcircle-logo.png" alt="K Circle" width={220} height={95} style={{ height: 'clamp(36px,5.5vw,52px)', width: 'auto', objectFit: 'contain' }} />
                   <span style={{ fontSize: '13px', fontWeight: 800, padding: '4px 12px', borderRadius: '20px', background: 'rgba(217,119,6,0.18)', border: '1px solid rgba(217,119,6,0.45)', color: '#fbbf24' }}>COMING SOON</span>
@@ -548,7 +570,7 @@ export default function LandingPage() {
                   Groups and chats for people into the anime niche — post, react, and talk about MANGAL series with fellow creators and readers.
                 </div>
               </div>
-              <div style={{ flex: '1 1 380px', position: 'relative', minHeight: '360px' }}>
+              <div className="mangal-door-media" style={{ flex: '1 1 380px', position: 'relative', minHeight: '360px' }}>
                 <Image src="/kcommunity-preview.jpg" alt="K Community" fill style={{ objectFit: 'cover' }} />
               </div>
             </Link>
