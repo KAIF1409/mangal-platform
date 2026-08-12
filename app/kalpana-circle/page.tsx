@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
 import { supabase } from '../lib/supabase';
 import { setPostLoginRedirect } from '../lib/authRedirect';
@@ -82,8 +82,25 @@ function Avatar({ name, size = 40 }: { name: string; size?: number }) {
   );
 }
 
+// Wrapper: useSearchParams requires a Suspense boundary (same pattern as
+// app/upload/page.tsx) since it's used to read the ?tag= cross-link param
+// from series pages ("💬 Discuss on Kalpana Circle").
 export default function KalpanaCirclePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
+        Loading...
+      </div>
+    }>
+      <KalpanaCircleInner />
+    </Suspense>
+  );
+}
+
+function KalpanaCircleInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tagFilter = searchParams.get('tag'); // set when arriving via a series page's "Discuss on Kalpana Circle" link
   const [userId, setUserId] = useState<string | null>(null);
   const [myUsername, setMyUsername] = useState<string | null>(null);
 
@@ -94,6 +111,7 @@ export default function KalpanaCirclePage() {
   const [viewingStory, setViewingStory] = useState<{ groupIdx: number; storyIdx: number } | null>(null);
 
   const [draft, setDraft] = useState('');
+  const [composerTag, setComposerTag] = useState('');
   const [composerImage, setComposerImage] = useState<File | null>(null);
   const [composerPreview, setComposerPreview] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
@@ -131,9 +149,11 @@ export default function KalpanaCirclePage() {
   // ── load feed ──
   const loadPosts = useCallback(async () => {
     setLoadingPosts(true);
-    const { data: rows } = await supabase
+    let query = supabase
       .from('kcircle_posts').select('id, author_id, caption, image_url, tag, created_at')
       .order('created_at', { ascending: false }).limit(30);
+    if (tagFilter) query = query.ilike('tag', tagFilter); // case-insensitive exact match on series title
+    const { data: rows } = await query;
 
     if (!rows || rows.length === 0) { setPosts([]); setLoadingPosts(false); return; }
 
@@ -169,10 +189,15 @@ export default function KalpanaCirclePage() {
       savedByMe: mySaved.has(r.id),
     })));
     setLoadingPosts(false);
-  }, [userId]);
+  }, [userId, tagFilter]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/userId change, same pattern as katube/upload
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/userId/tagFilter change, same pattern as katube/upload
   useEffect(() => { loadPosts(); }, [loadPosts]);
+
+  // Arriving via a series page's cross-link ("?tag=SeriesTitle") — prefill the
+  // composer's tag field once so a reply naturally stays tagged to that series too.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time prefill from URL, mirrors loadPosts pattern above
+  useEffect(() => { if (tagFilter) setComposerTag(tagFilter); }, [tagFilter]);
 
   // ── load stories ──
   const loadStories = useCallback(async () => {
@@ -231,6 +256,7 @@ export default function KalpanaCirclePage() {
 
     const { error } = await supabase.from('kcircle_posts').insert({
       author_id: userId, caption: draft.trim() || null, image_url: imageUrl,
+      tag: composerTag.trim() || null,
     });
     if (error) { setPostError(error.message); setPosting(false); return; }
 
@@ -596,6 +622,21 @@ export default function KalpanaCirclePage() {
         </div>
       )}
 
+      {/* ── TAG FILTER BANNER — shown when arriving via a series page's
+          "💬 Discuss on Kalpana Circle" link (?tag=SeriesTitle) ── */}
+      {tagFilter && (
+        <div style={{ maxWidth: '640px', margin: '0 auto 12px', padding: '0 14px' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+            padding: '10px 14px', borderRadius: '10px', background: 'rgba(124,58,237,0.1)',
+            border: '1px solid rgba(124,58,237,0.3)', fontSize: '12.5px', fontWeight: 600, color: '#a78bfa',
+          }}>
+            <span>Showing posts tagged &ldquo;{tagFilter}&rdquo;</span>
+            <Link href="/kalpana-circle" style={{ color: '#a78bfa', fontWeight: 800, textDecoration: 'none' }}>✕ Clear</Link>
+          </div>
+        </div>
+      )}
+
       {/* ── COMPOSER ── */}
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 14px' }}>
         <div style={{
@@ -617,6 +658,18 @@ export default function KalpanaCirclePage() {
               }}
             />
           </div>
+          {userId && (
+            <input
+              value={composerTag}
+              onChange={e => setComposerTag(e.target.value)}
+              placeholder="🏷️ Tag a series (optional) — e.g. exact series title"
+              style={{
+                width: '100%', marginTop: '8px', padding: '7px 10px', borderRadius: '8px',
+                border: '1px solid var(--border-color)', background: 'transparent',
+                color: 'var(--text-secondary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+          )}
           {composerPreview && (
             <div style={{ position: 'relative', marginTop: '10px', borderRadius: '10px', overflow: 'hidden', maxHeight: '260px' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}

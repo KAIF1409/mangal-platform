@@ -854,6 +854,18 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   </button>
                 )
               )}
+              {/* Cross-link — series ↔ Kalpana Circle discussion (kcircle_posts.tag) */}
+              <a
+                href={`/kalpana-circle?tag=${encodeURIComponent(series.title)}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px',
+                  padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
+                  background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)',
+                  color: '#a78bfa', textDecoration: 'none',
+                }}
+              >
+                💬 Discuss on Kalpana Circle
+              </a>
               {/* Step 11 — WhatsApp Share */}
               <ShareButton title={series.title} url={typeof window !== 'undefined' ? window.location.href : ''} />
             </div>
