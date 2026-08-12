@@ -1578,6 +1578,37 @@ followed/subscribed to" — this is a full directory of every channel, not a
 personalized list (matches §13d's note that "follows a series" is the only
 proxy for broadcast interest that exists, no dedicated subscription table).
 
+### 13f. KaTube ↔ Circle auto-post cross-link (DONE) — last remaining backlog item
+
+Two parts, same commit:
+
+1. **Per-video opt-in auto-post.** `app/katube/upload/page.tsx` gained a
+   "📣 Auto-post to K Circle" checkbox, **off by default, scoped to that
+   single upload** (not a standing profile setting). Checking it doesn't
+   flip the box immediately — it opens a small Yes/No confirm ("Post a
+   short update about this video to your K Circle channel?") so a stray
+   click can't post on the creator's behalf; only "Yes" actually sets the
+   flag. `POST /api/katube/upload` reads `autoPostToCircle` and, on
+   success, lazily finds-or-creates the creator's broadcast channel (same
+   pattern as `broadcast/[username]`'s lazy-create) and posts
+   `🎬 New video: "title"` + a watch link. **Best-effort, wrapped in
+   try/catch** — a Circle-side failure never fails the video upload
+   response itself.
+2. **"Fan Theories & Art" preview on the series page.** The reverse
+   direction of §12f's tag cross-link, which until now was only a button
+   pointing *out* to Circle. `app/series/[seriesId]/page.tsx` now fetches
+   the latest `kcircle_posts` tagged with the series title (same
+   `ilike`-match convention §12f already uses for the `?tag=` filter) and
+   renders them as small preview cards next to "Readers Also Liked",
+   linking through to the full filtered Circle view.
+
+**Not done:** no realtime/webhook — the series-page preview is fetched
+once on page load like every other section on that page, not live-updated
+if a new tagged post appears while someone's viewing. No cap on repeat
+auto-posts (if a creator re-uploads with the toggle on every time, each
+upload adds its own broadcast message — same as manually posting each
+time, no dedup).
+
 ## 13b. Repo/live-DB drift found this session — flag for follow-up
 
 While applying the notifications migration, `list_migrations` on the live
