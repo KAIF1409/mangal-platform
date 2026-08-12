@@ -229,7 +229,7 @@ export default function LandingPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (search.trim()) router.push(`/search?q=${encodeURIComponent(search.trim())}`);
+    if (search.trim()) router.push(`/WebMangal/search?keyword=${encodeURIComponent(search.trim())}`);
   };
 
   return (
@@ -317,10 +317,10 @@ export default function LandingPage() {
           {/* Center links */}
           <div className="mangal-landing-nav-center">
             {[
-              { label: 'Browse', href: '/search' },
+              { label: 'Browse', href: '/WebMangal' },
               { label: 'Rankings', href: '/rankings' },
-              { label: 'Genres', href: '/search' },
-              { label: 'New Releases', href: '/search' },
+              { label: 'Genres', href: '/WebMangal' },
+              { label: 'New Releases', href: '/WebMangal' },
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
@@ -450,7 +450,7 @@ export default function LandingPage() {
             {/* Genre Pills */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '8px' }}>
               {GENRE_PILLS.map(g => (
-                <a key={g} href={`/search?genre=${encodeURIComponent(g)}`} style={{
+                <a key={g} href={`/WebMangal?genre=${encodeURIComponent(g)}`} style={{
                   fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
                   background: 'rgba(7,7,10,0.78)',
                   backdropFilter: 'blur(8px)',
@@ -485,7 +485,7 @@ export default function LandingPage() {
         {/* ── THREE DOORS: MangaNovels / KaTube / Kalpana Circle (full width, no container constraint) ── */}
         <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <Link href="/search" style={{
+            <Link href="/WebMangal" style={{
               textDecoration: 'none', borderRadius: '0',
               background: '#0a0a0f', border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)',
               display: 'flex', alignItems: 'stretch', overflow: 'hidden',
@@ -745,10 +745,10 @@ export default function LandingPage() {
 
               <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
                 <FooterCol title="Platform" links={[
-                  { label: 'Browse', href: '/search' },
+                  { label: 'Browse', href: '/WebMangal' },
                   { label: 'Rankings', href: '/rankings' },
-                  { label: 'Genres', href: '/search' },
-                  { label: 'New Releases', href: '/search' },
+                  { label: 'Genres', href: '/WebMangal' },
+                  { label: 'New Releases', href: '/WebMangal' },
                 ]} />
                 <FooterCol title="Account" links={[
                   { label: 'Log In', href: '/login' },

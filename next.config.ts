@@ -68,6 +68,21 @@ const nextConfig: NextConfig = {
         destination: "/katube",
         permanent: true,
       },
+      // Old /search links carried a `?q=` search keyword — those go to the
+      // new dedicated search route with the param renamed to `?keyword=`
+      // (matches m.webnovel.com/search?keyword=... which this route now
+      // mirrors). Plain /search with no query is just old-style browsing.
+      {
+        source: "/search",
+        has: [{ type: "query", key: "q" }],
+        destination: "/WebMangal/search?keyword=:q",
+        permanent: true,
+      },
+      {
+        source: "/search",
+        destination: "/WebMangal",
+        permanent: true,
+      },
     ];
   },
 };

@@ -94,7 +94,7 @@ export default function RankingsPage() {
             {[
               { label: 'Browse', href: '/' },
               { label: '🏆 Rankings', href: '/rankings' },
-              { label: '🔍 Search', href: '/search' },
+              { label: '🔍 Search', href: '/WebMangal/search' },
               { label: 'Tags', href: '/tags' },
             ].map(link => (
               <a key={link.label} href={link.href} style={{

@@ -90,13 +90,16 @@ function fuzzyMatch(target: string, query: string, threshold = 0.3): boolean {
   return matches / tQ.size >= threshold;
 }
 
-function SearchPageInner() {
+function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const loginNext = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
-  const [query, setQuery] = useState(searchParams.get('q') ?? '');
+  // Browse (/WebMangal) never has a keyword — typing only matters on the
+  // dedicated search route. Reading it here too would make the browse page
+  // filter by a leftover ?keyword= from before a route rename/back-nav.
+  const [query, setQuery] = useState(mode === 'search' ? (searchParams.get('keyword') ?? '') : '');
   const [series, setSeries] = useState<Series[]>([]);
   const [creatorUsernames, setCreatorUsernames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -167,15 +170,18 @@ function SearchPageInner() {
   // Keep the URL in sync (shareable/bookmarkable search), without a full page reload
   useEffect(() => {
     const params = new URLSearchParams();
-    if (query.trim()) params.set('q', query.trim());
+    // Browse never carries a keyword in its URL — typing there only drives
+    // the overlay's live preview, it doesn't filter the browse listing.
+    if (mode === 'search' && query.trim()) params.set('keyword', query.trim());
     if (genreFilter !== 'All') params.set('genre', genreFilter);
     if (languageFilter !== 'All') params.set('language', languageFilter);
     if (statusFilter !== 'All') params.set('status', statusFilter);
     if (sortBy !== 'newest') params.set('sort', sortBy);
     const qs = params.toString();
-    router.replace(qs ? `/search?${qs}` : '/search', { scroll: false });
+    const base = mode === 'search' ? '/WebMangal/search' : '/WebMangal';
+    router.replace(qs ? `${base}?${qs}` : base, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, genreFilter, languageFilter, statusFilter, sortBy]);
+  }, [mode, query, genreFilter, languageFilter, statusFilter, sortBy]);
 
   // completion_status isn't migrated yet (Step 12) — hide that filter until real data has it,
   // so this page doesn't show a dead dropdown in the meantime
@@ -191,33 +197,47 @@ function SearchPageInner() {
     }
   };
 
-  const results = useMemo(() => {
+  // Filters that apply on both routes (genre/language/status/content type),
+  // independent of any typed keyword.
+  const baseFiltered = useMemo(() => {
     let r = series;
     if (activeContentType !== 'all') r = r.filter(s => s.content_type === activeContentType);
     if (genreFilter !== 'All') r = r.filter(s => s.genre === genreFilter);
     if (languageFilter !== 'All') r = r.filter(s => s.language === languageFilter);
-    if (hasCompletionStatus && statusFilter !== 'All') {
-      r = r.filter(s => s.completion_status === statusFilter);
-    }
-    const q = query.trim().toLowerCase();
-    if (q) {
-      r = r.filter(s => {
-        const username = (creatorUsernames[s.creator_id] ?? '').toLowerCase();
-        // Synopsis is long prose — for 1–2 char queries almost every series'
-        // synopsis contains that letter somewhere, which made searches like
-        // "H" match series that have nothing to do with the query. Only
-        // check synopsis once the query is specific enough (3+ chars).
-        const synopsisMatch = q.length >= 3 && fuzzyMatch(s.synopsis ?? '', q);
-        return (
-          fuzzyMatch(s.title, q) ||
-          synopsisMatch ||
-          fuzzyMatch(s.genre ?? '', q) ||
-          username.includes(q)
-        );
-      });
-    }
+    if (hasCompletionStatus && statusFilter !== 'All') r = r.filter(s => s.completion_status === statusFilter);
+    return r;
+  }, [series, activeContentType, genreFilter, languageFilter, statusFilter, hasCompletionStatus]);
 
-    // ── SORT ──
+  // Same as baseFiltered but without the content-type tab filter — used only
+  // to compute the per-tab counts (e.g. "Mangal 8"/"Novel 4") on the search
+  // route, since a tab's count shouldn't be affected by which tab is active.
+  const baseFilteredNoType = useMemo(() => {
+    let r = series;
+    if (genreFilter !== 'All') r = r.filter(s => s.genre === genreFilter);
+    if (languageFilter !== 'All') r = r.filter(s => s.language === languageFilter);
+    if (hasCompletionStatus && statusFilter !== 'All') r = r.filter(s => s.completion_status === statusFilter);
+    return r;
+  }, [series, genreFilter, languageFilter, statusFilter, hasCompletionStatus]);
+
+  const matchesQuery = (r: Series[], q: string) => {
+    if (!q) return [];
+    return r.filter(s => {
+      const username = (creatorUsernames[s.creator_id] ?? '').toLowerCase();
+      // Synopsis is long prose — for 1–2 char queries almost every series'
+      // synopsis contains that letter somewhere, which made searches like
+      // "H" match series that have nothing to do with the query. Only
+      // check synopsis once the query is specific enough (3+ chars).
+      const synopsisMatch = q.length >= 3 && fuzzyMatch(s.synopsis ?? '', q);
+      return (
+        fuzzyMatch(s.title, q) ||
+        synopsisMatch ||
+        fuzzyMatch(s.genre ?? '', q) ||
+        username.includes(q)
+      );
+    });
+  };
+
+  const sortResults = (r: Series[]) => {
     const sorted = [...r];
     switch (sortBy) {
       case 'views':
@@ -235,11 +255,56 @@ function SearchPageInner() {
         break;
     }
     return sorted;
-  }, [series, genreFilter, languageFilter, statusFilter, query, creatorUsernames, hasCompletionStatus, activeContentType, sortBy]);
+  };
+
+  const q = query.trim().toLowerCase();
+
+  // The overlay's live "as you type" preview — always keyword-driven,
+  // regardless of which route it was opened from.
+  const overlayResults = useMemo(
+    () => sortResults(matchesQuery(baseFiltered, q)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [baseFiltered, q, sortBy]
+  );
+
+  // The page's main results: browse always shows the (non-keyword) filtered
+  // listing; search only shows results once a keyword has actually been
+  // typed/submitted — an empty keyword means "haven't searched yet", not
+  // "show everything".
+  const results = useMemo(() => {
+    if (mode === 'search') return q ? overlayResults : [];
+    return sortResults(baseFiltered);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, q, overlayResults, baseFiltered, sortBy]);
+
+  // Per-tab counts shown on the search route, e.g. Webnovel's "Novels 575".
+  const tabCounts = useMemo(() => {
+    if (mode !== 'search' || !q) return null;
+    const matches = matchesQuery(baseFilteredNoType, q);
+    return {
+      all: matches.length,
+      mangal: matches.filter(s => s.content_type === 'mangal').length,
+      novel: matches.filter(s => s.content_type === 'novel').length,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, q, baseFilteredNoType]);
 
   const filtersActive = activeContentType !== 'all' || genreFilter !== 'All' || languageFilter !== 'All' || statusFilter !== 'All' || sortBy !== 'newest';
   const createHref = isCreator ? '/dashboard' : user ? '/become-creator' : '/login';
   const createLabel = isCreator ? 'Go to Studio' : user ? 'Become a Creator' : 'Log In to Create';
+
+  // Committing a search (Search button / Enter / keyboard "Go") always lands
+  // on the dedicated /WebMangal/search route with ?keyword=..., matching
+  // Webnovel's m.webnovel.com/search?keyword=solo pattern — browsing and
+  // searching are two different pages, not one page that silently reuses
+  // itself. If we're already on the search route, the URL-sync effect above
+  // already keeps ?keyword= current, so this just needs to close the overlay.
+  const submitSearch = () => {
+    setMobileSearchOpen(false);
+    if (mode === 'search') return;
+    const trimmed = query.trim();
+    if (trimmed) router.push(`/WebMangal/search?keyword=${encodeURIComponent(trimmed)}`);
+  };
 
   // Webnovel-style result row (cover left, tags/synopsis/author/ADD on the
   // right) — shared by the mobile search overlay's live suggestions AND the
@@ -319,7 +384,6 @@ function SearchPageInner() {
         .mangal-search-filters-row { flex-wrap: wrap; }
 
         .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 200px)); }
-        .mangal-search-list-mobile { display: none; }
 
         /* ── Tablet & small laptop ───────────────────────────────────── */
         @media (max-width: 768px) {
@@ -362,11 +426,9 @@ function SearchPageInner() {
           .mangal-search-filters-row select,
           .mangal-search-filters-row button { padding: 8px 10px !important; font-size: 12px !important; }
 
-          /* Phones show the Webnovel-style list (cover left, tags/synopsis/
-             author/ADD right) instead of the small grid tiles — matches the
-             search overlay's live results exactly. */
-          .mangal-search-grid { display: none; }
-          .mangal-search-list-mobile { display: flex; flex-direction: column; margin: 0 -12px; }
+          /* Bounded card width so a single result stays a normal-sized tile
+             instead of stretching to fill the whole screen. */
+          .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(105px, 130px)); gap: 10px; justify-content: start; }
         }
 
         @media (max-width: 340px) {
@@ -555,7 +617,7 @@ function SearchPageInner() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); setMobileSearchOpen(false); }
+                if (e.key === 'Enter') { e.preventDefault(); submitSearch(); }
               }}
               style={{
                 flex: 1, padding: '11px 14px', borderRadius: '10px',
@@ -565,7 +627,7 @@ function SearchPageInner() {
             />
             <button
               type="button"
-              onClick={() => setMobileSearchOpen(false)}
+              onClick={submitSearch}
               style={{
                 flexShrink: 0, padding: '11px 18px', borderRadius: '10px', border: 'none',
                 background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)', color: '#052e21',
@@ -583,12 +645,12 @@ function SearchPageInner() {
               <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
                 Start typing to search series, genres, or creators…
               </div>
-            ) : results.length === 0 ? (
+            ) : overlayResults.length === 0 ? (
               <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
                 No results found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.
               </div>
             ) : (
-              results.slice(0, 30).map(s => renderResultCard(s, () => setMobileSearchOpen(false)))
+              overlayResults.slice(0, 30).map(s => renderResultCard(s, () => setMobileSearchOpen(false)))
             )}
           </div>
         </div>
@@ -603,10 +665,11 @@ function SearchPageInner() {
           <input
             ref={searchInputRef}
             type="text"
-            autoFocus
+            autoFocus={mode === 'search'}
             placeholder="Search series, genres, creators..."
             value={query}
             onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitSearch(); } }}
             style={{
               width: '100%', padding: '14px 16px 14px 44px', borderRadius: '12px',
               background: 'var(--bg-card)', border: '1px solid var(--border-color)',
@@ -615,7 +678,9 @@ function SearchPageInner() {
           />
         </div>
 
-        {/* ── CONTENT TYPE TOGGLE (Step 21) ── */}
+        {/* ── CONTENT TYPE TOGGLE (Step 21) — on the search route each tab
+             also shows a Webnovel-style count (e.g. "Mangal 8") once a
+             keyword has been typed. ── */}
         <div className="mangal-search-toggle-row" style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
           {([
             { value: 'all' as ContentTypeFilter, emoji: '✨', label: 'All' },
@@ -635,9 +700,11 @@ function SearchPageInner() {
               }}
             >
               <span className="mangal-search-toggle-emoji">{opt.emoji} </span>{opt.label}
+              {tabCounts && <span style={{ opacity: 0.6, fontWeight: 600, marginLeft: '4px' }}>{tabCounts[opt.value]}</span>}
             </button>
           ))}
         </div>
+
 
         {/* ── FILTERS + SORT ── */}
         <div className="mangal-search-filters-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -715,6 +782,15 @@ function SearchPageInner() {
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
             <div style={{ fontSize: '14px' }}>Loading stories...</div>
           </div>
+        ) : mode === 'search' && !q ? (
+          /* Nothing searched yet — dedicated search route shouldn't dump the
+             entire catalog like the old combined page did. */
+          <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
+            <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
+              Search for a title, genre, or creator to get started.
+            </div>
+          </div>
         ) : results.length === 0 ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
@@ -734,7 +810,19 @@ function SearchPageInner() {
               </>
             )}
           </div>
+        ) : mode === 'search' ? (
+          /* Search route always uses the Webnovel-style list — cover left,
+             tags/synopsis/author/ADD right — same design on desktop and
+             mobile, matching m.webnovel.com/search?keyword=... exactly. */
+          <>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              {results.length} series found
+            </div>
+            <div>{results.map(s => renderResultCard(s))}</div>
+          </>
         ) : (
+          /* Browse route keeps the grid of tiles — this is regular
+             catalog-browsing, not a search-results view. */
           <>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               {results.length} series found
@@ -743,13 +831,6 @@ function SearchPageInner() {
               {results.map((s, i) => (
                 <SharedSeriesCard key={s.id} series={s} creatorUsername={creatorUsernames[s.creator_id]} rank={sortBy === 'views' ? i + 1 : undefined} />
               ))}
-            </div>
-            {/* Phone-only list view — same Webnovel-style card (cover left,
-                tags/synopsis/author/ADD right) as the search overlay, so the
-                results look identical whether you're still typing or already
-                hit Search. Desktop/tablet keep the grid above unchanged. */}
-            <div className="mangal-search-list-mobile">
-              {results.map(s => renderResultCard(s))}
             </div>
           </>
         )}
@@ -761,10 +842,10 @@ function SearchPageInner() {
   );
 }
 
-export default function SearchPage() {
+export default function BrowseSearchView({ mode }: { mode: 'browse' | 'search' }) {
   return (
     <Suspense fallback={null}>
-      <SearchPageInner />
+      <BrowseSearchViewInner mode={mode} />
     </Suspense>
   );
 }

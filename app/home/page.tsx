@@ -371,7 +371,7 @@ export default function HomePage() {
           {/* Search — Step 10: navigates to the dedicated /search page on Enter
               instead of filtering this grid in place */}
           <form
-            onSubmit={e => { e.preventDefault(); if (search.trim()) router.push(`/search?q=${encodeURIComponent(search.trim())}`); }}
+            onSubmit={e => { e.preventDefault(); if (search.trim()) router.push(`/WebMangal/search?keyword=${encodeURIComponent(search.trim())}`); }}
             style={{ maxWidth: '480px', margin: '0 auto', position: 'relative' }}
           >
             <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', pointerEvents: 'none' }}>🔍</span>

@@ -161,7 +161,7 @@ export default function LibraryPage() {
             {[
               { label: 'Browse', href: '/' },
               { label: '🏆 Rankings', href: '/rankings' },
-              { label: '🔍 Search', href: '/search' },
+              { label: '🔍 Search', href: '/WebMangal/search' },
               { label: '🔖 Bookmarks', href: '/bookmarks' },
             ].map(link => (
               <a key={link.label} href={link.href} style={{

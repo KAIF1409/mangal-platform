@@ -6,7 +6,7 @@ const siteUrl = "https://mangal-platform.vercel.app";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${siteUrl}/`, changeFrequency: "daily", priority: 1 },
-    { url: `${siteUrl}/search`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${siteUrl}/WebMangal`, changeFrequency: "daily", priority: 0.8 },
     { url: `${siteUrl}/become-creator`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${siteUrl}/privacy`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${siteUrl}/terms`, changeFrequency: "yearly", priority: 0.3 },

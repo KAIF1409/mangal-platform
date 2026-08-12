@@ -195,7 +195,7 @@ export default function BookmarksPage() {
             {[
               { label: 'Browse', href: '/' },
               { label: '🏆 Rankings', href: '/rankings' },
-              { label: '🔍 Search', href: '/search' },
+              { label: '🔍 Search', href: '/WebMangal/search' },
               { label: '🔔 Library', href: '/library' },
             ].map(link => (
               <a key={link.label} href={link.href} style={{
