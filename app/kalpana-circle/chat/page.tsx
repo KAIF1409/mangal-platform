@@ -10,10 +10,12 @@ import { supabase } from '../../lib/supabase';
 // kcircle_conversation_participants, kcircle_messages
 // (supabase/migrations/20260812_kcircle_social.sql +
 // 20260812101451_kcircle_fix_participant_rls_and_groups.sql +
-// 20260812110000_kcircle_group_chat_schema_and_rls_fix.sql).
-// Polling every 3s on the open thread instead of Supabase Realtime, to keep
-// this to patterns already proven in this codebase (no realtime channel
-// usage elsewhere yet).
+// 20260812110000_kcircle_group_chat_schema_and_rls_fix.sql,
+// 20260812130000_kcircle_realtime_chat.sql for the Realtime publication).
+// Live via Supabase Realtime (postgres_changes) — open thread, conversation
+// list previews/ordering, new conversations, renames, and being
+// removed/leaving are all pushed, no polling. First Realtime usage in this
+// codebase; see the two useEffect blocks below for the channel setup.
 
 const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
 const MAX_GROUP_MEMBERS = 20;
@@ -166,14 +168,97 @@ export default function KCircleChatPage() {
     setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
   }, []);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- polling data fetch when active thread changes */
+  // ── open-thread messages: Supabase Realtime, not polling ──
+  // Was `setInterval(() => loadMessages(active.id), 3000)` — up to 3s of
+  // lag, and a full re-fetch of the whole thread every tick whether or not
+  // anything changed. Now: one initial loadMessages() for history, then a
+  // channel subscribed to INSERTs on kcircle_messages for this
+  // conversation_id, appending each new row as it lands (including the
+  // sender's own — sendMessage() below no longer appends locally, this
+  // channel is the single path a message reaches the UI through, so there's
+  // no double-insert to dedupe). Requires the conversation_id=eq filter's
+  // table to be in the supabase_realtime publication — see
+  // supabase/migrations/20260812130000_kcircle_realtime_chat.sql.
+  /* eslint-disable react-hooks/set-state-in-effect -- initial history fetch when active thread changes */
   useEffect(() => {
     if (!active) return;
     loadMessages(active.id);
-    const interval = setInterval(() => loadMessages(active.id), 3000);
-    return () => clearInterval(interval);
+    const channel = supabase
+      .channel(`kcircle-thread-${active.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'kcircle_messages', filter: `conversation_id=eq.${active.id}` },
+        (payload) => {
+          const row = payload.new as MessageRow;
+          setMessages(prev => (prev.some(m => m.id === row.id) ? prev : [...prev, row]));
+          setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 50);
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [active, loadMessages]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // ── inbox: live previews/ordering + new conversations, also Realtime ──
+  // Previously the conversation list only ever loaded once (on mount /
+  // userId change) — a new incoming DM or group add never appeared, and an
+  // existing thread's preview/order never moved, until a full page reload.
+  // Two subscriptions: (1) any INSERT on kcircle_messages updates that
+  // conversation's preview text + re-sorts the list by lastAt, scoped to
+  // conversations already in `conversations` (RLS also independently
+  // limits delivery to rows this user's SELECT policy allows, i.e.
+  // conversations they're actually a participant of — see the migration
+  // comment above); (2) an INSERT on kcircle_conversation_participants for
+  // my own user_id (a rename lands here too via a plain conversations
+  // reload, cheap enough not to special-case) means I've been added to a
+  // conversation I don't have yet, so re-run loadConversations() to pick
+  // it up. Both no-ops harmlessly if the row isn't one I can see.
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`kcircle-inbox-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'kcircle_messages' },
+        (payload) => {
+          const row = payload.new as MessageRow;
+          setConversations(prev => {
+            if (!prev.some(c => c.id === row.conversation_id)) return prev;
+            return prev
+              .map(c => c.id === row.conversation_id ? { ...c, lastMessage: row.text, lastAt: row.created_at } : c)
+              .sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'kcircle_conversation_participants', filter: `user_id=eq.${userId}` },
+        () => { loadConversations(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'kcircle_conversations' },
+        (payload) => {
+          const row = payload.new as { id: string; title: string };
+          setConversations(prev => prev.map(c => c.id === row.id ? { ...c, title: row.title } : c));
+          setActive(prev => (prev && prev.id === row.id ? { ...prev, title: row.title } : prev));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'kcircle_conversation_participants', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.old as { conversation_id: string };
+          // Someone removed me (or I left from another device/tab) —
+          // drop it from the list here too and back out of the thread if
+          // it was open.
+          setConversations(prev => prev.filter(c => c.id !== row.conversation_id));
+          setActive(prev => (prev && prev.id === row.conversation_id ? null : prev));
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, loadConversations]);
 
   // For group threads, resolve sender_id -> username so messages can be labeled.
   /* eslint-disable react-hooks/set-state-in-effect -- derived lookup for the active group thread */
@@ -193,9 +278,14 @@ export default function KCircleChatPage() {
     if (!active || !userId || !draft.trim()) return;
     const text = draft.trim();
     setDraft('');
-    await supabase.from('kcircle_messages').insert({ conversation_id: active.id, sender_id: userId, text });
+    // No local append and no loadMessages() call here anymore — the
+    // kcircle-thread-{id} Realtime channel above is subscribed to INSERTs
+    // on this same conversation_id and receives this exact row back
+    // (including for the sender), so appending it here too would just
+    // double it up in the bubble list.
+    const { error } = await supabase.from('kcircle_messages').insert({ conversation_id: active.id, sender_id: userId, text });
+    if (error) { setDraft(text); return; }
     await supabase.from('kcircle_conversations').update({ last_message_at: new Date().toISOString() }).eq('id', active.id);
-    loadMessages(active.id);
   };
 
   const searchUsers = async (q: string) => {
