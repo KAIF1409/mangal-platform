@@ -87,6 +87,20 @@ export default function RankingsPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      {/* Mobile pass — tabs/title already wrapped reasonably, but container
+          padding and the rank row's gaps were fixed-desktop sizing, tight on
+          a ~320px phone once rank number + cover + stat block all compete
+          with the title for space. Tightened at the standard breakpoints. */}
+      <style>{`
+        @media (max-width: 640px) {
+          .mangal-rank-content { padding: 28px 16px 60px !important; }
+        }
+        @media (max-width: 480px) {
+          .mangal-rank-row { gap: 10px !important; padding: 10px 6px !important; }
+          .mangal-rank-cover { width: 38px !important; height: 52px !important; }
+          .mangal-rank-num { width: 20px !important; font-size: 14px !important; }
+        }
+      `}</style>
       <Navbar
         variant="custom"
         centerSlot={
@@ -106,7 +120,7 @@ export default function RankingsPage() {
         }
       />
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 80px' }}>
+      <div className="mangal-rank-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 80px' }}>
         <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
           Rankings
         </h1>
@@ -190,15 +204,16 @@ function RankRow({ series, rank, statLabel, tab }: { series: Series; rank: numbe
         background: hovered ? 'var(--bg-card)' : 'transparent', borderRadius: '8px',
         transition: 'background 0.15s',
       }}
+      className="mangal-rank-row"
     >
-      <div style={{
+      <div className="mangal-rank-num" style={{
         width: '28px', flexShrink: 0, textAlign: 'center', fontSize: rank <= 3 ? '20px' : '15px',
         fontWeight: 900, fontStyle: 'italic', color: rankColor,
       }}>
         {rank}
       </div>
 
-      <div style={{ width: '46px', height: '62px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', position: 'relative', background: '#1a0a0a' }}>
+      <div className="mangal-rank-cover" style={{ width: '46px', height: '62px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', position: 'relative', background: '#1a0a0a' }}>
         {series.cover_url ? (
           <Image src={series.cover_url} alt={series.title} fill sizes="46px" style={{ objectFit: 'cover' }} />
         ) : (
