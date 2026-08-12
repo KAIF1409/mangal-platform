@@ -863,13 +863,31 @@ function UploadFlow() {
 
   return (
     <main style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', padding: '40px 24px', }}>
-      <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+      {/* Mobile pass — biggest remaining page (1300+ lines), but the two-column
+          Series Info step and toolbar rows already used flexWrap, so this only
+          needed: outer/card padding tightened, the h1 given a mobile size (was
+          a fixed 36px with no clamp), the cover-panel sized down so it doesn't
+          dominate a narrow screen once it wraps above the details column, and
+          the Focus Mode overlay's header row given room to wrap. */}
+      <style>{`
+        @media (max-width: 640px) {
+          .mangal-upload-shell { padding: 24px 16px !important; }
+          .mangal-upload-card { padding: 20px !important; border-radius: 16px !important; }
+          .mangal-upload-title { font-size: 26px !important; }
+          .mangal-upload-focus { padding: 20px 16px !important; }
+        }
+        @media (max-width: 480px) {
+          .mangal-upload-cover-wrap { flex-basis: 140px !important; width: 140px !important; }
+          .mangal-upload-cover-box { width: 140px !important; height: 186px !important; }
+        }
+      `}</style>
+      <div className="mangal-upload-shell" style={{ maxWidth: '720px', margin: '0 auto' }}>
         <a href={seriesId ? `/series/${seriesId}` : '/dashboard'} style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to {seriesId ? 'Series' : 'Dashboard'}</a>
         <div style={{ marginTop: '16px' }} />
         <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em', color: '#d97706', background: 'rgba(120,53,15,0.25)', border: '1px solid rgba(180,83,9,0.3)', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' as const }}>
           Mangal Engine V1.0
         </span>
-        <h1 style={{ fontSize: '36px', fontWeight: 900, color: 'var(--text-primary)', margin: '16px 0 4px' }}>
+        <h1 className="mangal-upload-title" style={{ fontSize: '36px', fontWeight: 900, color: 'var(--text-primary)', margin: '16px 0 4px' }}>
           {step === 'series' ? 'Start a New Story' : isEditMode ? 'Edit Chapter' : justPublishedChapterId ? 'Chapter Published' : contentType === 'novel' ? 'Write Chapter' : 'Upload Pages'}
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginBottom: '32px' }}>
@@ -897,7 +915,7 @@ function UploadFlow() {
         {error && <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '12px', marginBottom: '16px' }}>{error}</div>}
         {message && !justPublishedChapterId && <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '12px', marginBottom: '16px' }}>{message}</div>}
 
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '32px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '32px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }} className="mangal-upload-card">
 
           {/* STEP 1: SERIES INFO — two-column layout (cover left, details right),
               inspired by the reference screenshots the founder shared. Only the
@@ -907,10 +925,10 @@ function UploadFlow() {
             <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' as const }}>
 
               {/* LEFT — Cover upload, large Wattpad-style click target */}
-              <div style={{ flex: '0 0 200px' }}>
+              <div className="mangal-upload-cover-wrap" style={{ flex: '0 0 200px' }}>
                 <label style={labelStyle}>Cover Photo</label>
                 <label style={{ cursor: 'pointer', display: 'block' }}>
-                  <div style={{
+                  <div className="mangal-upload-cover-box" style={{
                     width: '200px', height: '266px', borderRadius: '14px', overflow: 'hidden' as const,
                     border: '2px dashed var(--border-light)', display: 'flex', flexDirection: 'column' as const,
                     alignItems: 'center', justifyContent: 'center', gap: '10px',
@@ -1227,8 +1245,8 @@ function UploadFlow() {
 
                   {/* Focus mode — full-screen distraction-free overlay, same textarea state */}
                   {novelFocusMode && (
-                    <div style={{ position: 'fixed' as const, inset: 0, background: 'var(--bg-primary)', zIndex: 1000, display: 'flex', flexDirection: 'column' as const, padding: '32px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '760px', margin: '0 auto 16px', width: '100%' }}>
+                    <div className="mangal-upload-focus" style={{ position: 'fixed' as const, inset: 0, background: 'var(--bg-primary)', zIndex: 1000, display: 'flex', flexDirection: 'column' as const, padding: '32px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'space-between', alignItems: 'center', gap: '8px', maxWidth: '760px', margin: '0 auto 16px', width: '100%' }}>
                         <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{countWords(novelContent)} words · {estimateReadTime(countWords(novelContent))}</span>
                         <button type="button" onClick={() => setNovelFocusMode(false)} style={toolbarBtnStyle}>✕ Exit Focus Mode</button>
                       </div>
