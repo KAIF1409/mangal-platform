@@ -1,45 +1,60 @@
-# MANGAL — Dual-Mode Indian Webnovel & Comic Publishing Platform
+# MANGAL — Read & Publish Manga, Comics and Novels
 
 **Live:** [mangal-platform.vercel.app](https://mangal-platform.vercel.app)
 
-MANGAL is a full-stack publishing platform built for Indian creators to upload and monetize manga-style comics and web novels under one unified account — readers can switch between Comic and Novel mode with zero friction. Built solo, end-to-end, from database schema to deployed production app.
+MANGAL is a platform built for Indian creators and readers who love manga,
+comics, and web novels. Creators can upload and publish their work — comics
+or novels — all from one account, and readers can enjoy both in one place
+without switching apps. It's built to give creators a fair deal: right now,
+MANGAL takes **0% cut** from what creators earn.
 
-## Why this exists
+## Why MANGAL exists
 
-India has 500M+ smartphone users and a fast-growing base of indie comic/manga artists and novelists, but most existing platforms force creators to choose between a comics platform or a novel platform. MANGAL lets one creator account host both content types under a single series model, with **0% platform cut** for creators at this stage.
+India has a huge and growing community of readers and independent
+creators, but most platforms only let you do comics *or* novels, not both.
+MANGAL brings them together in one home, so a creator doesn't need two
+separate accounts and readers don't need two separate apps.
 
-## Tech Stack
+## What you can do on MANGAL
 
-- **Frontend:** Next.js 14 (App Router), TypeScript, React
-- **Backend / DB:** Supabase (PostgreSQL, Row-Level Security, Auth, Storage)
-- **Email:** Resend (transactional + notification emails)
-- **Hosting / CI-CD:** Vercel
-- **AI-assisted development:** Used Claude as a pair-programmer throughout — for architecture decisions, debugging, and feature implementation
+- **Read** manga, comics, and web novels — switch between comic pages and
+  novel chapters with zero friction
+- **Publish** your own comics or novels, with a clean, easy-to-use writer
+  and uploader
+- **Follow your favorite creators** and get notified the moment they post
+  a new chapter
+- **Bookmark and track** what you're reading, right where you left off
+- **Discover new stories** through search, genre filters, and
+  trending/staff-picks sections
+- **Read comfortably** with right-to-left manga mode and a Hindi/English
+  toggle
+- **Share** what you're reading straight to WhatsApp
 
-## Key Features
+MANGAL is also growing into a small family of connected experiences:
 
-- **Dual content-type engine** — a single `series` schema supports both manga (page/scroll image-based chapters) and novels (rich-text chapters), with a content-type-aware reader, uploader, and dashboard across the whole app
-- **Custom novel writer** — built-from-scratch lightweight text formatting engine (headings, bold, italic, scene breaks) with live word count, estimated read time, and local-storage draft autosave — no external rich-text library
-- **DPDP Act 2023 compliance** — itemized consent logging, DOB-based minor detection, automated parental-consent email verification flow for under-18 accounts, and a Download-My-Data / Delete-My-Account flow
-- **IT Rules 2021 compliance** — Grievance Officer page with legally mandated 24-hour acknowledgement / 15-day resolution SLAs, two-tier data retention (immediate front-end erasure + 180-day encrypted cold storage for legal/CERT-In requests)
-- **Admin moderation dashboard** — developer-role-gated, RLS-enforced two-click content removal and instant account bans
-- **Reader experience** — bookmarks, reading history with progress tracking, follow + new-chapter email notifications, WhatsApp share, RTL reading mode for manga, Hindi/English UI toggle
-- **Search & discovery** — genre/language/content-type filters, URL-synced query params, trending/staff-picks sections
+- **KaTube** — a space to discover AI-generated anime videos made by
+  MANGAL creators, adapted from their own series
+- **Kalpana Circle** — a community space to talk anime, share fan art and
+  theories, and chat with other readers — including group chats
 
-## Architecture Notes
+## Built with care for privacy and safety
 
-- Single unified `series` + `chapters` schema for both content types, differentiated by a `content_type` column rather than separate tables — keeps search, bookmarks, library, and history working identically across comics and novels with no duplicated logic
-- All sensitive operations (account deletion, data export, parent-consent confirmation, follower notifications) run through server-only API routes using the Supabase service role, never exposed client-side
-- RLS policies enforce access control at the database layer, not just in application code
+MANGAL follows India's data protection and IT rules — clear consent when
+you sign up, extra protection for users under 18 with parental consent,
+and simple ways to download or delete your data whenever you want. There's
+also a dedicated support page for any concerns, with a guaranteed response
+time.
 
 ## Status
 
-In active development. Core publishing, reading, and compliance flows are live in production. Monetization (UPI creator tips, premium chapter unlocks) is planned for after the platform reaches consistent reader traffic.
+MANGAL is live and in active use — reading, publishing, and the privacy
+features above are all working today. Ways for readers to directly support
+creators (tips, unlocking premium chapters) are coming soon, once the
+platform has more readers.
 
-The platform is also expanding into a small ecosystem — **Kalpanaverse** (AI-generated anime videos from MANGAL creators) and **Kalpana Circle** (community discussion) are in early UI-demo stages. See [`CONTEXT.md`](./CONTEXT.md) for the full current build status, architecture reasoning, and next steps on that expansion.
+## About
 
-## Author
-
-**Mohammed Kaif** — B.Tech CSE, PES University (2026)
-[LinkedIn](https://www.linkedin.com/in/mohammed-kaif-714a79242)
-MAIL:(mailto:kaifmohammed.work@gmail.com)
+Built solo, end-to-end, by **Mohammed Kaif** — B.Tech CSE, PES University
+(2026).
+[LinkedIn](https://www.linkedin.com/in/mohammed-kaif-714a79242) ·
+[Email](mailto:kaifmohammed.work@gmail.com)
