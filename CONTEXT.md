@@ -1289,6 +1289,58 @@ hydration-mismatch/flash-of-wrong-layout risk.
 - Committing one page/component at a time per the founder's explicit
   instruction for this pass — do not batch multiple pages into one commit.
 
+## 14. K Circle notifications system (DONE) — chosen over Broadcast Channels
+
+Founder asked to compare Broadcast Channels vs. Notifications (the two
+items left in the "Instagram + Discord-minus-reels" backlog from §12a) and
+build whichever is lighter/faster. **Notifications won**: broadcast
+channels needs a genuine chat-model rework (new channel/subscriber
+concept, one-to-many sender permissions, its own UI surface — the founder's
+own framing), while notifications is one new table bolted onto flows that
+already exist (like/comment/message/add-member all already succeed
+somewhere — a notification insert just piggybacks on each).
+
+- **Schema (`20260813120000_kcircle_notifications.sql`, applied live)** —
+  `kcircle_notifications` (recipient_id, actor_id, type: like/comment/
+  message/group_add, post_id, conversation_id, preview, read). RLS: actor
+  inserts on the recipient's behalf (`auth.uid() = actor_id`, no
+  self-notifications), recipient reads/marks-read their own rows only.
+  Added to the `supabase_realtime` publication (same pattern as chat).
+- **`app/components/NotificationBell.tsx`** — shared bell icon + unread
+  badge + dropdown panel, live via Realtime `postgres_changes` (no
+  polling), mark-all-read on open, click an item to jump to the feed or
+  chat. Dropped into both `/kalpana-circle` (mobile header + desktop top
+  bar) and `/kalpana-circle/chat` (list view only, hidden inside an open
+  thread to keep that header clean).
+- **Wired at the source of each event:** `toggleLike`/`submitComment` in
+  `app/kalpana-circle/page.tsx`; `sendMessage` (notifies every other
+  participant, not just one, so group DMs fan out correctly),
+  `createGroup`, and `addMember` in `app/kalpana-circle/chat/page.tsx`.
+
+**Not done:** no notification preferences/mute, no push notifications
+(in-app only), no "X and 3 others liked your post" grouping — each like
+is its own row/line item for now.
+
+## 13b. Repo/live-DB drift found this session — flag for follow-up
+
+While applying the notifications migration, `list_migrations` on the live
+project showed four applied migrations with **no matching file in this
+repo and no mention in this CONTEXT.md**: `kcircle_close_friends`,
+`kcircle_posts_link_fields`, `kcircle_dreamer_of_week` (+ a trigger-fix
+follow-up), `kcircle_polls`. Live tables confirmed: `kcircle_close_friends`
+(user_id/friend_id), `kcircle_poll_options` + `kcircle_poll_votes`
+(post_id-linked). **No UI anywhere in the repo reads or writes any of
+these** — grepped for `poll`/`close_friend`/`dreamer_of_week` across
+`app/`, only false-positive matches (the word "dreamer" used as a generic
+placeholder). So: schema for three more backlog items (close friends,
+polls, dreamer-of-week pinning) already exists live from an earlier
+session but was never wired to any screen, and the migration files were
+never committed. Didn't reconstruct/commit those migration files or build
+their UI this session (out of scope of the broadcast-vs-notifications ask)
+— flagging so the next session doesn't assume they don't exist, and so the
+founder can confirm whether to finish wiring them up or leave them
+dormant.
+
 ## 11. KaTube like button (`17eb400`) — one genuine like per user
 
 **Approach:** no custom "algorithm" — the one-like-per-user guarantee comes

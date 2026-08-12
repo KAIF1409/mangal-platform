@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import NotificationBell from '../../components/NotificationBell';
 
 // ── K Circle chat — DMs + group chats. ──
 // Backend: kcircle_conversations (is_group/title/created_by),
@@ -336,6 +337,21 @@ export default function KCircleChatPage() {
     setSending(false);
     if (error) { setDraft(text); return; }
     await supabase.from('kcircle_conversations').update({ last_message_at: new Date().toISOString() }).eq('id', active.id);
+
+    // Notify the other participant(s) — actor-scoped insert per
+    // kcircle_notifications_actor_insert, one row per recipient so a
+    // group message notifies every other member, not just one.
+    const { data: participantRows } = await supabase.from('kcircle_conversation_participants')
+      .select('user_id').eq('conversation_id', active.id).neq('user_id', userId);
+    const recipients = (participantRows ?? []).map(r => r.user_id);
+    if (recipients.length) {
+      await supabase.from('kcircle_notifications').insert(
+        recipients.map(recipientId => ({
+          recipient_id: recipientId, actor_id: userId, type: 'message' as const,
+          conversation_id: active.id, preview: (text || 'Sent a photo').slice(0, 80),
+        }))
+      );
+    }
   };
 
   const searchUsers = async (q: string) => {
@@ -383,6 +399,9 @@ export default function KCircleChatPage() {
     setConversations(prev => [newConvo, ...prev]);
     setActive(newConvo);
     resetComposer();
+    await supabase.from('kcircle_notifications').insert(
+      selected.map(s => ({ recipient_id: s.user_id, actor_id: userId, type: 'group_add' as const, conversation_id: convo.id }))
+    );
   };
 
   const openGroupSettings = async () => {
@@ -427,6 +446,7 @@ export default function KCircleChatPage() {
     setMembers(prev => [...prev, u]);
     setConversations(prev => prev.map(c => c.id === active.id ? { ...c, memberUsernames: [...c.memberUsernames, u.username] } : c));
     setAddMemberQuery(''); setAddMemberResults([]);
+    if (userId) await supabase.from('kcircle_notifications').insert({ recipient_id: u.user_id, actor_id: userId, type: 'group_add', conversation_id: active.id });
   };
 
   const removeMember = async (u: { user_id: string; username: string }) => {
@@ -473,10 +493,13 @@ export default function KCircleChatPage() {
           }} title="Group settings">ⓘ</button>
         )}
         {!active && (
-          <button className="kc-chat-new-btn" onClick={() => { setShowNew(v => !v); if (showNew) resetComposer(); }} style={{
-            marginLeft: 'auto', fontSize: '12px', fontWeight: 800, padding: '6px 12px', borderRadius: '8px', border: 'none',
-            background: RADIANT, color: '#27272a', cursor: 'pointer',
-          }}>+ New</button>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <NotificationBell userId={userId} iconSize={18} />
+            <button className="kc-chat-new-btn" onClick={() => { setShowNew(v => !v); if (showNew) resetComposer(); }} style={{
+              fontSize: '12px', fontWeight: 800, padding: '6px 12px', borderRadius: '8px', border: 'none',
+              background: RADIANT, color: '#27272a', cursor: 'pointer',
+            }}>+ New</button>
+          </div>
         )}
       </nav>
 

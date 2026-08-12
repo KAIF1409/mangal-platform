@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
+import NotificationBell from '../components/NotificationBell';
 import { supabase } from '../lib/supabase';
 import { setPostLoginRedirect } from '../lib/authRedirect';
 
@@ -265,6 +266,15 @@ function KalpanaCircleInner() {
     loadPosts();
   };
 
+  // ── notifications ── fire-and-forget insert, actor-scoped per RLS
+  // (kcircle_notifications_actor_insert), skipped for self-actions so a
+  // user liking/commenting their own post never trips the "actor_id <>
+  // recipient_id" check or clutters their own inbox.
+  const notify = (recipientId: string, type: 'like' | 'comment' | 'message' | 'group_add', extra: { post_id?: string; conversation_id?: string; preview?: string } = {}) => {
+    if (!userId || userId === recipientId) return;
+    supabase.from('kcircle_notifications').insert({ recipient_id: recipientId, actor_id: userId, type, ...extra }).then();
+  };
+
   // ── likes ──
   const toggleLike = async (post: KPost) => {
     if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
@@ -275,6 +285,7 @@ function KalpanaCircleInner() {
       await supabase.from('kcircle_post_likes').delete().eq('post_id', post.id).eq('liker_id', userId);
     } else {
       await supabase.from('kcircle_post_likes').insert({ post_id: post.id, liker_id: userId });
+      notify(post.author_id, 'like', { post_id: post.id });
     }
   };
 
@@ -318,6 +329,8 @@ function KalpanaCircleInner() {
     if (!error && data) {
       setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), { ...data, author: { username: myUsername ?? 'you' } }] }));
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p));
+      const owner = posts.find(p => p.id === postId)?.author_id;
+      if (owner) notify(owner, 'comment', { post_id: postId, preview: text.slice(0, 80) });
     }
   };
 
@@ -453,6 +466,7 @@ function KalpanaCircleInner() {
             color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)',
             whiteSpace: 'nowrap',
           }}>🎬<span className="kc-katube-badge-text"> KaTube</span></Link>
+          <NotificationBell userId={userId} iconSize={18} />
           <ThemeToggle size={28} />
         </div>
       </nav>
@@ -485,6 +499,7 @@ function KalpanaCircleInner() {
             background: RADIANT, border: 'none', width: '32px', height: '32px', borderRadius: '9px',
             fontSize: '16px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>+</button>
+          <NotificationBell userId={userId} iconSize={19} />
           <Link href={profileHref} title="Profile" style={{ textDecoration: 'none' }}>
             <Avatar name={myUsername ?? 'you'} size={28} />
           </Link>
