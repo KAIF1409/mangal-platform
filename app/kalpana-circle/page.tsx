@@ -311,31 +311,85 @@ export default function KalpanaCirclePage() {
   }, [viewingStory, advanceStory]);
 
   const navHref = (path: string) => (userId ? path : `/login?next=${encodeURIComponent(path)}`);
+  const profileHref = userId ? (myUsername ? `/creator/${myUsername}` : '/home') : '/login?next=/kalpana-circle';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden', paddingBottom: '76px' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }} className="kc-page">
 
-      {/* ── NAV ── */}
-      <nav style={{
+      {/* Responsive rules (plain <style> tag: media queries can't be
+          expressed with inline style={{}} objects) — same pattern as
+          app/WebMangal/View.tsx. Desktop/laptop = Instagram-web layout
+          (top icon nav, no bottom tab bar). Mobile = Instagram-mobile-web
+          layout (compact top header + bottom tab bar). Breakpoint matches
+          the rest of the codebase (768px). */}
+      <style>{`
+        .kc-nav-desktop { display: none; }
+        .kc-nav-mobile { display: flex; }
+        .kc-bottom-nav { display: flex; }
+        .kc-page { padding-bottom: 76px; }
+        @media (min-width: 768px) {
+          .kc-nav-desktop { display: flex; }
+          .kc-nav-mobile { display: none; }
+          .kc-bottom-nav { display: none; }
+          .kc-page { padding-bottom: 40px; }
+        }
+      `}</style>
+
+      {/* ── MOBILE NAV (Instagram mobile-web style: compact header, icons live in the bottom tab bar) ── */}
+      <nav className="kc-nav-mobile" style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 14px', height: '58px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+        alignItems: 'center', justifyContent: 'space-between', gap: '8px',
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
           <Image src="/icon.png" alt="MANGAL" width={28} height={28} style={{ display: 'block', borderRadius: '7px', flexShrink: 0 }} />
         </Link>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-          <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={56} style={{ display: 'block', height: '28px', width: 'auto', objectFit: 'contain' }} priority />
-        </div>
-
+        <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={56} style={{ display: 'block', height: '28px', width: 'auto', objectFit: 'contain' }} priority />
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           <Link href="/katube" style={{
             padding: '7px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700,
             color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)',
             whiteSpace: 'nowrap',
+          }}>🎬 KaTube</Link>
+          <ThemeToggle size={28} />
+        </div>
+      </nav>
+
+      {/* ── DESKTOP/LAPTOP NAV (Instagram-web style: full top bar with home/chat/create/profile icons, no bottom tab bar) ── */}
+      <nav className="kc-nav-desktop" style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid var(--border-color)',
+        padding: '0 24px', height: '64px',
+        alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: 1 }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
+            <Image src="/icon.png" alt="MANGAL" width={30} height={30} style={{ display: 'block', borderRadius: '8px' }} />
+          </Link>
+          <Image src="/kcircle-logo.png" alt="K Circle" width={150} height={64} style={{ display: 'block', height: '32px', width: 'auto', objectFit: 'contain' }} priority />
+          <span style={{
+            flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '280px',
+            fontSize: '12.5px', color: 'var(--text-tertiary)', background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 14px', opacity: 0.55, cursor: 'not-allowed',
+          }} title="Search — coming soon">🔍 Search</span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexShrink: 0 }}>
+          <Link href="/kalpana-circle" title="Home" style={{ fontSize: '19px', textDecoration: 'none', color: RADIANT_SOLID }}>🏠</Link>
+          <Link href={navHref('/kalpana-circle/chat')} title="Chat" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
+          <button onClick={() => fileInputRef.current?.click()} title="Create post" style={{
+            background: RADIANT, border: 'none', width: '32px', height: '32px', borderRadius: '9px',
+            fontSize: '16px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>+</button>
+          <Link href={profileHref} title="Profile" style={{ textDecoration: 'none' }}>
+            <Avatar name={myUsername ?? 'you'} size={28} />
+          </Link>
+          <Link href="/katube" style={{
+            padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+            color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)', whiteSpace: 'nowrap',
           }}>🎬 KaTube</Link>
           <ThemeToggle size={28} />
         </div>
@@ -536,11 +590,11 @@ export default function KalpanaCirclePage() {
         ))}
       </div>
 
-      {/* ── BOTTOM NAV (Instagram-style, mobile + desktop) ── */}
-      <div style={{
+      {/* ── BOTTOM TAB BAR — mobile only (Instagram mobile-web pattern); hidden on desktop via .kc-bottom-nav in the <style> block above, where the top nav's icons take over ── */}
+      <div className="kc-bottom-nav" style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)', borderTop: '1px solid var(--border-color)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-around', height: '58px', maxWidth: '640px', margin: '0 auto',
+        alignItems: 'center', justifyContent: 'space-around', height: '58px', maxWidth: '640px', margin: '0 auto',
       }}>
         <Link href="/kalpana-circle" style={{ fontSize: '20px', textDecoration: 'none', color: RADIANT_SOLID }}>🏠</Link>
         <span style={{ fontSize: '20px', color: 'var(--text-tertiary)', opacity: 0.4, cursor: 'not-allowed' }} title="Search — coming soon">🔍</span>
