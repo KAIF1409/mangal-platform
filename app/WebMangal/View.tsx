@@ -293,6 +293,31 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
   const createHref = isCreator ? '/dashboard' : user ? '/become-creator' : '/login';
   const createLabel = isCreator ? 'Go to Studio' : user ? 'Become a Creator' : 'Log In to Create';
 
+  // ── Webnovel-homepage-style "discovery" card + Hot Tags, browse route only ──
+  // A series counts as having "new chapters" if it was created/updated in
+  // the last 3 days — same idea as Webnovel's green "NEW CHAPTERS" tag.
+  // Date.now() can't be called during render (impure), so it's captured
+  // once via effect instead.
+  const [nowMs, setNowMs] = useState<number | null>(null);
+  useEffect(() => { setNowMs(Date.now()); }, []);
+  const recentlyUpdatedIds = useMemo(() => {
+    if (nowMs === null) return new Set<string>();
+    const cutoff = nowMs - 3 * 86_400_000;
+    return new Set(series.filter(s => new Date(s.created_at).getTime() >= cutoff).map(s => s.id));
+  }, [series, nowMs]);
+  const recentCount = recentlyUpdatedIds.size;
+  // Top of the discovery list: newest first, capped at 5 like the reference.
+  const featuredList = useMemo(
+    () => [...series].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5),
+    [series]
+  );
+  // Hot Tags — genre distribution across all published series, most common first.
+  const genreCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    series.forEach(s => { if (s.genre) counts[s.genre] = (counts[s.genre] ?? 0) + 1; });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  }, [series]);
+
   // Committing a search (Search button / Enter / keyboard "Go") always lands
   // on the dedicated /WebMangal/search route with ?keyword=..., matching
   // Webnovel's m.webnovel.com/search?keyword=solo pattern — browsing and
@@ -704,6 +729,84 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
             </button>
           ))}
         </div>
+
+        {/* ── DISCOVERY CARD (Webnovel homepage style) — browse route only.
+             Dark hero card: horizontal-scroll genre hashtags, a series/new
+             count line, then a short list of the newest series (cover left,
+             "NEW CHAPTERS" tag if updated in the last 3 days, title, author). ── */}
+        {mode === 'browse' && !loading && series.length > 0 && (
+          <div style={{
+            borderRadius: '16px', overflow: 'hidden', marginBottom: '20px',
+            background: 'linear-gradient(180deg, rgba(127,29,29,0.55), rgba(10,10,15,0.94))',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <div style={{ padding: '16px 16px 6px' }}>
+              <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '4px' }}>
+                {GENRE_OPTIONS.filter(g => g !== 'All').map(g => (
+                  <button
+                    key={g}
+                    onClick={() => setGenreFilter(g === genreFilter ? 'All' : g)}
+                    style={{
+                      flexShrink: 0, background: 'transparent', border: 'none', cursor: 'pointer',
+                      fontSize: '13px', fontWeight: 800, letterSpacing: '0.02em', padding: 0,
+                      color: genreFilter === g ? '#6ee7b7' : '#e5e7eb',
+                    }}
+                  >#{g.toUpperCase()}</button>
+                ))}
+              </div>
+              <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '6px', marginBottom: '10px' }}>
+                {series.length} {series.length === 1 ? 'series' : 'series'} on MANGAL
+                {recentCount > 0 && <span style={{ color: '#6ee7b7' }}> · +{recentCount} new</span>}
+              </div>
+            </div>
+            <div style={{ padding: '0 16px 14px' }}>
+              {featuredList.map(s => (
+                <Link
+                  key={s.id}
+                  href={`/series/${s.id}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '9px 0', textDecoration: 'none' }}
+                >
+                  <div style={{ width: '46px', height: '62px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: '#1f1f2a', position: 'relative' }}>
+                    {s.cover_url && <Image src={s.cover_url} alt={s.title} fill sizes="46px" style={{ objectFit: 'cover' }} />}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    {recentlyUpdatedIds.has(s.id) && (
+                      <div style={{ fontSize: '10px', fontWeight: 800, color: '#6ee7b7', marginBottom: '2px', letterSpacing: '0.03em' }}>NEW CHAPTERS</div>
+                    )}
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#f9fafb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {s.title}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#9ca3af' }}>by {creatorUsernames[s.creator_id] ?? 'Unknown'}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── HOT TAGS — genre breakdown, browse route only ── */}
+        {mode === 'browse' && !loading && genreCounts.length > 0 && (
+          <div style={{
+            background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '16px',
+            padding: '16px', marginBottom: '20px',
+          }}>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '6px' }}>Hot Tags</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              <span style={{ color: '#22c55e' }}>●</span> {series.length} series across {genreCounts.length} genres
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px' }}>
+              {genreCounts.map(([genre, count]) => (
+                <a
+                  key={genre}
+                  href={`/WebMangal?genre=${encodeURIComponent(genre)}`}
+                  style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textDecoration: 'none' }}
+                >
+                  #{genre.toUpperCase()}<span style={{ color: 'var(--text-faint)', fontWeight: 600 }}> ({count})</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
 
         {/* ── FILTERS + SORT ── */}
