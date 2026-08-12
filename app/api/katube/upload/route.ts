@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   let body: {
     youtubeId?: string; title?: string; seriesId?: string | null;
-    isShort?: boolean; category?: string; aiTool?: string;
+    isShort?: boolean; category?: string; aiTool?: string; autoPostToCircle?: boolean;
   };
   try {
     body = await req.json();
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { youtubeId, title, seriesId, isShort, category, aiTool } = body;
+  const { youtubeId, title, seriesId, isShort, category, aiTool, autoPostToCircle } = body;
   if (!youtubeId || !title?.trim()) {
     return NextResponse.json({ error: 'Missing video link or title.' }, { status: 400 });
   }
@@ -125,6 +125,40 @@ export async function POST(req: NextRequest) {
         'removing — thumbnail classifiers can false-positive on suggestive but non-explicit images.',
       is_auto_flagged: true,
     });
+  }
+
+  // KaTube ↔ K Circle auto-post cross-link — opt-in per upload, off by
+  // default (see app/katube/upload/page.tsx's confirm-before-on checkbox).
+  // Best-effort only: a failure here must never fail the video upload
+  // itself, so errors are swallowed, not surfaced to the response.
+  if (autoPostToCircle) {
+    try {
+      let { data: convo } = await auth.supabase
+        .from('kcircle_conversations')
+        .select('id')
+        .eq('created_by', auth.userId)
+        .eq('is_broadcast', true)
+        .maybeSingle();
+
+      if (!convo) {
+        const { data: created } = await auth.supabase
+          .from('kcircle_conversations')
+          .insert({ is_broadcast: true, is_group: true, created_by: auth.userId, title: 'Updates' })
+          .select('id')
+          .single();
+        convo = created ?? null;
+      }
+
+      if (convo) {
+        await auth.supabase.from('kcircle_messages').insert({
+          conversation_id: convo.id,
+          sender_id: auth.userId,
+          text: `🎬 New video: "${title.trim()}"\nkatube/watch/${inserted.id}`,
+        });
+      }
+    } catch {
+      // swallow — auto-post is a nice-to-have, never blocks the upload
+    }
   }
 
   return NextResponse.json({ id: inserted.id });

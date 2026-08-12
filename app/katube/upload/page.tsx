@@ -79,6 +79,13 @@ export default function KaTubeUploadPage() {
   const [aiTool, setAiTool] = useState('Other');
   const [ownSeries, setOwnSeries] = useState<OwnSeries[]>([]);
 
+  // Per-video toggle, default OFF — nothing auto-posts unless the creator
+  // opts in on this specific upload. Turning it on shows a one-time Yes/No
+  // confirmation instead of flipping the checkbox immediately, so a creator
+  // can't accidentally post to their K Circle channel with a stray click.
+  const [autoPostToCircle, setAutoPostToCircle] = useState(false);
+  const [showAutoPostConfirm, setShowAutoPostConfirm] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -156,7 +163,7 @@ export default function KaTubeUploadPage() {
         headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
         body: JSON.stringify({
           youtubeId, title: title.trim(), seriesId: seriesId || null,
-          isShort, category, aiTool,
+          isShort, category, aiTool, autoPostToCircle,
         }),
       });
       const data = await res.json();
@@ -377,6 +384,47 @@ export default function KaTubeUploadPage() {
                 <span style={{ color: 'var(--text-tertiary)' }}> — vertical/short-form, shows in the Shorts row instead of the main grid</span>
               </span>
             </label>
+
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: '10px', marginBottom: showAutoPostConfirm ? '10px' : '20px',
+              padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)',
+              background: 'var(--bg-card)', cursor: 'pointer',
+            }}>
+              <input
+                type="checkbox"
+                checked={autoPostToCircle}
+                onChange={e => {
+                  if (e.target.checked) setShowAutoPostConfirm(true);
+                  else { setAutoPostToCircle(false); setShowAutoPostConfirm(false); }
+                }}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '13px' }}>
+                <span style={{ fontWeight: 700 }}>📣 Auto-post to K Circle</span>
+                <span style={{ color: 'var(--text-tertiary)' }}> — off by default, only for this video</span>
+              </span>
+            </label>
+
+            {showAutoPostConfirm && (
+              <div style={{
+                padding: '12px 14px', borderRadius: '10px', marginBottom: '20px',
+                background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.3)',
+              }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 10px', lineHeight: 1.5 }}>
+                  Post a short update about this video to your K Circle channel?
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => setShowAutoPostConfirm(false)} style={{
+                    padding: '7px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                    border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer',
+                  }}>No</button>
+                  <button type="button" onClick={() => { setAutoPostToCircle(true); setShowAutoPostConfirm(false); }} style={{
+                    padding: '7px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                    border: 'none', background: '#7c3aed', color: '#fff', cursor: 'pointer',
+                  }}>Yes, auto-post</button>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div style={{

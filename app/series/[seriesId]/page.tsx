@@ -108,6 +108,19 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   // Step 27 — Recommendations
   const [relatedSeries, setRelatedSeries] = useState<Series[]>([]);
 
+  // KaTube ↔ Circle cross-link, part 2 — "Fan Theories & Art" preview.
+  // The other direction of §12f's tag cross-link: instead of only a button
+  // pointing out to Kalpana Circle, show a small embedded preview of the
+  // latest posts already tagged with this series' title, right on the
+  // series page itself.
+  interface CirclePostPreview {
+    id: string;
+    caption: string | null;
+    image_url: string | null;
+    username: string;
+  }
+  const [circlePosts, setCirclePosts] = useState<CirclePostPreview[]>([]);
+
   // Pulled out of the main load() below so it can also be called on its own
   // whenever the tab/page becomes visible again (see effect below) — we only
   // want to refresh the chapter list itself in that case, not redo the view
@@ -270,6 +283,28 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       // Step 27 — Readers Also Liked
       const { data: related } = await supabase.rpc('related_series', { target_series_id: seriesId, result_limit: 6 });
       if (related) setRelatedSeries(related as Series[]);
+
+      // Fan Theories & Art preview — latest kcircle_posts tagged with this
+      // series' title (same ilike match §12f's ?tag= filter uses on the
+      // Circle side, kept exact-ish/free-text on purpose, see that note).
+      if (s?.title) {
+        const { data: taggedPosts } = await supabase
+          .from('kcircle_posts')
+          .select('id, caption, image_url, author_id')
+          .ilike('tag', s.title)
+          .order('created_at', { ascending: false })
+          .limit(4);
+        if (taggedPosts && taggedPosts.length > 0) {
+          const authorIds = Array.from(new Set(taggedPosts.map(p => p.author_id)));
+          const { data: authorRows } = await supabase
+            .from('creator_profiles').select('user_id, username').in('user_id', authorIds);
+          const usernameMap = new Map((authorRows ?? []).map(a => [a.user_id, a.username]));
+          setCirclePosts(taggedPosts.map(p => ({
+            id: p.id, caption: p.caption, image_url: p.image_url,
+            username: usernameMap.get(p.author_id) ?? 'dreamer',
+          })));
+        }
+      }
 
       setLoading(false);
     };
@@ -928,6 +963,23 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           </section>
         )}
 
+        {/* ── Fan Theories & Art — K Circle cross-link preview ── */}
+        {circlePosts.length > 0 && (
+          <section style={{ padding: '40px 0 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                💬 Fan Theories &amp; Art
+              </h2>
+              <a href={`/kalpana-circle?tag=${encodeURIComponent(series.title)}`} style={{ fontSize: '12.5px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none' }}>
+                See all →
+              </a>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
+              {circlePosts.map(p => <CirclePostCard key={p.id} post={p} seriesTitle={series.title} />)}
+            </div>
+          </section>
+        )}
+
         {/* ── STEP 26 — WRITTEN REVIEWS ── */}
         <section style={{ padding: '48px 0 40px', borderTop: '1px solid var(--border-color)', marginTop: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: '10px', marginBottom: '20px' }}>
@@ -1224,6 +1276,36 @@ function formatViews(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return n.toString();
+}
+
+function CirclePostCard({ post, seriesTitle }: { post: { id: string; caption: string | null; image_url: string | null; username: string }; seriesTitle: string }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <a href={`/kalpana-circle?tag=${encodeURIComponent(seriesTitle)}`} style={{ textDecoration: 'none' }}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <div style={{
+        borderRadius: '12px', overflow: 'hidden',
+        background: 'var(--bg-card)', border: `1px solid ${hovered ? '#a78bfa' : 'var(--border-color)'}`,
+        transition: 'border-color 0.2s, transform 0.2s',
+        transform: hovered ? 'translateY(-3px)' : 'none',
+      }}>
+        <div style={{ position: 'relative', aspectRatio: '3/4', background: 'var(--bg-input)' }}>
+          {post.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- external Supabase storage URL, not a static asset
+            <img src={post.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          ) : (
+            <div style={{
+              width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '14px', textAlign: 'center', fontSize: '12px', color: 'var(--text-tertiary)', lineHeight: 1.5,
+            }}>{post.caption ?? '💬'}</div>
+          )}
+        </div>
+        <div style={{ padding: '8px 10px', fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          @{post.username}
+        </div>
+      </div>
+    </a>
+  );
 }
 
 function RelatedCard({ series }: { series: Series }) {
