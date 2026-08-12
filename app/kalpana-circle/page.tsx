@@ -37,6 +37,7 @@ interface KPost {
   likeCount: number;
   likedByMe: boolean;
   commentCount: number;
+  savedByMe: boolean;
 }
 
 interface KComment {
@@ -139,12 +140,15 @@ export default function KalpanaCirclePage() {
     const postIds = rows.map(r => r.id);
     const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
 
-    const [profilesRes, likesRes, commentsRes, myLikesRes] = await Promise.all([
+    const [profilesRes, likesRes, commentsRes, myLikesRes, mySavesRes] = await Promise.all([
       supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds),
       supabase.from('kcircle_post_likes').select('post_id').in('post_id', postIds),
       supabase.from('kcircle_post_comments').select('post_id').in('post_id', postIds),
       userId
         ? supabase.from('kcircle_post_likes').select('post_id').eq('liker_id', userId).in('post_id', postIds)
+        : Promise.resolve({ data: [] as { post_id: string }[] }),
+      userId
+        ? supabase.from('kcircle_saved_posts').select('post_id').eq('user_id', userId).in('post_id', postIds)
         : Promise.resolve({ data: [] as { post_id: string }[] }),
     ]);
 
@@ -154,6 +158,7 @@ export default function KalpanaCirclePage() {
     const commentCounts = new Map<string, number>();
     (commentsRes.data ?? []).forEach(c => commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1));
     const myLiked = new Set((myLikesRes.data ?? []).map(l => l.post_id));
+    const mySaved = new Set((mySavesRes.data ?? []).map(s => s.post_id));
 
     setPosts(rows.map(r => ({
       ...r,
@@ -161,6 +166,7 @@ export default function KalpanaCirclePage() {
       likeCount: likeCounts.get(r.id) ?? 0,
       commentCount: commentCounts.get(r.id) ?? 0,
       likedByMe: myLiked.has(r.id),
+      savedByMe: mySaved.has(r.id),
     })));
     setLoadingPosts(false);
   }, [userId]);
@@ -243,6 +249,17 @@ export default function KalpanaCirclePage() {
       await supabase.from('kcircle_post_likes').delete().eq('post_id', post.id).eq('liker_id', userId);
     } else {
       await supabase.from('kcircle_post_likes').insert({ post_id: post.id, liker_id: userId });
+    }
+  };
+
+  // ── saves ──
+  const toggleSave = async (post: KPost) => {
+    if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, savedByMe: !p.savedByMe } : p));
+    if (post.savedByMe) {
+      await supabase.from('kcircle_saved_posts').delete().eq('post_id', post.id).eq('user_id', userId);
+    } else {
+      await supabase.from('kcircle_saved_posts').insert({ post_id: post.id, user_id: userId });
     }
   };
 
@@ -437,6 +454,7 @@ export default function KalpanaCirclePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexShrink: 0 }}>
           <Link href="/kalpana-circle" title="Home" style={{ fontSize: '19px', textDecoration: 'none', color: RADIANT_SOLID }}>🏠</Link>
           <Link href={navHref('/kalpana-circle/chat')} title="Chat" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
+          <Link href={navHref('/kalpana-circle/saved')} title="Saved" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🔖</Link>
           <button onClick={() => fileInputRef.current?.click()} title="Create post" style={{
             background: RADIANT, border: 'none', width: '32px', height: '32px', borderRadius: '9px',
             fontSize: '16px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -663,7 +681,7 @@ export default function KalpanaCirclePage() {
               <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }} />
             )}
 
-            <div style={{ display: 'flex', gap: '18px', padding: '12px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '18px', padding: '12px 14px' }}>
               <button onClick={() => toggleLike(post)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: '12.5px', color: post.likedByMe ? '#ef4444' : 'var(--text-tertiary)',
@@ -673,6 +691,10 @@ export default function KalpanaCirclePage() {
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: '12.5px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700,
               }}>💬 {post.commentCount}</button>
+              <button onClick={() => toggleSave(post)} title={post.savedByMe ? 'Unsave' : 'Save'} style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: 'auto',
+                fontSize: '15px', color: post.savedByMe ? RADIANT_SOLID : 'var(--text-tertiary)',
+              }}>{post.savedByMe ? '🔖' : '📑'}</button>
             </div>
 
             {openComments === post.id && (
@@ -725,6 +747,7 @@ export default function KalpanaCirclePage() {
           fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>+</button>
         <Link href={navHref('/kalpana-circle/chat')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
+        <Link href={navHref('/kalpana-circle/saved')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🔖</Link>
         <Link href={userId ? (myUsername ? `/creator/${myUsername}` : '/home') : '/login?next=/kalpana-circle'} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>👤</Link>
       </div>
     </div>
