@@ -25,12 +25,17 @@ import { supabase } from '../lib/supabase';
 // desktop-first with no responsive behavior — on narrow/mobile viewports the
 // 240px sidebar ate most of the screen and the nav (hamburger + logo +
 // search + Create + K Circle + theme toggle + avatar) had no room to fit,
-// causing overflow/squeeze. Fixed via an `isMobile` flag (<=768px):
-// sidebar becomes a fixed overlay drawer with a tap-to-close backdrop
-// instead of pushing the content column, and the nav sheds
-// non-essential elements (search bar, "powered by MANGAL" subtitle,
-// K Circle label text) at that breakpoint. See SidebarNav and the nav JSX
-// below.
+// causing overflow/squeeze. First fixed via a JS `isMobile` flag read from
+// `window.innerWidth`, then that fix itself was found to cause a real bug:
+// `window` is undefined during server rendering, so the server always sent
+// down full desktop markup, and a mobile browser painted that broken/
+// overflowing layout before React hydrated and corrected it — a visible
+// flash on every mobile load, and a genuine hydration mismatch. Reworked to
+// pure CSS `@media (max-width: 768px)` rules (see the <style> block in the
+// nav JSX) so the compact layout — sidebar as a fixed overlay drawer with a
+// tap-to-close backdrop, search bar/"powered by MANGAL" subtitle/K Circle
+// label text dropped — paints correctly on the very first frame, no JS
+// required. See SidebarNav and the nav JSX below.
 
 interface RealVideo {
   id: string;
@@ -101,51 +106,49 @@ const SIDEBAR_ITEMS: { id: SidebarItem; label: string; icon: string }[] = [
 ];
 
 function SidebarNav({
-  open,
+  desktopOpen,
+  mobileOpen,
   active,
   onSelect,
-  isMobile,
   onClose,
 }: {
-  open: boolean;
+  desktopOpen: boolean;
+  mobileOpen: boolean;
   active: SidebarItem;
   onSelect: (id: SidebarItem) => void;
-  isMobile: boolean;
   onClose: () => void;
 }) {
+  // ── Hydration-safe mobile handling (Aug 2026 fix) ──
+  // Previously this branched on a JS `isMobile` boolean seeded from
+  // `window.innerWidth`, which is undefined during SSR. That meant the
+  // server always rendered the desktop version (sidebar pushing content,
+  // full-width nav) and a mobile browser had to wait for React to hydrate
+  // and recompute the real width before switching to the drawer layout —
+  // a visible flash of broken/overflowing desktop chrome on every mobile
+  // load, and a genuine hydration mismatch. Fixed by moving the
+  // mobile-vs-desktop *visual* behavior entirely into CSS `@media` rules
+  // (see the <style> block in KaTubePage), so the correct layout is
+  // painted immediately with no JS required. `desktopOpen`/`mobileOpen`
+  // are now two independent, breakpoint-agnostic booleans (both default
+  // to the same value on server and client, so there's nothing to
+  // mismatch) — CSS decides which one actually matters at a given width.
   return (
     <>
-      {/* Tap-to-close backdrop — only exists as an overlay drawer on mobile */}
-      {isMobile && open && (
-        <div
-          onClick={onClose}
-          aria-hidden="true"
-          style={{
-            position: 'fixed', inset: '64px 0 0 0', background: 'rgba(0,0,0,0.5)',
-            zIndex: 150,
-          }}
-        />
-      )}
-      <aside style={{
-        width: open ? '240px' : '0px',
-        flexShrink: 0,
-        overflow: 'hidden',
-        borderRight: open && !isMobile ? '1px solid var(--border-color)' : 'none',
-        transition: 'width 0.2s ease, border-color 0.2s ease',
-        position: isMobile ? 'fixed' : 'sticky',
-        top: '64px',
-        left: 0,
-        alignSelf: 'flex-start',
-        height: 'calc(100vh - 64px)',
-        zIndex: isMobile ? 200 : 'auto',
-        background: isMobile ? 'var(--bg-primary)' : 'transparent',
-        boxShadow: isMobile && open ? '4px 0 24px rgba(0,0,0,0.35)' : 'none',
-      }}>
+      {/* Tap-to-close backdrop — CSS-only hidden above 768px, so this is
+          harmless to always render. */}
+      <div
+        onClick={onClose}
+        aria-hidden="true"
+        className={`katube-backdrop${mobileOpen ? ' katube-backdrop--open' : ''}`}
+      />
+      <aside
+        className={`katube-sidebar${!desktopOpen ? ' katube-sidebar--desktop-closed' : ''}${mobileOpen ? ' katube-sidebar--mobile-open' : ''}`}
+      >
         <nav style={{ width: '240px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {SIDEBAR_ITEMS.map(item => (
             <button
               key={item.id}
-              onClick={() => { onSelect(item.id); if (isMobile) onClose(); }}
+              onClick={() => { onSelect(item.id); onClose(); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '20px',
                 padding: '12px 20px', borderRadius: '10px', border: 'none',
@@ -321,13 +324,23 @@ export default function KaTubePage() {
   const [videos, setVideos] = useState<RealVideo[]>([]);
   const [shorts, setShorts] = useState<RealShort[]>([]);
   const [loading, setLoading] = useState(true);
-  // Mobile detection: read synchronously via a lazy useState initializer
-  // (same pattern used elsewhere in this app for values only known at
-  // mount, e.g. login's nextPath — guaranteed correct before first paint,
-  // no flash of the wrong layout). Breakpoint matches typical
-  // phone/small-tablet width.
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
-  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window === 'undefined' || window.innerWidth > 768);
+  // ── Sidebar open state (Aug 2026 mobile-compat fix) ──
+  // Two independent booleans instead of one `isMobile`-branching value:
+  // `desktopSidebarOpen` is the persistent collapse toggle desktop users
+  // get from the hamburger; `mobileDrawerOpen` is the mobile overlay
+  // drawer. Both default identically on server and client (no
+  // `window.innerWidth` read during render), so there's no hydration
+  // mismatch — CSS `@media` rules (see <style> below) decide which one
+  // actually controls what's on screen at a given viewport width.
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const toggleSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      setMobileDrawerOpen(v => !v);
+    } else {
+      setDesktopSidebarOpen(v => !v);
+    }
+  };
   const [activeSidebar, setActiveSidebar] = useState<SidebarItem>('home');
   const [showAllFastTap, setShowAllFastTap] = useState(false);
   const [activeFilter, setActiveFilter] = useState(0);
@@ -335,12 +348,6 @@ export default function KaTubePage() {
   const [activeTool, setActiveTool] = useState('All');
   const [isLight, setIsLight] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -426,22 +433,109 @@ export default function KaTubePage() {
   return (
     <div data-theme={isLight ? 'light' : 'dark'} style={{ ...katubeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
+      {/* ── Mobile compatibility (Aug 2026 fix) ──
+          All of the responsive behavior below (nav padding/gap, hiding the
+          search bar and "powered by MANGAL" subtitle, shrinking Create/K
+          Circle to icon-only, the sidebar drawer) used to branch on a JS
+          `isMobile` boolean seeded from `window.innerWidth`. That value is
+          unknown during server rendering, so the server always emitted the
+          full desktop markup; a mobile browser painted that (overflowing,
+          squeezed) desktop nav first and only switched to the compact
+          layout after React hydrated and measured the real viewport —
+          a visible flash of a broken layout on every mobile page load,
+          and technically a hydration mismatch. Replaced with pure CSS
+          `@media (max-width: 768px)` rules below, so the browser paints
+          the correct layout immediately with no JS round-trip needed. */}
+      <style>{`
+        .katube-nav {
+          padding: 0 20px;
+          gap: 16px;
+          justify-content: flex-start;
+        }
+        .katube-nav-left { gap: 14px; }
+        .katube-nav-right { gap: 10px; }
+        .katube-subtitle { display: inline-block; }
+        .katube-search-wrap { display: flex; }
+        .katube-label-full { display: inline; }
+        .katube-label-mobile { display: none; }
+        .katube-theme-toggle { display: inline-flex; }
+
+        .katube-backdrop { display: none; }
+
+        .katube-sidebar {
+          width: 240px;
+          flex-shrink: 0;
+          overflow: hidden;
+          position: sticky;
+          top: 64px;
+          left: 0;
+          align-self: flex-start;
+          height: calc(100vh - 64px);
+          border-right: 1px solid var(--border-color);
+          background: transparent;
+          transition: width 0.2s ease, border-color 0.2s ease;
+        }
+        .katube-sidebar.katube-sidebar--desktop-closed {
+          width: 0px;
+          border-right: none;
+        }
+
+        @media (max-width: 768px) {
+          .katube-nav {
+            padding: 0 12px;
+            gap: 8px;
+            justify-content: space-between;
+          }
+          .katube-nav-left { gap: 8px; }
+          .katube-nav-right { gap: 6px; }
+          .katube-subtitle { display: none; }
+          .katube-search-wrap { display: none; }
+          .katube-label-full { display: none; }
+          .katube-label-mobile { display: inline; }
+          .katube-theme-toggle { display: none; }
+
+          .katube-backdrop.katube-backdrop--open {
+            display: block;
+            position: fixed;
+            inset: 64px 0 0 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 150;
+          }
+
+          .katube-sidebar {
+            position: fixed;
+            top: 64px;
+            left: 0;
+            height: calc(100vh - 64px);
+            z-index: 200;
+            background: var(--bg-primary);
+            border-right: none;
+            width: 240px;
+            transform: translateX(-100%);
+            transition: transform 0.2s ease;
+            box-shadow: none;
+          }
+          .katube-sidebar.katube-sidebar--mobile-open {
+            transform: translateX(0);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.35);
+          }
+        }
+      `}</style>
+
       {/* ── NAV — YouTube layout: hamburger + logo | search | create + avatar ──
-          Responsive: below 768px the search bar and "powered by MANGAL"
-          subtitle are dropped and K Circle collapses to its icon, so the
-          essential controls (menu, logo, Create, theme, profile) always
-          fit without horizontal overflow. */}
-      <nav style={{
+          Responsive: below 768px (via CSS, see <style> above) the search bar
+          and "powered by MANGAL" subtitle are dropped and K Circle/Create
+          collapse to icon-only, so the essential controls (menu, logo,
+          Create, theme, profile) always fit without horizontal overflow. */}
+      <nav className="katube-nav" style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
-        padding: isMobile ? '0 12px' : '0 20px', height: '64px',
-        display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px',
-        justifyContent: isMobile ? 'space-between' : 'flex-start',
+        height: '64px', display: 'flex', alignItems: 'center',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '14px', flexShrink: 0, minWidth: 0 }}>
+        <div className="katube-nav-left" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, minWidth: 0 }}>
           <button
-            onClick={() => setSidebarOpen(v => !v)}
+            onClick={toggleSidebar}
             aria-label="Toggle sidebar"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -456,62 +550,67 @@ export default function KaTubePage() {
           </button>
           <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
             <Image src="/katube-logo.png" alt="KaTube" width={140} height={70} style={{ display: 'block', height: '32px', width: 'auto', objectFit: 'contain' }} priority />
-            {!isMobile && (
-              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
-                powered by MANGAL
-              </span>
-            )}
+            <span className="katube-subtitle" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
+              powered by MANGAL
+            </span>
           </Link>
         </div>
 
         {/* Search — visual only for now, no search backend/results page yet.
-            Dropped below 768px: with the nav's other elements shrink-0,
-            there's no room for a search bar on a phone-width screen, and
-            it doesn't do anything yet anyway. */}
-        {!isMobile && (
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: '640px', margin: '0 auto', minWidth: 0 }}
-          >
-            <div style={{ display: 'flex', width: '100%', maxWidth: '560px' }}>
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search"
-                style={{
-                  flex: 1, height: '38px', padding: '0 16px', borderRadius: '20px 0 0 20px',
-                  border: '1px solid var(--border-color)', borderRight: 'none',
-                  background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13.5px', outline: 'none',
-                  minWidth: 0,
-                }}
-              />
-              <button
-                type="submit"
-                aria-label="Search"
-                title="Search isn't wired to real results yet"
-                style={{
-                  width: '52px', height: '38px', borderRadius: '0 20px 20px 0',
-                  border: '1px solid var(--border-color)', borderLeft: 'none',
-                  background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px',
-                }}
-              >🔍</button>
-            </div>
-          </form>
-        )}
+            Hidden below 768px via CSS: with the nav's other elements
+            shrink-0, there's no room for a search bar on a phone-width
+            screen, and it doesn't do anything yet anyway. */}
+        <form
+          className="katube-search-wrap"
+          onSubmit={(e) => e.preventDefault()}
+          style={{ flex: 1, justifyContent: 'center', maxWidth: '640px', margin: '0 auto', minWidth: 0 }}
+        >
+          <div style={{ display: 'flex', width: '100%', maxWidth: '560px' }}>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search"
+              style={{
+                flex: 1, height: '38px', padding: '0 16px', borderRadius: '20px 0 0 20px',
+                border: '1px solid var(--border-color)', borderRight: 'none',
+                background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13.5px', outline: 'none',
+                minWidth: 0,
+              }}
+            />
+            <button
+              type="submit"
+              aria-label="Search"
+              title="Search isn't wired to real results yet"
+              style={{
+                width: '52px', height: '38px', borderRadius: '0 20px 20px 0',
+                border: '1px solid var(--border-color)', borderLeft: 'none',
+                background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px',
+              }}
+            >🔍</button>
+          </div>
+        </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '10px', flexShrink: 0 }}>
+        <div className="katube-nav-right" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <Link href="/katube/upload" style={{
-            padding: isMobile ? '8px 12px' : '8px 14px', borderRadius: '18px', fontSize: '12.5px', fontWeight: 700,
+            padding: '8px 14px', borderRadius: '18px', fontSize: '12.5px', fontWeight: 700,
             color: '#fff', textDecoration: 'none', background: '#2563eb',
             whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px',
-          }}>{isMobile ? '+' : '+ Create'}</Link>
+          }}>
+            <span className="katube-label-full">+ Create</span>
+            <span className="katube-label-mobile">+</span>
+          </Link>
           <Link href="/kalpana-circle" style={{
-            padding: isMobile ? '8px 10px' : '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+            padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: '#7c3aed', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
             whiteSpace: 'nowrap',
-          }}>{isMobile ? '💬' : '💬 K Circle'}</Link>
-          {!isMobile && <ThemeToggle size={30} onChange={setIsLight} />}
+          }}>
+            <span className="katube-label-full">💬 K Circle</span>
+            <span className="katube-label-mobile">💬</span>
+          </Link>
+          <span className="katube-theme-toggle">
+            <ThemeToggle size={30} onChange={setIsLight} />
+          </span>
           {/* KaTube profile — channel verification + metrics live at
               /dashboard/katube (part of the main MANGAL dashboard, see
               CONTEXT.md §6). Swap for the founder's real logo image whenever
@@ -533,11 +632,11 @@ export default function KaTubePage() {
 
       <div style={{ display: 'flex', alignItems: 'flex-start' }}>
         <SidebarNav
-          open={sidebarOpen}
+          desktopOpen={desktopSidebarOpen}
+          mobileOpen={mobileDrawerOpen}
           active={activeSidebar}
           onSelect={setActiveSidebar}
-          isMobile={isMobile}
-          onClose={() => setSidebarOpen(false)}
+          onClose={() => setMobileDrawerOpen(false)}
         />
 
         <div style={{ flex: 1, minWidth: 0 }}>
