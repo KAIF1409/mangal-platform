@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -88,20 +88,32 @@ export default function KaTubeWatchPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
+  // Synchronous lock, separate from the `likeBusy` state used for the UI's
+  // disabled/opacity look. State updates are batched/async in React, so a
+  // fast double-click can fire the handler twice before the first
+  // setLikeBusy(true) has actually re-rendered — both calls would read the
+  // same stale `likeBusy === false` and both would fire. A ref is mutated
+  // synchronously, so the second click sees the lock immediately.
+  const likeLockRef = useRef(false);
 
-  // ── §4 item 5, step 2: Comment + Subscribe ──
-  // video_comments + creator_subscriptions tables (RLS already in place,
-  // 20260811165752_katube_comments_and_subscriptions.sql). Same toggle
-  // pattern as the like button above: optimistic UI, composite PK does the
-  // duplicate-prevention work at the DB level for subscriptions.
-  const [subscribed, setSubscribed] = useState(false);
-  const [subscriberCount, setSubscriberCount] = useState(0);
-  const [subBusy, setSubBusy] = useState(false);
+  // ── §4 item 5, step 2: Comment + Follow ──
+  // video_comments + creator_follows tables (RLS already in place,
+  // 20260811165752_katube_comments_and_subscriptions.sql +
+  // 20260812120000_katube_subscriptions_to_follows_rename.sql — this isn't
+  // sub-for-sub, it's a follow, same word/model as MANGAL's own `follows`
+  // table for series). Same toggle pattern as the like button above:
+  // optimistic UI, composite PK does the duplicate-prevention work at the
+  // DB level.
+  const [following, setFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followBusy, setFollowBusy] = useState(false);
+  const followLockRef = useRef(false);
 
   const [comments, setComments] = useState<VideoComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
   const [commentBusy, setCommentBusy] = useState(false);
+  const commentLockRef = useRef(false);
 
   useEffect(() => {
     if (!videoId) return;
@@ -214,55 +226,59 @@ export default function KaTubeWatchPage() {
     })();
   }, [videoId]);
 
-  // Subscriber count — public read, doesn't need userId.
+  // Follower count — public read, doesn't need userId.
   useEffect(() => {
     if (!video?.creatorId) return;
     supabase
-      .from('creator_subscriptions')
-      .select('subscriber_id', { count: 'exact', head: true })
+      .from('creator_follows')
+      .select('follower_id', { count: 'exact', head: true })
       .eq('creator_id', video.creatorId)
-      .then(({ count }) => setSubscriberCount(count || 0));
+      .then(({ count }) => setFollowerCount(count || 0));
   }, [video?.creatorId]);
 
-  // Whether the current viewer is subscribed — needs both.
+  // Whether the current viewer is following — needs both.
   useEffect(() => {
     if (!video?.creatorId || !userId) {
-      Promise.resolve().then(() => setSubscribed(false));
+      Promise.resolve().then(() => setFollowing(false));
       return;
     }
     supabase
-      .from('creator_subscriptions')
+      .from('creator_follows')
       .select('creator_id')
       .eq('creator_id', video.creatorId)
-      .eq('subscriber_id', userId)
+      .eq('follower_id', userId)
       .maybeSingle()
-      .then(({ data }) => setSubscribed(!!data));
+      .then(({ data }) => setFollowing(!!data));
   }, [video?.creatorId, userId]);
 
-  async function handleSubscribe() {
+  async function handleFollow() {
     if (!video) return;
     if (!userId) {
       window.location.href = '/login';
       return;
     }
-    if (userId === video.creatorId) return; // can't subscribe to your own channel
-    if (subBusy) return;
-    setSubBusy(true);
+    if (userId === video.creatorId) return; // can't follow your own channel
+    // Synchronous lock check+set — see likeLockRef comment above for why
+    // this can't just be the `followBusy` state check.
+    if (followLockRef.current) return;
+    followLockRef.current = true;
+    setFollowBusy(true);
 
-    const wasSubscribed = subscribed;
-    setSubscribed(!wasSubscribed);
-    setSubscriberCount(c => Math.max(0, c + (wasSubscribed ? -1 : 1)));
+    const wasFollowing = following;
+    setFollowing(!wasFollowing);
+    setFollowerCount(c => Math.max(0, c + (wasFollowing ? -1 : 1)));
 
-    const { error } = wasSubscribed
-      ? await supabase.from('creator_subscriptions').delete().eq('creator_id', video.creatorId).eq('subscriber_id', userId)
-      : await supabase.from('creator_subscriptions').insert({ creator_id: video.creatorId, subscriber_id: userId });
+    const { error } = wasFollowing
+      ? await supabase.from('creator_follows').delete().eq('creator_id', video.creatorId).eq('follower_id', userId)
+      : await supabase.from('creator_follows').insert({ creator_id: video.creatorId, follower_id: userId });
 
     if (error) {
       // roll back on failure
-      setSubscribed(wasSubscribed);
-      setSubscriberCount(c => Math.max(0, c + (wasSubscribed ? 1 : -1)));
+      setFollowing(wasFollowing);
+      setFollowerCount(c => Math.max(0, c + (wasFollowing ? 1 : -1)));
     }
-    setSubBusy(false);
+    followLockRef.current = false;
+    setFollowBusy(false);
   }
 
   async function handleCommentSubmit() {
@@ -272,7 +288,9 @@ export default function KaTubeWatchPage() {
       return;
     }
     const text = commentText.trim();
-    if (!text || commentBusy) return;
+    if (!text) return;
+    if (commentLockRef.current) return;
+    commentLockRef.current = true;
     setCommentBusy(true);
 
     const { data: row, error } = await supabase
@@ -287,6 +305,7 @@ export default function KaTubeWatchPage() {
       setComments(cs => [{ ...row, commenterName: profile?.username || 'You' }, ...cs]);
       setCommentText('');
     }
+    commentLockRef.current = false;
     setCommentBusy(false);
   }
 
@@ -296,7 +315,8 @@ export default function KaTubeWatchPage() {
       window.location.href = '/login';
       return;
     }
-    if (likeBusy) return;
+    if (likeLockRef.current) return;
+    likeLockRef.current = true;
     setLikeBusy(true);
 
     const wasLiked = liked;
@@ -318,6 +338,7 @@ export default function KaTubeWatchPage() {
       setLiked(wasLiked);
       setVideo(v => v ? { ...v, likes: prevLikes } : v);
     }
+    likeLockRef.current = false;
     setLikeBusy(false);
   }
 
@@ -411,18 +432,18 @@ export default function KaTubeWatchPage() {
                   )}
                   {userId !== video.creatorId && (
                     <button
-                      onClick={handleSubscribe}
-                      disabled={subBusy}
+                      onClick={handleFollow}
+                      disabled={followBusy}
                       style={{
                         fontSize: '12px', fontWeight: 700,
-                        color: subscribed ? 'var(--text-secondary)' : '#fff',
-                        background: subscribed ? 'var(--bg-card)' : '#2563eb',
-                        border: subscribed ? '1px solid var(--border-color)' : '1px solid #2563eb',
-                        borderRadius: '20px', padding: '5px 14px', cursor: subBusy ? 'default' : 'pointer',
-                        opacity: subBusy ? 0.6 : 1,
+                        color: following ? 'var(--text-secondary)' : '#fff',
+                        background: following ? 'var(--bg-card)' : '#2563eb',
+                        border: following ? '1px solid var(--border-color)' : '1px solid #2563eb',
+                        borderRadius: '20px', padding: '5px 14px', cursor: followBusy ? 'default' : 'pointer',
+                        opacity: followBusy ? 0.6 : 1,
                       }}
                     >
-                      {subscribed ? 'Subscribed' : 'Subscribe'}{subscriberCount > 0 ? ` · ${subscriberCount.toLocaleString()}` : ''}
+                      {following ? 'Following' : 'Follow'}{followerCount > 0 ? ` · ${followerCount.toLocaleString()}` : ''}
                     </button>
                   )}
                   <span>·</span>

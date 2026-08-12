@@ -215,13 +215,23 @@ re-deriving the business case from scratch.
    `videos.ai_tool` (AND'd together regardless of active sort chip).
 4. Real Supabase `posts` / `comments` tables for the community platform, wire up
    the composer
-5. Subscribe/like/comment interactions across the video platform once the above
-   exist — **Like: DONE (`17eb400`)**, see §11. **Comment + Subscribe: DONE
-   (`f9b1388`)** — `video_comments` + `creator_subscriptions` tables were
-   already live in Supabase (applied via MCP as `katube_comments_and_subscriptions`
-   but the migration file was never committed — added retroactively). Watch page
-   now has a real comment box/list and a Subscribe button (composite PK on
-   `creator_subscriptions` prevents double-subscribe, same pattern as likes).
+5. Follow/like/comment interactions across the video platform once the above
+   exist — **Like: DONE (`17eb400`)**, see §11. **Comment + Follow: DONE
+   (`f9b1388`, renamed subscribe→follow shortly after)** —
+   `video_comments` + `creator_follows` tables were already live in Supabase
+   under the name `creator_subscriptions` (applied via MCP as
+   `katube_comments_and_subscriptions` but the migration file was never
+   committed — added retroactively). Founder called out it's a **follow, not
+   sub-for-sub/subscribe** — table, column (`subscriber_id`→`follower_id`),
+   and UI all renamed to match MANGAL's existing `follows` (series) naming.
+   Watch page has a real comment box/list and a Follow button (composite PK
+   on `creator_follows` prevents double-follow, same pattern as likes). All
+   three actions (like/follow/comment) redirect to `/login` if signed out —
+   never allowed anonymously — and all three use a `useRef` lock (not just
+   the busy `useState`) to close a double-click race: two fast clicks can
+   both read a stale `busy === false` before React's first re-render lands,
+   since state updates are batched/async; a ref is mutated synchronously so
+   the second click sees the lock immediately.
 6. **Kalpanaverse sponsorship/ad monetization (documented future step, not started —
    gated behind real traffic).** Founder wants a revenue layer for Kalpanaverse
    itself, not just discovery-for-MANGAL. Direction agreed:
