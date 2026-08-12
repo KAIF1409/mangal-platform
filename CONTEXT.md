@@ -1289,6 +1289,40 @@ hydration-mismatch/flash-of-wrong-layout risk.
 - Committing one page/component at a time per the founder's explicit
   instruction for this pass — do not batch multiple pages into one commit.
 
+## 16. K Circle "Dreamer of the Week" pin wired up (DONE) — fastest of the three remaining items
+
+Founder asked which of broadcast channels / close-friends+dreamer-of-week
+UI / KaTube↔Circle cross-link (auto-post + embed) was fastest — this one
+won since `pinned_by`/`pinned_at` and the permission trigger
+(`kcircle_enforce_pin_permission`, §15) were already fully live; nothing
+needed but UI. No new migration.
+
+- **`isCreator` check** — mirrors the trigger's own rule (verified YouTube
+  channel via `creator_profiles.verified_youtube_channel_id`, or owns a
+  row in `series`), computed client-side purely to decide whether to show
+  the pin button; the trigger is still the real enforcement.
+- **Important nuance found while wiring this up:** `kcircle_posts`'s
+  UPDATE policy (`kcircle_posts_own_update`) is `auth.uid() = author_id`
+  — author-only. So even though the trigger's own logic would allow *any*
+  creator to pin *any* post, RLS gates the UPDATE before the trigger ever
+  runs, which in practice restricts pinning to **your own posts only**.
+  Built the UI to match what's actually enforced (📌 button only shown on
+  a creator's own post) rather than the trigger's nominally broader intent
+  — flagging in case the founder actually wants cross-post pinning (would
+  need a new UPDATE policy, e.g. "any creator can update pinned_by on any
+  post").
+- **UI (`app/kalpana-circle/page.tsx`):** 📌 pin/unpin button next to your
+  own post's timestamp (creators only); pinned posts get a "🌟 Dreamer of
+  the Week" banner + radiant-colored border and float to the top of the
+  feed (client-side sort by `pinned_at desc`, everything else keeps
+  `created_at desc`).
+
+**Not done:** no limit on how many posts you can have pinned at once (each
+pin is independent — RLS/trigger operate per-row, nothing clears a
+previous pin when a new one is set), no site-wide single Dreamer-of-the-
+Week (this is per-creator, not one global winner) — flag if the founder
+wants either of those tightened.
+
 ## 15. K Circle polls wired up (DONE) — the second orphaned schema is live
 
 Founder asked to wire up one of the schema-only orphans found in §13b;

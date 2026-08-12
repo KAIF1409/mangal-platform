@@ -48,6 +48,7 @@ interface KPost {
   savedByMe: boolean;
   poll: PollOption[] | null; // null = not a poll; [] shouldn't happen but guarded
   myVoteOptionId: string | null;
+  pinnedAt: string | null; // set = this is the author's pinned "Dreamer of the Week" post
 }
 
 interface KComment {
@@ -116,6 +117,7 @@ function KalpanaCircleInner() {
 
   const [posts, setPosts] = useState<KPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  const [isCreator, setIsCreator] = useState(false);
 
   const [stories, setStories] = useState<StoryGroup[]>([]);
   const [viewingStory, setViewingStory] = useState<{ groupIdx: number; storyIdx: number } | null>(null);
@@ -158,11 +160,28 @@ function KalpanaCircleInner() {
   }, [userId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // ── am I a creator? ── mirrors kcircle_enforce_pin_permission's own
+  // check (verified YouTube channel OR owns a series) so the pin button
+  // only shows where the server would actually allow the pin — RLS
+  // additionally restricts pinning to your own posts (kcircle_posts_own_update
+  // is author-only), so this only ever appears on posts you wrote.
+  /* eslint-disable react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as above */
+  useEffect(() => {
+    if (!userId) { setIsCreator(false); return; }
+    Promise.all([
+      supabase.from('creator_profiles').select('verified_youtube_channel_id').eq('user_id', userId).maybeSingle(),
+      supabase.from('series').select('id').eq('creator_id', userId).limit(1),
+    ]).then(([profRes, seriesRes]) => {
+      setIsCreator(!!profRes.data?.verified_youtube_channel_id || (seriesRes.data?.length ?? 0) > 0);
+    });
+  }, [userId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   // ── load feed ──
   const loadPosts = useCallback(async () => {
     setLoadingPosts(true);
     let query = supabase
-      .from('kcircle_posts').select('id, author_id, caption, image_url, tag, created_at')
+      .from('kcircle_posts').select('id, author_id, caption, image_url, tag, created_at, pinned_at')
       .order('created_at', { ascending: false }).limit(30);
     if (tagFilter) query = query.ilike('tag', tagFilter); // case-insensitive exact match on series title
     const { data: rows } = await query;
@@ -207,7 +226,7 @@ function KalpanaCircleInner() {
     });
     const myVoteByPost = new Map((myVoteRes.data ?? []).map(v => [v.post_id, v.option_id]));
 
-    setPosts(rows.map(r => ({
+    const mapped = rows.map(r => ({
       ...r,
       author: { username: usernameMap.get(r.author_id) ?? 'dreamer' },
       likeCount: likeCounts.get(r.id) ?? 0,
@@ -216,7 +235,18 @@ function KalpanaCircleInner() {
       savedByMe: mySaved.has(r.id),
       poll: optionsByPost.get(r.id) ?? null,
       myVoteOptionId: myVoteByPost.get(r.id) ?? null,
-    })));
+      pinnedAt: r.pinned_at,
+    }));
+    // Pinned ("Dreamer of the Week") posts float to the top, most
+    // recently pinned first; everything else keeps the created_at order
+    // the query already fetched it in.
+    mapped.sort((a, b) => {
+      if (a.pinnedAt && b.pinnedAt) return b.pinnedAt.localeCompare(a.pinnedAt);
+      if (a.pinnedAt) return -1;
+      if (b.pinnedAt) return 1;
+      return 0;
+    });
+    setPosts(mapped);
     setLoadingPosts(false);
   }, [userId, tagFilter]);
 
@@ -353,6 +383,19 @@ function KalpanaCircleInner() {
     } else {
       await supabase.from('kcircle_poll_votes').insert({ post_id: post.id, option_id: optionId, voter_id: userId });
     }
+  };
+
+  // ── dreamer of the week ── RLS only allows updating your own posts
+  // (kcircle_posts_own_update), so despite the server trigger's broader
+  // "any creator can pin" check, in practice this only ever pins your own
+  // post. The trigger sets/clears pinned_at automatically.
+  const togglePin = async (post: KPost) => {
+    if (!userId) return;
+    const pinning = !post.pinnedAt;
+    const { error } = await supabase.from('kcircle_posts')
+      .update({ pinned_by: pinning ? userId : null }).eq('id', post.id);
+    if (error) return;
+    loadPosts();
   };
 
   // ── saves ──
@@ -830,15 +873,27 @@ function KalpanaCircleInner() {
           </div>
         ) : posts.map(post => (
           <div key={post.id} style={{
-            borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+            borderRadius: '14px', background: 'var(--bg-card)', border: `1px solid ${post.pinnedAt ? RADIANT_SOLID : 'var(--border-color)'}`,
             marginBottom: '14px', overflow: 'hidden',
           }}>
+            {post.pinnedAt && (
+              <div style={{
+                padding: '6px 14px', fontSize: '11px', fontWeight: 800, color: '#27272a', background: RADIANT,
+                display: 'flex', alignItems: 'center', gap: '5px',
+              }}>🌟 Dreamer of the Week</div>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}>
               <Avatar name={post.author?.username ?? 'dreamer'} size={34} />
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.author?.username}</div>
                 <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{timeAgo(post.created_at)} ago</div>
               </div>
+              {isCreator && post.author_id === userId && (
+                <button onClick={() => togglePin(post)} title={post.pinnedAt ? 'Unpin' : 'Pin as Dreamer of the Week'} style={{
+                  background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px',
+                  color: post.pinnedAt ? RADIANT_SOLID : 'var(--text-tertiary)', flexShrink: 0,
+                }}>📌</button>
+              )}
             </div>
 
             {post.caption && (
