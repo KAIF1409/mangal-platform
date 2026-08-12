@@ -1146,6 +1146,57 @@ existing `manga-pages` storage bucket under a `kcircle/` prefix rather
 than a dedicated bucket (reused what was already wired up — flag if a
 separate bucket is wanted instead); no realtime chat (3s polling only).
 
+### 12a. K Circle security fixes + group chats (DONE)
+
+Two real RLS bugs found in `20260812_kcircle_social.sql` and fixed via new
+migrations (kept as new migrations rather than editing the shipped one, per
+this repo's existing convention):
+
+- **`20260812101451_kcircle_fix_participant_rls_and_groups.sql`** — the
+  participants insert policy shipped as
+  `with check (auth.uid() = user_id or true)`. The `or true` makes the
+  check always pass, so any authenticated user could insert themselves into
+  *any* conversation and read others' DMs via
+  `kcircle_messages_participant_read`. Replaced with a real
+  `auth.uid() = user_id` check. **This was already applied directly to the
+  live project in a prior session** (visible via `list_migrations` before
+  this repo file existed) — this migration file just brings the repo history
+  in sync with what's live.
+- **`20260812110000_kcircle_group_chat_schema_and_rls_fix.sql`** — a second,
+  separate bug in the self-read policy:
+  `p2.conversation_id = p2.conversation_id` (comparing a column to itself,
+  always true) instead of comparing to the *outer* row's
+  `conversation_id`. This let any user who participates in *any*
+  conversation read participant rows for *every* conversation on the
+  platform (a membership/DM-pairing leak, distinct from the message-content
+  leak above). Fixed to properly scope by the outer row's
+  `conversation_id`. Same migration also:
+  - Widens the insert policy so an **existing participant can add other
+    participants** to a conversation they're already in (needed for group
+    creation — was previously self-insert-only, which blocked groups
+    entirely), while keeping it fully `auth.uid()`-scoped (no `OR true`
+    reintroduced).
+  - Adds `is_group boolean default false`, `title text`, `created_by uuid`
+    to `kcircle_conversations`.
+- **Chat page rewrite (`app/kalpana-circle/chat/page.tsx`)** — `+ New` now
+  toggles between "Direct message" (unchanged 1:1 flow) and "Group chat"
+  (multi-select username search, optional group name, 2–20 other members).
+  Conversation list shows a 3-circle overlapping `GroupAvatar` + member
+  count for groups vs the existing single `Avatar` for DMs. Inside a group
+  thread, each incoming message is labeled with the sender's username
+  (resolved once per thread open via `creator_profiles`); DMs are
+  unchanged (no label needed, only two people). Still 3s polling, same as
+  before — no realtime subscription added.
+
+**Still not done from this section (backlog, next up):** dedicated group
+settings (add/remove members after creation, leave group, rename), read
+receipts/typing indicators, image/attachment messages, and the still-open
+gaps from §12 above (search tab, realtime, dedicated storage bucket). The
+broader "Instagram + Discord-minus-reels" feature parity the founder wants
+(stories replies, saved posts, close friends, voice/video, channels/roles)
+is intentionally scoped out of this pass — flag which of these to prioritize
+next.
+
 ## 13. Site-wide mobile-compatibility sweep (in progress)
 
 **Problem reported by founder:** the entire site was built and tested
