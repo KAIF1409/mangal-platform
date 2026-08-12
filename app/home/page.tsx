@@ -210,13 +210,46 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden', maxWidth: '100vw' }}>
 
+      {/* Responsive rules for the /home nav — same .mangal-* + <style> tag
+          pattern as app/dashboard/page.tsx and app/page.tsx. The center
+          links div used to be `overflow: hidden` with no scroll, which
+          silently CLIPPED nav items (Rankings/Genres/Tags/New
+          Releases/Library/KaTube/K Circle) on any viewport too narrow to
+          fit all 8 — worse than the landing page's version of this bug,
+          since there's no footer here to re-surface those links. Fixed by
+          making it horizontally scrollable at every width (invisible on
+          desktop where everything already fits, a real scroll strip on
+          phones) instead of hiding content with no way to reach it. */}
+      <style>{`
+        .mangal-home-nav-center {
+          display: flex; gap: 4px; align-items: center;
+          overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+          min-width: 0;
+        }
+        .mangal-home-nav-center::-webkit-scrollbar { display: none; }
+
+        @media (max-width: 860px) {
+          .mangal-home-nav { padding: 0 12px !important; }
+          .mangal-home-nav-center a { padding: 6px 8px !important; font-size: 11px !important; }
+          .mangal-home-lang-toggle { display: none; }
+        }
+
+        @media (max-width: 560px) {
+          .mangal-home-nav { height: 56px !important; gap: 6px; }
+          .mangal-home-brand-text { display: none; }
+          .mangal-home-login-link { display: none; }
+          .mangal-home-nav-right { gap: 6px !important; }
+        }
+      `}</style>
+
       {/* ── NAV ── */}
-      <nav style={{
+      <nav className="mangal-home-nav" style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 16px', height: '64px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: '8px',
       }}>
         {/* Logo */}
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
@@ -228,11 +261,11 @@ export default function HomePage() {
             style={{ display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
             priority
           />
-          <span style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
+          <span className="mangal-home-brand-text" style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
         </Link>
 
         {/* Center Nav Links */}
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', overflow: 'hidden', flexShrink: 1 }}>
+        <div className="mangal-home-nav-center">
           {[
             { label: t('browse'), href: '/' },
             { label: '🏆 Rankings', href: '/rankings' },
@@ -269,12 +302,14 @@ export default function HomePage() {
         </div>
 
         {/* Right side */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="mangal-home-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <ThemeToggle size={30} />
 
           {/* Step 22 — Hindi UI Toggle. Sits left of ProfileMenu/auth buttons so
-              the profile chip always stays the rightmost element on every page. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '3px' }}>
+              the profile chip always stays the rightmost element on every page.
+              Hidden under 860px (mangal-home-lang-toggle) — low-priority control
+              that was crowding out the auth/profile controls on tablets/phones. */}
+          <div className="mangal-home-lang-toggle" style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '3px' }}>
             {LANGUAGES.map(({ code, label }) => (
               <button
                 key={code}
@@ -298,7 +333,7 @@ export default function HomePage() {
                 <a href="/dashboard" style={{
                   padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
                   background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
-                  color: '#d97706', textDecoration: 'none',
+                  color: '#d97706', textDecoration: 'none', whiteSpace: 'nowrap',
                 }}>{t('studio')}</a>
               )}
               {/* Profile click → sliding dropdown. Reader accounts see Become a Creator
@@ -307,11 +342,11 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              <a href="/login" style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>{t('logIn')}</a>
+              <a href="/login" className="mangal-home-login-link" style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t('logIn')}</a>
               <a href="/login" style={{
                 padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
                 background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
-                color: '#fff', textDecoration: 'none',
+                color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
               }}>{t('getStarted')}</a>
             </>
           )}
@@ -543,7 +578,13 @@ export default function HomePage() {
                   </h2>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{series.length} {t('seriesTotal')}</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+                {/* minmax(min(340px, 100%), 1fr) instead of minmax(340px, 1fr) —
+                    plain minmax(340px, ...) can't shrink columns below 340px, so
+                    on any phone narrower than ~370px content width (nearly all of
+                    them) the grid forced horizontal overflow on the whole page.
+                    min(340px, 100%) lets a single column fall back to the
+                    container's real width instead. */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(340px, 100%), 1fr))', gap: '16px', marginBottom: '40px' }}>
                   {featured.map(s => (
                     <FeaturedCard key={s.id} series={s} />
                   ))}
