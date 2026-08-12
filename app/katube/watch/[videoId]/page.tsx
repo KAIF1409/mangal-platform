@@ -19,10 +19,19 @@ interface WatchVideo {
   views: number;
   likes: number;
   creator: string;
+  creatorId: string;
   creatorUsername: string | null;
   seriesId: string | null;
   basedOn: string | null;
   isShort: boolean;
+}
+
+interface VideoComment {
+  id: string;
+  comment_text: string;
+  created_at: string;
+  commenter_id: string;
+  commenterName: string;
 }
 
 // ── §4 item 5, step 1: Like ──
@@ -80,6 +89,20 @@ export default function KaTubeWatchPage() {
   const [liked, setLiked] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
 
+  // ── §4 item 5, step 2: Comment + Subscribe ──
+  // video_comments + creator_subscriptions tables (RLS already in place,
+  // 20260811165752_katube_comments_and_subscriptions.sql). Same toggle
+  // pattern as the like button above: optimistic UI, composite PK does the
+  // duplicate-prevention work at the DB level for subscriptions.
+  const [subscribed, setSubscribed] = useState(false);
+  const [subscriberCount, setSubscriberCount] = useState(0);
+  const [subBusy, setSubBusy] = useState(false);
+
+  const [comments, setComments] = useState<VideoComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(true);
+  const [commentText, setCommentText] = useState('');
+  const [commentBusy, setCommentBusy] = useState(false);
+
   useEffect(() => {
     if (!videoId) return;
 
@@ -110,6 +133,7 @@ export default function KaTubeWatchPage() {
         views: row.views,
         likes: row.likes,
         creator: creatorRes.data?.username || 'MANGAL Creator',
+        creatorId: row.creator_id,
         creatorUsername: creatorRes.data?.username || null,
         seriesId: row.series_id,
         basedOn: seriesRes.data?.title || null,
@@ -154,6 +178,117 @@ export default function KaTubeWatchPage() {
       .maybeSingle()
       .then(({ data }) => setLiked(!!data));
   }, [videoId, userId]);
+
+  // Comments — public read, so fetch as soon as we have the videoId (no
+  // need to wait on auth). Commenter usernames joined client-side the same
+  // way the recommended-videos creator names are (single batched `in()`
+  // query rather than N+1 per-comment lookups).
+  useEffect(() => {
+    if (!videoId) return;
+    (async () => {
+      setCommentsLoading(true);
+      const { data: rows } = await supabase
+        .from('video_comments')
+        .select('id, comment_text, created_at, commenter_id')
+        .eq('video_id', videoId)
+        .order('created_at', { ascending: false });
+
+      if (!rows || rows.length === 0) {
+        setComments([]);
+        setCommentsLoading(false);
+        return;
+      }
+
+      const commenterIds = [...new Set(rows.map(r => r.commenter_id))];
+      const { data: profiles } = await supabase
+        .from('creator_profiles')
+        .select('user_id, username')
+        .in('user_id', commenterIds);
+      const nameMap = new Map((profiles || []).map(p => [p.user_id, p.username]));
+
+      setComments(rows.map(r => ({
+        ...r,
+        commenterName: nameMap.get(r.commenter_id) || 'MANGAL Viewer',
+      })));
+      setCommentsLoading(false);
+    })();
+  }, [videoId]);
+
+  // Subscriber count — public read, doesn't need userId.
+  useEffect(() => {
+    if (!video?.creatorId) return;
+    supabase
+      .from('creator_subscriptions')
+      .select('subscriber_id', { count: 'exact', head: true })
+      .eq('creator_id', video.creatorId)
+      .then(({ count }) => setSubscriberCount(count || 0));
+  }, [video?.creatorId]);
+
+  // Whether the current viewer is subscribed — needs both.
+  useEffect(() => {
+    if (!video?.creatorId || !userId) {
+      Promise.resolve().then(() => setSubscribed(false));
+      return;
+    }
+    supabase
+      .from('creator_subscriptions')
+      .select('creator_id')
+      .eq('creator_id', video.creatorId)
+      .eq('subscriber_id', userId)
+      .maybeSingle()
+      .then(({ data }) => setSubscribed(!!data));
+  }, [video?.creatorId, userId]);
+
+  async function handleSubscribe() {
+    if (!video) return;
+    if (!userId) {
+      window.location.href = '/login';
+      return;
+    }
+    if (userId === video.creatorId) return; // can't subscribe to your own channel
+    if (subBusy) return;
+    setSubBusy(true);
+
+    const wasSubscribed = subscribed;
+    setSubscribed(!wasSubscribed);
+    setSubscriberCount(c => Math.max(0, c + (wasSubscribed ? -1 : 1)));
+
+    const { error } = wasSubscribed
+      ? await supabase.from('creator_subscriptions').delete().eq('creator_id', video.creatorId).eq('subscriber_id', userId)
+      : await supabase.from('creator_subscriptions').insert({ creator_id: video.creatorId, subscriber_id: userId });
+
+    if (error) {
+      // roll back on failure
+      setSubscribed(wasSubscribed);
+      setSubscriberCount(c => Math.max(0, c + (wasSubscribed ? 1 : -1)));
+    }
+    setSubBusy(false);
+  }
+
+  async function handleCommentSubmit() {
+    if (!video) return;
+    if (!userId) {
+      window.location.href = '/login';
+      return;
+    }
+    const text = commentText.trim();
+    if (!text || commentBusy) return;
+    setCommentBusy(true);
+
+    const { data: row, error } = await supabase
+      .from('video_comments')
+      .insert({ video_id: video.id, commenter_id: userId, comment_text: text })
+      .select('id, comment_text, created_at, commenter_id')
+      .single();
+
+    if (!error && row) {
+      const { data: profile } = await supabase
+        .from('creator_profiles').select('username').eq('user_id', userId).single();
+      setComments(cs => [{ ...row, commenterName: profile?.username || 'You' }, ...cs]);
+      setCommentText('');
+    }
+    setCommentBusy(false);
+  }
 
   async function handleLike() {
     if (!video) return;
@@ -274,6 +409,22 @@ export default function KaTubeWatchPage() {
                   ) : (
                     <span style={{ fontWeight: 700 }}>{video.creator}</span>
                   )}
+                  {userId !== video.creatorId && (
+                    <button
+                      onClick={handleSubscribe}
+                      disabled={subBusy}
+                      style={{
+                        fontSize: '12px', fontWeight: 700,
+                        color: subscribed ? 'var(--text-secondary)' : '#fff',
+                        background: subscribed ? 'var(--bg-card)' : '#2563eb',
+                        border: subscribed ? '1px solid var(--border-color)' : '1px solid #2563eb',
+                        borderRadius: '20px', padding: '5px 14px', cursor: subBusy ? 'default' : 'pointer',
+                        opacity: subBusy ? 0.6 : 1,
+                      }}
+                    >
+                      {subscribed ? 'Subscribed' : 'Subscribe'}{subscriberCount > 0 ? ` · ${subscriberCount.toLocaleString()}` : ''}
+                    </button>
+                  )}
                   <span>·</span>
                   <span>{video.views.toLocaleString()} views</span>
                   <span>·</span>
@@ -305,11 +456,71 @@ export default function KaTubeWatchPage() {
                 )}
               </div>
 
-              <div style={{
-                padding: '14px 16px', borderRadius: '12px', background: 'var(--bg-card)',
-                border: '1px solid var(--border-color)', fontSize: '12.5px', color: 'var(--text-tertiary)', lineHeight: 1.6,
-              }}>
-                Comment and subscribe aren&apos;t built yet — that&apos;s the next step.
+              {/* Comments */}
+              <div style={{ marginTop: '8px' }}>
+                <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 12px' }}>
+                  {comments.length > 0 ? `${comments.length.toLocaleString()} Comments` : 'Comments'}
+                </h2>
+
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '18px' }}>
+                  <input
+                    value={commentText}
+                    onChange={e => setCommentText(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !commentBusy) handleCommentSubmit(); }}
+                    placeholder={userId ? 'Add a comment…' : 'Log in to comment'}
+                    disabled={commentBusy}
+                    style={{
+                      flex: 1, minWidth: 0, padding: '10px 14px', borderRadius: '20px',
+                      border: '1px solid var(--border-color)', background: 'var(--bg-card)',
+                      color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
+                    }}
+                  />
+                  <button
+                    onClick={handleCommentSubmit}
+                    disabled={commentBusy || !commentText.trim()}
+                    style={{
+                      fontSize: '12.5px', fontWeight: 700, color: '#fff', background: '#2563eb',
+                      border: 'none', borderRadius: '20px', padding: '0 18px', cursor: 'pointer',
+                      opacity: (commentBusy || !commentText.trim()) ? 0.5 : 1, flexShrink: 0,
+                    }}
+                  >
+                    Post
+                  </button>
+                </div>
+
+                {commentsLoading ? (
+                  <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>Loading comments…</p>
+                ) : comments.length === 0 ? (
+                  <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>
+                    No comments yet — be the first to say something.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {comments.map(c => (
+                      <div key={c.id} style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{
+                          width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                          background: 'rgba(37,99,235,0.15)', color: '#2563eb',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '13px', fontWeight: 800,
+                        }}>
+                          {c.commenterName.charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)' }}>{c.commenterName}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                              {new Date(c.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, wordBreak: 'break-word' }}>
+                            {c.comment_text}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
