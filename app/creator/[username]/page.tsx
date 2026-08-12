@@ -255,6 +255,12 @@ export default function CreatorProfilePage() {
                 <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>👁 {formatViews(totalViews)}</span>
                 <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginLeft: '5px' }}>total views</span>
               </div>
+              <Link href={`/kalpana-circle/broadcast/${creator.username}`} style={{
+                fontSize: '11.5px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none',
+                padding: '6px 12px', borderRadius: '8px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)',
+              }}>
+                📣 Updates
+              </Link>
               {isDeveloper && accountActive && (
                 banConfirm ? (
                   <div style={{ display: 'inline-flex', gap: '6px' }}>

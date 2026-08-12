@@ -16,7 +16,7 @@ ecosystem, all under one Next.js app, one Supabase project, one Vercel deploymen
 |---|---|---|---|
 | **MangaNovels** | `/`, `/search`, `/read/...` | The original MANGAL platform — read manga, comics, and novels. Fully live. | ✅ Live, in active use |
 | **KaTube** | `/katube` (redirected from `/kalpanaverse`) | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row and full-screen Shorts feed. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟢 Grid, Shorts (row + full-screen feed), watch page (incl. tag-based recommendations), upload flow, channel verification, content moderation, ranking/filtering, and like/comment/subscribe engagement all live on real Supabase data (see §4, §11) |
-| **Kalpana Circle** | `/kalpana-circle` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from the video platform, not a tab inside it. Brand: purple/violet. | 🟡 UI demo only — placeholder posts, composer disabled |
+| **Kalpana Circle** | `/kalpana-circle` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from the video platform, not a tab inside it. Brand: purple/violet. | 🟢 Posts, stories, likes, comments, saved posts, image-attachment DMs/group chats, live search, group settings, series↔Circle cross-link (tag filter), and creator broadcast channels all live on real Supabase data (see §12–§12g). Notifications, polls, close friends, voice/video, and channels/roles are not built yet (see §14). |
 
 The homepage (`app/page.tsx`) shows all three as equal "doors" right under the hero,
 plus nav links on both the public landing page and the authenticated `/home` page.
@@ -1244,7 +1244,112 @@ add/remove/rename rights, matching the open trust model already in place
 for building groups. Tighten this (creator-only rename/remove) if the
 founder wants it later.
 
-## 13. Site-wide mobile-compatibility sweep (in progress)
+### 12d. Image/attachment messages in DMs and group chats (DONE)
+
+`app/kalpana-circle/chat/page.tsx` — messages can now carry an image, not
+just text. Uploads go to the `kcircle-media` bucket (`messages/{userId}-{ts}.ext`,
+same bucket §12b introduced for posts/stories). `kcircle_messages` gained
+an `image_url` column (nullable — a message can be text-only, image-only,
+or both). Bubble rendering shows the image above/below the text as
+appropriate; a message with only an image has no empty text bubble.
+
+**Not done:** no multi-image messages, no video/file attachments (images
+only), no upload progress indicator beyond a disabled-send-button state.
+
+### 12e. Saved posts (DONE)
+
+Instagram-style bookmarking. New table `kcircle_saved_posts` (`post_id`,
+`user_id`, composite PK — same one-row-per-user-per-post shape as
+`kcircle_post_likes`), migration `20260812150000_kcircle_saved_posts.sql`.
+`app/kalpana-circle/page.tsx` post cards get a 🔖 save/unsave toggle
+(optimistic update, same pattern as the ❤️ like toggle). New page
+`app/kalpana-circle/saved/page.tsx` lists the signed-in user's saved
+posts, linked from the bottom-nav/top-nav 🔖 icon (previously unused/
+placeholder icon slot).
+
+### 12f. Series ↔ Kalpana Circle cross-link (DONE)
+
+The two products had no bridge — a reader on a series page had no way to
+jump into fan discussion for that series, and `kcircle_posts.tag` (a
+column that's existed since the original schema, §12) was never actually
+written to by any UI. Fixed both directions:
+
+- **Series page → Circle:** new "💬 Discuss on Kalpana Circle" button
+  (`app/series/[seriesId]/page.tsx`, next to Follow/Share) links to
+  `/kalpana-circle?tag=<series title>`.
+- **Circle → filtered view:** `app/kalpana-circle/page.tsx` reads the
+  `?tag=` param (case-insensitive `ilike` match against `kcircle_posts.tag`),
+  shows a "Showing posts tagged…" banner with a Clear link, and — since
+  `useSearchParams` needs one — the page is now wrapped in a `Suspense`
+  boundary (component split into an outer `KalpanaCirclePage` wrapper +
+  inner `KalpanaCircleInner`, same pattern as `app/upload/page.tsx`).
+- **Composer:** new optional "Tag a series" text input, auto-prefilled
+  from `?tag=` when arriving via the cross-link, saved to
+  `kcircle_posts.tag` on post.
+
+**Not done:** tag matching is exact-ish (`ilike`, so case-insensitive but
+not fuzzy/typo-tolerant) and free-text (no autocomplete against real
+series titles, no validation that a typed tag matches an existing series).
+No reverse widget yet (a "Fan Theories & Art" preview embedded on the
+series page itself — the button linking out is the only bridge so far).
+
+### 12g. Creator broadcast channels (DONE)
+
+Discord-style announcement channel: the creator posts, fans can only
+like/comment — no reply-noise like a normal open group chat. One channel
+per creator, created lazily (on the creator's own first visit to their
+channel; a fan visiting first just sees "hasn't started broadcasting
+yet").
+
+**Backend** (`supabase/migrations/20260813120000_kcircle_broadcast_channels.sql`,
+applied live): reuses `kcircle_conversations`/`kcircle_messages` rather
+than a parallel table set — a broadcast channel is just a conversation
+with a new `is_broadcast boolean` column set true, `created_by` = the
+creator, and deliberately **no participant rows** (fans read it without
+being "added", unlike DMs/groups which gate reads through
+`kcircle_conversation_participants`). New RLS:
+- `kcircle_conversations`/`kcircle_messages` get public-read policies
+  scoped to `is_broadcast = true`, open to any authenticated user.
+- Only the owning creator can insert messages into their own broadcast
+  conversation (`created_by = auth.uid()` check) — fans have no matching
+  insert policy, so posting is structurally creator-only.
+- The pre-existing wide-open `kcircle_conversations` insert policy
+  (`with check (true)`, from the group-chat trust model in §12a) was
+  narrowed to `not is_broadcast or created_by = auth.uid()` so nobody can
+  create a broadcast channel impersonating another creator. Non-broadcast
+  inserts (DMs, groups) are untouched.
+- Two new tables for fan reactions, both FK'd to `kcircle_messages(id)`
+  and scoped to broadcast messages via an `exists (...is_broadcast)`
+  check in their insert policies: `kcircle_broadcast_likes` (toggle,
+  same one-row-per-user shape as `kcircle_post_likes`) and
+  `kcircle_broadcast_comments` (flat, no threading).
+
+**UI:** new route `app/kalpana-circle/broadcast/[username]/page.tsx` —
+message list (newest first), each with a 💜/🤍 like toggle and an
+expandable comment thread; the owner sees a composer at the top, everyone
+else sees a read-only feed. Linked from the creator's public profile
+(`app/creator/[username]/page.tsx`) via a new "📣 Updates" pill next to
+the series/views stats.
+
+**Not done:** no way to know which creators are "verified" vs. just have
+a `creator_profiles` row (same open trust model as the rest of Circle —
+anyone who completed `/become-creator` can have a channel); no
+notification when a followed creator posts (depends on §14's
+notifications system, not built yet); no channel discovery feed (a fan
+has to already be on that creator's profile to find the link).
+
+## 14. Next up (not started)
+
+Founder-prioritized backlog, fastest/highest-impact first per the
+founder's own ranking: **notifications** (bell icon — likes, comments,
+new messages; no notification system exists anywhere on the platform
+yet, the single biggest retention gap) is next, followed by
+lower-effort/medium-value items — polls on posts, a "Dreamer of the
+week" pin, close friends (story audience flag) — then the larger builds
+(voice/video via WebRTC + a paid TURN/STUN provider, Discord-style
+channels/roles data model) once there's time/budget for them.
+
+
 
 **Problem reported by founder:** the entire site was built and tested
 desktop-first — most pages have zero `@media` rules and use inline
