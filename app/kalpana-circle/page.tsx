@@ -18,6 +18,9 @@ import { setPostLoginRedirect } from '../lib/authRedirect';
 // Images upload to the dedicated 'kcircle-media' storage bucket
 // (posts/... and stories/... prefixes) — previously reused 'manga-pages'
 // under a 'kcircle/' prefix; moved to its own bucket for clean ownership.
+// Saved posts (private bookmarks): kcircle_saved_posts table, migration
+// 20260812121520_kcircle_saved_posts — owner-only RLS for read AND write,
+// unlike the public-read likes/comments tables.
 
 const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
 const RADIANT_SOLID = '#71717a';
@@ -37,6 +40,19 @@ interface KPost {
   likeCount: number;
   likedByMe: boolean;
   commentCount: number;
+  savedByMe: boolean;
+}
+
+// Lighter shape for the Saved-posts grid — just enough to render a
+// thumbnail + link to the author, no like/comment counts needed there.
+interface SavedPost {
+  id: string;
+  author_id: string;
+  caption: string | null;
+  image_url: string | null;
+  tag: string | null;
+  created_at: string;
+  author: AuthorInfo;
 }
 
 interface KComment {
@@ -112,6 +128,10 @@ export default function KalpanaCirclePage() {
   const [userResults, setUserResults] = useState<{ user_id: string; username: string }[]>([]);
   const [postResults, setPostResults] = useState<{ id: string; caption: string | null; username: string }[]>([]);
 
+  const [showSaved, setShowSaved] = useState(false);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
+
   // ── auth ──
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -139,12 +159,15 @@ export default function KalpanaCirclePage() {
     const postIds = rows.map(r => r.id);
     const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
 
-    const [profilesRes, likesRes, commentsRes, myLikesRes] = await Promise.all([
+    const [profilesRes, likesRes, commentsRes, myLikesRes, mySavedRes] = await Promise.all([
       supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds),
       supabase.from('kcircle_post_likes').select('post_id').in('post_id', postIds),
       supabase.from('kcircle_post_comments').select('post_id').in('post_id', postIds),
       userId
         ? supabase.from('kcircle_post_likes').select('post_id').eq('liker_id', userId).in('post_id', postIds)
+        : Promise.resolve({ data: [] as { post_id: string }[] }),
+      userId
+        ? supabase.from('kcircle_saved_posts').select('post_id').eq('user_id', userId).in('post_id', postIds)
         : Promise.resolve({ data: [] as { post_id: string }[] }),
     ]);
 
@@ -154,6 +177,7 @@ export default function KalpanaCirclePage() {
     const commentCounts = new Map<string, number>();
     (commentsRes.data ?? []).forEach(c => commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1));
     const myLiked = new Set((myLikesRes.data ?? []).map(l => l.post_id));
+    const mySaved = new Set((mySavedRes.data ?? []).map(s => s.post_id));
 
     setPosts(rows.map(r => ({
       ...r,
@@ -161,6 +185,7 @@ export default function KalpanaCirclePage() {
       likeCount: likeCounts.get(r.id) ?? 0,
       commentCount: commentCounts.get(r.id) ?? 0,
       likedByMe: myLiked.has(r.id),
+      savedByMe: mySaved.has(r.id),
     })));
     setLoadingPosts(false);
   }, [userId]);
@@ -245,6 +270,48 @@ export default function KalpanaCirclePage() {
       await supabase.from('kcircle_post_likes').insert({ post_id: post.id, liker_id: userId });
     }
   };
+
+  // ── saved posts (private bookmarks — kcircle_saved_posts is owner-read
+  // too, unlike likes/comments, so nobody else can see what a user saved) ──
+  const toggleSave = async (post: KPost) => {
+    if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    const nowSaved = !post.savedByMe;
+    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, savedByMe: nowSaved } : p));
+    setSavedPosts(prev => nowSaved ? prev : prev.filter(p => p.id !== post.id));
+    if (post.savedByMe) {
+      await supabase.from('kcircle_saved_posts').delete().eq('post_id', post.id).eq('user_id', userId);
+    } else {
+      await supabase.from('kcircle_saved_posts').insert({ post_id: post.id, user_id: userId });
+    }
+  };
+
+  // ── saved overlay: loaded lazily the first time it's opened, refreshed
+  // whenever it's (re)opened so unsaving-then-reopening reflects reality ──
+  const openSaved = async () => {
+    setShowSaved(true);
+    if (!userId) return;
+    setSavedLoading(true);
+    const { data: saveRows } = await supabase
+      .from('kcircle_saved_posts').select('post_id').eq('user_id', userId).order('created_at', { ascending: false });
+    const ids = (saveRows ?? []).map(r => r.post_id);
+    if (ids.length === 0) { setSavedPosts([]); setSavedLoading(false); return; }
+
+    const { data: rows } = await supabase
+      .from('kcircle_posts').select('id, author_id, caption, image_url, tag, created_at').in('id', ids);
+    const byId = new Map((rows ?? []).map(r => [r.id, r]));
+    const authorIds = Array.from(new Set((rows ?? []).map(r => r.author_id)));
+    const { data: profs } = authorIds.length
+      ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds)
+      : { data: [] as { user_id: string; username: string }[] };
+    const usernameMap = new Map((profs ?? []).map(p => [p.user_id, p.username]));
+
+    // preserve save-order (most recently saved first), skip posts that were deleted since being saved
+    setSavedPosts(ids.map(id => byId.get(id)).filter((r): r is NonNullable<typeof r> => !!r)
+      .map(r => ({ ...r, author: { username: usernameMap.get(r.author_id) ?? 'dreamer' } })));
+    setSavedLoading(false);
+  };
+
+  const closeSaved = () => setShowSaved(false);
 
   // ── comments ──
   const toggleComments = async (postId: string) => {
@@ -437,6 +504,7 @@ export default function KalpanaCirclePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexShrink: 0 }}>
           <Link href="/kalpana-circle" title="Home" style={{ fontSize: '19px', textDecoration: 'none', color: RADIANT_SOLID }}>🏠</Link>
           <Link href={navHref('/kalpana-circle/chat')} title="Chat" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
+          <button onClick={openSaved} title="Saved" style={{ background: 'none', border: 'none', fontSize: '19px', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>🔖</button>
           <button onClick={() => fileInputRef.current?.click()} title="Create post" style={{
             background: RADIANT, border: 'none', width: '32px', height: '32px', borderRadius: '9px',
             fontSize: '16px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -511,6 +579,56 @@ export default function KalpanaCirclePage() {
                     </div>
                   )}
                 </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SAVED POSTS OVERLAY — private grid, same overlay chrome as
+          search. No post-permalink page exists yet (same gap noted for
+          search results) so each thumbnail links to the author's profile
+          rather than the specific post. ── */}
+      {showSaved && (
+        <div onClick={closeSaved} style={{
+          position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '8vh',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: '92%', maxWidth: '480px', maxHeight: '76vh', display: 'flex', flexDirection: 'column',
+            background: 'var(--bg-primary)', borderRadius: '14px', border: '1px solid var(--border-color)', overflow: 'hidden',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '14px', fontWeight: 800 }}>🔖 Saved</span>
+              <button onClick={closeSaved} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)' }}>✕</button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '14px' }}>
+              {!userId ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12.5px', padding: '24px 0' }}>
+                  <Link href="/login?next=/kalpana-circle" onClick={closeSaved} style={{ color: RADIANT_SOLID, fontWeight: 700 }}>Log in</Link> to see what you&apos;ve saved.
+                </p>
+              ) : savedLoading ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12.5px', padding: '24px 0' }}>Loading…</p>
+              ) : savedPosts.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12.5px', padding: '24px 0' }}>Nothing saved yet — tap 📑 on a post to save it here.</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+                  {savedPosts.map(p => (
+                    <Link key={p.id} href={`/creator/${p.author.username}`} onClick={closeSaved} style={{
+                      display: 'block', aspectRatio: '1', borderRadius: '6px', overflow: 'hidden',
+                      background: 'var(--bg-card)', position: 'relative',
+                    }}>
+                      {p.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      ) : (
+                        <div style={{ padding: '8px', fontSize: '10.5px', color: 'var(--text-secondary)', lineHeight: 1.4, height: '100%', overflow: 'hidden' }}>
+                          {p.caption}
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -663,7 +781,7 @@ export default function KalpanaCirclePage() {
               <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }} />
             )}
 
-            <div style={{ display: 'flex', gap: '18px', padding: '12px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '18px', padding: '12px 14px' }}>
               <button onClick={() => toggleLike(post)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: '12.5px', color: post.likedByMe ? '#ef4444' : 'var(--text-tertiary)',
@@ -673,6 +791,10 @@ export default function KalpanaCirclePage() {
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: '12.5px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700,
               }}>💬 {post.commentCount}</button>
+              <button onClick={() => toggleSave(post)} title={post.savedByMe ? 'Unsave' : 'Save'} style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: 'auto',
+                fontSize: '14px', color: post.savedByMe ? RADIANT_SOLID : 'var(--text-tertiary)',
+              }}>{post.savedByMe ? '🔖' : '📑'}</button>
             </div>
 
             {openComments === post.id && (
@@ -725,6 +847,7 @@ export default function KalpanaCirclePage() {
           fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>+</button>
         <Link href={navHref('/kalpana-circle/chat')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
+        <button onClick={openSaved} style={{ background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>🔖</button>
         <Link href={userId ? (myUsername ? `/creator/${myUsername}` : '/home') : '/login?next=/kalpana-circle'} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>👤</Link>
       </div>
     </div>
