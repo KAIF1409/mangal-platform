@@ -143,6 +143,26 @@ export default function BroadcastChannelPage() {
     if (err) { setError(err.message); setPosting(false); return; }
     setDraft(''); setPosting(false);
     await loadMessages(conversationId);
+
+    // Notify everyone who follows any of this creator's series — the
+    // closest thing to a "subscriber list" that already exists (no
+    // broadcast-specific subscription table). Fire-and-forget, same
+    // pattern as app/kalpana-circle/page.tsx's `notify`.
+    const { data: seriesRows } = await supabase.from('series').select('id').eq('creator_id', userId);
+    const seriesIds = (seriesRows ?? []).map(s => s.id);
+    if (seriesIds.length > 0) {
+      const { data: followRows } = await supabase.from('follows').select('reader_id').in('series_id', seriesIds);
+      const recipientIds = Array.from(new Set((followRows ?? []).map(f => f.reader_id))).filter(id => id !== userId);
+      if (recipientIds.length > 0) {
+        const preview = draft.trim().slice(0, 80);
+        supabase.from('kcircle_notifications').insert(
+          recipientIds.map(recipientId => ({
+            recipient_id: recipientId, actor_id: userId, type: 'broadcast',
+            conversation_id: conversationId, preview,
+          }))
+        ).then();
+      }
+    }
   };
 
   const toggleLike = async (msg: BroadcastMsg) => {
