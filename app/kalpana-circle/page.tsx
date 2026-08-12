@@ -15,8 +15,9 @@ import { setPostLoginRedirect } from '../lib/authRedirect';
 // kcircle_story_views, kcircle_conversations, kcircle_messages).
 // No Reels here on purpose — KaTube already owns short-form video.
 // Brand: radiant grey (not Instagram's pink/orange/purple), see RADIANT below.
-// Images upload to the existing 'manga-pages' storage bucket under a
-// 'kcircle/' prefix — no dedicated bucket exists yet.
+// Images upload to the dedicated 'kcircle-media' storage bucket
+// (posts/... and stories/... prefixes) — previously reused 'manga-pages'
+// under a 'kcircle/' prefix; moved to its own bucket for clean ownership.
 
 const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
 const RADIANT_SOLID = '#71717a';
@@ -103,6 +104,13 @@ export default function KalpanaCirclePage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── search (was a disabled "coming soon" placeholder) ──
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [userResults, setUserResults] = useState<{ user_id: string; username: string }[]>([]);
+  const [postResults, setPostResults] = useState<{ id: string; caption: string | null; username: string }[]>([]);
 
   // ── auth ──
   useEffect(() => {
@@ -209,10 +217,10 @@ export default function KalpanaCirclePage() {
     let imageUrl: string | null = null;
     if (composerImage) {
       const ext = composerImage.name.split('.').pop();
-      const path = `kcircle/${userId}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('manga-pages').upload(path, composerImage, { upsert: true });
+      const path = `posts/${userId}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, composerImage, { upsert: true });
       if (upErr) { setPostError(`Upload failed: ${upErr.message}`); setPosting(false); return; }
-      imageUrl = supabase.storage.from('manga-pages').getPublicUrl(path).data.publicUrl;
+      imageUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
     }
 
     const { error } = await supabase.from('kcircle_posts').insert({
@@ -276,10 +284,10 @@ export default function KalpanaCirclePage() {
     if (!file) return;
     if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
     const ext = file.name.split('.').pop();
-    const path = `kcircle/stories/${userId}-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from('manga-pages').upload(path, file, { upsert: true });
+    const path = `stories/${userId}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
     if (upErr) return;
-    const imageUrl = supabase.storage.from('manga-pages').getPublicUrl(path).data.publicUrl;
+    const imageUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
     await supabase.from('kcircle_stories').insert({ author_id: userId, image_url: imageUrl });
     loadStories();
   };
@@ -292,7 +300,16 @@ export default function KalpanaCirclePage() {
     if (!group) { setViewingStory(null); return; }
     const story = group.stories[viewingStory.storyIdx];
     if (userId && story) {
-      await supabase.from('kcircle_story_views').upsert({ story_id: story.id, viewer_id: userId });
+      const { error: viewErr } = await supabase.from('kcircle_story_views').upsert({ story_id: story.id, viewer_id: userId });
+      // Previously this error was swallowed and the "seen" ring only ever
+      // updated on a full reload (loadStories() was never re-called after
+      // viewing). Now: log failures, and flip the ring locally right away
+      // on success so it doesn't require a refresh.
+      if (viewErr) {
+        console.error('Failed to mark story as viewed:', viewErr.message);
+      } else {
+        setStories(prev => prev.map((g, i) => i === viewingStory.groupIdx ? { ...g, seen: true } : g));
+      }
     }
     if (viewingStory.storyIdx + 1 < group.stories.length) {
       setViewingStory({ ...viewingStory, storyIdx: viewingStory.storyIdx + 1 });
@@ -309,6 +326,32 @@ export default function KalpanaCirclePage() {
     const t = setTimeout(() => { advanceStory(); }, 4000);
     return () => clearTimeout(t);
   }, [viewingStory, advanceStory]);
+
+  // ── search: debounced, searches usernames + post captions in parallel ──
+  /* eslint-disable react-hooks/set-state-in-effect -- clearing/loading state for a debounced search, same pattern used elsewhere in this file */
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) { setUserResults([]); setPostResults([]); setSearchLoading(false); return; }
+    setSearchLoading(true);
+    const t = setTimeout(async () => {
+      const [usersRes, postsRes] = await Promise.all([
+        supabase.from('creator_profiles').select('user_id, username').ilike('username', `%${q}%`).limit(10),
+        supabase.from('kcircle_posts').select('id, caption, author_id').ilike('caption', `%${q}%`).limit(10),
+      ]);
+      const authorIds = Array.from(new Set((postsRes.data ?? []).map(p => p.author_id)));
+      const { data: profiles } = authorIds.length
+        ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds)
+        : { data: [] as { user_id: string; username: string }[] };
+      const usernameMap = new Map((profiles ?? []).map(p => [p.user_id, p.username]));
+      setUserResults(usersRes.data ?? []);
+      setPostResults((postsRes.data ?? []).map(p => ({ id: p.id, caption: p.caption, username: usernameMap.get(p.author_id) ?? 'dreamer' })));
+      setSearchLoading(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const closeSearch = () => { setShowSearch(false); setSearchQuery(''); setUserResults([]); setPostResults([]); };
 
   const navHref = (path: string) => (userId ? path : `/login?next=${encodeURIComponent(path)}`);
   const profileHref = userId ? (myUsername ? `/creator/${myUsername}` : '/home') : '/login?next=/kalpana-circle';
@@ -370,11 +413,11 @@ export default function KalpanaCirclePage() {
             <Image src="/icon.png" alt="MANGAL" width={30} height={30} style={{ display: 'block', borderRadius: '8px' }} />
           </Link>
           <Image src="/kcircle-logo.png" alt="K Circle" width={150} height={64} style={{ display: 'block', height: '32px', width: 'auto', objectFit: 'contain' }} priority />
-          <span style={{
+          <button onClick={() => setShowSearch(true)} style={{
             flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '280px',
             fontSize: '12.5px', color: 'var(--text-tertiary)', background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 14px', opacity: 0.55, cursor: 'not-allowed',
-          }} title="Search — coming soon">🔍 Search</span>
+            border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 14px', cursor: 'pointer',
+          }}>🔍 Search</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexShrink: 0 }}>
@@ -394,6 +437,71 @@ export default function KalpanaCirclePage() {
           <ThemeToggle size={28} />
         </div>
       </nav>
+
+      {/* ── SEARCH OVERLAY ── */}
+      {showSearch && (
+        <div onClick={closeSearch} style={{
+          position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '8vh',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: '92%', maxWidth: '480px', maxHeight: '76vh', display: 'flex', flexDirection: 'column',
+            background: 'var(--bg-primary)', borderRadius: '14px', border: '1px solid var(--border-color)', overflow: 'hidden',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', borderBottom: '1px solid var(--border-color)' }}>
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search dreamers or posts…"
+                style={{
+                  flex: 1, fontSize: '13.5px', padding: '9px 12px', borderRadius: '8px',
+                  border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none',
+                }}
+              />
+              <button onClick={closeSearch} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)' }}>✕</button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '4px 0' }}>
+              {searchLoading ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12.5px', padding: '24px 0' }}>Searching…</p>
+              ) : !searchQuery.trim() ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12.5px', padding: '24px 14px' }}>Search for a username or something someone posted.</p>
+              ) : userResults.length === 0 && postResults.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12.5px', padding: '24px 0' }}>No results for &ldquo;{searchQuery}&rdquo;.</p>
+              ) : (
+                <>
+                  {userResults.length > 0 && (
+                    <div style={{ padding: '6px 14px' }}>
+                      <div style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em', margin: '6px 0' }}>DREAMERS</div>
+                      {userResults.map(u => (
+                        <Link key={u.user_id} href={`/creator/${u.username}`} onClick={closeSearch} style={{
+                          display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', textDecoration: 'none', color: 'var(--text-primary)',
+                        }}>
+                          <Avatar name={u.username} size={32} />
+                          <span style={{ fontSize: '13px', fontWeight: 700 }}>{u.username}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  {postResults.length > 0 && (
+                    <div style={{ padding: '6px 14px', borderTop: userResults.length ? '1px solid var(--border-color)' : 'none' }}>
+                      <div style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em', margin: '6px 0' }}>POSTS</div>
+                      {postResults.map(p => (
+                        <Link key={p.id} href={`/creator/${p.username}`} onClick={closeSearch} style={{
+                          display: 'block', padding: '8px 0', textDecoration: 'none', color: 'var(--text-primary)',
+                        }}>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-tertiary)' }}>@{p.username}</div>
+                          <div style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.caption}</div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── STORIES BAR ── */}
       <div style={{
@@ -597,7 +705,7 @@ export default function KalpanaCirclePage() {
         alignItems: 'center', justifyContent: 'space-around', height: '58px', maxWidth: '640px', margin: '0 auto',
       }}>
         <Link href="/kalpana-circle" style={{ fontSize: '20px', textDecoration: 'none', color: RADIANT_SOLID }}>🏠</Link>
-        <span style={{ fontSize: '20px', color: 'var(--text-tertiary)', opacity: 0.4, cursor: 'not-allowed' }} title="Search — coming soon">🔍</span>
+        <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-tertiary)', cursor: 'pointer' }}>🔍</button>
         <button onClick={() => fileInputRef.current?.click()} style={{
           background: RADIANT, border: 'none', width: '34px', height: '34px', borderRadius: '9px',
           fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
