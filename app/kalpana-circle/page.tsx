@@ -22,6 +22,7 @@ import { setPostLoginRedirect } from '../lib/authRedirect';
 
 const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
 const RADIANT_SOLID = '#71717a';
+const GREEN = '#22c55e'; // close-friends story ring/badge — matches Instagram's convention
 
 interface AuthorInfo {
   username: string;
@@ -63,7 +64,7 @@ interface KComment {
 interface StoryGroup {
   authorId: string;
   username: string;
-  stories: { id: string; image_url: string; created_at: string }[];
+  stories: { id: string; image_url: string; created_at: string; closeFriendsOnly: boolean }[];
   seen: boolean;
 }
 
@@ -261,7 +262,7 @@ function KalpanaCircleInner() {
   // ── load stories ──
   const loadStories = useCallback(async () => {
     const { data: rows } = await supabase
-      .from('kcircle_stories').select('id, author_id, image_url, created_at')
+      .from('kcircle_stories').select('id, author_id, image_url, created_at, close_friends_only')
       .order('created_at', { ascending: true });
     if (!rows || rows.length === 0) { setStories([]); return; }
 
@@ -281,7 +282,7 @@ function KalpanaCircleInner() {
         authorId: r.author_id, username: usernameMap.get(r.author_id) ?? 'dreamer',
         stories: [] as StoryGroup['stories'], seen: true,
       };
-      g.stories.push(r);
+      g.stories.push({ id: r.id, image_url: r.image_url, created_at: r.created_at, closeFriendsOnly: r.close_friends_only });
       if (!seenIds.has(r.id)) g.seen = false;
       grouped.set(r.author_id, g);
     });
@@ -444,16 +445,31 @@ function KalpanaCircleInner() {
   };
 
   // ── stories: add + view ──
-  const handleAddStory = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Two-step: file select stages a pending upload, then a small audience
+  // picker (Public vs 🟢 Close Friends) decides kcircle_stories.close_friends_only
+  // before the actual upload fires.
+  const [pendingStoryFile, setPendingStoryFile] = useState<File | null>(null);
+  const [postingStory, setPostingStory] = useState(false);
+
+  const handleAddStory = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    setPendingStoryFile(file);
+  };
+
+  const uploadStory = async (closeFriendsOnly: boolean) => {
+    if (!pendingStoryFile || !userId) return;
+    setPostingStory(true);
+    const file = pendingStoryFile;
     const ext = file.name.split('.').pop();
     const path = `stories/${userId}-${Date.now()}.${ext}`;
     const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
-    if (upErr) return;
+    if (upErr) { setPostingStory(false); setPendingStoryFile(null); return; }
     const imageUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
-    await supabase.from('kcircle_stories').insert({ author_id: userId, image_url: imageUrl });
+    await supabase.from('kcircle_stories').insert({ author_id: userId, image_url: imageUrl, close_friends_only: closeFriendsOnly });
+    setPendingStoryFile(null);
+    setPostingStory(false);
     loadStories();
   };
 
@@ -687,7 +703,7 @@ function KalpanaCircleInner() {
 
       {/* ── STORIES BAR ── */}
       <div style={{
-        display: 'flex', gap: '14px', overflowX: 'auto', padding: '14px 14px 10px',
+        display: 'flex', alignItems: 'center', gap: '14px', overflowX: 'auto', padding: '14px 14px 4px',
         maxWidth: '640px', margin: '0 auto', WebkitOverflowScrolling: 'touch',
       }}>
         <div onClick={() => storyFileInputRef.current?.click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flexShrink: 0, cursor: 'pointer', width: '62px' }}>
@@ -703,20 +719,52 @@ function KalpanaCircleInner() {
         </div>
         <input ref={storyFileInputRef} type="file" accept="image/*" onChange={handleAddStory} style={{ display: 'none' }} />
 
-        {stories.map((g, idx) => (
-          <div key={g.authorId} onClick={() => openStoryGroup(idx)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flexShrink: 0, cursor: 'pointer', width: '62px' }}>
-            <div style={{
-              width: '58px', height: '58px', borderRadius: '50%', padding: '2.5px',
-              background: g.seen ? 'var(--border-color)' : RADIANT,
-            }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '2px solid var(--bg-primary)', overflow: 'hidden' }}>
-                <Avatar name={g.username} size={51} />
+        {stories.map((g, idx) => {
+          const isCloseFriendsStory = g.stories.some(s => s.closeFriendsOnly);
+          return (
+            <div key={g.authorId} onClick={() => openStoryGroup(idx)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flexShrink: 0, cursor: 'pointer', width: '62px' }}>
+              <div style={{
+                width: '58px', height: '58px', borderRadius: '50%', padding: '2.5px',
+                background: g.seen ? 'var(--border-color)' : (isCloseFriendsStory ? GREEN : RADIANT),
+              }}>
+                <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '2px solid var(--bg-primary)', overflow: 'hidden' }}>
+                  <Avatar name={g.username} size={51} />
+                </div>
               </div>
+              <span style={{ fontSize: '10.5px', color: 'var(--text-tertiary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '62px' }}>{g.username}</span>
             </div>
-            <span style={{ fontSize: '10.5px', color: 'var(--text-tertiary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '62px' }}>{g.username}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 14px 12px', textAlign: 'right' }}>
+        <Link href={navHref('/kalpana-circle/close-friends')} style={{ fontSize: '10.5px', fontWeight: 700, color: GREEN, textDecoration: 'none' }}>
+          🟢 Manage Close Friends
+        </Link>
+      </div>
+
+      {/* ── STORY AUDIENCE PICKER — shown after choosing a file, before upload ── */}
+      {pendingStoryFile && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '340px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 4px' }}>Share your story with…</h3>
+            <p style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', margin: '0 0 16px' }}>Visible for 24 hours.</p>
+            <button onClick={() => uploadStory(false)} disabled={postingStory} style={{
+              width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px',
+              border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)',
+              cursor: postingStory ? 'wait' : 'pointer', fontSize: '13px', fontWeight: 700,
+            }}>🌍 Everyone</button>
+            <button onClick={() => uploadStory(true)} disabled={postingStory} style={{
+              width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: '10px', marginBottom: '14px',
+              border: `1px solid ${GREEN}`, background: 'rgba(34,197,94,0.1)', color: GREEN,
+              cursor: postingStory ? 'wait' : 'pointer', fontSize: '13px', fontWeight: 700,
+            }}>🟢 Close Friends</button>
+            <button onClick={() => setPendingStoryFile(null)} disabled={postingStory} style={{
+              width: '100%', textAlign: 'center', padding: '8px', border: 'none', background: 'transparent',
+              color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: '12px',
+            }}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* ── STORY VIEWER ── */}
       {viewingStory && stories[viewingStory.groupIdx] && (
@@ -736,6 +784,11 @@ function KalpanaCircleInner() {
           <div style={{ position: 'absolute', top: '22px', left: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Avatar name={stories[viewingStory.groupIdx].username} size={30} />
             <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>{stories[viewingStory.groupIdx].username}</span>
+            {stories[viewingStory.groupIdx].stories[viewingStory.storyIdx].closeFriendsOnly && (
+              <span style={{ fontSize: '10px', fontWeight: 800, color: GREEN, background: 'rgba(34,197,94,0.18)', padding: '2px 8px', borderRadius: '10px' }}>
+                🟢 Close Friends
+              </span>
+            )}
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
