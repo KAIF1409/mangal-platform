@@ -1548,6 +1548,36 @@ to remember to check the channel.
 **Not done:** "follows a series" is a proxy for "wants broadcast
 updates," not a real opt-in/opt-out subscription — no per-creator mute.
 
+### 13e. Broadcast channel discovery feed (DONE) — the other remaining backlog item
+
+Founder asked which was faster of the two remaining medium-effort items:
+KaTube↔Circle auto-post cross-link, or a central Broadcasts discovery feed
+(§12g's "no channel discovery feed — a fan has to already be on that
+creator's profile to find the link" gap). Discovery feed won — it's a
+single new read-only page over already-live schema/RLS, vs. the cross-link
+item which is really two separate builds (an upload-time auto-post insert,
+*and* a "Fan Theories & Art" preview widget on the series page).
+
+- **New route `app/kalpana-circle/broadcasts/page.tsx`** — lists every
+  `kcircle_conversations` row with `is_broadcast = true`, each showing the
+  creator + a preview of their latest message (`kcircle_messages`, newest
+  fetched client-side per conversation same windowing pattern as the
+  broadcast channel page itself). Sorted most-recently-active first;
+  channels nobody has posted to yet trail alphabetically rather than
+  cluttering the top. No new migration — pure read over existing tables/RLS
+  (`kcircle_conversations_broadcast_public_read`, `to authenticated`).
+  Auth-gated the same way `../saved` is (redirect to `/login?next=...`),
+  since an anonymous visitor would just see an always-empty list under that
+  RLS policy anyway.
+- **Nav:** new 📣 icon added to both the desktop top bar (between Chat and
+  Saved) and the mobile bottom tab bar (same position) on the main
+  `/kalpana-circle` page.
+
+**Not done:** still no "which broadcast channels have I actually
+followed/subscribed to" — this is a full directory of every channel, not a
+personalized list (matches §13d's note that "follows a series" is the only
+proxy for broadcast interest that exists, no dedicated subscription table).
+
 ## 13b. Repo/live-DB drift found this session — flag for follow-up
 
 While applying the notifications migration, `list_migrations` on the live
