@@ -1289,6 +1289,48 @@ hydration-mismatch/flash-of-wrong-layout risk.
 - Committing one page/component at a time per the founder's explicit
   instruction for this pass — do not batch multiple pages into one commit.
 
+## 15. K Circle polls wired up (DONE) — the second orphaned schema is live
+
+Founder asked to wire up one of the schema-only orphans found in §13b;
+picked polls since the tables already existed and needed the least new
+plumbing.
+
+- **Repo/DB sync first** — reconstructed migration files for all four
+  orphaned items found in §13b (`kcircle_close_friends`,
+  `kcircle_posts_link_fields`, `kcircle_dreamer_of_week` +its trigger-fix,
+  `kcircle_polls`), each named with the exact version `list_migrations`
+  showed as already applied live, so they're pure history reconciliation —
+  not re-run. Close friends, link fields, and dreamer-of-week are
+  **schema-only still** (documented, no UI) — only polls got built out
+  this session.
+- **One real addition, applied live:** `20260813130000_kcircle_poll_vote_change.sql`
+  — the shipped `kcircle_poll_votes` policy set was insert-only, so a
+  second tap just hit the `(post_id, voter_id)` primary key and silently
+  failed instead of switching the vote. Added UPDATE (switch option) and
+  DELETE (retract) policies, both `auth.uid() = voter_id`-scoped — same
+  one-vote-per-user guarantee, just not a one-way door.
+- **Composer (`app/kalpana-circle/page.tsx`):** new "📊 Poll" toggle next
+  to Photo — reveals 2–4 option inputs (add up to 4, remove down to 2).
+  Caption doubles as the poll question. On submit, the post is created
+  first, then `kcircle_poll_options` rows are inserted against its id; a
+  poll-insert failure surfaces as "Post published, but the poll failed to
+  save" rather than losing the post.
+- **Feed:** `loadPosts` now also fetches `kcircle_poll_options` +
+  `kcircle_poll_votes` (+ the viewer's own vote) for every post in the
+  same batch as likes/comments — a post is a poll purely by having option
+  rows, no boolean flag. Each option renders as a tappable bar
+  (percentage-filled background, vote count, ✓ on your pick); tapping your
+  current pick again retracts the vote, tapping another switches it.
+  `castVote` optimistically updates local counts before the network call,
+  matching the like/save pattern elsewhere on this page.
+
+**Not done:** no "poll closes at" expiry, no anonymous-voting toggle (your
+vote is always visible to you and reflected in the ✓, though individual
+voter identities are never shown to other users — only aggregate counts
+render), no live vote-count updates via Realtime (counts refresh on next
+`loadPosts`, same as likes/comments today — no Realtime wired for those
+either, so this matches the existing pattern rather than a regression).
+
 ## 14. K Circle notifications system (DONE) — chosen over Broadcast Channels
 
 Founder asked to compare Broadcast Channels vs. Notifications (the two
@@ -1340,6 +1382,11 @@ their UI this session (out of scope of the broadcast-vs-notifications ask)
 — flagging so the next session doesn't assume they don't exist, and so the
 founder can confirm whether to finish wiring them up or leave them
 dormant.
+
+**Update (§15):** migration files for all four are now committed
+(reconciliation only, versions match what's already live — see §15 for
+detail). Polls got a real UI this session; close friends, link fields, and
+dreamer-of-week are still schema-only.
 
 ## 11. KaTube like button (`17eb400`) — one genuine like per user
 

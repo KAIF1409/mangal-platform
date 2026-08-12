@@ -27,6 +27,13 @@ interface AuthorInfo {
   username: string;
 }
 
+interface PollOption {
+  id: string;
+  option_text: string;
+  position: number;
+  votes: number;
+}
+
 interface KPost {
   id: string;
   author_id: string;
@@ -39,6 +46,8 @@ interface KPost {
   likedByMe: boolean;
   commentCount: number;
   savedByMe: boolean;
+  poll: PollOption[] | null; // null = not a poll; [] shouldn't happen but guarded
+  myVoteOptionId: string | null;
 }
 
 interface KComment {
@@ -117,6 +126,8 @@ function KalpanaCircleInner() {
   const [composerPreview, setComposerPreview] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
+  const [pollMode, setPollMode] = useState(false);
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
 
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, KComment[]>>({});
@@ -161,7 +172,7 @@ function KalpanaCircleInner() {
     const postIds = rows.map(r => r.id);
     const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
 
-    const [profilesRes, likesRes, commentsRes, myLikesRes, mySavesRes] = await Promise.all([
+    const [profilesRes, likesRes, commentsRes, myLikesRes, mySavesRes, pollOptRes, pollVoteRes, myVoteRes] = await Promise.all([
       supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds),
       supabase.from('kcircle_post_likes').select('post_id').in('post_id', postIds),
       supabase.from('kcircle_post_comments').select('post_id').in('post_id', postIds),
@@ -171,6 +182,11 @@ function KalpanaCircleInner() {
       userId
         ? supabase.from('kcircle_saved_posts').select('post_id').eq('user_id', userId).in('post_id', postIds)
         : Promise.resolve({ data: [] as { post_id: string }[] }),
+      supabase.from('kcircle_poll_options').select('id, post_id, option_text, position').in('post_id', postIds).order('position', { ascending: true }),
+      supabase.from('kcircle_poll_votes').select('post_id, option_id').in('post_id', postIds),
+      userId
+        ? supabase.from('kcircle_poll_votes').select('post_id, option_id').eq('voter_id', userId).in('post_id', postIds)
+        : Promise.resolve({ data: [] as { post_id: string; option_id: string }[] }),
     ]);
 
     const usernameMap = new Map((profilesRes.data ?? []).map(p => [p.user_id, p.username]));
@@ -181,6 +197,16 @@ function KalpanaCircleInner() {
     const myLiked = new Set((myLikesRes.data ?? []).map(l => l.post_id));
     const mySaved = new Set((mySavesRes.data ?? []).map(s => s.post_id));
 
+    const voteCounts = new Map<string, number>(); // keyed by option_id
+    (pollVoteRes.data ?? []).forEach(v => voteCounts.set(v.option_id, (voteCounts.get(v.option_id) ?? 0) + 1));
+    const optionsByPost = new Map<string, PollOption[]>();
+    (pollOptRes.data ?? []).forEach(o => {
+      const list = optionsByPost.get(o.post_id) ?? [];
+      list.push({ id: o.id, option_text: o.option_text, position: o.position, votes: voteCounts.get(o.id) ?? 0 });
+      optionsByPost.set(o.post_id, list);
+    });
+    const myVoteByPost = new Map((myVoteRes.data ?? []).map(v => [v.post_id, v.option_id]));
+
     setPosts(rows.map(r => ({
       ...r,
       author: { username: usernameMap.get(r.author_id) ?? 'dreamer' },
@@ -188,6 +214,8 @@ function KalpanaCircleInner() {
       commentCount: commentCounts.get(r.id) ?? 0,
       likedByMe: myLiked.has(r.id),
       savedByMe: mySaved.has(r.id),
+      poll: optionsByPost.get(r.id) ?? null,
+      myVoteOptionId: myVoteByPost.get(r.id) ?? null,
     })));
     setLoadingPosts(false);
   }, [userId, tagFilter]);
@@ -244,6 +272,8 @@ function KalpanaCircleInner() {
   const submitPost = async () => {
     if (!userId) { setPostError('Log in to post.'); return; }
     if (!draft.trim() && !composerImage) { setPostError('Write something or add a photo first.'); return; }
+    const cleanOptions = pollMode ? pollOptions.map(o => o.trim()).filter(Boolean) : [];
+    if (pollMode && cleanOptions.length < 2) { setPostError('A poll needs at least 2 options.'); return; }
     setPosting(true); setPostError('');
 
     let imageUrl: string | null = null;
@@ -255,13 +285,20 @@ function KalpanaCircleInner() {
       imageUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
     }
 
-    const { error } = await supabase.from('kcircle_posts').insert({
+    const { error, data: newPost } = await supabase.from('kcircle_posts').insert({
       author_id: userId, caption: draft.trim() || null, image_url: imageUrl,
       tag: composerTag.trim() || null,
-    });
+    }).select('id').single();
     if (error) { setPostError(error.message); setPosting(false); return; }
 
+    if (cleanOptions.length && newPost) {
+      const { error: pollErr } = await supabase.from('kcircle_poll_options')
+        .insert(cleanOptions.map((option_text, position) => ({ post_id: newPost.id, option_text, position })));
+      if (pollErr) { setPostError(`Post published, but the poll failed to save: ${pollErr.message}`); }
+    }
+
     setDraft(''); setComposerImage(null); setComposerPreview(null);
+    setPollMode(false); setPollOptions(['', '']);
     setPosting(false);
     loadPosts();
   };
@@ -286,6 +323,35 @@ function KalpanaCircleInner() {
     } else {
       await supabase.from('kcircle_post_likes').insert({ post_id: post.id, liker_id: userId });
       notify(post.author_id, 'like', { post_id: post.id });
+    }
+  };
+
+  // ── poll voting ── one vote per user per poll (kcircle_poll_votes PK),
+  // but can switch — insert if no existing vote, update to move it,
+  // delete to retract by tapping the same option again.
+  const castVote = async (post: KPost, optionId: string) => {
+    if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    if (!post.poll) return;
+    const prevOptionId = post.myVoteOptionId;
+    const retracting = prevOptionId === optionId;
+
+    setPosts(prev => prev.map(p => {
+      if (p.id !== post.id || !p.poll) return p;
+      const poll = p.poll.map(o => {
+        if (retracting && o.id === optionId) return { ...o, votes: o.votes - 1 };
+        if (!retracting && o.id === optionId) return { ...o, votes: o.votes + 1 };
+        if (!retracting && prevOptionId && o.id === prevOptionId) return { ...o, votes: o.votes - 1 };
+        return o;
+      });
+      return { ...p, poll, myVoteOptionId: retracting ? null : optionId };
+    }));
+
+    if (retracting) {
+      await supabase.from('kcircle_poll_votes').delete().eq('post_id', post.id).eq('voter_id', userId);
+    } else if (prevOptionId) {
+      await supabase.from('kcircle_poll_votes').update({ option_id: optionId }).eq('post_id', post.id).eq('voter_id', userId);
+    } else {
+      await supabase.from('kcircle_poll_votes').insert({ post_id: post.id, option_id: optionId, voter_id: userId });
     }
   };
 
@@ -695,12 +761,49 @@ function KalpanaCircleInner() {
               }}>✕</button>
             </div>
           )}
+          {pollMode && (
+            <div style={{ marginTop: '10px', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+              <label style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>POLL OPTIONS</label>
+              {pollOptions.map((opt, i) => (
+                <div key={i} style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                  <input
+                    value={opt}
+                    onChange={e => setPollOptions(prev => prev.map((o, j) => j === i ? e.target.value : o))}
+                    placeholder={`Option ${i + 1}`}
+                    maxLength={80}
+                    style={{
+                      flex: 1, minWidth: 0, fontSize: '12.5px', padding: '7px 10px', borderRadius: '8px',
+                      border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none',
+                    }}
+                  />
+                  {pollOptions.length > 2 && (
+                    <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} style={{
+                      background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: '15px', padding: '0 4px',
+                    }}>✕</button>
+                  )}
+                </div>
+              ))}
+              {pollOptions.length < 4 && (
+                <button onClick={() => setPollOptions(prev => [...prev, ''])} style={{
+                  marginTop: '8px', background: 'none', border: 'none', color: RADIANT_SOLID, fontWeight: 700,
+                  fontSize: '12px', cursor: 'pointer', padding: 0,
+                }}>+ Add option</button>
+              )}
+            </div>
+          )}
           {postError && <p style={{ fontSize: '12px', color: '#ef4444', margin: '8px 0 0' }}>{postError}</p>}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
-            <button onClick={() => fileInputRef.current?.click()} disabled={!userId} style={{
-              fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', background: 'transparent',
-              border: '1px solid var(--border-color)', borderRadius: '8px', padding: '7px 12px', cursor: userId ? 'pointer' : 'not-allowed',
-            }}>📷 Photo</button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => fileInputRef.current?.click()} disabled={!userId} style={{
+                fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', background: 'transparent',
+                border: '1px solid var(--border-color)', borderRadius: '8px', padding: '7px 12px', cursor: userId ? 'pointer' : 'not-allowed',
+              }}>📷 Photo</button>
+              <button onClick={() => setPollMode(v => !v)} disabled={!userId} style={{
+                fontSize: '12px', fontWeight: 700, color: pollMode ? RADIANT_SOLID : 'var(--text-secondary)',
+                background: 'transparent', border: `1px solid ${pollMode ? RADIANT_SOLID : 'var(--border-color)'}`,
+                borderRadius: '8px', padding: '7px 12px', cursor: userId ? 'pointer' : 'not-allowed',
+              }}>📊 Poll</button>
+            </div>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleComposerFile} style={{ display: 'none' }} />
             {userId ? (
               <button onClick={submitPost} disabled={posting} style={{
@@ -748,6 +851,35 @@ function KalpanaCircleInner() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }} />
             )}
+
+            {post.poll && post.poll.length > 0 && (() => {
+              const total = post.poll.reduce((sum, o) => sum + o.votes, 0);
+              return (
+                <div style={{ padding: '2px 14px 12px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                  {post.poll.map(opt => {
+                    const pct = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
+                    const mine = post.myVoteOptionId === opt.id;
+                    return (
+                      <button key={opt.id} onClick={() => castVote(post, opt.id)} style={{
+                        position: 'relative', textAlign: 'left', border: `1px solid ${mine ? RADIANT_SOLID : 'var(--border-color)'}`,
+                        borderRadius: '9px', padding: '8px 12px', cursor: 'pointer', background: 'var(--bg-primary)',
+                        overflow: 'hidden', fontSize: '12.5px', fontWeight: mine ? 800 : 600, color: 'var(--text-primary)',
+                      }}>
+                        <div style={{
+                          position: 'absolute', inset: 0, width: `${pct}%`, background: mine ? 'rgba(113,113,122,0.28)' : 'rgba(113,113,122,0.14)',
+                          transition: 'width 0.25s ease',
+                        }} />
+                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                          <span>{mine ? '✓ ' : ''}{opt.option_text}</span>
+                          <span style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}>{pct}% · {opt.votes}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{total} vote{total === 1 ? '' : 's'}{post.myVoteOptionId ? ' · tap your pick again to retract' : ''}</span>
+                </div>
+              );
+            })()}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '18px', padding: '12px 14px' }}>
               <button onClick={() => toggleLike(post)} style={{
