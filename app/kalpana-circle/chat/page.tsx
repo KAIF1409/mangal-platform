@@ -67,9 +67,18 @@ interface MessageRow {
   id: string;
   conversation_id: string;
   sender_id: string;
-  text: string;
+  text: string | null;
+  attachment_url: string | null;
+  attachment_type: string | null;
   created_at: string;
 }
+
+// Chat attachments reuse the kcircle-media bucket (public read,
+// authenticated insert — same bucket posts/stories already use) under a
+// new messages/{userId}-{ts}.ext prefix. 5MB cap kept client-side, no
+// server-side enforcement yet (matches the trust level of post/story
+// uploads elsewhere in this file).
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
 export default function KCircleChatPage() {
   const router = useRouter();
@@ -81,6 +90,11 @@ export default function KCircleChatPage() {
   const [active, setActive] = useState<ConversationRow | null>(null);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [draft, setDraft] = useState('');
+  const [attachFile, setAttachFile] = useState<File | null>(null);
+  const [attachPreview, setAttachPreview] = useState<string | null>(null);
+  const [attachError, setAttachError] = useState('');
+  const [sending, setSending] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [senderNames, setSenderNames] = useState<Map<string, string>>(new Map());
 
   const [showNew, setShowNew] = useState(false);
@@ -135,9 +149,13 @@ export default function KCircleChatPage() {
       : { data: [] as { user_id: string; username: string }[] };
     const usernameMap = new Map((profiles ?? []).map(p => [p.user_id, p.username]));
 
-    const { data: lastMessages } = await supabase.from('kcircle_messages').select('conversation_id, text, created_at').in('conversation_id', convoIds).order('created_at', { ascending: false });
+    const { data: lastMessages } = await supabase.from('kcircle_messages').select('conversation_id, text, attachment_url, created_at').in('conversation_id', convoIds).order('created_at', { ascending: false });
     const lastByConvo = new Map<string, { text: string; created_at: string }>();
-    (lastMessages ?? []).forEach(m => { if (!lastByConvo.has(m.conversation_id)) lastByConvo.set(m.conversation_id, m); });
+    (lastMessages ?? []).forEach(m => {
+      if (!lastByConvo.has(m.conversation_id)) {
+        lastByConvo.set(m.conversation_id, { text: m.text ?? (m.attachment_url ? '📷 Photo' : ''), created_at: m.created_at });
+      }
+    });
 
     const rows: ConversationRow[] = convoIds.map(id => {
       const meta = metaById.get(id);
@@ -163,7 +181,7 @@ export default function KCircleChatPage() {
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
   const loadMessages = useCallback(async (conversationId: string) => {
-    const { data } = await supabase.from('kcircle_messages').select('id, conversation_id, sender_id, text, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: true });
+    const { data } = await supabase.from('kcircle_messages').select('id, conversation_id, sender_id, text, attachment_url, attachment_type, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: true });
     setMessages(data ?? []);
     setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
   }, []);
@@ -222,10 +240,11 @@ export default function KCircleChatPage() {
         { event: 'INSERT', schema: 'public', table: 'kcircle_messages' },
         (payload) => {
           const row = payload.new as MessageRow;
+          const preview = row.text ?? (row.attachment_url ? '📷 Photo' : '');
           setConversations(prev => {
             if (!prev.some(c => c.id === row.conversation_id)) return prev;
             return prev
-              .map(c => c.id === row.conversation_id ? { ...c, lastMessage: row.text, lastAt: row.created_at } : c)
+              .map(c => c.id === row.conversation_id ? { ...c, lastMessage: preview, lastAt: row.created_at } : c)
               .sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
           });
         }
@@ -274,16 +293,47 @@ export default function KCircleChatPage() {
   }, [active]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const handleAttachPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow picking the same file again later
+    if (!file) return;
+    setAttachError('');
+    if (!file.type.startsWith('image/')) { setAttachError('Only images for now.'); return; }
+    if (file.size > MAX_ATTACHMENT_BYTES) { setAttachError('Image too large (5MB max).'); return; }
+    setAttachFile(file);
+    setAttachPreview(URL.createObjectURL(file));
+  };
+
+  const clearAttach = () => { setAttachFile(null); setAttachPreview(null); setAttachError(''); };
+
   const sendMessage = async () => {
-    if (!active || !userId || !draft.trim()) return;
+    if (!active || !userId || (!draft.trim() && !attachFile)) return;
     const text = draft.trim();
-    setDraft('');
+    const file = attachFile;
+    setDraft(''); clearAttach();
+    setSending(true);
+
+    let attachmentUrl: string | null = null;
+    let attachmentType: string | null = null;
+    if (file) {
+      const ext = file.name.split('.').pop();
+      const path = `messages/${userId}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
+      if (upErr) { setSending(false); setDraft(text); setAttachError(`Upload failed: ${upErr.message}`); return; }
+      attachmentUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
+      attachmentType = 'image';
+    }
+
     // No local append and no loadMessages() call here anymore — the
     // kcircle-thread-{id} Realtime channel above is subscribed to INSERTs
     // on this same conversation_id and receives this exact row back
     // (including for the sender), so appending it here too would just
     // double it up in the bubble list.
-    const { error } = await supabase.from('kcircle_messages').insert({ conversation_id: active.id, sender_id: userId, text });
+    const { error } = await supabase.from('kcircle_messages').insert({
+      conversation_id: active.id, sender_id: userId,
+      text: text || null, attachment_url: attachmentUrl, attachment_type: attachmentType,
+    });
+    setSending(false);
     if (error) { setDraft(text); return; }
     await supabase.from('kcircle_conversations').update({ last_message_at: new Date().toISOString() }).eq('id', active.id);
   };
@@ -620,34 +670,81 @@ export default function KCircleChatPage() {
                       {senderNames.get(m.sender_id) ?? 'dreamer'}
                     </span>
                   )}
-                  <div style={{
-                    maxWidth: '75%', padding: '9px 13px', borderRadius: '16px', fontSize: '13.5px', lineHeight: 1.4,
-                    background: mine ? RADIANT : 'var(--bg-card)',
-                    color: mine ? '#27272a' : 'var(--text-primary)',
-                    border: mine ? 'none' : '1px solid var(--border-color)',
-                  }}>{m.text}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '75%', alignItems: mine ? 'flex-end' : 'flex-start' }}>
+                    {m.attachment_url && (
+                      <img
+                        src={m.attachment_url}
+                        alt="attachment"
+                        onClick={() => window.open(m.attachment_url!, '_blank')}
+                        style={{
+                          display: 'block', maxWidth: '240px', maxHeight: '320px', borderRadius: '14px',
+                          cursor: 'pointer', objectFit: 'cover',
+                          border: mine ? 'none' : '1px solid var(--border-color)',
+                        }}
+                      />
+                    )}
+                    {m.text && (
+                      <div style={{
+                        padding: '9px 13px', borderRadius: '16px', fontSize: '13.5px', lineHeight: 1.4,
+                        background: mine ? RADIANT : 'var(--bg-card)',
+                        color: mine ? '#27272a' : 'var(--text-primary)',
+                        border: mine ? 'none' : '1px solid var(--border-color)',
+                      }}>{m.text}</div>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
           <div style={{
-            display: 'flex', gap: '8px', padding: '10px 14px', borderTop: '1px solid var(--border-color)',
-            maxWidth: '640px', width: '100%', margin: '0 auto', boxSizing: 'border-box', flexShrink: 0,
+            borderTop: '1px solid var(--border-color)', maxWidth: '640px', width: '100%', margin: '0 auto',
+            boxSizing: 'border-box', flexShrink: 0,
           }}>
-            <input
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
-              placeholder="Message…"
-              style={{
-                flex: 1, minWidth: 0, fontSize: '13.5px', padding: '10px 14px', borderRadius: '20px',
-                border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none',
-              }}
-            />
-            <button onClick={sendMessage} style={{
-              fontSize: '13px', fontWeight: 800, padding: '10px 18px', borderRadius: '20px', border: 'none',
-              background: RADIANT, color: '#27272a', cursor: 'pointer', flexShrink: 0,
-            }}>Send</button>
+            {attachPreview && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px 0' }}>
+                <div style={{ position: 'relative' }}>
+                  <img src={attachPreview} alt="preview" style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
+                  <button onClick={clearAttach} style={{
+                    position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%',
+                    border: 'none', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                  }}>✕</button>
+                </div>
+                <span style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>Photo attached</span>
+              </div>
+            )}
+            {attachError && <p style={{ fontSize: '11.5px', color: '#ef4444', padding: '6px 14px 0', margin: 0 }}>{attachError}</p>}
+            <div style={{ display: 'flex', gap: '8px', padding: '10px 14px', alignItems: 'center' }}>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAttachPick} style={{ display: 'none' }} />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                title="Attach photo"
+                style={{
+                  width: '36px', height: '36px', borderRadius: '50%', border: '1px solid var(--border-color)',
+                  background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0,
+                  fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >📷</button>
+              <input
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
+                placeholder="Message…"
+                style={{
+                  flex: 1, minWidth: 0, fontSize: '13.5px', padding: '10px 14px', borderRadius: '20px',
+                  border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none',
+                }}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={sending || (!draft.trim() && !attachFile)}
+                style={{
+                  fontSize: '13px', fontWeight: 800, padding: '10px 18px', borderRadius: '20px', border: 'none',
+                  background: RADIANT, color: '#27272a', cursor: sending ? 'default' : 'pointer', flexShrink: 0,
+                  opacity: (sending || (!draft.trim() && !attachFile)) ? 0.5 : 1,
+                }}
+              >{sending ? '…' : 'Send'}</button>
+            </div>
           </div>
         </>
       )}
