@@ -935,9 +935,31 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       onClick={() => { resetHideTimer(); setShowSidebar(false); setShowSettings(false); }}
     >
 
-      {/* ── TOP BAR ── */}
+      {/* ── TOP BAR ──
+          Mobile fix: the right-side control cluster (theme toggle, optional
+          Studio pill, Chapters/Fullscreen/Lock/Settings — all fixed-width,
+          flexShrink:0) doesn't wrap, so on a narrow phone — worst case a
+          creator viewing in fullscreen, which adds the Lock Screen button
+          too — it was wider than the available space next to the left
+          title block and got pushed off past the viewport edge (clipped by
+          the page's overflowX:hidden, i.e. Settings became untappable).
+          The left title block already had minWidth:0/ellipsis so it
+          absorbed the squeeze instead of the overflow surfacing there.
+          Under 480px: Studio drops to icon-only, "Back" drops to just the
+          arrow, and padding/gaps tighten — same .mangal-*-under-480 pattern
+          as the KaTube-pill fix on Kalpana Circle's nav. */}
+      <style>{`
+        @media (max-width: 480px) {
+          .mangal-reader-topbar { padding: 0 10px !important; }
+          .mangal-reader-right { gap: 4px !important; }
+          .mangal-reader-back-text { display: none; }
+          .mangal-reader-back { padding: 6px 9px !important; }
+          .mangal-reader-studio { padding: 6px 8px !important; }
+          .mangal-reader-studio-text { display: none; }
+        }
+      `}</style>
       {!lockScreen && (
-      <div style={{
+      <div className="mangal-reader-topbar" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px', height: '56px',
@@ -954,11 +976,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         )}
         {/* Left: Back + title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-          <a href={series ? `/series/${series.id}` : '/'} style={{
+          <a href={series ? `/series/${series.id}` : '/'} className="mangal-reader-back" style={{
             display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
             background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px',
             padding: '6px 12px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px',
-          }}>← Back</a>
+          }}>←<span className="mangal-reader-back-text"> Back</span></a>
           <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', flexShrink: 0 }} />
           <div style={{ overflow: 'hidden', minWidth: 0 }}>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -985,15 +1007,15 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         </div>
 
         {/* Right controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+        <div className="mangal-reader-right" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           <ThemeToggle size={32} />
           {/* Creator-only: Go to Dashboard */}
           {isCreator && (
-            <a href="/dashboard" onClick={e => e.stopPropagation()} style={{
+            <a href="/dashboard" onClick={e => e.stopPropagation()} className="mangal-reader-studio" style={{
               padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
               background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)',
               color: '#d97706', textDecoration: 'none', whiteSpace: 'nowrap',
-            }}>🛠 Studio</a>
+            }}>🛠<span className="mangal-reader-studio-text"> Studio</span></a>
           )}
 
           {/* Chapter list toggle */}
