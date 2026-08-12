@@ -1527,6 +1527,27 @@ can still... actually stories have no reply feature at all yet, so N/A);
 no bulk-import from existing followers/DM contacts — you add people one
 at a time by username search.
 
+### 13d. Broadcast posts wired into notifications (DONE)
+
+Small follow-up to §12g (broadcast channels) and §14 (notifications) —
+until now a creator's broadcast post didn't notify anyone, so a fan had
+to remember to check the channel.
+
+- **Migration `20260813160000_kcircle_notifications_broadcast_type.sql`**
+  (applied live) — adds `'broadcast'` to `kcircle_notifications.type`'s
+  check constraint (previously like/comment/message/group_add only).
+- **`NotificationBell.tsx`** — new label ("📣 {who} posted an update: …")
+  and tap-through routes to `/kalpana-circle/broadcast/[actorUsername]`.
+- **Broadcast channel page:** after a successful post, notifies everyone
+  who follows *any* of the creator's series — reuses the existing
+  `follows` table and the already-live "Creators can view follows on
+  their own series" RLS policy rather than building a dedicated
+  broadcast-subscriber table. Fire-and-forget bulk insert, actor (the
+  creator) excluded from the recipient list.
+
+**Not done:** "follows a series" is a proxy for "wants broadcast
+updates," not a real opt-in/opt-out subscription — no per-creator mute.
+
 ## 13b. Repo/live-DB drift found this session — flag for follow-up
 
 While applying the notifications migration, `list_migrations` on the live
