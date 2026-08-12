@@ -392,7 +392,12 @@ function GlassCard({
         background: 'rgba(17,14,13,0.68)',
         border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: '18px',
-        padding: '36px 34px',
+        // clamp() instead of a fixed '36px 34px' — on a ~320–360px phone,
+        // GlassCard's own maxWidth cap can still leave very little room
+        // once this padding is subtracted twice from the viewport, making
+        // input fields/buttons feel cramped. Shrinks smoothly down to 20px
+        // on narrow phones, unchanged (36/34px) from ~600px up.
+        padding: 'clamp(22px, 6vw, 36px) clamp(18px, 5.5vw, 34px)',
         position: 'relative',
         boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
         backdropFilter: 'blur(18px) saturate(120%)',
