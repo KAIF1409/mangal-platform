@@ -1097,6 +1097,86 @@ a profile setting under the dashboard/KaTube avatar, not a step inside
 the upload form. Second and later uploads were already frictionless
 before this change and remain so.
 
+## 12. Kalpana Circle — real Instagram-style social backend (DONE, `9ddfcc8`, `99c1175`, `82d87f1`, `696b130`)
+
+Kalpana Circle went from a static UI demo (§ "Placeholder discussion feed", disabled composer) to a real Instagram-style surface with its own backend:
+
+- **Schema (`9ddfcc8`, migration `20260812_kcircle_social.sql`)** —
+  `kcircle_posts`, `kcircle_post_likes`, `kcircle_post_comments`,
+  `kcircle_stories` (24h expiry via `expires_at`), `kcircle_story_views`,
+  `kcircle_conversations` / `kcircle_conversation_participants`,
+  `kcircle_messages`. All RLS-locked to the owner for writes, public read
+  (stories additionally filtered to `expires_at > now()`).
+  **✅ Migration applied** directly against the live project
+  (`rfxlavwzhpnbhwoumaha`) via the Supabase MCP connector — confirmed via
+  `list_migrations` (`20260812054228 kcircle_social`).
+- **Feed (`99c1175`)** — stories bar (add/view, seen/unseen rings), real
+  posts with photo upload, like, threaded comments, Instagram-style bottom
+  nav (Home / Search-placeholder / Post / Chat / Profile) — no Reels tab.
+  Radiant-grey theme, distinct from both MangaNovels and KaTube's palettes.
+- **Chat (`82d87f1`)** — `/kalpana-circle/chat`: inbox list, username
+  search to start a DM, real thread view with send + 3s polling (no
+  realtime subscription yet, polling is the current mechanism).
+- **Responsive nav split (`696b130`)** — K Circle nav now branches at the
+  768px breakpoint (same breakpoint used everywhere else in this codebase):
+  desktop gets a full Instagram-web-style top bar (logo, disabled search
+  pill, Home/Chat/Create(+)/avatar-profile/KaTube/theme toggle as icons,
+  no bottom bar); mobile gets a compact header (logos + KaTube + theme
+  toggle only) with all action icons living in a fixed bottom tab bar.
+  Same feed/stories/likes/comments underneath both — only nav chrome
+  changes per device.
+
+**Known gaps, not built yet:** search tab is still a disabled placeholder
+(no post/user search backend); images (posts + stories) upload into the
+existing `manga-pages` storage bucket under a `kcircle/` prefix rather
+than a dedicated bucket (reused what was already wired up — flag if a
+separate bucket is wanted instead); no realtime chat (3s polling only).
+
+## 13. Site-wide mobile-compatibility sweep (in progress)
+
+**Problem reported by founder:** the entire site was built and tested
+desktop-first — most pages have zero `@media` rules and use inline
+`style={{}}` objects with fixed multi-item flex rows (`justifyContent:
+'space-between'`, no wrap), which either overflow horizontally or silently
+clip content on phone-width viewports. Confirmed via a repo-wide grep for
+`@media`: only `app/dashboard/page.tsx`, `app/terms/page.tsx`, and
+`app/components/StudioSidebar.tsx` had any responsive rules before this
+sweep started — every other page (60+ files) was desktop-only.
+
+**Working pattern (established by `app/dashboard/page.tsx`, reused
+throughout this sweep):** since inline style objects can't express media
+queries, each page gets a plain `<style>{...}</style>` tag with `.mangal-*`
+scoped class names (passed as `className` alongside the existing inline
+`style` for anything that doesn't need to change responsively) and real
+`@media` breakpoints — `768px`/`860px` (tablet), `560px`/`640px` (phone),
+`380px` (very small phone) depending on what a given page needs. No
+JS-based `window.innerWidth` checks — pure CSS, so there's no
+hydration-mismatch/flash-of-wrong-layout risk.
+
+**Status so far:**
+- ✅ `app/page.tsx` (public landing) — nav bar collapses (`5c4b396`):
+  center links become horizontally-scrollable under 860px, hidden under
+  640px (still reachable via footer), "Log in" text link dropped in favor
+  of the primary CTA under 640px, brand wordmark hidden under 380px. Hero
+  search input `minWidth` 260px → 200px so it doesn't force overflow on
+  ~280px-wide phones.
+- ⏳ Queued next, in rough priority order (most-visited first): `/home`
+  nav (same overflow-hidden-clipping issue as landing, worse — 8 center
+  nav items get silently clipped rather than scrolling), `/login`,
+  `/search` (note: renamed to `/WebMangal` + `/WebMangal/search` in
+  `164fc51`/`b418b5a`, already has some mobile work per commit history —
+  re-verify before assuming it still needs the full pass),
+  `/series/[seriesId]`, `/read/[chapterId]`, `/katube` (has its own
+  sidebar layout, needs separate attention), `/library`, `/bookmarks`,
+  `/history`, `/rankings`, `/tags`, `/tags/[slug]`, `/upload`,
+  `/dashboard/*` subpages beyond the main one, shared components
+  (`EditSeriesModal`, `ManagePagesModal`, `ProfileMenu`, `ShareButton`,
+  `ReportButton`), `/about`, `/help`, `/privacy`, `/grievance`,
+  `/become-creator`, `/creator/[username]`, `/settings`,
+  `/katube/watch`, `/katube/upload`, `/katube/shorts`.
+- Committing one page/component at a time per the founder's explicit
+  instruction for this pass — do not batch multiple pages into one commit.
+
 ## 11. KaTube like button (`17eb400`) — one genuine like per user
 
 **Approach:** no custom "algorithm" — the one-like-per-user guarantee comes
