@@ -1690,6 +1690,19 @@ overwrites, not the leaner 3-fixed-role MVP that was proposed first).
   roles are created ranked below the creator's own highest role (unless
   they're an admin). DB is still the actual enforcement; the client-side
   check is just to avoid dead-end clicks that RLS would reject anyway.
+- **Channels/overwrites permission gap (DONE, follow-up session):**
+  `supabase/migrations/20260813190000_kcircle_channels_overwrites_permission_guard.sql`.
+  Closed the matching gap flagged above for `kcircle_group_channels`
+  (insert/update/delete now require `MANAGE_CHANNELS`, or `ADMINISTRATOR`)
+  and `kcircle_channel_overwrites` (insert/update/delete now require
+  `MANAGE_ROLES` — editing a channel's permission overwrite for a role is
+  permission management — AND the same rank guard as the role hierarchy
+  fix: the role being overwritten must rank strictly below the caller's
+  own highest role, unless `ADMINISTRATOR`). No frontend change needed —
+  the UI already gated channel creation/deletion on `MANAGE_CHANNELS`
+  client-side, and there's no overwrite-editing UI built yet (still just
+  read, via `resolveChannelPermissions`), so this was DB-only hardening.
+  Verified via `pg_policies` that all 6 rewritten policies applied live.
 
 **Not done (flagged as follow-ups, not started):**
 - No channel reordering UI (position is set at creation time only)
@@ -1699,10 +1712,9 @@ overwrites, not the leaner 3-fixed-role MVP that was proposed first).
   `image_url` column exists on `kcircle_channel_messages` but nothing
   writes to it yet (DM/group-chat image attachments already work
   elsewhere, per §12d, this just isn't wired for channels yet)
-- `kcircle_group_channels` and `kcircle_channel_overwrites` RLS still only
-  checks group participation, not `MANAGE_CHANNELS`/`MANAGE_ROLES` — same
-  class of gap the role hierarchy guard just closed for roles, not yet
-  applied to channels/overwrites. Worth doing in the same pass next time.
+- No UI for editing per-channel role permission overwrites yet (the
+  `kcircle_channel_overwrites` table + RLS are ready; `resolveChannelPermissions`
+  reads them; nothing in the Roles/Channels panels writes to them yet)
 - Voice/video calls (separate backlog item, still fully unstarted)
 
 ## 11. KaTube like button (`17eb400`) — one genuine like per user
