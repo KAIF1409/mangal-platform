@@ -1711,9 +1711,14 @@ overwrites, not the leaner 3-fixed-role MVP that was proposed first).
   `kcircle_channel_overwrites`, deletes the row once a role goes back to
   all-inherit. Role list in the editor filtered through `canManageRoleAt()`
   so it never offers a control the DB (§ hierarchy guard) would reject.
+- **Channel reordering (DONE, follow-up session):** ▲/▼ buttons per
+  channel in the sidebar (visible when `MANAGE_CHANNELS`). `moveChannel()`
+  swaps two adjacent channels by writing their array indices as the new
+  `position` values (not a read-modify-write on the stored position),
+  which also self-normalizes any duplicate/gapped positions left over
+  from earlier inserts.
 
 **Not done (flagged as follow-ups, not started):**
-- No channel reordering UI (position is set at creation time only)
 - No voice/stage channels — text-only, per the `kcircle_group_channels`
   schema (no `type` column yet)
 - No image/attachment support in channel messages on the composer side —
