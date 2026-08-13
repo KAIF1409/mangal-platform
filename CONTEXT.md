@@ -1663,7 +1663,9 @@ overwrites, not the leaner 3-fixed-role MVP that was proposed first).
   (create/delete roles, toggle each permission bit per role, assign/unassign
   non-default roles per member — gated on `MANAGE_ROLES`). Linked from
   `app/kalpana-circle/chat/page.tsx`'s group header via a new "# Channels"
-  link next to the existing group-settings (ⓘ) button.
+  link next to the existing group-settings (ⓘ) button. **Mobile:** hamburger
+  (☰) toggle added to the nav — sidebar becomes a full-screen overlay under
+  700px with a ✕ Close button, and auto-closes when a channel is selected.
 - **Repo/DB drift found and fixed this session:** a `kcircle_channel_messages`
   table already existed live on Supabase with a different, undocumented
   schema (`sender_id` instead of `author_id`, no `image_url`, no migration
@@ -1683,9 +1685,6 @@ overwrites, not the leaner 3-fixed-role MVP that was proposed first).
   `image_url` column exists on `kcircle_channel_messages` but nothing
   writes to it yet (DM/group-chat image attachments already work
   elsewhere, per §12d, this just isn't wired for channels yet)
-- Mobile: sidebar is hidden under 700px with no toggle button yet
-  (`.kc-group-sidebar` CSS class exists for this, needs a hamburger/toggle
-  control wired to it)
 - Voice/video calls (separate backlog item, still fully unstarted)
 
 ## 11. KaTube like button (`17eb400`) — one genuine like per user
