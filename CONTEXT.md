@@ -1869,3 +1869,77 @@ not committed any code — working tree was clean at session start).
 - Didn't audit every other page for mobile nav-link parity — only the
   landing page's nav was reported/found missing a mobile fallback this
   session.
+
+## 20. Storage/bandwidth — Supabase vs Cloudflare R2 (ANALYZED, not started — backlog)
+
+Founder asked whether Supabase Storage is the right long-term home for
+media (worried about scaling since there's no audience yet) and whether
+Cloudflare R2 (10GB free) is a better fit. Analyzed, not implemented yet.
+
+**Current storage footprint (only two buckets, no video files at all):**
+- `manga-pages` — comic page images, referenced from `app/upload/page.tsx`,
+  `app/series/[seriesId]/page.tsx`, `app/components/ManagePagesModal.tsx`,
+  `app/components/EditSeriesModal.tsx`.
+- `kcircle-media` — K Circle chat image attachments, referenced from
+  `app/kalpana-circle/page.tsx`, `app/kalpana-circle/chat/page.tsx`,
+  `app/kalpana-circle/group/[conversationId]/page.tsx`.
+- KaTube stores **no video files** — `app/katube/upload/page.tsx` only
+  saves a YouTube link + metadata to the `videos` table (see
+  `supabase/migrations/20260810_katube_videos.sql`); videos stay hosted on
+  YouTube. So "storing videos in Supabase" isn't actually happening —
+  founder's instinct that this needs solving pre-emptively is about images
+  and future growth, not a live video-storage problem.
+
+**Why R2 over Supabase Storage, when the time comes:** Supabase free tier
+caps at 5GB storage *and* 5GB bandwidth/month — bandwidth is the real
+constraint since every image view counts against it. R2 free tier is
+10GB storage with **zero egress fees, unlimited bandwidth out** — much
+better fit for a content platform where reads >> writes.
+
+**Blocker found this session:** tried provisioning an R2 bucket via the
+Cloudflare MCP connector (`r2_buckets_list`) — failed with `403: Please
+enable R2 through the Cloudflare Dashboard`. Confirmed via web research
+this is a hard Cloudflare requirement even on the free tier: a card (or
+PayPal) must be on file to activate R2 at all, though nothing is charged
+under the 10GB/1M-ops free allowance. This is a Cloudflare account-level
+step only the founder can do (dashboard login), not something doable via
+API/connector/token.
+
+**Two paths forward, presented to founder:**
+- **Option A — full R2 migration (needs a card on the Cloudflare
+  account).** Founder doesn't have one; suggested Indian fintech apps that
+  issue free virtual debit/RuPay/Visa cards without a bank branch visit
+  (Jupiter, Fi Money, Niyo) as a fast unblock if he wants to go this route.
+  Once unblocked: create R2 bucket, generate R2 API token (S3-compatible
+  Access Key ID + Secret, separate credential from the Cloudflare account
+  API token the MCP connector uses — connector can create/manage the
+  bucket but can't generate S3-style credentials, so this step needs the
+  founder to do it in-dashboard), attach a public custom domain or use
+  `r2.dev`, build a presigned-upload-URL API route (client can't upload
+  directly to R2 with a secret key the way it currently does to Supabase
+  via RLS + anon key), swap the upload call sites listed above to the new
+  flow, migrate existing files with a one-time copy script, add R2 env
+  vars to Vercel.
+- **Option B — free Cloudflare CDN/caching proxy in front of existing
+  Supabase Storage URLs, no R2, no card needed.** Recommended as the
+  near-term move since there's no audience yet (i.e. no real bandwidth
+  problem to solve today) — this removes most of the *future* bandwidth
+  pain for $0 without waiting on a card. Mechanism: add the founder's
+  domain to Cloudflare (free plan), point a subdomain (e.g.
+  `cdn.<domain>`) at the Supabase storage endpoint via a CNAME/proxy
+  record with the Cloudflare orange cloud (proxied) on, then add a Cache
+  Rule so Cloudflare's edge caches the image responses (comic
+  pages/attachments are immutable once uploaded — new upload = new path,
+  since the app already generates fresh storage paths per upload rather
+  than overwriting — so cache-forever is safe). Once cached, repeat views
+  of the same image are served from Cloudflare's edge and never hit
+  Supabase's bandwidth meter again. App code changes needed: swap the
+  base URL used in `getPublicUrl()` calls (or wrap them) to point at the
+  new `cdn.<domain>` host instead of the raw
+  `*.supabase.co/storage/v1/object/public/...` host, once that subdomain
+  exists.
+
+**Not started:** waiting on founder decision (A vs B) and, for either
+option, founder-side action outside what a connector/token can do (R2:
+add card in dashboard; Option B: confirm/add the domain to Cloudflare and
+share it). No code changes made this session.
