@@ -61,17 +61,17 @@ const GENRE_PILLS = ['Mythology', 'Action', 'Romance', 'Folk Tale', 'Desi Horror
 
 const DOORS = [
   {
-    href: '/WebMangal', title: 'MangaNovels', image: '/comics.jpg',
+    href: '/WebMangal', title: 'WebMangal', image: '/webmangal-door.png',
     blurb: 'Read manga, comics, and novels made by Desi creators — free forever, no ads, no gatekeepers.',
     tag: null,
   },
   {
-    href: '/katube', title: 'KaTube', image: '/kcommunity-preview.jpg',
+    href: '/katube', title: 'KaTube', video: '/videos/katube-door-preview.mp4',
     blurb: "A YouTube-style discovery space for AI-generated anime, from quick Shorts to full videos — built for the MANGAL creator niche.",
     tag: 'COMING SOON',
   },
   {
-    href: '/kalpana-circle', title: 'K Circle', image: '/kcommunity-preview.jpg',
+    href: '/kalpana-circle', title: 'K Circle', image: '/kcircle-door.png',
     blurb: 'Groups and chats for people into the anime niche — post, react, and talk about MANGAL series together.',
     tag: 'COMING SOON',
   },
@@ -540,7 +540,13 @@ export default function LandingPage() {
                   textDecoration: 'none', background: '#0a0a0f', border: '1px solid var(--border-color)',
                 }}
               >
-                <Image src={door.image} alt={door.title} fill style={{ objectFit: 'cover' }} />
+                {door.image && <Image src={door.image} alt={door.title} fill style={{ objectFit: 'cover' }} />}
+                {door.video && (
+                  <video
+                    src={door.video} autoPlay loop muted playsInline
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                )}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)' }} />
                 <div style={{ position: 'absolute', left: '20px', right: '20px', bottom: '20px', zIndex: 2 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
