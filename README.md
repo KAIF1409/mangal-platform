@@ -61,7 +61,7 @@ disclose YouTube API Services usage per YouTube's ToS requirements.
 
 ## Status
 
-MangaNovels is live and in active use. KaTube and Kalpana Circle are both live on real
+WebMangal is live and in active use. KaTube and Kalpana Circle are both live on real
 Supabase data with the feature sets described above — see the table at the top for what's
 shipped per product. Reader-to-creator monetization (tips, unlocking premium chapters) and
 platform-side sponsorship on KaTube are the next planned steps, gated behind reader/viewer
