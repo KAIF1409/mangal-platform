@@ -8,7 +8,7 @@ creators and readers.
 
 | Product | Route | What it does |
 |---|---|---|
-| **MangaNovels** | `/`, `/search`, `/read/...` | Read & publish manga, comics and web novels — one account, no split between formats. **Live, in active use.** |
+| **WebMangal** | `/`, `/search`, `/read/...` | Read & publish manga, comics and web novels — one account, no split between formats. **Live, in active use.** |
 | **KaTube** | `/katube` | YouTube-style discovery feed for AI-generated anime videos made by MANGAL creators, adapted from their own series. Grid + Shorts feed, watch pages, upload flow, channel-ownership verification, automated content moderation. |
 | **Kalpana Circle** | `/kalpana-circle` | Instagram-meets-Discord fan community — posts, stories, DMs/group chats, notifications, polls, close friends, creator broadcast channels, and full Discord-style channels & roles. |
 
