@@ -1704,6 +1704,14 @@ overwrites, not the leaner 3-fixed-role MVP that was proposed first).
   read, via `resolveChannelPermissions`), so this was DB-only hardening.
   Verified via `pg_policies` that all 6 rewritten policies applied live.
 
+- **Per-channel overwrite editing UI (DONE, follow-up session):** ⚙ icon
+  next to each channel in the sidebar (visible when `MANAGE_ROLES`) opens
+  a 3-state chip editor (Inherit/Allow/Deny, cycled on tap) per role x
+  permission, scoped to that channel. Writes via upsert to
+  `kcircle_channel_overwrites`, deletes the row once a role goes back to
+  all-inherit. Role list in the editor filtered through `canManageRoleAt()`
+  so it never offers a control the DB (§ hierarchy guard) would reject.
+
 **Not done (flagged as follow-ups, not started):**
 - No channel reordering UI (position is set at creation time only)
 - No voice/stage channels — text-only, per the `kcircle_group_channels`
@@ -1712,9 +1720,6 @@ overwrites, not the leaner 3-fixed-role MVP that was proposed first).
   `image_url` column exists on `kcircle_channel_messages` but nothing
   writes to it yet (DM/group-chat image attachments already work
   elsewhere, per §12d, this just isn't wired for channels yet)
-- No UI for editing per-channel role permission overwrites yet (the
-  `kcircle_channel_overwrites` table + RLS are ready; `resolveChannelPermissions`
-  reads them; nothing in the Roles/Channels panels writes to them yet)
 - Voice/video calls (separate backlog item, still fully unstarted)
 
 ## 11. KaTube like button (`17eb400`) — one genuine like per user
