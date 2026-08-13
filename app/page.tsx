@@ -4,8 +4,22 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import ThemeToggle from './components/ThemeToggle';
+import ParticleField from './components/ParticleField';
 import { supabase } from './lib/supabase';
+
+// Shared scroll-reveal variants — fade + rise into place the first time a
+// section crosses into the viewport (viewport once:true so it doesn't
+// replay every time the user scrolls up/down past it).
+const fadeUp = {
+  hidden: { opacity: 0, y: 32 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
+};
+const staggerContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+};
 
 // ── Public landing page — no auth required ──
 // Authenticated users are redirected to /home automatically.
@@ -378,16 +392,19 @@ export default function LandingPage() {
               onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text-primary)'}
               onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-secondary)'}
             >Log in</a>
-            <a href="/login" className="mangal-landing-cta" style={{
-              padding: '9px 20px', borderRadius: '9px', fontSize: '13px', fontWeight: 700,
-              background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
-              color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
-              boxShadow: '0 2px 16px rgba(127,29,29,0.4)',
-              transition: 'box-shadow 0.2s, transform 0.15s',
-            }}
-              onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-1px)'; el.style.boxShadow = '0 4px 24px rgba(127,29,29,0.55)'; }}
-              onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 2px 16px rgba(127,29,29,0.4)'; }}
-            >Start Reading Free</a>
+            <motion.a
+              href="/login"
+              className="mangal-landing-cta"
+              whileHover={{ y: -1, boxShadow: '0 4px 24px rgba(127,29,29,0.55)' }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              style={{
+                padding: '9px 20px', borderRadius: '9px', fontSize: '13px', fontWeight: 700,
+                background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
+                boxShadow: '0 2px 16px rgba(127,29,29,0.4)',
+              }}
+            >Start Reading Free</motion.a>
           </div>
         </nav>
 
@@ -421,8 +438,16 @@ export default function LandingPage() {
             pointerEvents: 'none',
           }} />
 
-          <div style={{ position: 'relative', zIndex: 3 }}>
-            <h1 style={{
+          {/* Interactive particle network — subtle depth layer behind the copy */}
+          <ParticleField />
+
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={staggerContainer}
+            style={{ position: 'relative', zIndex: 3 }}
+          >
+            <motion.h1 variants={fadeUp} style={{
               fontSize: 'clamp(32px, 6vw, 72px)', fontWeight: 900, margin: '0 0 12px',
               letterSpacing: '-0.04em',
               background: 'linear-gradient(135deg, #fff 0%, #d97706 60%, #7f1d1d 100%)',
@@ -431,16 +456,16 @@ export default function LandingPage() {
               filter: 'drop-shadow(-2px -2px 0px #000) drop-shadow(2px -2px 0px #000) drop-shadow(-2px 2px 0px #000) drop-shadow(2px 2px 0px #000) drop-shadow(0 4px 24px rgba(0,0,0,0.9))',
             }}>
               Bharat Ki Kahaniyan 🔥
-            </h1>
-            <p style={{
+            </motion.h1>
+            <motion.p variants={fadeUp} style={{
               fontSize: 'clamp(14px, 2vw, 20px)', color: '#f3f4f6', margin: '0 0 32px', lineHeight: 1.6, textShadow: '0 1px 12px rgba(0,0,0,0.9)',
               maxWidth: '620px', marginLeft: 'auto', marginRight: 'auto',
             }}>
               1000+ Desi comics & novels by Desi people. Scroll or read. Free forever. No ads, no gatekeepers.
-            </p>
+            </motion.p>
 
             {/* Search Bar */}
-            <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', maxWidth: '540px', margin: '0 auto 48px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <motion.form variants={fadeUp} onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', maxWidth: '540px', margin: '0 auto 48px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <input
                 type="text"
                 placeholder="Search stories, creators, genres..."
@@ -452,22 +477,22 @@ export default function LandingPage() {
                   fontSize: '14px', fontFamily: 'inherit',
                 }}
               />
-              <button
+              <motion.button
                 type="submit"
+                whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(217,119,6,0.5)' }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                 style={{
                   padding: '12px 28px', borderRadius: '10px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
                   color: '#fff', border: 'none', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                  transition: 'box-shadow 0.2s, transform 0.15s',
                 }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.transform = 'translateY(-2px)'; (e.target as HTMLElement).style.boxShadow = '0 8px 24px rgba(217,119,6,0.5)'; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.transform = 'none'; (e.target as HTMLElement).style.boxShadow = 'none'; }}
               >
                 Search
-              </button>
-            </form>
+              </motion.button>
+            </motion.form>
 
             {/* Genre Pills */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '8px' }}>
+            <motion.div variants={fadeUp} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '8px' }}>
               {GENRE_PILLS.map(g => (
                 <a key={g} href={`/WebMangal?genre=${encodeURIComponent(g)}`} style={{
                   fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
@@ -495,15 +520,21 @@ export default function LandingPage() {
                   {g}
                 </a>
               ))}
-            </div>
+            </motion.div>
 
-          </div>
+          </motion.div>
         </section>
 
 
         {/* ── THREE DOORS: MangaNovels / KaTube / Kalpana Circle (full width, no container constraint) ── */}
         <section style={{ width: '100%' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <motion.div
+              initial={{ opacity: 0, x: -40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
+            >
             <Link href="/WebMangal" style={{
               textDecoration: 'none', borderRadius: '0',
               background: '#0a0a0f', border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -526,7 +557,14 @@ export default function LandingPage() {
                 <Image src="/comics.jpg" alt="MangaNovels" fill style={{ objectFit: 'cover' }} />
               </div>
             </Link>
+            </motion.div>
 
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
+            >
             <Link href="/katube" style={{
               textDecoration: 'none', borderRadius: '0',
               background: '#0a0a0f', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -550,7 +588,14 @@ export default function LandingPage() {
                 <video src="/videos/katube-preview.mp4" autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </Link>
+            </motion.div>
 
+            <motion.div
+              initial={{ opacity: 0, x: -40 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
+            >
             <Link href="/kalpana-circle" style={{
               textDecoration: 'none', borderRadius: '0',
               background: '#0a0a0f', border: 'none',
@@ -574,15 +619,22 @@ export default function LandingPage() {
                 <Image src="/kcommunity-preview.jpg" alt="K Community" fill style={{ objectFit: 'cover' }} />
               </div>
             </Link>
+            </motion.div>
           </div>
         </section>
 
         {/* ── SHOWCASE ── */}
         <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '48px' }}>
-            <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.15 }}
+            variants={staggerContainer}
+            style={{ marginBottom: '48px' }}
+          >
+            <motion.h2 variants={fadeUp} style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
               🔥 Trending Now
-            </h2>
+            </motion.h2>
             {loading ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 180px))', gap: '14px' }}>
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -591,11 +643,13 @@ export default function LandingPage() {
               </div>
             ) : showcaseItems.length > 0 ? (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 180px))', gap: '14px' }}>
+                <motion.div variants={staggerContainer} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 180px))', gap: '14px' }}>
                   {showcaseItems.map((s, i) => (
-                    <ShowcaseCard key={s.id} series={s} rank={i + 1} />
+                    <motion.div key={s.id} variants={fadeUp}>
+                      <ShowcaseCard series={s} rank={i + 1} />
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
                 {showcaseItems.length < 6 && (
                   <div style={{
                     marginTop: '20px', padding: '18px 22px', borderRadius: '14px',
@@ -638,13 +692,19 @@ export default function LandingPage() {
                 </a>
               </div>
             )}
-          </div>
+          </motion.div>
         </section>
 
 
         {/* ── TAG CLOUD ── */}
         {tagCloud.length > 0 && (
           <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1200px', margin: '0 auto' }}>
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
+            >
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
               <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
                 🏷️ Browse by Tag
@@ -673,54 +733,73 @@ export default function LandingPage() {
                 </a>
               ))}
             </div>
+            </motion.div>
           </section>
         )}
 
 
         {/* ── FEATURES ── */}
         <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <h2 style={{
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={staggerContainer}
+            style={{ textAlign: 'center', marginBottom: '48px' }}
+          >
+            <motion.h2 variants={fadeUp} style={{
               fontSize: 'clamp(24px, 3.5vw, 42px)', fontWeight: 900, margin: '0 0 12px',
               letterSpacing: '-0.03em', color: 'var(--text-primary)',
             }}>
               Why Choose Mangal?
-            </h2>
-            <p style={{ fontSize: 'clamp(13px, 1.8vw, 16px)', color: 'var(--text-tertiary)', margin: '0 0 32px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
+            </motion.h2>
+            <motion.p variants={fadeUp} style={{ fontSize: 'clamp(13px, 1.8vw, 16px)', color: 'var(--text-tertiary)', margin: '0 0 32px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
               India&apos;s platform by creators, for readers. Discover stories rooted in our culture.
-            </p>
+            </motion.p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 280px))', gap: '20px' }}>
+            <motion.div variants={staggerContainer} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 280px))', gap: '20px' }}>
               {FEATURE_CARDS.map(f => (
-                <FeatureCard key={f.title} {...f} />
+                <motion.div key={f.title} variants={fadeUp}>
+                  <FeatureCard {...f} />
+                </motion.div>
               ))}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </section>
 
 
         {/* ── CREATOR CTA ── */}
         <section style={{ padding: 'clamp(70px,10vw,120px) 24px', textAlign: 'center', maxWidth: '680px', margin: '0 auto' }}>
-          <div style={{ fontSize: '40px', marginBottom: '24px', filter: 'drop-shadow(0 0 20px rgba(217,119,6,0.6))' }}>🔥</div>
-          <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-0.04em', color: 'var(--text-primary)' }}>
-            Got a story in you?
-          </h2>
-          <p style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: 'var(--text-tertiary)', margin: '0 0 36px', lineHeight: 1.65 }}>
-            Publish your own Mangal or Novel on our platform. Free tools, real readers, no middlemen.
-          </p>
-          <a href="/login?creator=1" style={{
-            padding: '14px 36px', borderRadius: '12px', fontSize: '15px', fontWeight: 800,
-            background: 'linear-gradient(135deg, #7f1d1d 0%, #d97706 100%)',
-            color: '#fff', textDecoration: 'none',
-            boxShadow: '0 4px 28px rgba(217,119,6,0.35)',
-            display: 'inline-flex', alignItems: 'center', gap: '10px',
-            transition: 'transform 0.15s, box-shadow 0.2s',
-          }}
-            onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = '0 8px 36px rgba(217,119,6,0.55)'; }}
-            onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'none'; el.style.boxShadow = '0 4px 28px rgba(217,119,6,0.35)'; }}
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.3 }}
+            variants={staggerContainer}
           >
-            ✍️ Become a Creator
-          </a>
+            <motion.div variants={fadeUp} style={{ fontSize: '40px', marginBottom: '24px', filter: 'drop-shadow(0 0 20px rgba(217,119,6,0.6))' }}>🔥</motion.div>
+            <motion.h2 variants={fadeUp} style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-0.04em', color: 'var(--text-primary)' }}>
+              Got a story in you?
+            </motion.h2>
+            <motion.p variants={fadeUp} style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: 'var(--text-tertiary)', margin: '0 0 36px', lineHeight: 1.65 }}>
+              Publish your own Mangal or Novel on our platform. Free tools, real readers, no middlemen.
+            </motion.p>
+            <motion.a
+              variants={fadeUp}
+              href="/login?creator=1"
+              whileHover={{ y: -3, boxShadow: '0 8px 36px rgba(217,119,6,0.55)' }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+              style={{
+                padding: '14px 36px', borderRadius: '12px', fontSize: '15px', fontWeight: 800,
+                background: 'linear-gradient(135deg, #7f1d1d 0%, #d97706 100%)',
+                color: '#fff', textDecoration: 'none',
+                boxShadow: '0 4px 28px rgba(217,119,6,0.35)',
+                display: 'inline-flex', alignItems: 'center', gap: '10px',
+              }}
+            >
+              ✍️ Become a Creator
+            </motion.a>
+          </motion.div>
         </section>
 
 

@@ -1761,3 +1761,53 @@ bypassed by calling the API directly or from a buggy client.
 limiting or bot/fraud detection beyond "must be a real logged-in
 `auth.users` row" — same trust model as the rest of the app (e.g. view
 counts) for now.
+
+## 18. Landing page — Framer Motion scroll/entrance animations + particle field (DONE, this session)
+
+Founder asked for a modern redesign pass on the public landing page
+(`app/page.tsx`) — glassmorphism/hero polish, smooth scroll-driven
+animations, and an interactive visual layer. Kept the existing structure,
+data-fetching, and `mangal-*` inline-style/CSS-var conventions intact;
+this was additive, not a rewrite.
+
+- **Dependency:** added `framer-motion` (package.json + lockfile).
+- **Hero:** new `app/components/ParticleField.tsx` — a lightweight
+  `<canvas>` particle network (no Three.js/WebGL dependency) rendered
+  behind the hero copy. Particles drift, link to nearby neighbors within
+  130px, and gently repel from the cursor within 110px. Respects
+  `prefers-reduced-motion` (renders a static frame, no animation loop) and
+  is `pointer-events: none` so it never blocks hero clicks. Hero headline,
+  subtext, search bar, and genre pills now stagger in on load via a shared
+  `fadeUp` + `staggerContainer` Framer Motion variant pair (defined once
+  near the top of `page.tsx`, reused across every section below).
+- **Scroll reveals:** three-door section (MangaNovels/KaTube/K Circle)
+  alternates slide-in-from-left/right per door on `whileInView`
+  (`viewport={{ once: true }}`, so it doesn't replay on scroll-up).
+  Trending showcase grid, tag cloud, features grid, and the "Got a story
+  in you?" CTA section all fade-up on scroll with staggered children
+  (cards/pills animate in one after another, not all at once).
+- **Micro-interactions:** nav "Start Reading Free" button, hero search
+  button, and the creator CTA button converted from manual
+  `onMouseEnter`/`onMouseLeave` style mutation to Framer Motion
+  `whileHover`/`whileTap` spring transitions. Everything else (genre pill
+  hovers, showcase/feature card hovers, footer link hovers) intentionally
+  left on the original manual-JS pattern — no reason to touch code that
+  wasn't part of this ask.
+- **Verified:** `tsc --noEmit` clean, `eslint` clean on the touched files
+  (one pre-existing unrelated apostrophe lint warning on the KaTube door
+  copy, not introduced this session, not touched). `next build` could not
+  be run to completion in the dev sandbox — `next/font/google` fetches
+  fonts.googleapis.com at build time and that's not on the sandbox's
+  allowed egress list, so the build fails on the font step specifically,
+  unrelated to this change. Should build clean on Vercel; **flagging so
+  the founder watches the first Vercel deploy log for this change** in
+  case anything else surfaces.
+
+**Not done (out of scope for this pass, flagged as follow-ups):**
+- No GSAP — Framer Motion covered every animation need here, didn't add a
+  second animation library on top of it.
+- No Three.js/WebGL 3D scene — used a canvas particle network instead
+  (same "interactive depth" effect, much lighter bundle). Worth a real
+  Three.js hero scene later if the founder wants something more elaborate.
+- Full-stack logic (backend APIs/auth/DB) untouched — this was a
+  presentation-layer pass only, no schema or route changes.
