@@ -1811,3 +1811,61 @@ this was additive, not a rewrite.
   Three.js hero scene later if the founder wants something more elaborate.
 - Full-stack logic (backend APIs/auth/DB) untouched — this was a
   presentation-layer pass only, no schema or route changes.
+
+## 19. Landing page dark-by-default + ThemeToggle mount bug fix + mobile nav menu (DONE, this session)
+
+Picked up where a previous session left off (had analyzed the approach but
+not committed any code — working tree was clean at session start).
+
+- **Landing page now defaults to dark**, light available via the existing
+  `ThemeToggle`, using the same page-scoped local-override pattern KaTube
+  already uses (§11 area / `app/katube/page.tsx`): `isLight` state
+  (`useState(false)`), a `landingDarkVars`/`landingLightVars` CSS-var map
+  (identical token values to `globals.css`'s `:root`/`[data-theme='light']`)
+  spread onto the root div's inline `style`, independent of the site-wide
+  light-default `<html>` attribute. Site-wide default (home, read, series,
+  history, KaTube's own watch/upload pages, Kalpana Circle, etc.) is
+  untouched — light unless the visitor explicitly picked dark.
+- **Real bug fixed in `ThemeToggle.tsx` (not just landing-page-specific):**
+  the component's mount effect always read `document.documentElement`'s
+  `data-theme` attribute to compute its initial `isLight`/call `onChange` —
+  which reflects the *site-wide* default, not a page's own override. For
+  any page using the local-override pattern (KaTube, and now landing),
+  this silently flipped the page's dark default back to light right after
+  paint for first-time visitors, because the site-wide default is light.
+  Fixed by adding two opt-in props: `defaultLight` (this page's own default
+  when not syncing globally) and `syncGlobal` (whether toggling here should
+  write to the shared `<html>` attribute + `mangal_theme` localStorage key
+  at all). Pages using the plain site-wide toggle (the majority — no props
+  passed) get identical behavior to before. KaTube's call site and the new
+  landing page one both now pass `defaultLight={false} syncGlobal={false}`,
+  so: (a) they don't get flipped back to light after mount, and (b)
+  toggling on those pages re-themes only that page via `onChange` and never
+  overwrites the sitewide preference other pages fall back to (previously,
+  toggling KaTube back to "dark" after flipping to light would have written
+  `dark` to the shared `mangal_theme` key, silently changing the sitewide
+  default too — also fixed by the same `syncGlobal` change).
+- **Mobile nav — real compatibility bug, not just polish:** under 640px,
+  `.mangal-landing-nav-center` (Browse/Rankings/Genres/New Releases/KaTube/K
+  Circle) and `.mangal-landing-login-link` were both set to `display: none`
+  with nothing replacing them — mobile visitors had no way to reach any of
+  those routes, only the "Start Reading Free" CTA. Added a hamburger button
+  (`☰`/`✕`, visible only ≤640px) that toggles a sticky slide-down menu
+  listing all the hidden links plus Log in, each closing the menu on tap.
+- **Verified:** `tsc --noEmit` clean, `eslint` clean on all three touched
+  files (`app/page.tsx`, `app/components/ThemeToggle.tsx`,
+  `app/katube/page.tsx`) — only 2 pre-existing unrelated `<img>` warnings in
+  `katube/page.tsx`, not introduced this session. `next build` still fails
+  in this sandbox on the same pre-existing Google Fonts egress restriction
+  (`fonts.googleapis.com` 403) documented in §18 — unrelated to this
+  change, should build clean on Vercel; **flagging so the founder watches
+  the first Vercel deploy log for this change** same as last time.
+
+**Not done (out of scope, flagged as follow-ups):**
+- Toggling on KaTube/landing is session-only (component state), not
+  persisted per-page across visits — only the sitewide preference persists
+  (by design now, via `syncGlobal`). Worth a per-page localStorage key
+  later if the founder wants the local choice remembered too.
+- Didn't audit every other page for mobile nav-link parity — only the
+  landing page's nav was reported/found missing a mobile fallback this
+  session.

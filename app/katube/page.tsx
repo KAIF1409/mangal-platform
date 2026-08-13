@@ -609,7 +609,7 @@ export default function KaTubePage() {
             <span className="katube-label-mobile">💬</span>
           </Link>
           <span className="katube-theme-toggle">
-            <ThemeToggle size={30} onChange={setIsLight} />
+            <ThemeToggle size={30} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
           </span>
           {/* KaTube profile — channel verification + metrics live at
               /dashboard/katube (part of the main MANGAL dashboard, see

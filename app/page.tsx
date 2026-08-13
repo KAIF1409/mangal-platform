@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -162,6 +162,14 @@ export default function LandingPage() {
   const [tagCloud, setTagCloud] = useState<TagWithCount[]>([]);
   const mainRef = useRef<HTMLDivElement>(null);
 
+  // Landing page defaults to dark, independent of the site-wide
+  // light-default (founder's call — same local-override pattern as
+  // KaTube, see CONTEXT.md §18). ThemeToggle's `syncGlobal={false}` keeps
+  // this page's toggle from touching the global <html> attribute/localStorage,
+  // so flipping it here never changes what /home, /read, etc. default to.
+  const [isLight, setIsLight] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) router.replace('/home');
@@ -271,8 +279,26 @@ export default function LandingPage() {
     if (search.trim()) router.push(`/WebMangal/search?keyword=${encodeURIComponent(search.trim())}`);
   };
 
+  // Same token values as the site-wide dark/light vars (globals.css) —
+  // hardcoded locally (not read from the global attribute) so this page's
+  // dark default can't be knocked over by the sitewide light-default, and
+  // toggling here can't leak back into it either. See isLight above.
+  const landingDarkVars = {
+    '--bg-primary': '#07070a', '--bg-card': '#0d0d14', '--bg-input': '#08080c',
+    '--border-color': 'rgba(255, 255, 255, 0.18)', '--text-primary': '#f9fafb',
+    '--text-secondary': '#9ca3af', '--text-tertiary': '#6b7280',
+    '--nav-bg': 'rgba(7, 7, 10, 0.97)', '--nav-bg-transparent': 'rgba(7, 7, 10, 0.85)',
+  } as CSSProperties;
+  const landingLightVars = {
+    '--bg-primary': '#ffffff', '--bg-card': '#f7f7f9', '--bg-input': '#f0f0f3',
+    '--border-color': '#e5e7eb', '--text-primary': '#14141c',
+    '--text-secondary': '#4b5563', '--text-tertiary': '#6b7280',
+    '--nav-bg': 'rgba(255, 255, 255, 0.97)', '--nav-bg-transparent': 'rgba(255, 255, 255, 0.88)',
+  } as CSSProperties;
+  const landingVars = isLight ? landingLightVars : landingDarkVars;
+
   return (
-    <div ref={mainRef} style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
+    <div ref={mainRef} data-theme={isLight ? 'light' : 'dark'} style={{ ...landingVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
       {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
       <CustomCursor />
@@ -282,6 +308,8 @@ export default function LandingPage() {
         <style>{`
           .mangal-landing-nav-center { display: flex; gap: 4px; align-items: center; }
           .mangal-landing-login-link { display: inline-block; }
+          .mangal-landing-hamburger { display: none; }
+          .mangal-landing-mobile-menu { display: none; }
 
           @media (max-width: 860px) {
             .mangal-landing-nav { padding: 0 16px !important; }
@@ -290,8 +318,14 @@ export default function LandingPage() {
             .mangal-landing-nav-center a { padding: 6px 9px !important; font-size: 12px !important; }
           }
           @media (max-width: 640px) {
+            /* Nav links + Log in used to just vanish here with nothing to
+               replace them — mobile visitors had no way to reach Rankings,
+               KaTube, K Circle, etc. Swapped for a hamburger + slide-down
+               menu instead of hiding them outright. */
             .mangal-landing-nav-center { display: none; }
             .mangal-landing-login-link { display: none; }
+            .mangal-landing-hamburger { display: flex; }
+            .mangal-landing-mobile-menu { display: flex; }
             .mangal-landing-nav { padding: 0 12px !important; height: 56px !important; }
             .mangal-landing-brand-text { font-size: 17px !important; }
             .mangal-landing-cta { padding: 8px 14px !important; font-size: 12px !important; }
@@ -390,7 +424,7 @@ export default function LandingPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            <ThemeToggle size={32} />
+            <ThemeToggle size={32} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
             <a href="/login" className="mangal-landing-login-link" data-cursor-hover="true" style={{
               padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
               color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s',
@@ -409,8 +443,51 @@ export default function LandingPage() {
                 whiteSpace: 'nowrap', boxShadow: '0 2px 16px rgba(127,29,29,0.4)',
               }}
             >Start Reading Free</motion.a>
+            <button
+              className="mangal-landing-hamburger"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen(v => !v)}
+              style={{
+                width: '36px', height: '36px', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)',
+                color: 'var(--text-primary)', fontSize: '16px', cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              {mobileMenuOpen ? '✕' : '☰'}
+            </button>
           </div>
         </nav>
+
+        {/* ── MOBILE NAV MENU — sub-640px only; the links above (Browse,
+             Rankings, KaTube, K Circle, Log in) get hidden by CSS at that
+             width with no other way to reach them, so this fills the gap. */}
+        <div
+          className="mangal-landing-mobile-menu"
+          style={{
+            flexDirection: 'column', position: 'sticky', top: '56px', zIndex: 99,
+            background: 'var(--nav-bg)', backdropFilter: 'blur(20px)',
+            borderBottom: '1px solid var(--border-color)',
+            maxHeight: mobileMenuOpen ? '400px' : '0px', overflow: 'hidden',
+            transition: 'max-height 0.25s ease',
+          }}
+        >
+          {[
+            { label: 'Browse', href: '/WebMangal' },
+            { label: 'Rankings', href: '/rankings' },
+            { label: 'Genres', href: '/WebMangal' },
+            { label: 'New Releases', href: '/WebMangal' },
+            { label: '🎬 KaTube', href: '/katube' },
+            { label: '💬 K Circle', href: '/kalpana-circle' },
+            { label: 'Log in', href: '/login' },
+          ].map(link => (
+            <a key={link.label} href={link.href} onClick={() => setMobileMenuOpen(false)} style={{
+              padding: '14px 20px', fontSize: '14px', fontWeight: 600,
+              color: 'var(--text-secondary)', textDecoration: 'none',
+              borderBottom: '1px solid var(--border-color)',
+            }}>{link.label}</a>
+          ))}
+        </div>
 
         {/* ── HERO ── */}
         <section id="mangal-hero" style={{
