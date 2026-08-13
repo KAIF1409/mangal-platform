@@ -1,60 +1,75 @@
-# MANGAL — Read & Publish Manga, Comics and Novels
+# MANGAL — Manga/Novel Reading, AI-Anime Discovery & Fan Community
 
 **Live:** [mangal-platform.vercel.app](https://mangal-platform.vercel.app)
 
-MANGAL is a platform built for Indian creators and readers who love manga,
-comics, and web novels. Creators can upload and publish their work — comics
-or novels — all from one account, and readers can enjoy both in one place
-without switching apps. It's built to give creators a fair deal: right now,
-MANGAL takes **0% cut** from what creators earn.
+A solo-built, production Next.js ecosystem with three connected products sharing one
+codebase, one Supabase project, and one Vercel deployment — built for Indian manga/novel
+creators and readers.
 
-## Why MANGAL exists
+| Product | Route | What it does |
+|---|---|---|
+| **MangaNovels** | `/`, `/search`, `/read/...` | Read & publish manga, comics and web novels — one account, no split between formats. **Live, in active use.** |
+| **KaTube** | `/katube` | YouTube-style discovery feed for AI-generated anime videos made by MANGAL creators, adapted from their own series. Grid + Shorts feed, watch pages, upload flow, channel-ownership verification, automated content moderation. |
+| **Kalpana Circle** | `/kalpana-circle` | Instagram-meets-Discord fan community — posts, stories, DMs/group chats, notifications, polls, close friends, creator broadcast channels, and full Discord-style channels & roles. |
 
-India has a huge and growing community of readers and independent
-creators, but most platforms only let you do comics *or* novels, not both.
-MANGAL brings them together in one home, so a creator doesn't need two
-separate accounts and readers don't need two separate apps.
+## Tech stack
 
-## What you can do on MANGAL
+- **Framework:** Next.js 16 (App Router), React 19, TypeScript
+- **Backend:** Supabase (Postgres, Auth, Storage, Realtime) — every table locked down with
+  row-level security, no service-role key used client-side
+- **Styling:** inline CSS-variable theming (light/dark), no CSS framework at runtime
+- **Media/AI:** NSFWJS + TensorFlow.js for automated content moderation, `sharp` for
+  server-side image processing, YouTube Data API v3 for channel verification & metadata
+- **Motion:** Framer Motion + GSAP for the landing page
+- **Deployment:** Vercel, with Vercel Analytics
 
-- **Read** manga, comics, and web novels — switch between comic pages and
-  novel chapters with zero friction
-- **Publish** your own comics or novels, with a clean, easy-to-use writer
-  and uploader
-- **Follow your favorite creators** and get notified the moment they post
-  a new chapter
-- **Bookmark and track** what you're reading, right where you left off
-- **Discover new stories** through search, genre filters, and
-  trending/staff-picks sections
-- **Read comfortably** with right-to-left manga mode and a Hindi/English
-  toggle
-- **Share** what you're reading straight to WhatsApp
+## Engineering highlights
 
-MANGAL is also growing into a small family of connected experiences:
+A few things worth a closer look in the code, not just the feature list:
 
-- **KaTube** — a space to discover AI-generated anime videos made by
-  MANGAL creators, adapted from their own series
-- **Kalpana Circle** — a community space to talk anime, share fan art and
-  theories, and chat with other readers — including group chats
+- **Zero-cost, ToS-safe video architecture** — KaTube never stores or rehosts video files;
+  it only stores YouTube video IDs + metadata and plays back through YouTube's own embed,
+  which keeps the product both free to run and compliant with YouTube's API Terms of
+  Service (no branding removal, no scraping, no download tooling).
+- **Server-verified channel ownership** — creators prove they own a YouTube channel via a
+  one-time verification-code handshake, then every single upload is independently checked
+  server-side against that verified channel ID before it's accepted, closing the obvious
+  "upload someone else's video" exploit.
+- **Automated moderation pipeline** — NSFW thumbnail classification (NSFWJS) and
+  AI-disclosure checks (via YouTube's `containsSyntheticMedia` field) auto-flag risky
+  uploads into a review queue instead of hard-blocking, to avoid false-positive creator
+  friction while still catching real problems.
+- **Discord-style permission system built from scratch** — bitmask role permissions,
+  per-channel allow/deny overwrites, and a resolution order that mirrors Discord's own
+  (role permissions → channel denies → channel allows → admin override), enforced at the
+  RLS layer (not just hidden in the UI) with a role-hierarchy guard so a member can never
+  edit or assign a role ranked above their own.
+- **Found and fixed real RLS security holes** — including a participant-insert policy that
+  had degraded to an always-true check (letting any user join any private conversation)
+  and a self-referential policy comparison that leaked group membership across the
+  platform. Both traced, root-caused, and patched with regression-safe migrations.
+- **Race-condition-safe interactions** — like/follow/vote actions use a synchronous ref
+  lock (not just React state) to close a double-click window that async state batching
+  would otherwise leave open.
 
-## Built with care for privacy and safety
+## Privacy & compliance
 
-MANGAL follows India's data protection and IT rules — clear consent when
-you sign up, extra protection for users under 18 with parental consent,
-and simple ways to download or delete your data whenever you want. There's
-also a dedicated support page for any concerns, with a guaranteed response
-time.
+Built with India's data protection and IT rules in mind: explicit consent at signup, extra
+protection and parental consent for under-18 users, self-serve data export/delete, and a
+dedicated support channel with a guaranteed response time. KaTube's public-facing pages
+disclose YouTube API Services usage per YouTube's ToS requirements.
 
 ## Status
 
-MANGAL is live and in active use — reading, publishing, and the privacy
-features above are all working today. Ways for readers to directly support
-creators (tips, unlocking premium chapters) are coming soon, once the
-platform has more readers.
+MangaNovels is live and in active use. KaTube and Kalpana Circle are both live on real
+Supabase data with the feature sets described above — see the table at the top for what's
+shipped per product. Reader-to-creator monetization (tips, unlocking premium chapters) and
+platform-side sponsorship on KaTube are the next planned steps, gated behind reader/viewer
+growth.
 
 ## About
 
-Built solo, end-to-end, by **Mohammed Kaif** — B.Tech CSE, PES University
-(2026).
+Built solo, end-to-end — architecture, backend, and frontend — by **Mohammed Kaif**,
+B.Tech CSE, PES University (2026).
 [LinkedIn](https://www.linkedin.com/in/mohammed-kaif-714a79242) ·
 [Email](mailto:kaifmohammed.work@gmail.com)
