@@ -190,6 +190,24 @@ export default function CreatorProfilePage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
 
+      {/* Mobile pass (§13 sweep): this page had zero @media rules. The
+          2-item nav (logo | Back to Browse) is small enough it was already
+          safe, and the flex patterns elsewhere (flexShrink:0 avatar +
+          flex:1/minWidth:0 info column, flexWrap on the stats row) already
+          absorbed most of the squeeze — but the header card's fixed 28px
+          padding plus the 72px avatar left very little room for the
+          username/stats column on a ~320-360px phone. Tightens padding and
+          shrinks the avatar under 480px, same .mangal-* + <style> pattern
+          used elsewhere in this sweep. */}
+      <style>{`
+        @media (max-width: 480px) {
+          .mangal-creator-header { padding: 18px !important; gap: 14px !important; }
+          .mangal-creator-avatar { width: 56px !important; height: 56px !important; font-size: 20px !important; }
+          .mangal-creator-name { font-size: 19px !important; }
+          .mangal-creator-grid { padding: 0 16px 48px !important; }
+        }
+      `}</style>
+
       {/* ── NAV ── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
@@ -209,16 +227,16 @@ export default function CreatorProfilePage() {
         <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to Browse</Link>
       </nav>
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px 60px' }}>
+      <div className="mangal-creator-grid" style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px 60px' }}>
 
         {/* ── CREATOR HEADER ── */}
-        <div style={{
+        <div className="mangal-creator-header" style={{
           display: 'flex', alignItems: 'center', gap: '20px',
           padding: '28px', borderRadius: '20px',
           background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           marginBottom: '32px',
         }}>
-          <div style={{
+          <div className="mangal-creator-avatar" style={{
             width: '72px', height: '72px', borderRadius: '50%', flexShrink: 0,
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -228,7 +246,7 @@ export default function CreatorProfilePage() {
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' as const, marginBottom: '4px' }}>
-              <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+              <h1 className="mangal-creator-name" style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
                 @{creator.username}
               </h1>
               {!accountActive && (
