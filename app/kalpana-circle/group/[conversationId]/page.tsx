@@ -58,7 +58,8 @@ export default function GroupChannelsPage() {
   const [myRoleIds, setMyRoleIds] = useState<string[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
 
-  const [panel, setPanel] = useState<'channels' | 'roles' | null>(null);
+  const [panel, setPanel] = useState<'channels' | 'roles' | 'overwrites' | null>(null);
+  const [overwriteChannelId, setOverwriteChannelId] = useState<string | null>(null);
   const [newChannelName, setNewChannelName] = useState('');
   const [newRoleName, setNewRoleName] = useState('');
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
@@ -222,6 +223,41 @@ export default function GroupChannelsPage() {
     await loadAll();
   };
 
+  // Per-channel role overwrite: 3-state cycle inherit -> allow -> deny -> inherit,
+  // same states Discord's channel permission editor uses. Gated the same way
+  // the RLS policy is (MANAGE_ROLES + the overwritten role must rank below
+  // the caller's own highest role) via canManageRoleAt.
+  const getOverwriteState = (channelId: string, roleId: string, permKey: keyof typeof PERM): 'inherit' | 'allow' | 'deny' => {
+    const bit = PERM[permKey];
+    const o = overwrites.find(ow => ow.channel_id === channelId && ow.role_id === roleId);
+    if (!o) return 'inherit';
+    if (o.allow & bit) return 'allow';
+    if (o.deny & bit) return 'deny';
+    return 'inherit';
+  };
+
+  const cycleOverwrite = async (channelId: string, roleId: string, permKey: keyof typeof PERM) => {
+    const role = roles.find(r => r.id === roleId);
+    if (!role || !canManageRoleAt(myRoleRows, role.position)) return;
+    const bit = PERM[permKey];
+    const existing = overwrites.find(ow => ow.channel_id === channelId && ow.role_id === roleId);
+    const allow = existing?.allow ?? 0;
+    const deny = existing?.deny ?? 0;
+    const state = getOverwriteState(channelId, roleId, permKey);
+    let nextAllow = allow;
+    let nextDeny = deny;
+    if (state === 'inherit') { nextAllow = allow | bit; nextDeny = deny & ~bit; }
+    else if (state === 'allow') { nextAllow = allow & ~bit; nextDeny = deny | bit; }
+    else { nextAllow = allow & ~bit; nextDeny = deny & ~bit; }
+
+    if (nextAllow === 0 && nextDeny === 0) {
+      if (existing) await supabase.from('kcircle_channel_overwrites').delete().eq('channel_id', channelId).eq('role_id', roleId);
+    } else {
+      await supabase.from('kcircle_channel_overwrites').upsert({ channel_id: channelId, role_id: roleId, allow: nextAllow, deny: nextDeny });
+    }
+    await loadAll();
+  };
+
   if (!checkedAuth || loading) {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-primary)' }}>Loading…</div>;
   }
@@ -287,6 +323,9 @@ export default function GroupChannelsPage() {
               }}># {c.name}</button>
               {canManageChannels && (
                 <button onClick={() => deleteChannel(c.id)} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+              )}
+              {canManageRoles && (
+                <button onClick={() => { setOverwriteChannelId(c.id); setPanel('overwrites'); }} title="Channel permissions" style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer' }}>⚙</button>
               )}
             </div>
           ))}
@@ -419,6 +458,55 @@ export default function GroupChannelsPage() {
             ))}
           </div>
         )}
+
+        {panel === 'overwrites' && overwriteChannelId && canManageRoles && (() => {
+          const chan = channels.find(c => c.id === overwriteChannelId);
+          const editableRoles = roles.filter(r => canManageRoleAt(myRoleRows, r.position));
+          return (
+            <div style={{ width: '300px', flexShrink: 0, borderLeft: '1px solid var(--border-color)', padding: '16px', overflowY: 'auto' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: 800, margin: '0 0 4px' }}># {chan?.name ?? ''} permissions</h3>
+              <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '0 0 14px' }}>Per-role overrides for this channel only. Tap a chip to cycle Inherit → Allow → Deny.</p>
+
+              {editableRoles.length === 0 && (
+                <div style={{ fontSize: '11.5px', color: 'var(--text-faint)' }}>No roles you can edit here.</div>
+              )}
+
+              {editableRoles.map(r => {
+                const meta = roleNames.get(r.id);
+                return (
+                  <div key={r.id} style={{ marginBottom: '10px', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '8px 10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: meta?.color ?? '#94a3b8', flexShrink: 0 }} />
+                      <span style={{ fontSize: '12.5px', fontWeight: 700 }}>{meta?.name}{r.is_default ? ' (default)' : ''}</span>
+                    </div>
+                    {PERMISSION_LABELS.map(p => {
+                      const state = getOverwriteState(overwriteChannelId, r.id, p.key);
+                      const colors: Record<typeof state, { bg: string; fg: string; label: string }> = {
+                        inherit: { bg: 'transparent', fg: 'var(--text-tertiary)', label: 'Inherit' },
+                        allow: { bg: 'rgba(34,197,94,0.15)', fg: '#22c55e', label: 'Allow' },
+                        deny: { bg: 'rgba(239,68,68,0.15)', fg: '#ef4444', label: 'Deny' },
+                      };
+                      const c = colors[state];
+                      return (
+                        <div key={p.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0' }}>
+                          <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>{p.label}</span>
+                          <button
+                            onClick={() => cycleOverwrite(overwriteChannelId, r.id, p.key)}
+                            style={{
+                              fontSize: '10px', fontWeight: 800, padding: '2px 9px', borderRadius: '9px',
+                              border: `1px solid ${state === 'inherit' ? 'var(--border-color)' : c.fg}`,
+                              background: c.bg, color: c.fg, cursor: 'pointer', minWidth: '58px',
+                            }}
+                          >{c.label}</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
