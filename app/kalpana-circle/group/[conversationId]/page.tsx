@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
@@ -20,6 +20,8 @@ import {
 
 const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
 const ACCENT = '#a78bfa';
+// Same bucket + size limit chat/page.tsx uses for DM/group message attachments (§12d).
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
 interface ChannelRow { id: string; name: string; topic: string | null; position: number }
 interface Msg { id: string; author_id: string; text: string | null; image_url: string | null; created_at: string; author: string }
@@ -51,6 +53,10 @@ export default function GroupChannelsPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState('');
   const [posting, setPosting] = useState(false);
+  const [attachFile, setAttachFile] = useState<File | null>(null);
+  const [attachPreview, setAttachPreview] = useState<string | null>(null);
+  const [attachError, setAttachError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [roleNames, setRoleNames] = useState<Map<string, { name: string; color: string | null }>>(new Map());
@@ -156,17 +162,44 @@ export default function GroupChannelsPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on active channel change, same pattern as ../../broadcast/[username]/page.tsx
   useEffect(() => { if (activeChannelId) loadMessages(activeChannelId); }, [activeChannelId, loadMessages]);
 
-  const postMessage = async () => {
-    if (!userId || !activeChannelId || !draft.trim()) return;
+  const sendMessage = async () => {
+    if (!userId || !activeChannelId || (!draft.trim() && !attachFile)) return;
+    const text = draft.trim();
+    const file = attachFile;
     setPosting(true);
+
+    let imageUrl: string | null = null;
+    if (file) {
+      const ext = file.name.split('.').pop();
+      // eslint-disable-next-line react-hooks/purity -- Date.now() used inside an event handler (onClick), not during render; same pattern as ../../chat/page.tsx sendMessage
+      const path = `messages/${userId}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
+      if (upErr) { setPosting(false); setAttachError(`Upload failed: ${upErr.message}`); return; }
+      imageUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
+    }
+
     const { error } = await supabase.from('kcircle_channel_messages').insert({
-      channel_id: activeChannelId, author_id: userId, text: draft.trim(),
+      channel_id: activeChannelId, author_id: userId, text: text || null, image_url: imageUrl,
     });
     setPosting(false);
     if (error) return;
     setDraft('');
+    clearAttach();
     await loadMessages(activeChannelId);
   };
+
+  const handleAttachPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setAttachError('');
+    if (!file.type.startsWith('image/')) { setAttachError('Only images for now.'); return; }
+    if (file.size > MAX_ATTACHMENT_BYTES) { setAttachError('Image too large (5MB max).'); return; }
+    setAttachFile(file);
+    setAttachPreview(URL.createObjectURL(file));
+  };
+
+  const clearAttach = () => { setAttachFile(null); setAttachPreview(null); setAttachError(''); };
 
   const createChannel = async () => {
     if (!newChannelName.trim()) return;
@@ -376,26 +409,52 @@ export default function GroupChannelsPage() {
                       <span style={{ fontWeight: 800, fontSize: '12.5px' }}>@{m.author}</span>
                       <span style={{ fontSize: '10.5px', color: 'var(--text-tertiary)' }}>{timeAgo(m.created_at)}</span>
                     </div>
+                    {m.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element -- same pattern as ../../chat/page.tsx for chat attachments
+                      <img src={m.image_url} alt="attachment" style={{ maxWidth: '260px', maxHeight: '260px', borderRadius: '10px', marginTop: '4px', display: 'block', border: '1px solid var(--border-color)' }} />
+                    )}
                     {m.text && <p style={{ fontSize: '13.5px', margin: '3px 0 0', whiteSpace: 'pre-wrap' }}>{m.text}</p>}
                   </div>
                 ))}
               </div>
-              <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+              <div style={{ borderTop: '1px solid var(--border-color)' }}>
                 {canSendHere ? (
                   <>
-                    <input
-                      value={draft} onChange={e => setDraft(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') postMessage(); }}
-                      placeholder={`Message #${channels.find(c => c.id === activeChannelId)?.name ?? ''}`}
-                      style={{ flex: 1, minWidth: 0, padding: '9px 12px', borderRadius: '10px', fontSize: '13px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none' }}
-                    />
-                    <button onClick={postMessage} disabled={posting || !draft.trim()} style={{
-                      fontSize: '12.5px', fontWeight: 800, padding: '9px 18px', borderRadius: '10px', border: 'none',
-                      background: RADIANT, color: '#27272a', cursor: posting ? 'wait' : 'pointer', opacity: draft.trim() ? 1 : 0.6,
-                    }}>Send</button>
+                    {attachPreview && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px 0' }}>
+                        <div style={{ position: 'relative' }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview, same pattern as ../../chat/page.tsx */}
+                          <img src={attachPreview} alt="preview" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
+                          <button onClick={clearAttach} style={{
+                            position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', borderRadius: '50%',
+                            border: 'none', background: '#ef4444', color: '#fff', fontSize: '10px', fontWeight: 800, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                          }}>✕</button>
+                        </div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Photo attached</span>
+                      </div>
+                    )}
+                    {attachError && <p style={{ fontSize: '11px', color: '#ef4444', padding: '6px 14px 0', margin: 0 }}>{attachError}</p>}
+                    <div style={{ padding: '10px 14px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAttachPick} style={{ display: 'none' }} />
+                      <button
+                        onClick={() => fileInputRef.current?.click()} title="Attach photo"
+                        style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >📷</button>
+                      <input
+                        value={draft} onChange={e => setDraft(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
+                        placeholder={`Message #${channels.find(c => c.id === activeChannelId)?.name ?? ''}`}
+                        style={{ flex: 1, minWidth: 0, padding: '9px 12px', borderRadius: '10px', fontSize: '13px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none' }}
+                      />
+                      <button onClick={sendMessage} disabled={posting || (!draft.trim() && !attachFile)} style={{
+                        fontSize: '12.5px', fontWeight: 800, padding: '9px 18px', borderRadius: '10px', border: 'none',
+                        background: RADIANT, color: '#27272a', cursor: posting ? 'wait' : 'pointer', opacity: (draft.trim() || attachFile) ? 1 : 0.6,
+                      }}>{posting ? '…' : 'Send'}</button>
+                    </div>
                   </>
                 ) : (
-                  <div style={{ flex: 1, textAlign: 'center', fontSize: '12px', color: 'var(--text-faint)', padding: '6px 0' }}>You can view this channel but can&apos;t post here</div>
+                  <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-faint)', padding: '10px 14px' }}>You can view this channel but can&apos;t post here</div>
                 )}
               </div>
             </>
