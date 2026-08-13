@@ -417,14 +417,26 @@ export default function LandingPage() {
           minHeight: '92vh',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {/* BG IMAGE */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 0,
-            backgroundImage: 'url(/hero-bg.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center top',
-            backgroundRepeat: 'no-repeat',
-          }} />
+          {/* BG IMAGE — slow continuous Ken Burns zoom/pan (18s loop,
+              reverses back and forth) so the hero reads as "always moving"
+              like a video background, without needing an actual video
+              file. Reference brief (Sidcup Family Golf's full-bleed
+              autoplay hero) asked for that kind of constant motion — this
+              gets the same felt effect from a still image + framer-motion,
+              recolored/rebuilt from scratch rather than reusing their
+              video asset. */}
+          <motion.div
+            style={{
+              position: 'absolute', inset: 0, zIndex: 0,
+              backgroundImage: 'url(/hero-bg.jpg)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center top',
+              backgroundRepeat: 'no-repeat',
+            }}
+            initial={{ scale: 1.06 }}
+            animate={{ scale: 1.16 }}
+            transition={{ duration: 18, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
+          />
           {/* Dark overlay */}
           <div style={{
             position: 'absolute', inset: 0, zIndex: 1,
@@ -522,6 +534,47 @@ export default function LandingPage() {
               ))}
             </motion.div>
 
+          </motion.div>
+        </section>
+
+
+        {/* ── ABOUT ── two-column image + copy, same beat as a typical
+            venue-site "About Us" section: a warm intro paragraph next to a
+            representative photo, framed by the brand's own accent color
+            rather than anyone else's. Original layout/copy, existing
+            in-repo image asset (no external assets pulled in). */}
+        <section style={{ padding: 'clamp(60px,8vw,110px) 24px', maxWidth: '1100px', margin: '0 auto' }}>
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.25 }}
+            variants={staggerContainer}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 'clamp(28px,5vw,64px)',
+              flexWrap: 'wrap-reverse',
+            }}
+          >
+            <motion.div variants={fadeUp} style={{ flex: '1 1 320px', minWidth: 0 }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#d97706', marginBottom: '10px' }}>
+                Welcome to Mangal
+              </div>
+              <h2 style={{ fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+                Bharat&apos;s stories, told by Bharat&apos;s storytellers
+              </h2>
+              <p style={{ fontSize: 'clamp(14px,1.7vw,16px)', color: 'var(--text-tertiary)', lineHeight: 1.75, maxWidth: '480px', margin: '0 0 14px' }}>
+                Mangal started as a place to read manga, comics, and novels rooted in Indian mythology,
+                folklore, and everyday life — the stories that don&apos;t usually get made into anything.
+                No paywalls, no ad interruptions, just chapters dropping every week from creators across the country.
+              </p>
+              <p style={{ fontSize: 'clamp(14px,1.7vw,16px)', color: 'var(--text-tertiary)', lineHeight: 1.75, maxWidth: '480px', margin: 0 }}>
+                It&apos;s grown into a small ecosystem — KaTube for AI-anime adaptations of these same series,
+                and Kalpana Circle for readers to gather and talk theories. One login, one home for it all.
+              </p>
+            </motion.div>
+            <motion.div variants={fadeUp} style={{ flex: '1 1 320px', minWidth: 0, position: 'relative', aspectRatio: '4/3', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
+              <Image src="/bg-aryavarta.jpg" alt="A Mangal story world" fill style={{ objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(217,119,6,0.14), transparent 60%)' }} />
+            </motion.div>
           </motion.div>
         </section>
 
@@ -764,6 +817,34 @@ export default function LandingPage() {
                 </motion.div>
               ))}
             </motion.div>
+          </motion.div>
+        </section>
+
+
+        {/* ── TESTIMONIAL ── one large pull-quote on a tinted band, same
+            "break the page with a single reader voice" beat as the venue
+            reference site's testimonial section. Original quote/copy. */}
+        <section style={{
+          padding: 'clamp(60px,9vw,110px) 24px',
+          background: 'linear-gradient(135deg, rgba(127,29,29,0.10), rgba(217,119,6,0.08))',
+          borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)',
+        }}>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
+            style={{ maxWidth: '720px', margin: '0 auto', textAlign: 'center' }}
+          >
+            <div style={{ fontSize: '40px', color: '#d97706', lineHeight: 1, marginBottom: '18px', opacity: 0.7 }}>&ldquo;</div>
+            <p style={{
+              fontSize: 'clamp(18px,2.6vw,28px)', fontWeight: 700, color: 'var(--text-primary)',
+              lineHeight: 1.5, letterSpacing: '-0.01em', margin: '0 0 22px',
+            }}>
+              I found a mythology series here I&apos;d never get anywhere else — new chapters every week,
+              zero ads, and creators who actually reply in the comments. It feels like ours.
+            </p>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-tertiary)' }}>— A Mangal reader</div>
           </motion.div>
         </section>
 
