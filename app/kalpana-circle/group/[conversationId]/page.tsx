@@ -184,6 +184,22 @@ export default function GroupChannelsPage() {
     await loadAll();
   };
 
+  // Swap two adjacent channels' positions. Uses the pair's array indices
+  // (not their stored position values) as the new positions, which also
+  // self-normalizes any duplicate/gapped position values from past inserts.
+  const moveChannel = async (index: number, direction: -1 | 1) => {
+    if (!canManageChannels) return;
+    const otherIndex = index + direction;
+    if (otherIndex < 0 || otherIndex >= channels.length) return;
+    const a = channels[index];
+    const b = channels[otherIndex];
+    await Promise.all([
+      supabase.from('kcircle_group_channels').update({ position: otherIndex }).eq('id', a.id),
+      supabase.from('kcircle_group_channels').update({ position: index }).eq('id', b.id),
+    ]);
+    await loadAll();
+  };
+
   const createRole = async () => {
     if (!newRoleName.trim() || !canManageRoles) return;
     // New role must rank strictly below my own highest role, unless I'm admin —
@@ -314,8 +330,20 @@ export default function GroupChannelsPage() {
             onClick={() => setMobileSidebarOpen(false)}
             style={{ display: 'none', alignSelf: 'flex-end', background: 'none', border: 'none', fontSize: '13px', color: 'var(--text-tertiary)', cursor: 'pointer', marginBottom: '8px' }}
           >✕ Close</button>
-          {channels.map(c => (
+          {channels.map((c, i) => (
             <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {canManageChannels && (
+                <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+                  <button
+                    onClick={() => moveChannel(i, -1)} disabled={i === 0} title="Move up"
+                    style={{ background: 'none', border: 'none', color: i === 0 ? 'var(--border-color)' : 'var(--text-faint)', fontSize: '9px', lineHeight: 1, cursor: i === 0 ? 'default' : 'pointer', padding: '1px 0' }}
+                  >▲</button>
+                  <button
+                    onClick={() => moveChannel(i, 1)} disabled={i === channels.length - 1} title="Move down"
+                    style={{ background: 'none', border: 'none', color: i === channels.length - 1 ? 'var(--border-color)' : 'var(--text-faint)', fontSize: '9px', lineHeight: 1, cursor: i === channels.length - 1 ? 'default' : 'pointer', padding: '1px 0' }}
+                  >▼</button>
+                </div>
+              )}
               <button onClick={() => { setActiveChannelId(c.id); setMobileSidebarOpen(false); }} style={{
                 flex: 1, textAlign: 'left', background: activeChannelId === c.id ? 'var(--bg-card)' : 'none', border: 'none',
                 borderRadius: '6px', padding: '7px 8px', fontSize: '13px', fontWeight: activeChannelId === c.id ? 700 : 500,
