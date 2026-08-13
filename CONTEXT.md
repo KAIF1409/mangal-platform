@@ -1672,19 +1672,37 @@ overwrites, not the leaner 3-fixed-role MVP that was proposed first).
   file, no app code referencing it anywhere) — same pattern as the drift
   flagged in §13b. It was empty, so it was dropped and recreated to match
   this feature's schema before the migration file was written.
+- **Role hierarchy guard (DONE, follow-up session):**
+  `supabase/migrations/20260813180000_kcircle_role_hierarchy_guard.sql`.
+  Closed a privilege-escalation gap — the original RLS policies only
+  checked group membership, not the `MANAGE_ROLES` bit, so any participant
+  could write directly to `kcircle_group_roles` / `kcircle_group_role_members`
+  (bypassing the UI) and edit/delete any role including Owner, or assign
+  themselves a higher role. Now enforced at the RLS level (not just
+  UI-hidden): a member needs `MANAGE_ROLES` (or `ADMINISTRATOR`, which
+  bypasses rank entirely — server-owner pattern) AND can only touch roles
+  ranked, by `position`, strictly below their own highest role — same rule
+  Discord enforces. New DB functions: `kcircle_my_highest_role_position()`,
+  `kcircle_has_permission()`. Client-side mirror in
+  `app/lib/kcirclePermissions.ts` (`highestRolePosition()`,
+  `canManageRoleAt()`) — the Roles panel now shows a 🔒 and disables
+  edit/delete/assign controls for roles a member can't manage, and new
+  roles are created ranked below the creator's own highest role (unless
+  they're an admin). DB is still the actual enforcement; the client-side
+  check is just to avoid dead-end clicks that RLS would reject anyway.
 
 **Not done (flagged as follow-ups, not started):**
 - No channel reordering UI (position is set at creation time only)
-- No role position/hierarchy enforcement beyond storage — a lower role
-  can still edit another role's permissions if it happens to have
-  `MANAGE_ROLES`, there's no "can't edit a role positioned above your own
-  highest role" guard yet (Discord enforces this; this build doesn't)
 - No voice/stage channels — text-only, per the `kcircle_group_channels`
   schema (no `type` column yet)
 - No image/attachment support in channel messages on the composer side —
   `image_url` column exists on `kcircle_channel_messages` but nothing
   writes to it yet (DM/group-chat image attachments already work
   elsewhere, per §12d, this just isn't wired for channels yet)
+- `kcircle_group_channels` and `kcircle_channel_overwrites` RLS still only
+  checks group participation, not `MANAGE_CHANNELS`/`MANAGE_ROLES` — same
+  class of gap the role hierarchy guard just closed for roles, not yet
+  applied to channels/overwrites. Worth doing in the same pass next time.
 - Voice/video calls (separate backlog item, still fully unstarted)
 
 ## 11. KaTube like button (`17eb400`) — one genuine like per user

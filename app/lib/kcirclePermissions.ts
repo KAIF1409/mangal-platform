@@ -28,6 +28,7 @@ export interface RoleRow {
   id: string;
   permissions: number;
   is_default: boolean;
+  position: number;
 }
 
 export interface OverwriteRow {
@@ -71,6 +72,24 @@ export function resolveChannelPermissions(
 export function can(effectivePermissions: number, perm: keyof typeof PERM): boolean {
   if (effectivePermissions & PERM.ADMINISTRATOR) return true;
   return (effectivePermissions & PERM[perm]) !== 0;
+}
+
+/** Highest `position` among a member's own roles — the rank they can manage strictly below. */
+export function highestRolePosition(memberRoles: RoleRow[]): number {
+  return memberRoles.reduce((max, r) => Math.max(max, r.position), 0);
+}
+
+/**
+ * Can this member manage (edit/delete/assign) a role at `targetPosition`?
+ * Mirrors the DB-level rule in kcircle_my_highest_role_position /
+ * kcircle_has_permission: ADMINISTRATOR bypasses rank entirely, everyone
+ * else can only touch roles ranked strictly below their own highest role.
+ */
+export function canManageRoleAt(memberRoles: RoleRow[], targetPosition: number): boolean {
+  const base = resolveBasePermissions(memberRoles);
+  if (base & PERM.ADMINISTRATOR) return true;
+  if (!(base & PERM.MANAGE_ROLES)) return false;
+  return targetPosition < highestRolePosition(memberRoles);
 }
 
 export const PERMISSION_LABELS: { key: PermKey; label: string; description: string }[] = [

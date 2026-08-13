@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import {
-  PERM, PERMISSION_LABELS, resolveBasePermissions, resolveChannelPermissions, can,
+  PERM, PERMISSION_LABELS, resolveBasePermissions, resolveChannelPermissions, can, highestRolePosition, canManageRoleAt,
   type RoleRow, type OverwriteRow,
 } from '../../../lib/kcirclePermissions';
 
@@ -97,7 +97,7 @@ export default function GroupChannelsPage() {
     setActiveChannelId(prev => prev ?? channelRows[0]?.id ?? null);
 
     const roleRows = (rolesRes.data ?? []) as (RoleRow & { name: string; color: string | null })[];
-    setRoles(roleRows.map(r => ({ id: r.id, permissions: r.permissions, is_default: r.is_default })));
+    setRoles(roleRows.map(r => ({ id: r.id, permissions: r.permissions, is_default: r.is_default, position: r.position })));
     setRoleNames(new Map(roleRows.map(r => [r.id, { name: r.name, color: r.color }])));
 
     const roleIdSet = new Set(roleRows.map(r => r.id));
@@ -137,6 +137,8 @@ export default function GroupChannelsPage() {
   const canManageRoles = can(myBasePerms, 'MANAGE_ROLES');
   const canSendHere = can(myChannelPerms, 'SEND_MESSAGES');
   const canViewHere = can(myChannelPerms, 'VIEW_CHANNEL');
+  const myHighestPosition = highestRolePosition(myRoleRows);
+  const iAmAdmin = can(myBasePerms, 'ADMINISTRATOR');
 
   const loadMessages = useCallback(async (channelId: string) => {
     const { data: rows } = await supabase
@@ -182,15 +184,20 @@ export default function GroupChannelsPage() {
   };
 
   const createRole = async () => {
-    if (!newRoleName.trim()) return;
+    if (!newRoleName.trim() || !canManageRoles) return;
+    // New role must rank strictly below my own highest role, unless I'm admin —
+    // same rank rule the DB enforces (kcircle_my_highest_role_position).
+    const position = iAmAdmin ? roles.length : Math.max(0, myHighestPosition - 1);
     const { error } = await supabase.from('kcircle_group_roles').insert({
       conversation_id: conversationId, name: newRoleName.trim(), color: '#94a3b8',
-      position: roles.length, permissions: PERM.VIEW_CHANNEL | PERM.SEND_MESSAGES,
+      position, permissions: PERM.VIEW_CHANNEL | PERM.SEND_MESSAGES,
     });
     if (!error) { setNewRoleName(''); await loadAll(); }
   };
 
   const deleteRole = async (roleId: string) => {
+    const role = roles.find(r => r.id === roleId);
+    if (!role || !canManageRoleAt(myRoleRows, role.position)) return;
     if (!confirm('Delete this role?')) return;
     await supabase.from('kcircle_group_roles').delete().eq('id', roleId);
     await loadAll();
@@ -198,13 +205,15 @@ export default function GroupChannelsPage() {
 
   const toggleRolePermission = async (roleId: string, permKey: keyof typeof PERM) => {
     const role = roles.find(r => r.id === roleId);
-    if (!role) return;
+    if (!role || !canManageRoleAt(myRoleRows, role.position)) return;
     const next = role.permissions ^ PERM[permKey];
     await supabase.from('kcircle_group_roles').update({ permissions: next }).eq('id', roleId);
     await loadAll();
   };
 
   const toggleMemberRole = async (userIdTarget: string, roleId: string, has: boolean) => {
+    const role = roles.find(r => r.id === roleId);
+    if (!role || !canManageRoleAt(myRoleRows, role.position)) return;
     if (has) {
       await supabase.from('kcircle_group_role_members').delete().eq('role_id', roleId).eq('user_id', userIdTarget);
     } else {
@@ -360,16 +369,21 @@ export default function GroupChannelsPage() {
 
             {roles.map(r => {
               const meta = roleNames.get(r.id);
+              const manageable = canManageRoleAt(myRoleRows, r.position);
               return (
-                <div key={r.id} style={{ marginBottom: '8px', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', cursor: 'pointer' }} onClick={() => setEditingRoleId(editingRoleId === r.id ? null : r.id)}>
+                <div key={r.id} style={{ marginBottom: '8px', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', opacity: manageable ? 1 : 0.55 }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', cursor: manageable ? 'pointer' : 'default' }}
+                    onClick={() => manageable && setEditingRoleId(editingRoleId === r.id ? null : r.id)}
+                  >
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: meta?.color ?? '#94a3b8', flexShrink: 0 }} />
                     <span style={{ fontSize: '12.5px', fontWeight: 700, flex: 1 }}>{meta?.name}{r.is_default ? ' (default)' : ''}</span>
-                    {!r.is_default && (
+                    {!manageable && <span title="Ranked above your highest role — you can't manage this" style={{ fontSize: '11px' }}>🔒</span>}
+                    {!r.is_default && manageable && (
                       <button onClick={e => { e.stopPropagation(); deleteRole(r.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer' }}>✕</button>
                     )}
                   </div>
-                  {editingRoleId === r.id && (
+                  {editingRoleId === r.id && manageable && (
                     <div style={{ padding: '8px 10px', borderTop: '1px solid var(--border-color)' }}>
                       {PERMISSION_LABELS.map(p => (
                         <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', padding: '3px 0', cursor: 'pointer' }}>
@@ -388,7 +402,7 @@ export default function GroupChannelsPage() {
               <div key={m.user_id} style={{ marginBottom: '10px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, marginBottom: '3px' }}>@{m.username}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                  {roles.filter(r => !r.is_default).map(r => {
+                  {roles.filter(r => !r.is_default && canManageRoleAt(myRoleRows, r.position)).map(r => {
                     const has = m.roleIds.includes(r.id);
                     const meta = roleNames.get(r.id);
                     return (
