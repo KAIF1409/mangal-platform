@@ -1,28 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ThemeToggle from './components/ThemeToggle';
 import ParticleField from './components/ParticleField';
+import CustomCursor from './components/CustomCursor';
 import { supabase } from './lib/supabase';
-
-// Shared scroll-reveal variants — fade + rise into place the first time a
-// section crosses into the viewport (viewport once:true so it doesn't
-// replay every time the user scrolls up/down past it).
-const fadeUp = {
-  hidden: { opacity: 0, y: 32 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
-};
-const staggerContainer = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-};
 
 // ── Public landing page — no auth required ──
 // Authenticated users are redirected to /home automatically.
+//
+// Design language for this pass is borrowed from a reference brief
+// (GSAP ScrollTrigger scrub animations, custom cursor, infinite marquee,
+// tilt-card reveal grid, diagonal gradient banner) and recolored to
+// MANGAL's own amber/maroon brand instead of the reference's green —
+// same motion system, different palette. Framer Motion still handles the
+// simple on-load/on-enter fades; GSAP handles anything tied to scroll
+// *position* (scrub), since that's what it's built for and Framer's
+// whileInView is one-shot by comparison.
 
 interface Series {
   id: string;
@@ -59,17 +59,34 @@ const FEATURE_CARDS = [
 
 const GENRE_PILLS = ['Mythology', 'Action', 'Romance', 'Folk Tale', 'Desi Horror', 'Thriller', 'Fantasy', 'School Life', 'Street Life', 'Sci-Fi'];
 
+const DOORS = [
+  {
+    href: '/WebMangal', title: 'MangaNovels', image: '/comics.jpg',
+    blurb: 'Read manga, comics, and novels made by Desi creators — free forever, no ads, no gatekeepers.',
+    tag: null,
+  },
+  {
+    href: '/katube', title: 'KaTube', image: '/kcommunity-preview.jpg',
+    blurb: "A YouTube-style discovery space for AI-generated anime, from quick Shorts to full videos — built for the MANGAL creator niche.",
+    tag: 'COMING SOON',
+  },
+  {
+    href: '/kalpana-circle', title: 'K Circle', image: '/kcommunity-preview.jpg',
+    blurb: 'Groups and chats for people into the anime niche — post, react, and talk about MANGAL series together.',
+    tag: 'COMING SOON',
+  },
+];
+
 /* ── SPLASH SCREEN ── */
 function SplashScreen({ onDone }: { onDone: () => void }) {
   // Phase: 0=symbol drop, 1=text slide, 2=hold, 3=fade out
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
-    // symbol drop starts immediately (phase 0)
-    const t1 = setTimeout(() => setPhase(1), 400);   // text slides in after symbol lands
-    const t2 = setTimeout(() => setPhase(2), 1100);  // hold
-    const t3 = setTimeout(() => setPhase(3), 2000);  // fade out
-    const t4 = setTimeout(() => onDone(), 2600);     // done
+    const t1 = setTimeout(() => setPhase(1), 400);
+    const t2 = setTimeout(() => setPhase(2), 1100);
+    const t3 = setTimeout(() => setPhase(3), 2000);
+    const t4 = setTimeout(() => onDone(), 2600);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, [onDone]);
 
@@ -82,7 +99,6 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       transition: phase === 3 ? 'opacity 0.6s ease' : 'none',
       pointerEvents: 'none',
     }}>
-      {/* Glow behind logo */}
       <div style={{
         position: 'absolute',
         width: '320px', height: '320px', borderRadius: '50%',
@@ -93,51 +109,30 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       }} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0px', position: 'relative' }}>
-
-        {/* Symbol — drops in from top with bounce */}
         <div style={{
           transform: phase === 0 ? 'translateY(-120px) rotate(-8deg) scale(1.3)' : 'translateY(0px) rotate(0deg) scale(1)',
           opacity: phase === 0 ? 0 : 1,
-          transition: phase === 0
-            ? 'none'
-            : 'transform 0.38s cubic-bezier(0.22, 1.8, 0.4, 1), opacity 0.15s ease',
+          transition: phase === 0 ? 'none' : 'transform 0.38s cubic-bezier(0.22, 1.8, 0.4, 1), opacity 0.15s ease',
           marginRight: '16px',
         }}>
-          {/* Drop shadow punch on land */}
           <div style={{
             filter: phase >= 1 ? 'drop-shadow(0 0 32px rgba(217,119,6,0.7)) drop-shadow(0 8px 24px rgba(0,0,0,0.8))' : 'none',
             transition: 'filter 0.3s ease 0.1s',
           }}>
-            <Image
-              src="/mangal-flame-icon-black.jpg"
-              alt="M"
-              width={80}
-              height={80}
-              style={{ display: 'block' }}
-              priority
-            />
+            <Image src="/mangal-flame-icon-black.jpg" alt="M" width={80} height={80} style={{ display: 'block' }} priority />
           </div>
         </div>
 
-        {/* "MANGAL" text — slides in from right */}
         <div style={{
           overflow: 'hidden',
           maxWidth: phase >= 1 ? '340px' : '0px',
           opacity: phase >= 1 ? 1 : 0,
-          transition: phase >= 1
-            ? 'max-width 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease'
-            : 'none',
+          transition: phase >= 1 ? 'max-width 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease' : 'none',
         }}>
           <span style={{
-            display: 'block',
-            fontSize: '64px',
-            fontWeight: 900,
-            letterSpacing: '-0.04em',
-            whiteSpace: 'nowrap',
+            display: 'block', fontSize: '64px', fontWeight: 900, letterSpacing: '-0.04em', whiteSpace: 'nowrap',
             background: 'linear-gradient(135deg, #fff 0%, #d97706 55%, #991b1b 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
             transform: phase >= 1 ? 'translateX(0)' : 'translateX(60px)',
             transition: phase >= 1 ? 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
           }}>
@@ -146,19 +141,11 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
-      {/* Tagline fades in under logo */}
       <div style={{
-        position: 'absolute',
-        bottom: '38%',
-        left: 0, right: 0,
-        textAlign: 'center',
-        fontSize: '12px',
-        letterSpacing: '0.22em',
-        color: 'var(--text-muted)',
-        textTransform: 'uppercase',
-        opacity: phase >= 2 ? 0.8 : 0,
-        transition: 'opacity 0.5s ease',
-        }}>
+        position: 'absolute', bottom: '38%', left: 0, right: 0, textAlign: 'center',
+        fontSize: '12px', letterSpacing: '0.22em', color: 'var(--text-muted)', textTransform: 'uppercase',
+        opacity: phase >= 2 ? 0.8 : 0, transition: 'opacity 0.5s ease',
+      }}>
         Bharat Ki Kahaniyan
       </div>
     </div>
@@ -173,22 +160,20 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
   const [tagCloud, setTagCloud] = useState<TagWithCount[]>([]);
+  const mainRef = useRef<HTMLDivElement>(null);
 
-  // Redirect logged-in users to /home
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) router.replace('/home');
     });
   }, [router]);
 
-  // Nav shadow on scroll
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Fetch showcase: try trending first, fall back to top by views
   useEffect(() => {
     const loadShowcase = async () => {
       const { data: trendingRows } = await supabase.rpc('trending_series', { days_back: 7, result_limit: 18 });
@@ -206,7 +191,6 @@ export default function LandingPage() {
           return;
         }
       }
-      // Fall back to top views
       const { data } = await supabase
         .from('series')
         .select('id, title, synopsis, genre, language, cover_url, reading_mode, content_type, status, views')
@@ -219,8 +203,6 @@ export default function LandingPage() {
     loadShowcase();
   }, []);
 
-  // Fetch top tags for the "Browse by Tag" cloud — same single-embedded-count
-  // query as /tags, just capped to the top 16 by usage for a homepage teaser.
   useEffect(() => {
     supabase
       .from('tags')
@@ -229,9 +211,7 @@ export default function LandingPage() {
         if (!data) return;
         const withCounts = data
           .map((t: { id: string; name: string; slug: string; series_tags: { count: number }[] | null }) => ({
-            id: t.id,
-            name: t.name,
-            slug: t.slug,
+            id: t.id, name: t.name, slug: t.slug,
             count: Array.isArray(t.series_tags) ? (t.series_tags[0]?.count ?? 0) : 0,
           }))
           .filter((t) => t.count > 0)
@@ -241,53 +221,74 @@ export default function LandingPage() {
       });
   }, []);
 
+  // ── GSAP ScrollTrigger — everything tied to scroll *position* rather
+  // than a one-shot "has this entered the viewport" fade. Mirrors the
+  // reference site's script.js: nav darkens as you leave the hero, the
+  // about-style intro rises in with scrub, the tilt-card grid scales up,
+  // and the big pull-quote's flanking flame glyphs slide in from either
+  // side — all recolored amber instead of the reference's green.
+  useEffect(() => {
+    if (!splashDone) return;
+    gsap.registerPlugin(ScrollTrigger);
+    const ctx = gsap.context(() => {
+      gsap.to('#mangal-nav', {
+        backgroundColor: 'rgba(10,8,6,0.92)',
+        backdropFilter: 'blur(20px)',
+        borderBottomColor: 'rgba(217,119,6,0.25)',
+        duration: 0.4,
+        scrollTrigger: { trigger: '#mangal-hero', start: 'top -10%', end: 'top -40%', scrub: 1 },
+      });
+
+      gsap.from('#mangal-about-copy, #mangal-about-media', {
+        y: 60, opacity: 0, duration: 1,
+        scrollTrigger: { trigger: '#mangal-about', start: 'top 75%', end: 'top 45%', scrub: 1.5 },
+      });
+
+      gsap.from('#mangal-card-grid', {
+        scale: 0.85, opacity: 0, duration: 1,
+        scrollTrigger: { trigger: '#mangal-card-grid', start: 'top 80%', end: 'top 50%', scrub: 1.5 },
+      });
+
+      gsap.from('#mangal-glyph-left', {
+        x: -60, y: -40, opacity: 0,
+        scrollTrigger: { trigger: '#mangal-quote', start: 'top 70%', end: 'top 40%', scrub: 2 },
+      });
+      gsap.from('#mangal-glyph-right', {
+        x: 60, y: 40, opacity: 0,
+        scrollTrigger: { trigger: '#mangal-quote', start: 'top 70%', end: 'top 40%', scrub: 2 },
+      });
+
+      gsap.from('#mangal-outline-heading', {
+        y: 50, opacity: 0,
+        scrollTrigger: { trigger: '#mangal-outline-heading', start: 'top 85%', end: 'top 60%', scrub: 1.5 },
+      });
+    }, mainRef);
+    return () => ctx.revert();
+  }, [splashDone]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (search.trim()) router.push(`/WebMangal/search?keyword=${encodeURIComponent(search.trim())}`);
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: 'var(--bg-primary)',
-      color: 'var(--text-primary)',
-      overflowX: 'hidden',
-    }}>
+    <div ref={mainRef} style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
-      {/* ── SPLASH ── */}
       {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
+      <CustomCursor />
 
-      {/* Main content fades in after splash */}
-      <div style={{
-        opacity: splashDone ? 1 : 0,
-        transition: 'opacity 0.5s ease',
-      }}>
+      <div style={{ opacity: splashDone ? 1 : 0, transition: 'opacity 0.5s ease' }}>
 
-        {/* Responsive rules for the landing nav — plain <style> tag (same
-            pattern as app/dashboard/page.tsx's .mangal-dash-* rules) since
-            media queries can't be expressed via React inline style objects.
-            Mobile: center nav links become a horizontally-scrollable row
-            (nothing gets silently clipped), the "Log in" text link is
-            dropped in favor of just the primary CTA, and paddings/text
-            shrink so the whole bar fits a 360–414px phone without any
-            horizontal page scroll. */}
         <style>{`
           .mangal-landing-nav-center { display: flex; gap: 4px; align-items: center; }
           .mangal-landing-login-link { display: inline-block; }
 
           @media (max-width: 860px) {
             .mangal-landing-nav { padding: 0 16px !important; }
-            .mangal-landing-nav-center {
-              gap: 2px;
-              overflow-x: auto;
-              -webkit-overflow-scrolling: touch;
-              scrollbar-width: none;
-              max-width: 34vw;
-            }
+            .mangal-landing-nav-center { gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 34vw; }
             .mangal-landing-nav-center::-webkit-scrollbar { display: none; }
             .mangal-landing-nav-center a { padding: 6px 9px !important; font-size: 12px !important; }
           }
-
           @media (max-width: 640px) {
             .mangal-landing-nav-center { display: none; }
             .mangal-landing-login-link { display: none; }
@@ -295,59 +296,67 @@ export default function LandingPage() {
             .mangal-landing-brand-text { font-size: 17px !important; }
             .mangal-landing-cta { padding: 8px 14px !important; font-size: 12px !important; }
           }
-
           @media (max-width: 380px) {
             .mangal-landing-brand-text { display: none; }
           }
 
-          /* ── Three-door section (MangaNovels / KaTube / Kalpana Circle) ──
-             Never touched by the earlier mobile sweep (CONTEXT.md §13 only
-             covered the nav). Built for desktop: minHeight: 88vh per door
-             plus align-items: stretch was fine on wide screens where text
-             and image sit side by side, but on phone widths flexWrap kicks
-             in and stacks text-then-image into two lines. align-content's
-             default 'stretch' then divides the leftover space (container
-             forced to 88vh regardless of actual content) unevenly between
-             those two lines, which is what stretched/distorted the door
-             photos in the founder's screenshot. Fixed by dropping the
-             forced 88vh on mobile so each door is exactly as tall as its
-             real content, and giving the media block a fixed, sane height
-             instead of stretching to fill leftover space. */
+          /* Outlined double-stroke hero title, à la reference site's h1::before trick */
+          .mangal-outline-title { position: relative; }
+          .mangal-outline-title::before {
+            content: attr(data-text);
+            position: absolute; top: -4px; left: -4px; z-index: -1;
+            color: transparent;
+            -webkit-text-stroke: 2px rgba(217,119,6,0.55);
+          }
+
+          /* Infinite marquee — two duplicated tracks sitting side by side,
+             each independently animating its own -100% so the loop is seamless */
+          .mangal-marquee-track { white-space: nowrap; overflow: hidden; }
+          .mangal-marquee-in { display: inline-block; white-space: nowrap; animation: mangal-marquee 26s linear infinite; }
+          .mangal-marquee-in span {
+            display: inline-block; margin-right: 28px;
+            font-size: clamp(36px, 7vw, 100px); font-weight: 900; text-transform: uppercase;
+            color: transparent; -webkit-text-stroke: 1.5px rgba(217,119,6,0.6);
+            transition: color 0.3s ease;
+          }
+          .mangal-marquee-in span:hover { color: #d97706; }
+          @keyframes mangal-marquee { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+          /* Tilt cards — 3D rotate + amber overlay reveal on hover */
+          .mangal-tilt-card { transition: transform 0.5s ease; transform-style: preserve-3d; }
+          .mangal-tilt-card:hover { transform: rotate3d(-1, 1, 0, 8deg) translateY(-6px); }
+          .mangal-tilt-overlay { opacity: 0; transition: opacity 0.4s ease; }
+          .mangal-tilt-card:hover .mangal-tilt-overlay { opacity: 1; }
+
+          /* Hover-reveal trending panels */
+          .mangal-elem img { transition: all 0.5s ease; scale: 1.15; }
+          .mangal-elem:hover img { scale: 1; }
+          .mangal-elem .mangal-elem-label { transition: all 0.4s ease; }
+          .mangal-elem:hover .mangal-elem-label { background: transparent; color: #fff; }
+
           @media (max-width: 640px) {
-            .mangal-door { min-height: 0 !important; }
-            .mangal-door-media { min-height: 240px !important; height: 240px !important; flex-grow: 0 !important; }
-            .mangal-door-text { padding: 28px 20px !important; }
+            .mangal-tilt-card { min-height: 0 !important; }
+            #mangal-card-grid { flex-direction: column !important; height: auto !important; }
+            .mangal-tilt-card { width: 100% !important; height: 320px !important; }
+            .mangal-elem { width: 100% !important; }
           }
         `}</style>
 
         {/* ── NAV ── */}
-        <nav className="mangal-landing-nav" style={{
+        <nav id="mangal-nav" className="mangal-landing-nav" style={{
           position: 'sticky', top: 0, zIndex: 100,
           background: scrolled ? 'var(--nav-bg)' : 'var(--nav-bg-transparent)',
           backdropFilter: 'blur(20px)',
           borderBottom: scrolled ? '1px solid var(--border-color)' : '1px solid transparent',
           padding: '0 24px', height: '64px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: '8px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
           transition: 'background 0.3s, border-color 0.3s',
         }}>
-          {/* Logo */}
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-            <Image
-              src="/logo-icon.png"
-              alt="MANGAL"
-              width={36}
-              height={36}
-              style={{
-                borderRadius: '10px',
-                boxShadow: '0 0 20px rgba(217,119,6,0.3)', display: 'block',
-              }}
-              priority
-            />
+          <Link href="/" data-cursor-hover="true" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
+            <Image src="/logo-icon.png" alt="MANGAL" width={36} height={36} style={{ borderRadius: '10px', boxShadow: '0 0 20px rgba(217,119,6,0.3)', display: 'block' }} priority />
             <span className="mangal-landing-brand-text" style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
           </Link>
 
-          {/* Center links */}
           <div className="mangal-landing-nav-center">
             {[
               { label: 'Browse', href: '/WebMangal' },
@@ -355,7 +364,7 @@ export default function LandingPage() {
               { label: 'Genres', href: '/WebMangal' },
               { label: 'New Releases', href: '/WebMangal' },
             ].map(link => (
-              <a key={link.label} href={link.href} style={{
+              <a key={link.label} href={link.href} data-cursor-hover="true" style={{
                 padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
                 color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap',
                 transition: 'color 0.15s, background 0.15s',
@@ -364,28 +373,25 @@ export default function LandingPage() {
                 onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
               >{link.label}</a>
             ))}
-            <a href="/katube" style={{
+            <a href="/katube" data-cursor-hover="true" style={{
               padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-              color: '#2563eb', textDecoration: 'none', whiteSpace: 'nowrap',
-              transition: 'color 0.15s, background 0.15s',
+              color: '#2563eb', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'color 0.15s, background 0.15s',
             }}
               onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
             >🎬 KaTube</a>
-            <a href="/kalpana-circle" style={{
+            <a href="/kalpana-circle" data-cursor-hover="true" style={{
               padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-              color: '#c4b5fd', textDecoration: 'none', whiteSpace: 'nowrap',
-              transition: 'color 0.15s, background 0.15s',
+              color: '#c4b5fd', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'color 0.15s, background 0.15s',
             }}
               onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
             >💬 K Circle</a>
           </div>
 
-          {/* Auth buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <ThemeToggle size={32} />
-            <a href="/login" className="mangal-landing-login-link" style={{
+            <a href="/login" className="mangal-landing-login-link" data-cursor-hover="true" style={{
               padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
               color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s',
             }}
@@ -393,95 +399,60 @@ export default function LandingPage() {
               onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-secondary)'}
             >Log in</a>
             <motion.a
-              href="/login"
-              className="mangal-landing-cta"
+              href="/login" className="mangal-landing-cta" data-cursor-hover="true"
               whileHover={{ y: -1, boxShadow: '0 4px 24px rgba(127,29,29,0.55)' }}
               whileTap={{ scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               style={{
                 padding: '9px 20px', borderRadius: '9px', fontSize: '13px', fontWeight: 700,
-                background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
-                color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
-                boxShadow: '0 2px 16px rgba(127,29,29,0.4)',
+                background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none',
+                whiteSpace: 'nowrap', boxShadow: '0 2px 16px rgba(127,29,29,0.4)',
               }}
             >Start Reading Free</motion.a>
           </div>
         </nav>
 
-
         {/* ── HERO ── */}
-        <section style={{
+        <section id="mangal-hero" style={{
           position: 'relative', overflow: 'hidden',
           padding: 'clamp(80px,12vw,140px) 24px clamp(60px,10vw,100px)',
-          textAlign: 'center',
-          minHeight: '92vh',
+          textAlign: 'center', minHeight: '92vh',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {/* BG IMAGE — slow continuous Ken Burns zoom/pan (18s loop,
-              reverses back and forth) so the hero reads as "always moving"
-              like a video background, without needing an actual video
-              file. Reference brief (Sidcup Family Golf's full-bleed
-              autoplay hero) asked for that kind of constant motion — this
-              gets the same felt effect from a still image + framer-motion,
-              recolored/rebuilt from scratch rather than reusing their
-              video asset. */}
-          <motion.div
-            style={{
-              position: 'absolute', inset: 0, zIndex: 0,
-              backgroundImage: 'url(/hero-bg.jpg)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center top',
-              backgroundRepeat: 'no-repeat',
-            }}
-            initial={{ scale: 1.06 }}
-            animate={{ scale: 1.16 }}
-            transition={{ duration: 18, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
-          />
-          {/* Dark overlay */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 1,
-            background: 'linear-gradient(to bottom, rgba(7,7,10,0.72) 0%, rgba(7,7,10,0.38) 35%, rgba(7,7,10,0.38) 65%, rgba(7,7,10,0.88) 100%)',
-            pointerEvents: 'none',
-          }} />
-          {/* Amber glow */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 2,
-            background: 'radial-gradient(ellipse 60% 40% at 50% 55%, rgba(217,119,6,0.08) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }} />
-
-          {/* Interactive particle network — subtle depth layer behind the copy */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 0, backgroundImage: 'url(/hero-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center top', backgroundRepeat: 'no-repeat' }} />
+          <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'linear-gradient(to bottom, rgba(7,7,10,0.72) 0%, rgba(7,7,10,0.38) 35%, rgba(7,7,10,0.38) 65%, rgba(7,7,10,0.88) 100%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'radial-gradient(ellipse 60% 40% at 50% 55%, rgba(217,119,6,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
           <ParticleField />
 
           <motion.div
-            initial="hidden"
-            animate="show"
-            variants={staggerContainer}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             style={{ position: 'relative', zIndex: 3 }}
           >
-            <motion.h1 variants={fadeUp} style={{
-              fontSize: 'clamp(32px, 6vw, 72px)', fontWeight: 900, margin: '0 0 12px',
-              letterSpacing: '-0.04em',
-              background: 'linear-gradient(135deg, #fff 0%, #d97706 60%, #7f1d1d 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              filter: 'drop-shadow(-2px -2px 0px #000) drop-shadow(2px -2px 0px #000) drop-shadow(-2px 2px 0px #000) drop-shadow(2px 2px 0px #000) drop-shadow(0 4px 24px rgba(0,0,0,0.9))',
-            }}>
-              Bharat Ki Kahaniyan 🔥
-            </motion.h1>
-            <motion.p variants={fadeUp} style={{
-              fontSize: 'clamp(14px, 2vw, 20px)', color: '#f3f4f6', margin: '0 0 32px', lineHeight: 1.6, textShadow: '0 1px 12px rgba(0,0,0,0.9)',
-              maxWidth: '620px', marginLeft: 'auto', marginRight: 'auto',
+            <h1
+              className="mangal-outline-title"
+              data-text="Bharat Ki Kahaniyan"
+              style={{
+                fontSize: 'clamp(32px, 6vw, 88px)', fontWeight: 900, margin: '0 0 12px',
+                letterSpacing: '-0.04em', textTransform: 'uppercase',
+                background: 'linear-gradient(135deg, #fff 0%, #d97706 60%, #7f1d1d 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.9))',
+              }}
+            >
+              Bharat Ki Kahaniyan
+            </h1>
+            <p style={{
+              fontSize: 'clamp(14px, 2vw, 20px)', color: '#f3f4f6', margin: '0 0 32px', lineHeight: 1.6,
+              textShadow: '0 1px 12px rgba(0,0,0,0.9)', maxWidth: '620px', marginLeft: 'auto', marginRight: 'auto',
             }}>
               1000+ Desi comics & novels by Desi people. Scroll or read. Free forever. No ads, no gatekeepers.
-            </motion.p>
+            </p>
 
-            {/* Search Bar */}
-            <motion.form variants={fadeUp} onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', maxWidth: '540px', margin: '0 auto 48px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', maxWidth: '540px', margin: '0 auto 48px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <input
-                type="text"
-                placeholder="Search stories, creators, genres..."
-                value={search}
+                type="text" placeholder="Search stories, creators, genres..." value={search}
                 onChange={e => setSearch(e.target.value)}
                 style={{
                   flex: 1, minWidth: '200px', padding: '12px 18px', borderRadius: '10px',
@@ -490,7 +461,7 @@ export default function LandingPage() {
                 }}
               />
               <motion.button
-                type="submit"
+                type="submit" data-cursor-hover="true"
                 whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(217,119,6,0.5)' }}
                 whileTap={{ scale: 0.96 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 20 }}
@@ -501,193 +472,124 @@ export default function LandingPage() {
               >
                 Search
               </motion.button>
-            </motion.form>
-
-            {/* Genre Pills */}
-            <motion.div variants={fadeUp} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '8px' }}>
-              {GENRE_PILLS.map(g => (
-                <a key={g} href={`/WebMangal?genre=${encodeURIComponent(g)}`} style={{
-                  fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-                  background: 'rgba(7,7,10,0.78)',
-                  backdropFilter: 'blur(8px)',
-                  color: '#fff',
-                  textDecoration: 'none',
-                  border: '1px solid rgba(255,255,255,0.22)',
-                  transition: 'all 0.15s',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.45)',
-                }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget;
-                    el.style.background = 'rgba(217,119,6,0.92)';
-                    el.style.borderColor = '#d97706';
-                    el.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget;
-                    el.style.background = 'rgba(7,7,10,0.78)';
-                    el.style.borderColor = 'rgba(255,255,255,0.22)';
-                    el.style.transform = 'none';
-                  }}
-                >
-                  {g}
-                </a>
-              ))}
-            </motion.div>
-
+            </form>
           </motion.div>
-        </section>
 
-
-        {/* ── ABOUT ── two-column image + copy, same beat as a typical
-            venue-site "About Us" section: a warm intro paragraph next to a
-            representative photo, framed by the brand's own accent color
-            rather than anyone else's. Original layout/copy, existing
-            in-repo image asset (no external assets pulled in). */}
-        <section style={{ padding: 'clamp(60px,8vw,110px) 24px', maxWidth: '1100px', margin: '0 auto' }}>
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.25 }}
-            variants={staggerContainer}
+          {/* Circular scroll-down cue, bottom-left — reference site's #arrow */}
+          <a
+            href="#mangal-marquee" data-cursor-hover="true"
             style={{
-              display: 'flex', alignItems: 'center', gap: 'clamp(28px,5vw,64px)',
-              flexWrap: 'wrap-reverse',
+              position: 'absolute', bottom: '28px', left: '28px', zIndex: 3,
+              width: 'clamp(64px,8vw,96px)', height: 'clamp(64px,8vw,96px)', borderRadius: '50%',
+              border: '2px solid rgba(217,119,6,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: '22px', textDecoration: 'none', transition: 'all 0.4s ease',
+              background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(4px)',
             }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#d97706'; e.currentTarget.style.transform = 'scale(0.85)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.2)'; e.currentTarget.style.transform = 'none'; }}
           >
-            <motion.div variants={fadeUp} style={{ flex: '1 1 320px', minWidth: 0 }}>
-              <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#d97706', marginBottom: '10px' }}>
-                Welcome to Mangal
-              </div>
-              <h2 style={{ fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
-                Bharat&apos;s stories, told by Bharat&apos;s storytellers
-              </h2>
-              <p style={{ fontSize: 'clamp(14px,1.7vw,16px)', color: 'var(--text-tertiary)', lineHeight: 1.75, maxWidth: '480px', margin: '0 0 14px' }}>
-                Mangal started as a place to read manga, comics, and novels rooted in Indian mythology,
-                folklore, and everyday life — the stories that don&apos;t usually get made into anything.
-                No paywalls, no ad interruptions, just chapters dropping every week from creators across the country.
-              </p>
-              <p style={{ fontSize: 'clamp(14px,1.7vw,16px)', color: 'var(--text-tertiary)', lineHeight: 1.75, maxWidth: '480px', margin: 0 }}>
-                It&apos;s grown into a small ecosystem — KaTube for AI-anime adaptations of these same series,
-                and Kalpana Circle for readers to gather and talk theories. One login, one home for it all.
-              </p>
-            </motion.div>
-            <motion.div variants={fadeUp} style={{ flex: '1 1 320px', minWidth: 0, position: 'relative', aspectRatio: '4/3', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
-              <Image src="/bg-aryavarta.jpg" alt="A Mangal story world" fill style={{ objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(217,119,6,0.14), transparent 60%)' }} />
-            </motion.div>
-          </motion.div>
+            ↓
+          </a>
         </section>
 
-
-        {/* ── THREE DOORS: MangaNovels / KaTube / Kalpana Circle (full width, no container constraint) ── */}
-        <section style={{ width: '100%' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.25 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
-            >
-            <Link href="/WebMangal" style={{
-              textDecoration: 'none', borderRadius: '0',
-              background: '#0a0a0f', border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)',
-              display: 'flex', alignItems: 'stretch', overflow: 'hidden',
-              minHeight: '88vh', transition: 'border-color 0.2s', flexWrap: 'wrap',
-            }}
-              className="mangal-door"
-              onMouseEnter={e => { e.currentTarget.style.borderTopColor = '#d97706'; e.currentTarget.style.borderBottomColor = '#d97706'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderTopColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
-            >
-              <div className="mangal-door-text" style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
-                <div style={{ fontWeight: 900, fontSize: 'clamp(28px,4.5vw,48px)', color: '#fff', display: 'flex', alignItems: 'center', gap: '12px', lineHeight: 1.1 }}>
-                  <span style={{ fontSize: '36px' }}>📖</span> MangaNovels
-                </div>
-                <div style={{ fontSize: 'clamp(14px,1.6vw,17px)', color: '#9ca3af', marginTop: '18px', lineHeight: 1.65, maxWidth: '460px' }}>
-                  Read manga, comics, and novels made by Desi creators — free forever, no ads, no gatekeepers. Bookmark series, track your reading progress, and discover new stories across mythology, action, romance, and more.
-                </div>
+        {/* ── MARQUEE: scrolling genre wall ── */}
+        <section id="mangal-marquee" style={{ padding: '28px 0', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)' }}>
+          <div className="mangal-marquee-track">
+            {[0, 1].map(copy => (
+              <div key={copy} className="mangal-marquee-in">
+                {GENRE_PILLS.map(g => (
+                  <a key={g} href={`/WebMangal?genre=${encodeURIComponent(g)}`} data-cursor-hover="true" style={{ textDecoration: 'none' }}>
+                    <span>{g} 🔥</span>
+                  </a>
+                ))}
               </div>
-              <div className="mangal-door-media" style={{ flex: '1 1 380px', position: 'relative', minHeight: '360px' }}>
-                <Image src="/comics.jpg" alt="MangaNovels" fill style={{ objectFit: 'cover' }} />
-              </div>
-            </Link>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.25 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
-            >
-            <Link href="/katube" style={{
-              textDecoration: 'none', borderRadius: '0',
-              background: '#0a0a0f', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.08)',
-              display: 'flex', alignItems: 'stretch', overflow: 'hidden',
-              minHeight: '88vh', transition: 'border-color 0.2s', flexWrap: 'wrap',
-            }}
-              className="mangal-door"
-              onMouseEnter={e => { e.currentTarget.style.borderBottomColor = '#2563eb'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
-            >
-              <div className="mangal-door-text" style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
-                <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                  <Image src="/katube-logo.png" alt="KaTube" width={220} height={110} style={{ height: 'clamp(36px,5.5vw,52px)', width: 'auto', objectFit: 'contain' }} />
-                  <span style={{ fontSize: '13px', fontWeight: 800, padding: '4px 12px', borderRadius: '20px', background: 'rgba(217,119,6,0.18)', border: '1px solid rgba(217,119,6,0.45)', color: '#fbbf24' }}>COMING SOON</span>
-                </div>
-                <div style={{ fontSize: 'clamp(14px,1.6vw,17px)', color: '#9ca3af', marginTop: '18px', lineHeight: 1.65, maxWidth: '460px' }}>
-                  A YouTube-style discovery space for AI-generated anime — made with today's popular AI video tools, from quick Shorts to full videos. Focused only on the anime niche, so MANGAL creators can bring their series to life visually.
-                </div>
-              </div>
-              <div className="mangal-door-media" style={{ flex: '1 1 380px', position: 'relative', minHeight: '360px', background: '#000' }}>
-                <video src="/videos/katube-preview.mp4" autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-            </Link>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.25 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as const }}
-            >
-            <Link href="/kalpana-circle" style={{
-              textDecoration: 'none', borderRadius: '0',
-              background: '#0a0a0f', border: 'none',
-              display: 'flex', alignItems: 'stretch', overflow: 'hidden',
-              minHeight: '88vh', transition: 'background 0.2s', flexWrap: 'wrap',
-            }}
-              className="mangal-door"
-              onMouseEnter={e => { e.currentTarget.style.background = '#0d0a14'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#0a0a0f'; }}
-            >
-              <div className="mangal-door-text" style={{ flex: '1 1 320px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 'clamp(32px,5vw,64px)' }}>
-                <div style={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                  <Image src="/kcircle-logo.png" alt="K Circle" width={220} height={95} style={{ height: 'clamp(36px,5.5vw,52px)', width: 'auto', objectFit: 'contain' }} />
-                  <span style={{ fontSize: '13px', fontWeight: 800, padding: '4px 12px', borderRadius: '20px', background: 'rgba(217,119,6,0.18)', border: '1px solid rgba(217,119,6,0.45)', color: '#fbbf24' }}>COMING SOON</span>
-                </div>
-                <div style={{ fontSize: 'clamp(14px,1.6vw,17px)', color: '#9ca3af', marginTop: '18px', lineHeight: 1.65, maxWidth: '460px' }}>
-                  Groups and chats for people into the anime niche — post, react, and talk about MANGAL series with fellow creators and readers.
-                </div>
-              </div>
-              <div className="mangal-door-media" style={{ flex: '1 1 380px', position: 'relative', minHeight: '360px' }}>
-                <Image src="/kcommunity-preview.jpg" alt="K Community" fill style={{ objectFit: 'cover' }} />
-              </div>
-            </Link>
-            </motion.div>
+            ))}
           </div>
+        </section>
+
+        {/* ── ABOUT ── */}
+        <section id="mangal-about" style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '32px', flexWrap: 'wrap' }}>
+            <div id="mangal-about-media" style={{ position: 'relative', width: '160px', height: '160px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0 }}>
+              <Image src="/comics.jpg" alt="Mangal stories" fill style={{ objectFit: 'cover' }} />
+            </div>
+            <div id="mangal-about-copy" style={{ flex: '1 1 360px', textAlign: 'center' }}>
+              <h3 style={{ fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 900, margin: '0 0 20px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>About Mangal</h3>
+              <p style={{ fontSize: 'clamp(13px,1.6vw,16px)', color: 'var(--text-tertiary)', lineHeight: 1.8, margin: '0 0 16px' }}>
+                India&apos;s home for original comics and novels — mythology, folk tales, and street life told by Desi creators, for Desi readers. Bookmark series, track your reading progress, and discover something new every week.
+              </p>
+              <p style={{ fontSize: 'clamp(13px,1.6vw,16px)', color: 'var(--text-tertiary)', lineHeight: 1.8, margin: 0 }}>
+                No paywalls, no gatekeepers — just stories, forever free to read.
+              </p>
+            </div>
+            <div style={{ position: 'relative', width: '160px', height: '160px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0 }}>
+              <Image src="/kcommunity-preview.jpg" alt="K Circle community" fill style={{ objectFit: 'cover' }} />
+            </div>
+          </div>
+        </section>
+
+        {/* ── TILT CARDS: MangaNovels / KaTube / K Circle ── */}
+        <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1300px', margin: '0 auto' }}>
+          <div id="mangal-card-grid" style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'center', gap: '20px', height: '78vh', flexWrap: 'wrap', perspective: '1200px' }}>
+            {DOORS.map(door => (
+              <Link
+                key={door.title} href={door.href} data-cursor-hover="true"
+                className="mangal-tilt-card"
+                style={{
+                  flex: '1 1 280px', minHeight: '360px', position: 'relative', borderRadius: '20px', overflow: 'hidden',
+                  textDecoration: 'none', background: '#0a0a0f', border: '1px solid var(--border-color)',
+                }}
+              >
+                <Image src={door.image} alt={door.title} fill style={{ objectFit: 'cover' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)' }} />
+                <div style={{ position: 'absolute', left: '20px', right: '20px', bottom: '20px', zIndex: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 'clamp(20px,2.6vw,28px)', fontWeight: 900, color: '#fff' }}>{door.title}</span>
+                    {door.tag && (
+                      <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '20px', background: 'rgba(217,119,6,0.22)', border: '1px solid rgba(217,119,6,0.5)', color: '#fbbf24' }}>{door.tag}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="mangal-tilt-overlay" style={{
+                  position: 'absolute', inset: 0, zIndex: 3,
+                  background: 'linear-gradient(135deg, rgba(127,29,29,0.94), rgba(217,119,6,0.9))',
+                  padding: 'clamp(20px,4vw,36px)', display: 'flex', alignItems: 'center',
+                }}>
+                  <p style={{ color: '#fff', fontSize: 'clamp(13px,1.6vw,16px)', lineHeight: 1.7, fontWeight: 600, margin: 0 }}>
+                    {door.blurb}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* ── DIAGONAL GRADIENT BANNER ── */}
+        <section style={{
+          background: 'linear-gradient(to right top, rgba(217,119,6,1) 52%, rgba(153,27,27,1) 74%, rgba(69,10,10,1) 100%)',
+          minHeight: 'clamp(160px,26vh,260px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '32px 24px', textAlign: 'center',
+        }}>
+          <h4 style={{ fontSize: 'clamp(18px,2.6vw,30px)', fontWeight: 900, textTransform: 'uppercase', color: '#0d0d14', maxWidth: '720px', lineHeight: 1.5, margin: 0 }}>
+            🔥 New chapters drop every week — bookmark your favorites and never miss a release
+          </h4>
+        </section>
+
+        {/* ── PULL QUOTE ── */}
+        <section id="mangal-quote" style={{ position: 'relative', padding: 'clamp(80px,12vw,140px) 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: '1000px', margin: '0 auto', minHeight: '50vh' }}>
+          <span id="mangal-glyph-left" style={{ position: 'absolute', top: '18%', left: 'clamp(8px,8vw,140px)', fontSize: 'clamp(40px,6vw,80px)', color: 'rgba(217,119,6,0.35)', fontWeight: 900 }}>&ldquo;</span>
+          <span id="mangal-glyph-right" style={{ position: 'absolute', bottom: '18%', right: 'clamp(8px,8vw,140px)', fontSize: 'clamp(40px,6vw,80px)', color: 'rgba(217,119,6,0.35)', fontWeight: 900 }}>&rdquo;</span>
+          <p style={{ fontSize: 'clamp(20px,3.4vw,40px)', fontWeight: 800, textAlign: 'center', lineHeight: 1.5, color: 'var(--text-primary)', margin: 0 }}>
+            Every creator deserves real readers — not gatekeepers.
+          </p>
         </section>
 
         {/* ── SHOWCASE ── */}
         <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.15 }}
-            variants={staggerContainer}
-            style={{ marginBottom: '48px' }}
-          >
-            <motion.h2 variants={fadeUp} style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+          <div style={{ marginBottom: '48px' }}>
+            <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
               🔥 Trending Now
-            </motion.h2>
+            </h2>
             {loading ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 180px))', gap: '14px' }}>
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -696,13 +598,11 @@ export default function LandingPage() {
               </div>
             ) : showcaseItems.length > 0 ? (
               <>
-                <motion.div variants={staggerContainer} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 180px))', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 180px))', gap: '14px' }}>
                   {showcaseItems.map((s, i) => (
-                    <motion.div key={s.id} variants={fadeUp}>
-                      <ShowcaseCard series={s} rank={i + 1} />
-                    </motion.div>
+                    <ShowcaseCard key={s.id} series={s} rank={i + 1} />
                   ))}
-                </motion.div>
+                </div>
                 {showcaseItems.length < 6 && (
                   <div style={{
                     marginTop: '20px', padding: '18px 22px', borderRadius: '14px',
@@ -712,11 +612,9 @@ export default function LandingPage() {
                     <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
                       MANGAL just launched — {showcaseItems.length === 1 ? 'this is our first published story' : `these are our first ${showcaseItems.length} published stories`}. Early creators get the most visibility here.
                     </p>
-                    <a href="/login?creator=1" style={{
+                    <a href="/login?creator=1" data-cursor-hover="true" style={{
                       flexShrink: 0, fontSize: '13px', fontWeight: 700, color: '#fff', textDecoration: 'none',
-                      padding: '9px 18px', borderRadius: '9px',
-                      background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-                      whiteSpace: 'nowrap',
+                      padding: '9px 18px', borderRadius: '9px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', whiteSpace: 'nowrap',
                     }}>
                       Publish yours →
                     </a>
@@ -724,60 +622,37 @@ export default function LandingPage() {
                 )}
               </>
             ) : (
-              <div style={{
-                textAlign: 'center', padding: '56px 24px', borderRadius: '16px',
-                background: 'var(--bg-card)', border: '1px dashed var(--border-color)',
-              }}>
+              <div style={{ textAlign: 'center', padding: '56px 24px', borderRadius: '16px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)' }}>
                 <div style={{ fontSize: '32px', marginBottom: '14px' }}>📜</div>
-                <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-secondary)', margin: '0 0 6px' }}>
-                  No stories published yet
-                </p>
+                <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-secondary)', margin: '0 0 6px' }}>No stories published yet</p>
                 <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 20px', maxWidth: '360px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
                   MANGAL is a new platform — the first creators to publish here will be featured right in this spot.
                 </p>
-                <a href="/login?creator=1" style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  fontSize: '13px', fontWeight: 700, color: '#fff', textDecoration: 'none',
-                  padding: '10px 20px', borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
+                <a href="/login?creator=1" data-cursor-hover="true" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: '#fff',
+                  textDecoration: 'none', padding: '10px 20px', borderRadius: '10px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
                 }}>
                   Become a Creator →
                 </a>
               </div>
             )}
-          </motion.div>
+          </div>
         </section>
-
 
         {/* ── TAG CLOUD ── */}
         {tagCloud.length > 0 && (
           <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1200px', margin: '0 auto' }}>
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
-            >
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
-              <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
-                🏷️ Browse by Tag
-              </h2>
-              <Link href="/tags" style={{ fontSize: '13px', fontWeight: 700, color: '#d97706', textDecoration: 'none' }}>
-                See all tags →
-              </Link>
+              <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>🏷️ Browse by Tag</h2>
+              <Link href="/tags" data-cursor-hover="true" style={{ fontSize: '13px', fontWeight: 700, color: '#d97706', textDecoration: 'none' }}>See all tags →</Link>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {tagCloud.map(tag => (
-                <a
-                  key={tag.id}
-                  href={`/tags/${tag.slug}`}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)',
-                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                    padding: '10px 16px', borderRadius: '24px', textDecoration: 'none',
-                    transition: 'border-color 0.15s, color 0.15s',
-                  }}
+                <a key={tag.id} href={`/tags/${tag.slug}`} data-cursor-hover="true" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)',
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '10px 16px', borderRadius: '24px', textDecoration: 'none',
+                  transition: 'border-color 0.15s, color 0.15s',
+                }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,119,6,0.5)'; (e.currentTarget as HTMLElement).style.color = '#d97706'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-color)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
                 >
@@ -786,139 +661,108 @@ export default function LandingPage() {
                 </a>
               ))}
             </div>
-            </motion.div>
           </section>
         )}
 
+        {/* ── OUTLINED HEADING + HOVER-REVEAL TRENDING PANELS ── */}
+        {showcaseItems.length >= 3 && (
+          <section style={{ padding: 'clamp(80px,10vw,120px) 24px clamp(60px,8vw,100px)', textAlign: 'center' }}>
+            <h1
+              id="mangal-outline-heading"
+              className="mangal-outline-title"
+              data-text="Start Reading Now"
+              style={{
+                fontSize: 'clamp(28px,5vw,64px)', fontWeight: 900, textTransform: 'uppercase',
+                color: 'transparent', WebkitTextStroke: '1.5px var(--text-primary)',
+                margin: '0 0 40px', letterSpacing: '-0.02em',
+              }}
+            >
+              Start Reading Now
+            </h1>
+            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {showcaseItems.slice(0, 4).map(s => (
+                <a
+                  key={s.id} href={`/series/${s.id}`} data-cursor-hover="true"
+                  className="mangal-elem"
+                  style={{
+                    position: 'relative', width: '220px', height: '300px', borderRadius: '18px', overflow: 'hidden',
+                    textDecoration: 'none', display: 'block', background: '#1a0a0a',
+                  }}
+                >
+                  {s.cover_url && <Image src={s.cover_url} alt={s.title} fill style={{ objectFit: 'cover' }} />}
+                  <div className="mangal-elem-label" style={{
+                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    textAlign: 'center', padding: '16px', background: 'rgba(217,119,6,0.88)', color: '#0d0d14',
+                    fontWeight: 900, textTransform: 'uppercase', fontSize: '15px',
+                  }}>
+                    {s.title}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── FEATURES ── */}
         <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1100px', margin: '0 auto' }}>
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={staggerContainer}
-            style={{ textAlign: 'center', marginBottom: '48px' }}
-          >
-            <motion.h2 variants={fadeUp} style={{
-              fontSize: 'clamp(24px, 3.5vw, 42px)', fontWeight: 900, margin: '0 0 12px',
-              letterSpacing: '-0.03em', color: 'var(--text-primary)',
-            }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 42px)', fontWeight: 900, margin: '0 0 12px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
               Why Choose Mangal?
-            </motion.h2>
-            <motion.p variants={fadeUp} style={{ fontSize: 'clamp(13px, 1.8vw, 16px)', color: 'var(--text-tertiary)', margin: '0 0 32px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
+            </h2>
+            <p style={{ fontSize: 'clamp(13px, 1.8vw, 16px)', color: 'var(--text-tertiary)', margin: '0 0 32px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
               India&apos;s platform by creators, for readers. Discover stories rooted in our culture.
-            </motion.p>
-
-            <motion.div variants={staggerContainer} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 280px))', gap: '20px' }}>
-              {FEATURE_CARDS.map(f => (
-                <motion.div key={f.title} variants={fadeUp}>
-                  <FeatureCard {...f} />
-                </motion.div>
-              ))}
-            </motion.div>
-          </motion.div>
-        </section>
-
-
-        {/* ── TESTIMONIAL ── one large pull-quote on a tinted band, same
-            "break the page with a single reader voice" beat as the venue
-            reference site's testimonial section. Original quote/copy. */}
-        <section style={{
-          padding: 'clamp(60px,9vw,110px) 24px',
-          background: 'linear-gradient(135deg, rgba(127,29,29,0.10), rgba(217,119,6,0.08))',
-          borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)',
-        }}>
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
-            style={{ maxWidth: '720px', margin: '0 auto', textAlign: 'center' }}
-          >
-            <div style={{ fontSize: '40px', color: '#d97706', lineHeight: 1, marginBottom: '18px', opacity: 0.7 }}>&ldquo;</div>
-            <p style={{
-              fontSize: 'clamp(18px,2.6vw,28px)', fontWeight: 700, color: 'var(--text-primary)',
-              lineHeight: 1.5, letterSpacing: '-0.01em', margin: '0 0 22px',
-            }}>
-              I found a mythology series here I&apos;d never get anywhere else — new chapters every week,
-              zero ads, and creators who actually reply in the comments. It feels like ours.
             </p>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-tertiary)' }}>— A Mangal reader</div>
-          </motion.div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 280px))', gap: '20px' }}>
+              {FEATURE_CARDS.map(f => (
+                <FeatureCard key={f.title} {...f} />
+              ))}
+            </div>
+          </div>
         </section>
-
 
         {/* ── CREATOR CTA ── */}
         <section style={{ padding: 'clamp(70px,10vw,120px) 24px', textAlign: 'center', maxWidth: '680px', margin: '0 auto' }}>
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={staggerContainer}
+          <div style={{ fontSize: '40px', marginBottom: '24px', filter: 'drop-shadow(0 0 20px rgba(217,119,6,0.6))' }}>🔥</div>
+          <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-0.04em', color: 'var(--text-primary)' }}>Got a story in you?</h2>
+          <p style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: 'var(--text-tertiary)', margin: '0 0 36px', lineHeight: 1.65 }}>
+            Publish your own Mangal or Novel on our platform. Free tools, real readers, no middlemen.
+          </p>
+          <motion.a
+            href="/login?creator=1" data-cursor-hover="true"
+            whileHover={{ y: -3, boxShadow: '0 8px 36px rgba(217,119,6,0.55)' }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+            style={{
+              padding: '14px 36px', borderRadius: '12px', fontSize: '15px', fontWeight: 800,
+              background: 'linear-gradient(135deg, #7f1d1d 0%, #d97706 100%)', color: '#fff', textDecoration: 'none',
+              boxShadow: '0 4px 28px rgba(217,119,6,0.35)', display: 'inline-flex', alignItems: 'center', gap: '10px',
+            }}
           >
-            <motion.div variants={fadeUp} style={{ fontSize: '40px', marginBottom: '24px', filter: 'drop-shadow(0 0 20px rgba(217,119,6,0.6))' }}>🔥</motion.div>
-            <motion.h2 variants={fadeUp} style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-0.04em', color: 'var(--text-primary)' }}>
-              Got a story in you?
-            </motion.h2>
-            <motion.p variants={fadeUp} style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: 'var(--text-tertiary)', margin: '0 0 36px', lineHeight: 1.65 }}>
-              Publish your own Mangal or Novel on our platform. Free tools, real readers, no middlemen.
-            </motion.p>
-            <motion.a
-              variants={fadeUp}
-              href="/login?creator=1"
-              whileHover={{ y: -3, boxShadow: '0 8px 36px rgba(217,119,6,0.55)' }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 22 }}
-              style={{
-                padding: '14px 36px', borderRadius: '12px', fontSize: '15px', fontWeight: 800,
-                background: 'linear-gradient(135deg, #7f1d1d 0%, #d97706 100%)',
-                color: '#fff', textDecoration: 'none',
-                boxShadow: '0 4px 28px rgba(217,119,6,0.35)',
-                display: 'inline-flex', alignItems: 'center', gap: '10px',
-              }}
-            >
-              ✍️ Become a Creator
-            </motion.a>
-          </motion.div>
+            ✍️ Become a Creator
+          </motion.a>
         </section>
 
-
-        {/* ── FOOTER ── */}
-        <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '40px 24px 32px' }}>
+        {/* ── FOOTER — diagonal gradient, matches banner above ── */}
+        <footer style={{
+          background: 'linear-gradient(to left bottom, #7f1d1d 0%, #d97706 85%)',
+          padding: '48px 24px 32px', position: 'relative',
+        }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', justifyContent: 'space-between', marginBottom: '32px' }}>
-              {/* Brand */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <Image
-                    src="/logo-icon.png"
-                    alt="MANGAL"
-                    width={32}
-                    height={32}
-                    style={{ borderRadius: '9px', display: 'block' }}
-                  />
-                  <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--footer-text)' }}>MANGAL</span>
+                  <Image src="/logo-icon.png" alt="MANGAL" width={32} height={32} style={{ borderRadius: '9px', display: 'block' }} />
+                  <span style={{ fontWeight: 900, fontSize: '18px', color: '#0d0d14' }}>MANGAL</span>
                 </div>
-                <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', maxWidth: '200px', lineHeight: 1.6, margin: '0 0 16px' }}>
+                <p style={{ fontSize: '12px', color: 'rgba(13,13,20,0.75)', maxWidth: '200px', lineHeight: 1.6, margin: '0 0 16px', fontWeight: 600 }}>
                   India&apos;s home for original comics &amp; novels. Made with ❤️ in Bharat.
                 </p>
-                {/* Social icons — accounts aren't live yet, so these are
-                    non-clickable placeholders (title tooltip explains why)
-                    rather than dead links to nowhere. Swap the <span> for
-                    an <a href="..."> the moment each account exists. */}
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {SOCIAL_ICONS.map(({ name, path }) => (
-                    <span
-                      key={name}
-                      title={`${name} — coming soon`}
-                      style={{
-                        width: '30px', height: '30px', borderRadius: '50%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(255,255,255,0.06)', border: '1px solid var(--footer-border)',
-                        color: 'var(--footer-text-muted)', cursor: 'default',
-                      }}
-                    >
+                    <span key={name} title={`${name} — coming soon`} style={{
+                      width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(13,13,20,0.12)', border: '1px solid rgba(13,13,20,0.25)', color: 'rgba(13,13,20,0.75)', cursor: 'default',
+                    }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d={path} /></svg>
                     </span>
                   ))}
@@ -927,31 +771,22 @@ export default function LandingPage() {
 
               <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
                 <FooterCol title="Platform" links={[
-                  { label: 'Browse', href: '/WebMangal' },
-                  { label: 'Rankings', href: '/rankings' },
-                  { label: 'Genres', href: '/WebMangal' },
-                  { label: 'New Releases', href: '/WebMangal' },
+                  { label: 'Browse', href: '/WebMangal' }, { label: 'Rankings', href: '/rankings' },
+                  { label: 'Genres', href: '/WebMangal' }, { label: 'New Releases', href: '/WebMangal' },
                 ]} />
                 <FooterCol title="Account" links={[
-                  { label: 'Log In', href: '/login' },
-                  { label: 'Sign Up', href: '/login' },
-                  { label: 'Become a Creator', href: '/login?creator=1' },
+                  { label: 'Log In', href: '/login' }, { label: 'Sign Up', href: '/login' }, { label: 'Become a Creator', href: '/login?creator=1' },
                 ]} />
-                <FooterCol title="Company" links={[
-                  { label: 'About', href: '/about' },
-                  { label: 'Help Center', href: '/help' },
-                ]} />
+                <FooterCol title="Company" links={[{ label: 'About', href: '/about' }, { label: 'Help Center', href: '/help' }]} />
                 <FooterCol title="Legal" links={[
-                  { label: 'Privacy Policy', href: '/privacy' },
-                  { label: 'Terms of Service', href: '/terms' },
-                  { label: 'Grievance', href: '/grievance' },
+                  { label: 'Privacy Policy', href: '/privacy' }, { label: 'Terms of Service', href: '/terms' }, { label: 'Grievance', href: '/grievance' },
                 ]} />
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid var(--footer-border)', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={{ fontSize: '11px', color: 'var(--footer-text-muted)', margin: 0 }}>© 2026 Mangal. All rights reserved.</p>
-              <p style={{ fontSize: '11px', color: 'var(--footer-text-muted)', margin: 0 }}>Free to read, forever. 🇮🇳</p>
+            <div style={{ borderTop: '1px solid rgba(13,13,20,0.25)', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: '11px', color: 'rgba(13,13,20,0.7)', margin: 0, fontWeight: 600 }}>© 2026 Mangal. All rights reserved.</p>
+              <p style={{ fontSize: '11px', color: 'rgba(13,13,20,0.7)', margin: 0, fontWeight: 600 }}>Free to read, forever. 🇮🇳</p>
             </div>
           </div>
         </footer>
@@ -966,7 +801,7 @@ export default function LandingPage() {
 function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}
+    <a href={`/series/${series.id}`} data-cursor-hover="true" style={{ textDecoration: 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}>
       <div style={{
@@ -984,17 +819,14 @@ function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
           )}
           {rank && rank <= 3 && (
             <div style={{
-              position: 'absolute', top: '6px', left: '6px',
-              width: '20px', height: '20px', borderRadius: '5px',
+              position: 'absolute', top: '6px', left: '6px', width: '20px', height: '20px', borderRadius: '5px',
               background: rank === 1 ? '#d97706' : rank === 2 ? 'var(--text-secondary)' : '#92400e',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '10px', fontWeight: 900, color: '#0d0d14',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 900, color: '#0d0d14',
             }}>#{rank}</div>
           )}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)',
-            padding: '20px 7px 7px',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)', padding: '20px 7px 7px',
           }}>
             <span style={{
               fontSize: '8px', fontWeight: 700, color: '#fff',
@@ -1045,8 +877,6 @@ function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc:
 
 
 /* ── FOOTER COLUMN ── */
-// WebNovel-style footer social icons — Instagram, TikTok/X, Facebook, YouTube.
-// Simple single-path glyphs so they render crisp at 14px without an icon library.
 const SOCIAL_ICONS = [
   { name: 'Instagram', path: 'M12 2c2.7 0 3.06.01 4.12.06 1.06.05 1.79.22 2.43.47.66.26 1.22.6 1.77 1.15.55.55.9 1.11 1.15 1.77.25.64.42 1.37.47 2.43C21.99 8.94 22 9.3 22 12s-.01 3.06-.06 4.12c-.05 1.06-.22 1.79-.47 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.25-1.37.42-2.43.47C15.06 21.99 14.7 22 12 22s-3.06-.01-4.12-.06c-1.06-.05-1.79-.22-2.43-.47a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.25-.64-.42-1.37-.47-2.43C2.01 15.06 2 14.7 2 12s.01-3.06.06-4.12c.05-1.06.22-1.79.47-2.43.26-.66.6-1.22 1.15-1.77A4.9 4.9 0 0 1 5.45 2.53c.64-.25 1.37-.42 2.43-.47C8.94 2.01 9.3 2 12 2Zm0 3.24a6.76 6.76 0 1 0 0 13.52 6.76 6.76 0 0 0 0-13.52Zm0 2a4.76 4.76 0 1 1 0 9.52 4.76 4.76 0 0 1 0-9.52Zm6.9-.4a1.58 1.58 0 1 1-3.16 0 1.58 1.58 0 0 1 3.16 0Z' },
   { name: 'X', path: 'M18.9 2.25h3.68l-8.04 9.19L24 21.75h-7.4l-5.8-7.58-6.64 7.58H.48l8.6-9.83L0 2.25h7.59l5.24 6.93 6.07-6.93Zm-1.29 17.28h2.04L6.5 4.35H4.31l13.3 15.18Z' },
@@ -1058,12 +888,12 @@ const SOCIAL_ICONS = [
 function FooterCol({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div>
-      <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--footer-link)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>{title}</div>
+      <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(13,13,20,0.65)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>{title}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {links.map(l => (
-          <a key={l.label} href={l.href} style={{ fontSize: '13px', color: 'var(--footer-text-muted)', textDecoration: 'none', transition: 'color 0.15s' }}
-            onMouseEnter={e => (e.target as HTMLElement).style.color = '#d97706'}
-            onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--footer-text-muted)'}
+          <a key={l.label} href={l.href} data-cursor-hover="true" style={{ fontSize: '13px', color: 'rgba(13,13,20,0.85)', textDecoration: 'none', transition: 'color 0.15s', fontWeight: 600 }}
+            onMouseEnter={e => (e.target as HTMLElement).style.color = '#0d0d14'}
+            onMouseLeave={e => (e.target as HTMLElement).style.color = 'rgba(13,13,20,0.85)'}
           >{l.label}</a>
         ))}
       </div>
