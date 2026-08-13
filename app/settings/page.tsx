@@ -72,6 +72,7 @@ export default function SettingsPage() {
     background: 'var(--bg-card)', border: '1px solid var(--border-color)',
     borderRadius: '16px', padding: '24px 28px', marginBottom: '24px',
   };
+  const sectionCardClass = 'mangal-settings-section';
   const sectionTitle: React.CSSProperties = {
     fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 14px',
     display: 'flex', alignItems: 'center', gap: '8px',
@@ -165,25 +166,43 @@ export default function SettingsPage() {
     <div style={{
       minHeight: '100vh', backgroundColor: 'var(--bg-primary)',
       color: 'var(--text-primary)', }}>
-      <nav style={{
+
+      {/* Mobile pass (§13 sweep): this page had zero @media rules. The nav
+          (logo | lang toggle + Back to Home) had no flexShrink on the logo
+          and no wrap — same squeeze bug already fixed on other pages in
+          this sweep. Under 480px: brand wordmark drops, "Back to Home"
+          shrinks to just the icon-free text at a smaller size, and side
+          padding tightens. Also gives the delete-account confirm/cancel
+          button row somewhere to go instead of overflowing. */}
+      <style>{`
+        @media (max-width: 480px) {
+          .mangal-settings-nav { padding: 0 14px !important; }
+          .mangal-settings-brand-text { display: none; }
+          .mangal-settings-section { padding: 18px !important; }
+          .mangal-settings-content { padding: 32px 14px 60px !important; }
+          .mangal-settings-delete-row { flex-wrap: wrap; }
+        }
+      `}</style>
+
+      <nav className="mangal-settings-nav" style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: 'var(--nav-bg)', backdropFilter: 'blur(12px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '60px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
           <div style={{
             width: '32px', height: '32px', borderRadius: '8px',
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
           }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+          <span className="mangal-settings-brand-text" style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             {PLATFORM_NAME}
           </span>
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           {/* Step 22 — Hindi UI Toggle. This page has no ProfileMenu (it's a
               standalone settings screen), so the toggle sits directly next
               to the Back to Home link instead, keeping the same EN/हिं
@@ -205,13 +224,13 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
-          <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
+          <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             {t('backToHome')}
           </Link>
         </div>
       </nav>
 
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '48px 24px 80px' }}>
+      <div className="mangal-settings-content" style={{ maxWidth: '640px', margin: '0 auto', padding: '48px 24px 80px' }}>
         <div style={{ marginBottom: '32px' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-0.02em', margin: '0 0 8px', color: 'var(--text-primary)' }}>
             {t('settingsTitle')}
@@ -224,7 +243,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Profile — optional gender, feeds real Audience Insights for creators */}
-        <div style={sectionCard}>
+        <div className={sectionCardClass} style={sectionCard}>
           <h2 style={sectionTitle}>👤 Profile</h2>
           <p style={bodyText}>
             Optional. If you share this, it helps creators understand their audience —
@@ -252,7 +271,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Download My Data */}
-        <div style={sectionCard}>
+        <div className={sectionCardClass} style={sectionCard}>
           <h2 style={sectionTitle}>{t('downloadDataTitle')}</h2>
           <p style={bodyText}>
             {t('downloadDataBody')}
@@ -278,7 +297,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Withdraw Consent */}
-        <div style={sectionCard}>
+        <div className={sectionCardClass} style={sectionCard}>
           <h2 style={sectionTitle}>{t('withdrawConsentTitle')}</h2>
           <p style={bodyText}>
             {t('withdrawConsentBody')}
@@ -308,7 +327,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Delete My Account */}
-        <div style={{ ...sectionCard, borderColor: 'rgba(239,68,68,0.25)' }}>
+        <div className={sectionCardClass} style={{ ...sectionCard, borderColor: 'rgba(239,68,68,0.25)' }}>
           <h2 style={{ ...sectionTitle, color: '#ef4444' }}>{t('deleteAccountTitle')}</h2>
           <p style={bodyText}>
             {t('deleteAccountBodyPart1')}{' '}
@@ -337,7 +356,7 @@ export default function SettingsPage() {
               <p style={{ ...bodyText, color: '#fca5a5', fontWeight: 700 }}>
                 {t('deleteAccountConfirmQ')}
               </p>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div className="mangal-settings-delete-row" style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={handleDeleteAccount}
                   style={{
