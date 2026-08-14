@@ -2062,3 +2062,28 @@ up that palette instead of the blue it launched with (see §1b).
 **Verified:** `tsc --noEmit` clean, `eslint app/katube/page.tsx` clean (0
 errors, same 2 pre-existing `no-img-element` warnings as §22, unrelated to
 this change).
+
+## 24. KaTube — carried the orange rebrand to upload/watch/shorts (DONE, this session)
+
+§23 only touched `app/katube/page.tsx` (the landing/grid page). Founder
+asked for the rest of KaTube's own pages to match, so the same
+blue → orange hex swap was applied to the other three pages that share
+KaTube's branded nav/chrome:
+
+- `app/katube/upload/page.tsx` — verified-channel banner, category/tool
+  pill gradients, submit button (including its `#93c5fd` disabled-state
+  light blue, now a light orange `#fdba8c`), "View KaTube profile" link.
+- `app/katube/watch/[videoId]/page.tsx` — "Back to KaTube" link, subscribe
+  button, like button, "based on" tag, video-info pill.
+- `app/katube/shorts/[shortId]/page.tsx` — "Back to KaTube" link (only one
+  hardcoded accent color on this page).
+
+`app/dashboard/katube/page.tsx` was deliberately left alone — it renders
+inside the main MANGAL dashboard shell (`Navbar`/`Footer` from the core
+site, not KaTube's own nav/sidebar), so it's the site-wide dashboard style,
+not a "KaTube page" in the branded sense. Flagging in case the founder
+wants that recolored too.
+
+**Verified:** `tsc --noEmit` clean across the whole project; `eslint` on
+all three touched files clean (0 errors; one pre-existing `no-img-element`
+warning on the shorts page, unrelated to this change).

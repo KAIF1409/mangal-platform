@@ -395,7 +395,7 @@ export default function KaTubeWatchPage() {
         ) : notFound || !video ? (
           <div style={{ textAlign: 'center', padding: '80px 20px', width: '100%' }}>
             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px' }}>This video doesn&apos;t exist or was removed.</p>
-            <Link href="/katube" style={{ fontSize: '13px', fontWeight: 700, color: '#2563eb' }}>← Back to KaTube</Link>
+            <Link href="/katube" style={{ fontSize: '13px', fontWeight: 700, color: '#f97316' }}>← Back to KaTube</Link>
           </div>
         ) : (
           <>
@@ -437,8 +437,8 @@ export default function KaTubeWatchPage() {
                       style={{
                         fontSize: '12px', fontWeight: 700,
                         color: following ? 'var(--text-secondary)' : '#fff',
-                        background: following ? 'var(--bg-card)' : '#2563eb',
-                        border: following ? '1px solid var(--border-color)' : '1px solid #2563eb',
+                        background: following ? 'var(--bg-card)' : '#f97316',
+                        border: following ? '1px solid var(--border-color)' : '1px solid #f97316',
                         borderRadius: '20px', padding: '5px 14px', cursor: followBusy ? 'default' : 'pointer',
                         opacity: followBusy ? 0.6 : 1,
                       }}
@@ -455,9 +455,9 @@ export default function KaTubeWatchPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: '6px',
                       fontSize: '13px', fontWeight: 700,
-                      color: liked ? '#2563eb' : 'var(--text-secondary)',
-                      background: liked ? 'rgba(37,99,235,0.10)' : 'transparent',
-                      border: liked ? '1px solid rgba(37,99,235,0.28)' : '1px solid var(--border-color)',
+                      color: liked ? '#f97316' : 'var(--text-secondary)',
+                      background: liked ? 'rgba(249,115,22,0.10)' : 'transparent',
+                      border: liked ? '1px solid rgba(249,115,22,0.28)' : '1px solid var(--border-color)',
                       borderRadius: '20px', padding: '4px 12px', cursor: likeBusy ? 'default' : 'pointer',
                       opacity: likeBusy ? 0.6 : 1,
                     }}
@@ -468,8 +468,8 @@ export default function KaTubeWatchPage() {
 
                 {video.basedOn && (
                   <Link href={video.seriesId ? `/series/${video.seriesId}` : '#'} style={{
-                    fontSize: '11.5px', fontWeight: 700, color: '#2563eb', textDecoration: 'none',
-                    background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.28)',
+                    fontSize: '11.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
+                    background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
                     padding: '4px 11px', borderRadius: '20px', whiteSpace: 'nowrap',
                   }}>
                     📖 Based on {video.basedOn}
@@ -500,7 +500,7 @@ export default function KaTubeWatchPage() {
                     onClick={handleCommentSubmit}
                     disabled={commentBusy || !commentText.trim()}
                     style={{
-                      fontSize: '12.5px', fontWeight: 700, color: '#fff', background: '#2563eb',
+                      fontSize: '12.5px', fontWeight: 700, color: '#fff', background: '#f97316',
                       border: 'none', borderRadius: '20px', padding: '0 18px', cursor: 'pointer',
                       opacity: (commentBusy || !commentText.trim()) ? 0.5 : 1, flexShrink: 0,
                     }}
@@ -521,7 +521,7 @@ export default function KaTubeWatchPage() {
                       <div key={c.id} style={{ display: 'flex', gap: '10px' }}>
                         <div style={{
                           width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
-                          background: 'rgba(37,99,235,0.15)', color: '#2563eb',
+                          background: 'rgba(249,115,22,0.15)', color: '#f97316',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: '13px', fontWeight: 800,
                         }}>

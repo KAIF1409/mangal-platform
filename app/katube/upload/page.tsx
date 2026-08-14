@@ -237,12 +237,12 @@ export default function KaTubeUploadPage() {
             border: '1px solid var(--border-color)', fontSize: '13px', lineHeight: 1.6,
           }}>
             You need to be logged in to upload a video.{' '}
-            <Link href="/login?next=/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>Log in</Link>
+            <Link href="/login?next=/katube/upload" style={{ color: '#f97316', fontWeight: 700 }}>Log in</Link>
           </div>
         ) : success ? (
           <div style={{
-            padding: '20px', borderRadius: '12px', background: 'rgba(37,99,235,0.08)',
-            border: '1px solid rgba(37,99,235,0.3)', fontSize: '13px', fontWeight: 700, color: '#2563eb',
+            padding: '20px', borderRadius: '12px', background: 'rgba(249,115,22,0.08)',
+            border: '1px solid rgba(249,115,22,0.3)', fontSize: '13px', fontWeight: 700, color: '#f97316',
           }}>
             Uploaded! Taking you to the video…
           </div>
@@ -261,7 +261,7 @@ export default function KaTubeUploadPage() {
             </p>
             <Link href="/dashboard/katube" style={{
               display: 'inline-block', padding: '10px 18px', borderRadius: '10px',
-              background: '#2563eb', color: '#fff', fontSize: '13px', fontWeight: 700,
+              background: '#f97316', color: '#fff', fontSize: '13px', fontWeight: 700,
               textDecoration: 'none',
             }}>Go to my KaTube profile →</Link>
           </div>
@@ -269,9 +269,9 @@ export default function KaTubeUploadPage() {
           <>
           <div style={{
             padding: '10px 14px', borderRadius: '10px', marginBottom: '20px',
-            background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.25)',
-            fontSize: '12px', fontWeight: 700, color: '#2563eb',
-          }}>✅ Verified channel — every upload is still checked against it. <Link href="/dashboard/katube" style={{ color: '#2563eb' }}>View KaTube profile</Link></div>
+            background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.25)',
+            fontSize: '12px', fontWeight: 700, color: '#f97316',
+          }}>✅ Verified channel — every upload is still checked against it. <Link href="/dashboard/katube" style={{ color: '#f97316' }}>View KaTube profile</Link></div>
           <form onSubmit={handleSubmit}>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
               YouTube link
@@ -340,7 +340,7 @@ export default function KaTubeUploadPage() {
                   onClick={() => setCategory(c)}
                   style={{
                     fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-                    background: category === c ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
+                    background: category === c ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'var(--bg-card)',
                     color: category === c ? '#fff' : 'var(--text-secondary)',
                     border: category === c ? 'none' : '1px solid var(--border-color)',
                     cursor: 'pointer',
@@ -359,7 +359,7 @@ export default function KaTubeUploadPage() {
                   onClick={() => setAiTool(t)}
                   style={{
                     fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-                    background: aiTool === t ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
+                    background: aiTool === t ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'var(--bg-card)',
                     color: aiTool === t ? '#fff' : 'var(--text-secondary)',
                     border: aiTool === t ? 'none' : '1px solid var(--border-color)',
                     cursor: 'pointer',
@@ -441,7 +441,7 @@ export default function KaTubeUploadPage() {
               disabled={submitting}
               style={{
                 width: '100%', padding: '13px', borderRadius: '10px', border: 'none',
-                background: submitting ? '#93c5fd' : '#2563eb', color: '#fff',
+                background: submitting ? '#fdba8c' : '#f97316', color: '#fff',
                 fontSize: '14px', fontWeight: 800, cursor: submitting ? 'default' : 'pointer',
               }}
             >

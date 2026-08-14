@@ -159,7 +159,7 @@ export default function KaTubeShortsFeedPage() {
       ) : shorts.length === 0 ? (
         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '20px', textAlign: 'center' }}>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>No Fast Tap shorts yet.</p>
-          <Link href="/katube" style={{ color: '#2563eb', fontSize: '13px', fontWeight: 700 }}>← Back to KaTube</Link>
+          <Link href="/katube" style={{ color: '#f97316', fontSize: '13px', fontWeight: 700 }}>← Back to KaTube</Link>
         </div>
       ) : (
         <div
