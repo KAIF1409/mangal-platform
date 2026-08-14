@@ -82,6 +82,24 @@ reasons:
   same playbook platforms like Webtoon (Korea → global) and TikTok
   (China → global) used.
 
+## What's next
+
+- **Multi-language support.** Right now MANGAL runs in one language. Adding
+  support for multiple languages — Indian regional languages (Hindi, Tamil,
+  Telugu, Bengali, and more) as well as major international ones — is one of
+  the biggest planned steps. Language is one of the main walls that keeps a
+  platform local: a reader in Chennai, a reader in Tokyo, and a reader in
+  Mexico City can all enjoy the same story if it's not locked to one
+  language. This single change opens the platform to both underserved
+  Indian-language readers and international audiences at the same time.
+- **Reader-to-creator monetization** — tips and unlocking premium chapters,
+  so creators can earn directly from MANGAL, not just from YouTube views.
+- **Platform-side sponsorships on KaTube**, once there's enough viewer
+  traffic to make it worthwhile.
+
+Both of the monetization steps above are intentionally gated behind
+audience growth first — grow readers and viewers, then turn on ways to earn.
+
 ## Who it's for
 
 - **Readers** who want free, easy access to manga, comics, and novels made by
