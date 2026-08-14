@@ -33,6 +33,55 @@ just when there's a new chapter or video to check out.
 **The idea connecting all three:** *MANGAL writes the story. KaTube brings it
 to life. Kalpana Circle is where the fans gather to talk about it.*
 
+## Why it works
+
+- **Zero-cost, legally clean video model.** KaTube never hosts or stores any
+  video files itself — it only stores a link to the video and plays it
+  through YouTube's own player. That means no server/bandwidth costs even at
+  scale, and no copyright risk, because every video is original content made
+  by the creator who owns the story it's based on — never pirated or reposted
+  anime.
+- **One account, three products.** A reader on MangaNovels is already a
+  potential viewer on KaTube and a potential community member on Kalpana
+  Circle. Each product feeds the other two instead of competing for the same
+  attention, which is rare — most platforms have to build an audience three
+  separate times.
+- **Creator-first, not platform-first.** Money and audience flow to the
+  creator (views/revenue on their own YouTube channel, followers on their own
+  profile) rather than being locked inside MANGAL. That makes it easy for
+  creators to join without giving anything up, which is how a platform grows
+  fast in its early days.
+- **Built for an underserved audience.** Indian manga/novel/anime fans
+  currently split their time across global apps (Webtoon, Tapas, YouTube,
+  Discord, Instagram) with no single home that understands the local
+  audience. MANGAL is positioned to be that home.
+
+## How it connects to the global market
+
+The manga/webtoon/anime fan base is a genuinely global one — the same
+audience already exists in the US, Southeast Asia, Latin America, and Europe,
+not just India. MANGAL's model is built to travel beyond India for a few
+reasons:
+
+- **Anime and manga fandom has no borders.** The content categories (manga,
+  web novels, anime) already have massive global audiences on platforms like
+  Webtoon, Crunchyroll, and MyAnimeList — MANGAL is entering a proven market,
+  not creating a new one.
+- **The zero-cost video architecture scales globally without extra
+  infrastructure spend**, since KaTube rides on YouTube's global
+  infrastructure instead of MANGAL having to build or pay for its own
+  video-hosting/CDN as it expands to new countries.
+- **The three-in-one structure (read, watch, socialize) is a differentiator
+  internationally too** — most competitors are single-purpose (Webtoon only
+  reads, YouTube only watches, Discord only socializes). A platform that
+  does all three under one account is a stronger, stickier product anywhere
+  in the world, not just in India.
+- **India-first is a deliberate go-to-market strategy, not a ceiling** —
+  proving the model with a large, currently underserved home audience first,
+  then expanding outward once the product and community are proven, is the
+  same playbook platforms like Webtoon (Korea → global) and TikTok
+  (China → global) used.
+
 ## Who it's for
 
 - **Readers** who want free, easy access to manga, comics, and novels made by
