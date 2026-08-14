@@ -17,9 +17,11 @@ import { supabase } from '../lib/supabase';
 // Upload flow lives at /katube/upload — paste a YouTube link, mark it as a
 // Short or not, optionally pick a series you own, submit.
 //
-// Brand: white + blue (per founder request), distinct from Kalpana Circle's
-// purple identity — the two doors should read as related but visually
-// distinguishable products.
+// Brand: black + warm orange (matches the MANGAL wordmark gradient — see
+// founder reference image), distinct from Kalpana Circle's purple identity —
+// the two doors should read as related but visually distinguishable
+// products. Previously white + blue; recolored to tie KaTube visually back
+// to the core MANGAL logo palette.
 //
 // Mobile compatibility (Aug 2026): the left sidebar and top nav were built
 // desktop-first with no responsive behavior — on narrow/mobile viewports the
@@ -101,12 +103,12 @@ interface DemoShort {
 }
 
 const DEMO_SHORTS: DemoShort[] = [
-  { id: 's1', title: 'Aryavarta in 30 seconds', views: '12K', gradient: 'linear-gradient(160deg, #2563eb, #0ea5e9)', emoji: '⚡' },
-  { id: 's2', title: 'That plot twist though 😱', views: '8.7K', gradient: 'linear-gradient(160deg, #1e3a8a, #1d4ed8)', emoji: '😱' },
-  { id: 's3', title: 'Banyan Spirit — best frame', views: '15K', gradient: 'linear-gradient(160deg, #0891b2, #2563eb)', emoji: '🌳' },
-  { id: 's4', title: 'Street Life Mumbai vibes', views: '6.1K', gradient: 'linear-gradient(160deg, #0369a1, #38bdf8)', emoji: '🌆' },
-  { id: 's5', title: 'POV: exam week hits different', views: '21K', gradient: 'linear-gradient(160deg, #2563eb, #7dd3fc)', emoji: '🎒' },
-  { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #1e3a8a, #0ea5e9)', emoji: '👻' },
+  { id: 's1', title: 'Aryavarta in 30 seconds', views: '12K', gradient: 'linear-gradient(160deg, #f97316, #fb923c)', emoji: '⚡' },
+  { id: 's2', title: 'That plot twist though 😱', views: '8.7K', gradient: 'linear-gradient(160deg, #7c2d12, #c2410c)', emoji: '😱' },
+  { id: 's3', title: 'Banyan Spirit — best frame', views: '15K', gradient: 'linear-gradient(160deg, #ea580c, #f97316)', emoji: '🌳' },
+  { id: 's4', title: 'Street Life Mumbai vibes', views: '6.1K', gradient: 'linear-gradient(160deg, #9a3412, #fdba74)', emoji: '🌆' },
+  { id: 's5', title: 'POV: exam week hits different', views: '21K', gradient: 'linear-gradient(160deg, #f97316, #fde68a)', emoji: '🎒' },
+  { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #7c2d12, #fb923c)', emoji: '👻' },
 ];
 
 // ── KaTube redesign Step 2 (11 Aug 2026) — sidebar now actually filters ──
@@ -191,8 +193,8 @@ function SidebarNav({
                     style={{
                       display: 'flex', alignItems: 'center', gap: '20px',
                       padding: '12px 20px', borderRadius: '10px', border: 'none',
-                      background: active === item.id ? 'rgba(37,99,235,0.12)' : 'transparent',
-                      color: active === item.id ? '#2563eb' : 'var(--text-secondary)',
+                      background: active === item.id ? 'rgba(249,115,22,0.12)' : 'transparent',
+                      color: active === item.id ? '#f97316' : 'var(--text-secondary)',
                       fontSize: '15px', fontWeight: active === item.id ? 800 : 600,
                       cursor: 'pointer', textAlign: 'left', whiteSpace: 'nowrap',
                       transition: 'background 0.15s, color 0.15s',
@@ -208,13 +210,13 @@ function SidebarNav({
         </nav>
 
         {/* Pinned bottom CTA — matches the template's pinned "Upload Video"
-            button (recolored to KaTube's blue brand instead of YouTube red),
+            button (recolored to KaTube's orange brand instead of YouTube red),
             sitting above the existing "Back to MANGAL" link. */}
         <div style={{ padding: '12px 20px 16px', borderTop: '1px solid var(--border-color)', flexShrink: 0 }}>
           <Link href="/katube/upload" onClick={onClose} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             width: '100%', padding: '11px 0', borderRadius: '10px', textDecoration: 'none',
-            background: '#2563eb', color: '#fff', fontSize: '13px', fontWeight: 800,
+            background: '#f97316', color: '#fff', fontSize: '13px', fontWeight: 800,
             letterSpacing: '0.01em', marginBottom: '12px',
           }}>⬆ Upload video</Link>
           <Link href="/" style={{
@@ -247,7 +249,7 @@ function DemoShortCard({ short }: { short: DemoShort }) {
         position: 'relative', aspectRatio: '2/3', background: short.gradient,
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
-        boxShadow: hover ? '0 12px 24px rgba(37,99,235,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
+        boxShadow: hover ? '0 12px 24px rgba(249,115,22,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
         transition: 'transform 0.15s, box-shadow 0.2s',
       }}
     >
@@ -281,7 +283,7 @@ function RealShortCard({ short }: { short: RealShort }) {
         position: 'relative', aspectRatio: '2/3', background: '#000',
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
-        boxShadow: hover ? '0 12px 24px rgba(37,99,235,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
+        boxShadow: hover ? '0 12px 24px rgba(249,115,22,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
         transition: 'transform 0.15s, box-shadow 0.2s',
       }}
     >
@@ -322,7 +324,7 @@ function RealVideoCard({ video }: { video: RealVideo }) {
         background: 'var(--bg-card)', border: '1px solid var(--border-color)',
         transition: 'transform 0.15s, box-shadow 0.2s',
         transform: hover ? 'translateY(-4px)' : 'none',
-        boxShadow: hover ? '0 12px 28px rgba(37,99,235,0.20)' : 'none',
+        boxShadow: hover ? '0 12px 28px rgba(249,115,22,0.20)' : 'none',
       }}
     >
       <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000' }}>
@@ -359,8 +361,8 @@ function RealVideoCard({ video }: { video: RealVideo }) {
               href="#"
               onClick={(e) => e.stopPropagation()}
               style={{
-                fontSize: '10.5px', fontWeight: 700, color: '#2563eb', textDecoration: 'none',
-                background: 'rgba(37,99,235,0.10)', border: '1px solid rgba(37,99,235,0.28)',
+                fontSize: '10.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
+                background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
                 padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
               }}>
               📖 {video.basedOn}
@@ -656,7 +658,7 @@ export default function KaTubePage() {
         <div className="katube-nav-right" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <Link href="/katube/upload" style={{
             padding: '8px 14px', borderRadius: '18px', fontSize: '12.5px', fontWeight: 700,
-            color: '#fff', textDecoration: 'none', background: '#2563eb',
+            color: '#fff', textDecoration: 'none', background: '#f97316',
             whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px',
           }}>
             <span className="katube-label-full">+ Create</span>
@@ -717,7 +719,7 @@ export default function KaTubePage() {
       {/* ── HERO STRIP ── */}
       <div style={{
         padding: '36px 20px 24px', textAlign: 'center',
-        background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgba(37,99,235,0.10) 0%, transparent 70%)',
+        background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgba(249,115,22,0.10) 0%, transparent 70%)',
       }}>
         <h1 style={{
           fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.03em',
@@ -745,7 +747,7 @@ export default function KaTubePage() {
             onClick={() => setActiveFilter(i)}
             style={{
               flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-              background: i === activeFilter ? 'linear-gradient(135deg, #2563eb, #0ea5e9)' : 'var(--bg-card)',
+              background: i === activeFilter ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'var(--bg-card)',
               color: i === activeFilter ? '#fff' : 'var(--text-secondary)',
               border: i === activeFilter ? 'none' : '1px solid var(--border-color)',
               cursor: 'pointer', whiteSpace: 'nowrap',
@@ -816,8 +818,8 @@ export default function KaTubePage() {
               onClick={() => setShowAllFastTap(v => !v)}
               style={{
                 display: 'block', margin: '12px auto 0', padding: '8px 20px', borderRadius: '20px',
-                fontSize: '12px', fontWeight: 700, color: '#2563eb', background: 'rgba(37,99,235,0.10)',
-                border: '1px solid rgba(37,99,235,0.28)', cursor: 'pointer',
+                fontSize: '12px', fontWeight: 700, color: '#f97316', background: 'rgba(249,115,22,0.10)',
+                border: '1px solid rgba(249,115,22,0.28)', cursor: 'pointer',
               }}
             >
               {showAllFastTap ? '▲ Show less' : '▼ Show more'}
@@ -825,7 +827,7 @@ export default function KaTubePage() {
           )}
           {shorts.length === 0 && (
             <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '10px 0 0' }}>
-              Demo placeholders — <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>upload a Short</Link> to replace these.
+              Demo placeholders — <Link href="/katube/upload" style={{ color: '#f97316', fontWeight: 700 }}>upload a Short</Link> to replace these.
             </p>
           )}
         </div>
@@ -844,7 +846,7 @@ export default function KaTubePage() {
           ) : videos.length === 0 ? (
             <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
               <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-                No videos yet — be the first! <Link href="/katube/upload" style={{ color: '#2563eb', fontWeight: 700 }}>Upload a video</Link> and
+                No videos yet — be the first! <Link href="/katube/upload" style={{ color: '#f97316', fontWeight: 700 }}>Upload a video</Link> and
                 it&apos;ll show up here automatically.
               </p>
             </div>

@@ -2031,3 +2031,34 @@ results — unchanged from before); Popular Channels / YouTube Mixes sections
 from the template weren't added since KaTube doesn't have that data
 (subscriptions/mixes) built yet — flagged as a possible future step, not
 done this session to avoid inventing fake data.
+
+## 23. KaTube — accent color rebrand, blue → warm orange (DONE, this session)
+
+Founder shared a reference image of the MANGAL wordmark (black background,
+warm cream-to-deep-orange gradient lettering) and asked KaTube's page to pick
+up that palette instead of the blue it launched with (see §1b).
+
+- Swapped every hardcoded blue hex on `app/katube/page.tsx` for an orange
+  equivalent — solid accent `#2563eb` → `#f97316`; the accent's `rgba(37,99,235,…)`
+  form → `rgba(249,115,22,…)` (same alpha values, just the new accent's RGB).
+  Covers: active sidebar item, pinned "Upload video" CTA, nav "+ Create"
+  pill, active filter pill gradient, the "based on <series>" tag on video
+  cards, the fast-tap "Show more" button + empty-state links, and the hero
+  strip's radial glow.
+- Demo Shorts card gradients (6 two-stop blue pairs) remapped to 6 two-stop
+  orange/amber pairs, keeping each card visually distinct rather than making
+  them all identical.
+- Kalpana Circle's purple (`#7c3aed`) cross-link and the forced-dark
+  background vars (`--bg-primary: #07070a` etc., already near-black) were
+  left untouched — only the blue *accent* moved, not the base dark theme,
+  which already reads close to the reference image's black.
+- Updated the two brand comments at the top of the file and above the
+  pinned CTA that said "blue" to describe the new orange brand instead.
+- Didn't touch `public/katube-logo.png` — that's a separate raster asset
+  (purple/red gradient "KaTube" wordmark), not a CSS color, and wasn't part
+  of what was asked; flagging in case the founder wants it redone to match
+  too.
+
+**Verified:** `tsc --noEmit` clean, `eslint app/katube/page.tsx` clean (0
+errors, same 2 pre-existing `no-img-element` warnings as §22, unrelated to
+this change).
