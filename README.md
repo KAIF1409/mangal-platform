@@ -1,75 +1,51 @@
-# MANGAL — Manga/Novel Reading, AI-Anime Discovery & Fan Community
+# MANGAL
 
-**Live:** [mangal-platform.vercel.app](https://mangal-platform.vercel.app)
+**Live app:** [mangal-platform.vercel.app](https://mangal-platform.vercel.app)
 
-A solo-built, production Next.js ecosystem with three connected products sharing one
-codebase, one Supabase project, and one Vercel deployment — built for Indian manga/novel
-creators and readers.
+MANGAL is an Indian platform built for people who love manga, comics, web
+novels, and anime — a place to read, watch, and hang out with a community that
+loves the same stuff.
 
-| Product | Route | What it does |
-|---|---|---|
-| **WebMangal** | `/`, `/search`, `/read/...` | Read & publish manga, comics and web novels — one account, no split between formats. **Live, in active use.** |
-| **KaTube** | `/katube` | YouTube-style discovery feed for AI-generated anime videos made by MANGAL creators, adapted from their own series. Grid + Shorts feed, watch pages, upload flow, channel-ownership verification, automated content moderation. |
-| **Kalpana Circle** | `/kalpana-circle` | Instagram-meets-Discord fan community — posts, stories, DMs/group chats, notifications, polls, close friends, creator broadcast channels, and full Discord-style channels & roles. |
+It has **three parts** that work together:
 
-## Tech stack
+### 1. MangaNovels — read manga, comics & novels
+The original MANGAL. Anyone can create an account and start reading manga,
+comics, and web novels for free. Writers and artists can also publish their
+own original work here — chapters, covers, updates — directly to readers,
+without needing a publisher.
 
-- **Framework:** Next.js 16 (App Router), React 19, TypeScript
-- **Backend:** Supabase (Postgres, Auth, Storage, Realtime) — every table locked down with
-  row-level security, no service-role key used client-side
-- **Styling:** inline CSS-variable theming (light/dark), no CSS framework at runtime
-- **Media/AI:** NSFWJS + TensorFlow.js for automated content moderation, `sharp` for
-  server-side image processing, YouTube Data API v3 for channel verification & metadata
-- **Motion:** Framer Motion + GSAP for the landing page
-- **Deployment:** Vercel, with Vercel Analytics
+### 2. KaTube — a video feed for AI-made anime
+A YouTube-style feed made specifically for **AI-generated anime videos**.
+The idea: a MANGAL creator who has written a series can use AI video tools to
+bring a scene from their own story to life as a short anime-style clip, then
+share it here. People browse and discover these videos the same way they'd
+scroll YouTube Shorts or Instagram Reels — except everything is home-grown,
+original content, not reposted or pirated anime.
 
-## Engineering highlights
+### 3. Kalpana Circle — the community space
+"Kalpana" means *imagination* in Hindi. This is the social side of MANGAL —
+think Instagram and Discord mixed together. People can post, share
+disappearing stories (including a "Close Friends" mode so only chosen people
+can see certain stories), chat one-on-one or in groups, and follow their
+favourite creators. It's built as the reason people come back every day, not
+just when there's a new chapter or video to check out.
 
-A few things worth a closer look in the code, not just the feature list:
+**The idea connecting all three:** *MANGAL writes the story. KaTube brings it
+to life. Kalpana Circle is where the fans gather to talk about it.*
 
-- **Zero-cost, ToS-safe video architecture** — KaTube never stores or rehosts video files;
-  it only stores YouTube video IDs + metadata and plays back through YouTube's own embed,
-  which keeps the product both free to run and compliant with YouTube's API Terms of
-  Service (no branding removal, no scraping, no download tooling).
-- **Server-verified channel ownership** — creators prove they own a YouTube channel via a
-  one-time verification-code handshake, then every single upload is independently checked
-  server-side against that verified channel ID before it's accepted, closing the obvious
-  "upload someone else's video" exploit.
-- **Automated moderation pipeline** — NSFW thumbnail classification (NSFWJS) and
-  AI-disclosure checks (via YouTube's `containsSyntheticMedia` field) auto-flag risky
-  uploads into a review queue instead of hard-blocking, to avoid false-positive creator
-  friction while still catching real problems.
-- **Discord-style permission system built from scratch** — bitmask role permissions,
-  per-channel allow/deny overwrites, and a resolution order that mirrors Discord's own
-  (role permissions → channel denies → channel allows → admin override), enforced at the
-  RLS layer (not just hidden in the UI) with a role-hierarchy guard so a member can never
-  edit or assign a role ranked above their own.
-- **Found and fixed real RLS security holes** — including a participant-insert policy that
-  had degraded to an always-true check (letting any user join any private conversation)
-  and a self-referential policy comparison that leaked group membership across the
-  platform. Both traced, root-caused, and patched with regression-safe migrations.
-- **Race-condition-safe interactions** — like/follow/vote actions use a synchronous ref
-  lock (not just React state) to close a double-click window that async state batching
-  would otherwise leave open.
+## Who it's for
 
-## Privacy & compliance
+- **Readers** who want free, easy access to manga, comics, and novels made by
+  Indian creators.
+- **Writers and artists** who want a place to publish their work directly to
+  an audience.
+- **Anime fans** who want to discover original AI-made anime content and talk
+  about it with a community, instead of just watching pirated clips.
 
-Built with India's data protection and IT rules in mind: explicit consent at signup, extra
-protection and parental consent for under-18 users, self-serve data export/delete, and a
-dedicated support channel with a guaranteed response time. KaTube's public-facing pages
-disclose YouTube API Services usage per YouTube's ToS requirements.
+## Who built it
 
-## Status
+Built solo — design, backend, and frontend all handled by one person —
+by **Mohammed Kaif**, a B.Tech CSE student at PES University (Class of 2026).
 
-WebMangal is live and in active use. KaTube and Kalpana Circle are both live on real
-Supabase data with the feature sets described above — see the table at the top for what's
-shipped per product. Reader-to-creator monetization (tips, unlocking premium chapters) and
-platform-side sponsorship on KaTube are the next planned steps, gated behind reader/viewer
-growth.
-
-## About
-
-Built solo, end-to-end — architecture, backend, and frontend — by **Mohammed Kaif**,
-B.Tech CSE, PES University (2026).
 [LinkedIn](https://www.linkedin.com/in/mohammed-kaif-714a79242) ·
 [Email](mailto:kaifmohammed.work@gmail.com)
