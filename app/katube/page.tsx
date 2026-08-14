@@ -75,6 +75,23 @@ const TOOL_PILLS = ['All', 'Sora', 'Kling', 'Runway', 'Pika', 'Hailuo', 'Veo', '
 // means we simply never render the extra cards, so there's nothing to crop.
 const FAST_TAP_COLLAPSED_COUNT = 6;
 
+// Relative-time helper for the video card meta line ("creator · time ago"),
+// matching the founder's YouTube-template reference. Falls back to a plain
+// date once older than a week so it doesn't produce "52 weeks ago".
+function timeAgo(dateStr: string): string {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
 interface DemoShort {
   id: string;
   title: string;
@@ -98,11 +115,26 @@ const DEMO_SHORTS: DemoShort[] = [
 // 'saved' has no backing data yet, so it shows a placeholder message.
 type SidebarItem = 'home' | 'fast' | 'slow' | 'saved';
 
-const SIDEBAR_ITEMS: { id: SidebarItem; label: string; icon: string }[] = [
-  { id: 'home', label: 'Home', icon: '🏠' },
-  { id: 'fast', label: 'Fast tap', icon: '▷' },
-  { id: 'slow', label: 'Slow tap', icon: '▷' },
-  { id: 'saved', label: 'Saved', icon: '🔖' },
+// Grouped into labeled sections (Menu / Library) to match the founder's
+// YouTube-template reference — same four items and the same filtering
+// behavior as before, just organized under section headers instead of one
+// flat list, plus a pinned "+ Create" CTA at the bottom of the sidebar
+// (see the JSX below) matching the template's pinned "Upload Video" button.
+const SIDEBAR_GROUPS: { label: string; items: { id: SidebarItem; label: string; icon: string }[] }[] = [
+  {
+    label: 'Menu',
+    items: [
+      { id: 'home', label: 'Home', icon: '🏠' },
+      { id: 'fast', label: 'Fast tap', icon: '⚡' },
+      { id: 'slow', label: 'Slow tap', icon: '▶' },
+    ],
+  },
+  {
+    label: 'Library',
+    items: [
+      { id: 'saved', label: 'Saved', icon: '🔖' },
+    ],
+  },
 ];
 
 function SidebarNav({
@@ -144,28 +176,47 @@ function SidebarNav({
       <aside
         className={`katube-sidebar${!desktopOpen ? ' katube-sidebar--desktop-closed' : ''}${mobileOpen ? ' katube-sidebar--mobile-open' : ''}`}
       >
-        <nav style={{ width: '240px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {SIDEBAR_ITEMS.map(item => (
-            <button
-              key={item.id}
-              onClick={() => { onSelect(item.id); onClose(); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '20px',
-                padding: '12px 20px', borderRadius: '10px', border: 'none',
-                background: active === item.id ? 'rgba(37,99,235,0.12)' : 'transparent',
-                color: active === item.id ? '#2563eb' : 'var(--text-secondary)',
-                fontSize: '15px', fontWeight: active === item.id ? 800 : 600,
-                cursor: 'pointer', textAlign: 'left', whiteSpace: 'nowrap',
-                transition: 'background 0.15s, color 0.15s',
-              }}
-            >
-              <span style={{ fontSize: '22px', width: '24px', textAlign: 'center' }}>{item.icon}</span>
-              {item.label}
-            </button>
+        <nav style={{ width: '240px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '18px', flex: 1, overflowY: 'auto' }}>
+          {SIDEBAR_GROUPS.map(group => (
+            <div key={group.label}>
+              <div style={{
+                padding: '0 20px 6px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+                color: 'var(--text-tertiary)', textTransform: 'uppercase',
+              }}>{group.label}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {group.items.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => { onSelect(item.id); onClose(); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '20px',
+                      padding: '12px 20px', borderRadius: '10px', border: 'none',
+                      background: active === item.id ? 'rgba(37,99,235,0.12)' : 'transparent',
+                      color: active === item.id ? '#2563eb' : 'var(--text-secondary)',
+                      fontSize: '15px', fontWeight: active === item.id ? 800 : 600,
+                      cursor: 'pointer', textAlign: 'left', whiteSpace: 'nowrap',
+                      transition: 'background 0.15s, color 0.15s',
+                    }}
+                  >
+                    <span style={{ fontSize: '22px', width: '24px', textAlign: 'center' }}>{item.icon}</span>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
-        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-color)' }}>
+        {/* Pinned bottom CTA — matches the template's pinned "Upload Video"
+            button (recolored to KaTube's blue brand instead of YouTube red),
+            sitting above the existing "Back to MANGAL" link. */}
+        <div style={{ padding: '12px 20px 16px', borderTop: '1px solid var(--border-color)', flexShrink: 0 }}>
+          <Link href="/katube/upload" onClick={onClose} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            width: '100%', padding: '11px 0', borderRadius: '10px', textDecoration: 'none',
+            background: '#2563eb', color: '#fff', fontSize: '13px', fontWeight: 800,
+            letterSpacing: '0.01em', marginBottom: '12px',
+          }}>⬆ Upload video</Link>
           <Link href="/" style={{
             display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none',
             fontSize: '12.5px', fontWeight: 700, color: 'var(--text-tertiary)', whiteSpace: 'nowrap',
@@ -299,7 +350,9 @@ function RealVideoCard({ video }: { video: RealVideo }) {
           lineHeight: 1.35, marginBottom: '6px',
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>{video.title}</div>
-        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>{video.creator}</div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+          {video.creator} · {timeAgo(video.created_at)}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
           {video.basedOn && (
             <Link
@@ -348,6 +401,19 @@ export default function KaTubePage() {
   const [activeTool, setActiveTool] = useState('All');
   const [isLight, setIsLight] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // Lightweight display-name lookup for the nav avatar (template shows the
+  // name next to the avatar). No redirect/gating like /dashboard does —
+  // KaTube is a public discovery page, so a logged-out visitor just sees the
+  // avatar with no name, same as before this change.
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const name = data.user?.user_metadata?.full_name || data.user?.email?.split('@')[0] || null;
+      setUserName(name);
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -465,6 +531,8 @@ export default function KaTubePage() {
         .katube-sidebar {
           width: 240px;
           flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
           overflow: hidden;
           position: sticky;
           top: 64px;
@@ -565,29 +633,23 @@ export default function KaTubePage() {
           onSubmit={(e) => e.preventDefault()}
           style={{ flex: 1, justifyContent: 'center', maxWidth: '640px', margin: '0 auto', minWidth: 0 }}
         >
-          <div style={{ display: 'flex', width: '100%', maxWidth: '560px' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '560px' }}>
+            <span aria-hidden="true" style={{
+              position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
+              fontSize: '14px', color: 'var(--text-tertiary)', pointerEvents: 'none',
+            }}>🔍</span>
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search"
+              title="Search isn't wired to real results yet"
               style={{
-                flex: 1, height: '38px', padding: '0 16px', borderRadius: '20px 0 0 20px',
-                border: '1px solid var(--border-color)', borderRight: 'none',
+                width: '100%', height: '40px', padding: '0 16px 0 40px', borderRadius: '20px',
+                border: '1px solid var(--border-color)',
                 background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13.5px', outline: 'none',
                 minWidth: 0,
               }}
             />
-            <button
-              type="submit"
-              aria-label="Search"
-              title="Search isn't wired to real results yet"
-              style={{
-                width: '52px', height: '38px', borderRadius: '0 20px 20px 0',
-                border: '1px solid var(--border-color)', borderLeft: 'none',
-                background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px',
-              }}
-            >🔍</button>
           </div>
         </form>
 
@@ -614,19 +676,30 @@ export default function KaTubePage() {
           {/* KaTube profile — channel verification + metrics live at
               /dashboard/katube (part of the main MANGAL dashboard, see
               CONTEXT.md §6). Swap for the founder's real logo image whenever
-              it's ready; still just a "K" placeholder visually. */}
+              it's ready; still just a "K" placeholder visually. Name next to
+              the avatar (template reference) only renders when a user is
+              actually logged in — graceful fallback to avatar-only otherwise. */}
           <Link
             href="/dashboard/katube"
             aria-label="KaTube profile"
             title="KaTube profile"
             style={{
+              display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none',
+              flexShrink: 0,
+            }}
+          >
+            {userName && (
+              <span className="katube-label-full" style={{
+                fontSize: '12.5px', fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap',
+              }}>{userName}</span>
+            )}
+            <span style={{
               width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
               background: 'var(--bg-card)', border: '1px solid var(--border-color)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '13px', color: 'var(--text-tertiary)', fontWeight: 700,
-              textDecoration: 'none',
-            }}
-          >K</Link>
+            }}>K</span>
+          </Link>
         </div>
       </nav>
 
