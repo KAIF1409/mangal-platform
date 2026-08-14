@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { isMinor, isPlausibleDateOfBirth, PARENT_CONSENT_PENDING_COPY } from '../lib/dpdp';
 import { setPostLoginRedirect } from '../lib/authRedirect';
 
 // 'dob'     = Google OAuth new users — skipped register form so no DOB yet
 // 'pending' = minor whose parent hasn't confirmed yet
-type Mode = 'landing' | 'login' | 'register' | 'dob' | 'role' | 'pending';
+type Mode = 'login' | 'register' | 'dob' | 'role' | 'pending';
 
 // ── Full-screen background image layer ──────────────────────────────────────
 // Drop your generated image at /public/bg-aryavarta.jpg (any name works,
@@ -80,76 +81,6 @@ function CosmicOverlay() {
   );
 }
 
-// ── Ambient ember drift ──────────────────────────────────────────────────────
-// Kept only on the landing/marketing screen, and tuned well down from a
-// "particle effects" look to a slow, quiet drift — atmosphere, not motion
-// graphics. Never shown behind an active form.
-function EmberCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let W = (canvas.width = window.innerWidth);
-    let H = (canvas.height = window.innerHeight);
-    const onResize = () => {
-      W = canvas.width = window.innerWidth;
-      H = canvas.height = window.innerHeight;
-    };
-    window.addEventListener('resize', onResize);
-
-    type Particle = { x: number; y: number; r: number; vx: number; vy: number; life: number; maxLife: number };
-    const particles: Particle[] = [];
-
-    const spawn = () => {
-      const x = W * 0.5 + (Math.random() - 0.5) * W * 0.7;
-      particles.push({
-        x,
-        y: H + 10,
-        r: Math.random() * 1.6 + 0.4,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: -(Math.random() * 0.5 + 0.25),
-        life: 0,
-        maxLife: 220 + Math.random() * 260,
-      });
-    };
-
-    let frame = 0;
-    const animate = () => {
-      ctx.clearRect(0, 0, W, H);
-      if (frame % 9 === 0) spawn();
-      frame++;
-
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx + Math.sin(p.life * 0.02) * 0.15;
-        p.y += p.vy;
-        p.life++;
-        if (p.life > p.maxLife) {
-          particles.splice(i, 1);
-          continue;
-        }
-        const alpha = Math.sin((p.life / p.maxLife) * Math.PI) * 0.28;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(28, 70%, 55%, ${alpha})`;
-        ctx.fill();
-      }
-      raf = requestAnimationFrame(animate);
-    };
-
-    let raf = requestAnimationFrame(animate);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', onResize);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-}
-
 // ── Icon set ─────────────────────────────────────────────────────────────────
 // A single consistent stroke-icon system replaces the emoji glyphs used
 // throughout the previous version. currentColor + 1.6px stroke everywhere
@@ -170,12 +101,6 @@ function IconBase({
 const IconFlame = ({ size = 20 }: { size?: number }) => (
   <IconBase size={size}>
     <path d="M12 2.5c1.2 2.6-.6 4-.6 6.2 0 1.3 1 2.3 2.3 2.3 1.1 0 1.9-.7 2.1-1.7 1.4 1.6 2.2 3.6 2.2 5.6 0 4-3.1 7.1-6.9 6.9-3.6-.2-6.4-3.3-6.1-7 .2-2.5 1.5-4 2.6-5.6.4 1 1.3 1.5 2.1 1.2.9-.3 1.2-1.2.8-2.2C9.5 6.4 10.6 4.3 12 2.5Z" />
-  </IconBase>
-);
-const IconArrowLeft = ({ size = 14 }: { size?: number }) => (
-  <IconBase size={size}>
-    <path d="M19 12H5" />
-    <path d="M11 18l-6-6 6-6" />
   </IconBase>
 );
 const IconArrowRight = ({ size = 14 }: { size?: number }) => (
@@ -309,31 +234,6 @@ function AnimInput({
   );
 }
 
-// ── Trust strip (replaces floating emoji badges) ─────────────────────────────
-function TrustStrip() {
-  const items = ['Built for Indian readers', 'Free to read, always', '0% platform cut until monetization'];
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        flexWrap: 'wrap' as const,
-        justifyContent: 'center',
-        gap: '10px',
-        fontSize: '11.5px',
-        color: 'rgba(226,220,209,0.6)',
-      }}
-    >
-      {items.map((label, i) => (
-        <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {i > 0 && <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'rgba(226,220,209,0.3)' }} />}
-          {label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 // ── Footer ───────────────────────────────────────────────────────────────────
 function Footer() {
   return (
@@ -453,31 +353,6 @@ function Banner({ tone, icon, children }: { tone: 'error' | 'success' | 'warn'; 
   );
 }
 
-function BackButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: 'none',
-        border: 'none',
-        color: 'rgba(226,220,209,0.55)',
-        fontSize: '12px',
-        cursor: 'pointer',
-        marginBottom: '24px',
-        padding: 0,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        transition: 'color 0.2s',
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
-      onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(226,220,209,0.55)')}
-    >
-      <IconArrowLeft /> Back
-    </button>
-  );
-}
-
 function PrimaryButton({
   onClick,
   disabled,
@@ -522,7 +397,7 @@ function PrimaryButton({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AuthPage() {
-  const [mode, setMode] = useState<Mode>('landing');
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -704,6 +579,27 @@ export default function AuthPage() {
     setLoading(false);
   };
 
+  // Forgot-password — sends a Supabase reset-password email to whatever's
+  // currently typed in the Email field. Deliberately reuses the same
+  // `error`/`message` banners the rest of the form already has rather than
+  // a separate screen/mode, since it's a one-field, one-action flow.
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Enter your email above first, then tap "Forgot password?".');
+      return;
+    }
+    setForgotLoading(true);
+    setError('');
+    setMessage('');
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+    setForgotLoading(false);
+    if (resetError) { setError(resetError.message); return; }
+    setMessage(`If an account exists for ${email}, a reset link is on its way.`);
+  };
+
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleGoogleLogin = async () => {
@@ -795,10 +691,10 @@ export default function AuthPage() {
                 </p>
               </div>
               <button
-                onClick={() => switchMode('landing')}
+                onClick={() => switchMode('login')}
                 style={{ background: 'none', border: 'none', color: 'rgba(226,220,209,0.55)', fontSize: '12px', cursor: 'pointer' }}
               >
-                ← Back to home
+                ← Back to sign in
               </button>
             </div>
           </GlassCard>
@@ -861,170 +757,6 @@ export default function AuthPage() {
               </PrimaryButton>
             </div>
           </GlassCard>
-        </main>
-        <Footer />
-      </div>
-    );
-
-  // ── LANDING ──────────────────────────────────────────────────────────────
-  if (mode === 'landing')
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <CosmicBackground />
-        <CosmicOverlay />
-        <EmberCanvas />
-
-        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', zIndex: 1 }}>
-          <div style={{ width: '100%', maxWidth: '900px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '36px' }}>
-            {/* Hero text above card */}
-            <div
-              style={{
-                textAlign: 'center',
-                opacity: cardVisible ? 1 : 0,
-                transform: cardVisible ? 'translateY(0)' : 'translateY(-12px)',
-                transition: 'opacity 0.4s ease 0.05s, transform 0.4s ease 0.05s',
-                position: 'relative',
-                padding: '24px 32px',
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'radial-gradient(ellipse 70% 100% at center, rgba(6,5,4,0.5) 0%, transparent 75%)',
-                  zIndex: -1,
-                  borderRadius: '32px',
-                }}
-              />
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <div style={{ height: '1px', width: '32px', background: 'linear-gradient(to right, transparent, rgba(224,172,95,0.7))' }} />
-                <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.2em', color: 'rgba(224,172,95,0.9)', textTransform: 'uppercase' }}>India&apos;s Comic Platform</span>
-                <div style={{ height: '1px', width: '32px', background: 'linear-gradient(to left, transparent, rgba(224,172,95,0.7))' }} />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '14px' }}>
-                <LogoMark size={52} />
-                <h1
-                  style={{
-                    fontSize: 'clamp(44px, 8vw, 68px)',
-                    fontWeight: 800,
-                    letterSpacing: '-0.03em',
-                    color: '#fff',
-                    margin: 0,
-                    lineHeight: 1,
-                    filter: 'drop-shadow(0 2px 16px rgba(0,0,0,0.6))',
-                  }}
-                >
-                  MANGAL
-                </h1>
-              </div>
-              <p style={{ fontSize: '12.5px', color: 'rgba(226,220,209,0.85)', letterSpacing: '0.16em', margin: '0 0 8px', textTransform: 'uppercase' }}>
-                Bharat Ki Kahaniyan
-              </p>
-              <p style={{ fontSize: '15px', color: 'rgba(226,220,209,0.82)', lineHeight: 1.7, margin: 0 }}>
-                The home India&apos;s storytellers never had.
-                <br />
-                <span style={{ color: '#e0ac5f', fontWeight: 600 }}>Read. Create. Rise.</span>
-              </p>
-            </div>
-
-            {/* Main card */}
-            <GlassCard maxWidth={420} visible={cardVisible}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {error && <Banner tone="error" icon={<IconAlert />}>{error}</Banner>}
-
-                {/* Google — primary CTA */}
-                <button
-                  onClick={handleGoogleLogin}
-                  disabled={isGoogleLoading}
-                  style={{
-                    width: '100%',
-                    padding: '13px 18px',
-                    background: '#fff',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '10px',
-                    color: '#111',
-                    fontSize: '13.5px',
-                    fontWeight: 600,
-                    cursor: isGoogleLoading ? 'default' : 'pointer',
-                    opacity: isGoogleLoading ? 0.7 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
-                    transition: 'transform 0.15s',
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ''; }}
-                >
-                  <GoogleIcon /> {isGoogleLoading ? 'Redirecting…' : 'Continue with Google'}
-                </button>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-                  <span style={{ fontSize: '10px', color: 'rgba(226,220,209,0.42)', letterSpacing: '0.08em' }}>OR</span>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-                </div>
-
-                <PrimaryButton onClick={() => switchMode('register')}>Create account</PrimaryButton>
-
-                <button
-                  onClick={() => switchMode('login')}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'transparent',
-                    border: '1px solid rgba(255,255,255,0.13)',
-                    borderRadius: '10px',
-                    color: 'rgba(226,220,209,0.78)',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    transition: 'border-color 0.2s, color 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.28)';
-                    (e.currentTarget as HTMLButtonElement).style.color = '#fff';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.13)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'rgba(226,220,209,0.78)';
-                  }}
-                >
-                  Already a member? Sign in
-                </button>
-              </div>
-
-              {/* Role teaser */}
-              <div style={{ marginTop: '22px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {[
-                  { icon: <IconPen size={19} />, role: 'Creator', desc: 'Publish your story', color: '#e79b93' },
-                  { icon: <IconBook size={19} />, role: 'Reader', desc: "Discover India's best", color: '#e0ac5f' },
-                ].map((item) => (
-                  <div
-                    key={item.role}
-                    style={{
-                      background: 'rgba(10,8,7,0.4)',
-                      border: '1px solid rgba(255,255,255,0.09)',
-                      borderRadius: '12px',
-                      padding: '14px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <div style={{ color: item.color, marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>{item.icon}</div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#f4f1ec', marginBottom: '2px' }}>{item.role}</div>
-                    <div style={{ fontSize: '10.5px', color: 'rgba(226,220,209,0.55)' }}>{item.desc}</div>
-                  </div>
-                ))}
-              </div>
-
-              <p style={{ textAlign: 'center', fontSize: '9.5px', color: 'rgba(226,220,209,0.38)', marginTop: '20px', marginBottom: 0, letterSpacing: '0.04em' }}>
-                © 2026 MANGAL · Crafted in India
-              </p>
-            </GlassCard>
-
-            <TrustStrip />
-          </div>
         </main>
         <Footer />
       </div>
@@ -1127,75 +859,159 @@ export default function AuthPage() {
       </div>
     );
 
-  // ── LOGIN / REGISTER ──────────────────────────────────────────────────────
-  const isLogin = mode === 'login';
+  // ── LOGIN / REGISTER — split screen (form left, hero video right) ────────
+  const isLogin = mode !== 'register';
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <CosmicBackground />
-      <CosmicOverlay />
+    <div className="mangal-auth-shell">
+      <style>{`
+        .mangal-auth-shell {
+          min-height: 100vh;
+          display: flex;
+          background: #08070a;
+        }
+        .mangal-auth-left {
+          flex: 1 1 480px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: 40px clamp(24px, 6vw, 88px);
+          position: relative;
+          z-index: 1;
+        }
+        .mangal-auth-form-wrap { width: 100%; max-width: 400px; margin: 0 auto; }
+        .mangal-auth-tabs {
+          display: inline-flex;
+          gap: 4px;
+          padding: 4px;
+          border-radius: 10px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.08);
+          margin-bottom: 28px;
+        }
+        .mangal-auth-tab {
+          border: none;
+          background: transparent;
+          padding: 8px 18px;
+          border-radius: 7px;
+          font-size: 12.5px;
+          font-weight: 700;
+          cursor: pointer;
+          color: rgba(226,220,209,0.55);
+          transition: background 0.18s, color 0.18s;
+        }
+        .mangal-auth-tab.active { background: linear-gradient(135deg, #6b1d1d 0%, #a1650f 100%); color: #fff; }
+        .mangal-auth-right {
+          flex: 1 1 46%;
+          position: relative;
+          overflow: hidden;
+          margin: 14px 14px 14px 0;
+          border-radius: 22px;
+        }
+        .mangal-auth-right video {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .mangal-auth-right::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(8,7,10,0.15) 0%, rgba(8,7,10,0.05) 40%, rgba(8,7,10,0.85) 100%);
+        }
+        .mangal-auth-quote {
+          position: absolute;
+          left: 24px;
+          right: 24px;
+          bottom: 24px;
+          z-index: 2;
+          background: rgba(10,8,8,0.55);
+          border: 1px solid rgba(255,255,255,0.14);
+          backdrop-filter: blur(14px) saturate(120%);
+          -webkit-backdrop-filter: blur(14px) saturate(120%);
+          border-radius: 16px;
+          padding: 22px 24px;
+        }
+        @media (max-width: 900px) {
+          .mangal-auth-right { display: none; }
+          .mangal-auth-left { padding: 32px 20px; }
+        }
+      `}</style>
 
-      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', zIndex: 1 }}>
-        <GlassCard maxWidth={420} visible={cardVisible}>
-          <BackButton onClick={() => switchMode('landing')} />
+      <div className="mangal-auth-left">
+        <div className="mangal-auth-form-wrap">
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none', marginBottom: '32px' }}>
+            <LogoMark size={34} />
+            <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>MANGAL</span>
+          </Link>
 
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-            <LogoMark size={36} />
-            <div>
-              <h2 style={{ fontSize: '21px', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>
-                {isLogin ? 'Welcome back' : 'Join MANGAL'}
-              </h2>
-              <p style={{ fontSize: '12px', color: 'rgba(226,220,209,0.55)', margin: '2px 0 0' }}>
-                {isLogin ? 'Sign in to your account' : 'Create your free account'}
-              </p>
-            </div>
+          {/* Login / Sign up tabs */}
+          <div className="mangal-auth-tabs">
+            <button
+              className={`mangal-auth-tab${isLogin ? ' active' : ''}`}
+              onClick={() => switchMode('login')}
+            >
+              Log in
+            </button>
+            <button
+              className={`mangal-auth-tab${!isLogin ? ' active' : ''}`}
+              onClick={() => switchMode('register')}
+            >
+              Sign up
+            </button>
           </div>
+
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+            {isLogin ? 'Welcome back' : 'Create your account'}
+          </h1>
+          <p style={{ fontSize: '13px', color: 'rgba(226,220,209,0.6)', margin: '0 0 26px' }}>
+            {isLogin ? 'Enter your details to sign in.' : 'Free forever — start reading or publishing in a minute.'}
+          </p>
 
           {/* Error / success banners */}
           {error && <Banner tone="error" icon={<IconAlert />}>{error}</Banner>}
           {message && <Banner tone="success" icon={<IconCheck />}>{message}</Banner>}
           {dobError && <Banner tone="warn" icon={<IconShield />}>{dobError}</Banner>}
 
-          {/* Google */}
-          <button
-            onClick={handleGoogleLogin}
-            disabled={isGoogleLoading}
-            style={{
-              width: '100%',
-              padding: '12px',
-              background: '#fff',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '10px',
-              color: '#111',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: isGoogleLoading ? 'default' : 'pointer',
-              opacity: isGoogleLoading ? 0.7 : 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              marginBottom: '16px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              transition: 'transform 0.15s',
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ''; }}
-          >
-            <GoogleIcon /> {isGoogleLoading ? 'Redirecting…' : 'Continue with Google'}
-          </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-            <span style={{ fontSize: '10px', color: 'rgba(226,220,209,0.4)' }}>OR</span>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
-          </div>
-
           {/* Form fields */}
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '14px' }}>
             {!isLogin && <AnimInput label="Your Name" type="text" placeholder="e.g., Arjun Sharma" value={name} onChange={setName} />}
-            <AnimInput label="Email" type="email" placeholder="name@domain.com" value={email} onChange={setEmail} />
-            <AnimInput label="Password" type="password" placeholder="••••••••" value={password} onChange={setPassword} />
+            <AnimInput label="Email address" type="email" placeholder="Enter your email address" value={email} onChange={setEmail} />
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label style={{ fontSize: '10.5px', fontWeight: 600, color: '#9a938c', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
+                  Password
+                </label>
+                {isLogin && (
+                  <button
+                    onClick={handleForgotPassword}
+                    disabled={forgotLoading}
+                    style={{ background: 'none', border: 'none', color: '#e0ac5f', fontSize: '11px', fontWeight: 600, cursor: forgotLoading ? 'default' : 'pointer', padding: 0 }}
+                  >
+                    {forgotLoading ? 'Sending…' : 'Forgot password?'}
+                  </button>
+                )}
+              </div>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  background: 'rgba(12,10,9,0.55)',
+                  border: '1px solid rgba(255,255,255,0.11)',
+                  color: '#f4f1ec',
+                  fontSize: '13.5px',
+                  outline: 'none',
+                  boxSizing: 'border-box' as const,
+                }}
+              />
+            </div>
 
             {/* DPDP DOB fields */}
             {!isLogin && (
@@ -1235,23 +1051,78 @@ export default function AuthPage() {
 
             {/* Submit */}
             <PrimaryButton onClick={isLogin ? handleLogin : handleRegister} disabled={loading}>
-              {loading ? 'Please wait…' : isLogin ? 'Sign in' : 'Create account'}
+              {loading ? 'Please wait…' : isLogin ? 'Log in' : 'Create account'}
             </PrimaryButton>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+              <span style={{ fontSize: '10px', color: 'rgba(226,220,209,0.4)' }}>OR</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+            </div>
+
+            {/* Google */}
+            <button
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#fff',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '10px',
+                color: '#111',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: isGoogleLoading ? 'default' : 'pointer',
+                opacity: isGoogleLoading ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                transition: 'transform 0.15s',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ''; }}
+            >
+              <GoogleIcon /> {isGoogleLoading ? 'Redirecting…' : 'Continue with Google'}
+            </button>
+
             {/* Switch mode */}
-            <p style={{ textAlign: 'center' as const, fontSize: '12px', color: 'rgba(226,220,209,0.6)', margin: 0 }}>
-              {isLogin ? 'New here? ' : 'Already a member? '}
+            <p style={{ textAlign: 'center' as const, fontSize: '12px', color: 'rgba(226,220,209,0.6)', margin: '6px 0 0' }}>
+              {isLogin ? "Don't have an account yet? " : 'Already a member? '}
               <button
                 onClick={() => switchMode(isLogin ? 'register' : 'login')}
-                style={{ background: 'none', border: 'none', color: '#e0ac5f', fontSize: '12px', cursor: 'pointer', fontWeight: 700, padding: 0 }}
+                style={{ background: 'none', border: 'none', color: '#e0ac5f', fontSize: '12px', cursor: 'pointer', fontWeight: 700, padding: 0, textDecoration: 'underline' }}
               >
-                {isLogin ? 'Create account' : 'Sign in'}
+                {isLogin ? 'Sign up' : 'Sign in'}
               </button>
             </p>
           </div>
-        </GlassCard>
-      </main>
-      <Footer />
+        </div>
+      </div>
+
+      {/* Hero video panel — hidden under 900px so mobile never pays for the
+          video download; the form above already works standalone at full
+          width on phones. */}
+      <div className="mangal-auth-right">
+        <video autoPlay loop muted playsInline preload="metadata" poster="/hero-bg.jpg">
+          <source src="/videos/login-dragon-hero.mp4" type="video/mp4" />
+        </video>
+        <div className="mangal-auth-quote">
+          <p style={{ fontSize: '15px', lineHeight: 1.65, color: '#fff', margin: '0 0 16px', fontWeight: 500 }}>
+            &ldquo;MANGAL gave my comic a home before it had a single reader —
+            now it has thousands. Upload, publish, tell your story, no
+            gatekeepers.&rdquo;
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#fff' }}>Ananya Rao</div>
+              <div style={{ fontSize: '11.5px', color: 'rgba(226,220,209,0.65)' }}>Creator · &ldquo;Kaal Bhairav&rdquo; on MANGAL</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1943,3 +1943,58 @@ API/connector/token.
 option, founder-side action outside what a connector/token can do (R2:
 add card in dashboard; Option B: confirm/add the domain to Cloudflare and
 share it). No code changes made this session.
+
+## 21. Login page — split-screen redesign with hero video, mobile responsive (DONE, this session)
+
+Picked up from a previous session that had built out most of the new
+`/login` page (form left, hero video right, split screen) but stopped
+mid-way due to hitting a token limit before committing — working tree
+was clean at session start, the in-progress version only existed as an
+uploaded file.
+
+- **Replaced the old card-based login/register flow** with a split-screen
+  layout matching a reference design: form panel on the left (tabs for
+  Log in / Sign up, email + password fields, Google OAuth, forgot-password
+  link), a hero video panel on the right with a glassmorphic testimonial
+  quote card overlaid at the bottom.
+- **Hero video** — added `public/videos/login-dragon-hero.mp4` (same
+  `public/videos/` folder KaTube's preview clips already live in) and
+  wired it into the right panel via `<video autoPlay loop muted
+  playsInline preload="metadata" poster="/hero-bg.jpg">` — no new video
+  infra needed, same pattern as the existing KaTube video files.
+- **Mobile responsive:** `.mangal-auth-right` (the video panel) is hidden
+  entirely under 900px via `@media (max-width: 900px)` — the form panel
+  becomes full-width standalone, and critically the browser never
+  downloads the video at all on mobile (no wasted bandwidth on a panel
+  that isn't shown).
+- **Removed the dead landing/marketing screen** (`mode === 'landing'`)
+  that used to be the entry point of this page — login is now the
+  default `mode`. Cleaned up everything that only existed to support it:
+  the `'landing'` value from the `Mode` type union, the unused
+  `BackButton`, `EmberCanvas` (ember-particle canvas effect), `TrustStrip`,
+  and `IconArrowLeft` components/consts (verified each was genuinely
+  unused elsewhere in the file, not just in the removed block, before
+  deleting). `dob`/`role`/`pending` modes are untouched — still in active
+  use.
+- **Fixed one real lint error surfaced along the way:** the logo link at
+  the top of the form panel was a raw `<a href="/">`; swapped for
+  `next/link`'s `<Link>` per `@next/next/no-html-link-for-pages`.
+- **Verified:** `tsc --noEmit` clean and `eslint` clean (0 errors, 0
+  warnings) on `app/login/page.tsx` after installing `node_modules` in
+  the sandbox (wasn't installed at session start). `next build` still
+  fails in this sandbox on the same pre-existing `fonts.googleapis.com`
+  403 egress restriction documented in §18/§19 — unrelated to this
+  change, should build clean on Vercel; **flagging so the founder watches
+  the first Vercel deploy log for this change** same as previous
+  sessions.
+
+**Not done (out of scope this pass, flagged as follow-ups):**
+- Didn't touch the `dob`/`role`/`pending` screens' visual style — only
+  the landing screen was removed and the login/register screen redesigned;
+  those three still use the older `CosmicBackground`/`CosmicOverlay`
+  look, which is now the *only* place that look is used.
+- Forgot-password flow (`handleForgotPassword`, Supabase
+  `resetPasswordForEmail`) was already implemented in the uploaded WIP
+  file from the previous session; carried over as-is, not modified here.
+- Testimonial quote/name on the hero video panel is static placeholder
+  copy, not wired to any real data source.
