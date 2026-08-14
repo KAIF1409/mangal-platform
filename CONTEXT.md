@@ -1998,3 +1998,36 @@ uploaded file.
   file from the previous session; carried over as-is, not modified here.
 - Testimonial quote/name on the hero video panel is static placeholder
   copy, not wired to any real data source.
+
+## 22. KaTube — YouTube-template landing polish (DONE, this session)
+
+Picked up from a previous session that stopped mid-way (token limit) before
+committing. That prior WIP never made it into the working tree or git history
+— `git status` was clean at the start of this session — so this was a fresh
+implementation, not a continuation of uncommitted code.
+
+- **Sidebar regrouped into labeled sections** (`Menu`: Home/Fast tap/Slow tap,
+  `Library`: Saved) with small-caps section headers, matching the founder's
+  YouTube-template reference. Same four items, same filtering behavior as
+  before — only the visual organization changed.
+- **Pinned bottom CTA** — a blue "⬆ Upload video" button (KaTube brand color,
+  not YouTube red) pinned above the existing "← Back to MANGAL" link, matching
+  the template's pinned upload button.
+- **Search bar restyled** as a single rounded pill with an inline 🔍 icon
+  (was previously an input + separate square button).
+- **Name next to avatar** — added a lightweight `supabase.auth.getUser()`
+  check (no redirect/gating, unlike `/dashboard`) that shows the logged-in
+  user's `full_name` (from signup metadata) or email prefix next to the nav
+  avatar; logged-out visitors just see the avatar as before.
+- **Relative-time meta line** — added a `timeAgo()` helper and changed the
+  video card's meta line from just the creator name to `creator · Xh/d/w ago`,
+  matching the template's "channel · time ago" pattern.
+
+**Verified:** `tsc --noEmit` clean, `eslint app/katube/page.tsx` clean (0
+errors, 2 pre-existing `no-img-element` warnings unrelated to this change).
+
+**Not done / follow-ups:** search bar is still visual-only (not wired to real
+results — unchanged from before); Popular Channels / YouTube Mixes sections
+from the template weren't added since KaTube doesn't have that data
+(subscriptions/mixes) built yet — flagged as a possible future step, not
+done this session to avoid inventing fake data.
