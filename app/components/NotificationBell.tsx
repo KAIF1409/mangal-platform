@@ -59,6 +59,18 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
   const [unread, setUnread] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Unique per mounted instance (not just per user) — this component is
+  // rendered twice at once on Kalpana Circle's main page (mobile nav +
+  // desktop nav, both present in the DOM simultaneously and toggled via
+  // CSS, not conditional rendering). Two instances sharing one userId
+  // used to open Realtime channels with the SAME topic
+  // (`kcircle-notifications-${userId}`); by the time the second
+  // instance's .on() ran, the first had already called .subscribe() on
+  // that topic, which throws "cannot add postgres_changes callbacks ...
+  // after subscribe()" and crashed the whole page. Appending a random
+  // per-instance id keeps each mount's channel independent.
+  const [instanceId] = useState(() => Math.random().toString(36).slice(2));
+
   const load = useCallback(async () => {
     if (!userId) return;
     const { data: rows } = await supabase.from('kcircle_notifications')
@@ -79,11 +91,11 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
   // Live badge count + fresh items on new notifications — no polling.
   useEffect(() => {
     if (!userId) return;
-    const channel = supabase.channel(`kcircle-notifications-${userId}`)
+    const channel = supabase.channel(`kcircle-notifications-${userId}-${instanceId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kcircle_notifications', filter: `recipient_id=eq.${userId}` }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [userId, load]);
+  }, [userId, load, instanceId]);
 
   useEffect(() => {
     if (!open) return;
