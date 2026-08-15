@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
 import Link from 'next/link';
+import { Lock, Flag, Inbox, Bot, CheckCircle2, Check, AlertTriangle, Trash2, Ban } from 'lucide-react';
 
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
@@ -201,7 +202,7 @@ export default function AdminReportsPage() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔒</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px', color: 'var(--text-tertiary)' }}><Lock size={32} strokeWidth={1.5} /></div>
           <div>This page is for developers only.</div>
           <Link href="/" style={{ color: '#d97706', textDecoration: 'none', fontSize: '13px', marginTop: '8px', display: 'block' }}>&larr; Back to Browse</Link>
         </div>
@@ -212,7 +213,7 @@ export default function AdminReportsPage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 4px' }}>🚩 Reports</h1>
+        <h1 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '8px' }}><Flag size={20} strokeWidth={2} /> Reports</h1>
         <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 24px' }}>
           {reports.filter(r => r.status === 'open').length} open &middot; {reports.length} total
         </p>
@@ -237,7 +238,7 @@ export default function AdminReportsPage() {
 
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px', color: 'var(--text-muted)' }}><Inbox size={32} strokeWidth={1.5} /></div>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>No {filter !== 'all' ? filter : ''} reports.</p>
           </div>
         ) : (
@@ -264,7 +265,7 @@ export default function AdminReportsPage() {
                           border: '1px solid rgba(168,85,247,0.35)', padding: '3px 9px', borderRadius: '12px',
                           textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: '8px',
                         }} title="Created automatically by KaTube's upload-time moderation checks, not a user report">
-                          🤖 Auto-flagged
+                          <Bot size={11} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />Auto-flagged
                         </span>
                       )}
                       <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.reason}</span>
@@ -295,12 +296,12 @@ export default function AdminReportsPage() {
 
                   {as.removed && (
                     <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '12px', marginBottom: '10px' }}>
-                      ✅ Content removed successfully.
+                      <CheckCircle2 size={13} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }} />Content removed successfully.
                     </div>
                   )}
                   {as.banned && (
                     <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '12px', marginBottom: '10px' }}>
-                      ✅ User banned — account_active set to false.
+                      <CheckCircle2 size={13} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '5px' }} />User banned — account_active set to false.
                     </div>
                   )}
 
@@ -316,7 +317,7 @@ export default function AdminReportsPage() {
                         color: r.status === 'reviewed' ? 'var(--text-muted)' : '#10b981',
                       }}
                     >
-                      ✓ Mark Reviewed
+                      <Check size={12} strokeWidth={2.5} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Mark Reviewed
                     </button>
 
                     <button
@@ -360,7 +361,7 @@ export default function AdminReportsPage() {
                           transition: 'all 0.15s',
                         }}
                       >
-                        {as.removing ? 'Removing…' : as.removeConfirm ? '⚠️ Confirm Remove' : '🗑️ Remove Content'}
+                        {as.removing ? 'Removing…' : as.removeConfirm ? (<><AlertTriangle size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Confirm Remove</>) : (<><Trash2 size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Remove Content</>)}
                       </button>
                     )}
 
@@ -377,7 +378,7 @@ export default function AdminReportsPage() {
                           transition: 'all 0.15s',
                         }}
                       >
-                        {as.banning ? 'Banning…' : as.banConfirm ? '⚠️ Confirm Ban' : '🚫 Ban User'}
+                        {as.banning ? 'Banning…' : as.banConfirm ? (<><AlertTriangle size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Confirm Ban</>) : (<><Ban size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Ban User</>)}
                       </button>
                     )}
 

@@ -22,6 +22,9 @@
 import { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import {
+  X, Zap, BarChart3, Trash2, Baby, CheckCircle2, Link2, Lock, Cookie, FileEdit, Mail,
+} from 'lucide-react';
 
 // ── CONFIGURE THESE ─────────────────────────────────────────────────────────
 const PLATFORM_NAME = 'MANGAL';
@@ -160,14 +163,14 @@ export default function PrivacyPolicyPage() {
               onClick={() => setLangNotice(false)}
               style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}
             >
-              Dismiss ✕
+              Dismiss <X size={11} strokeWidth={2.5} style={{ display: 'inline', verticalAlign: 'middle' }} />
             </button>
           </div>
         )}
 
         {/* TL;DR */}
         <div style={{ ...sectionCard, borderColor: 'rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.04)' }}>
-          <h2 style={sectionTitle}>⚡ The Short Version</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><Zap size={18} strokeWidth={2} /> The Short Version</h2>
           <p style={bodyText}>
             We collect only what&apos;s needed to run MANGAL: your login, your reading
             activity, and basic security logs. We never sell your data. We never run
@@ -178,7 +181,7 @@ export default function PrivacyPolicyPage() {
 
         {/* What We Collect — itemized, not bundled (DPDP requirement) */}
         <div style={sectionCard}>
-          <h2 style={sectionTitle}>📊 What We Collect (Itemized)</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><BarChart3 size={18} strokeWidth={2} /> What We Collect (Itemized)</h2>
           <p style={bodyText}>
             Under the DPDP Act, we must itemize, not lump. Here&apos;s exactly what we
             collect, why, and how long we keep it. No surprises.
@@ -205,7 +208,7 @@ export default function PrivacyPolicyPage() {
 
         {/* What happens when you delete your account */}
         <div style={sectionCard}>
-          <h2 style={sectionTitle}>🗑️ What Happens When You Delete Your Account</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><Trash2 size={18} strokeWidth={2} /> What Happens When You Delete Your Account</h2>
           <p style={bodyText}>
             This is where Indian law pulls in two directions, and we want to be
             upfront about how we handle it rather than bury it in legal text:
@@ -232,7 +235,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Minors */}
         <div style={sectionCard}>
-          <h2 style={sectionTitle}>🧒 Children &amp; Minors</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><Baby size={18} strokeWidth={2} /> Children &amp; Minors</h2>
           <p style={bodyText}>
             Under the DPDP Act, anyone under 18 is legally a &quot;child,&quot; and
             we take that seriously given the audience a manga platform naturally
@@ -247,7 +250,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Your Rights */}
         <div style={sectionCard}>
-          <h2 style={sectionTitle}>✅ Your Rights as a Data Principal</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle2 size={18} strokeWidth={2} /> Your Rights as a Data Principal</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px', marginTop: '8px' }}>
             {YOUR_RIGHTS.map((r) => (
               <div key={r.title} style={{
@@ -272,7 +275,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Who we share data with */}
         <div style={sectionCard}>
-          <h2 style={sectionTitle}>🔗 Who We Share Data With</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><Link2 size={18} strokeWidth={2} /> Who We Share Data With</h2>
           <p style={bodyText}>
             We do not sell your personal data, ever — to anyone, for any reason.
             We use a small number of service providers (Data Processors) strictly
@@ -292,7 +295,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Security */}
         <div style={sectionCard}>
-          <h2 style={sectionTitle}>🔒 How We Protect Your Data</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><Lock size={18} strokeWidth={2} /> How We Protect Your Data</h2>
           <p style={bodyText}>
             Passwords are never stored in plain text. Database access is governed
             by Row Level Security policies so that, by default, you can only read
@@ -305,7 +308,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Cookies / local storage */}
         <div style={sectionCard}>
-          <h2 style={sectionTitle}>🍪 Cookies &amp; Local Storage</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><Cookie size={18} strokeWidth={2} /> Cookies &amp; Local Storage</h2>
           <p style={bodyText}>
             We use your browser&apos;s local storage (not third-party tracking
             cookies) for small functional purposes: remembering that you&apos;ve
@@ -317,7 +320,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Changes */}
         <div style={sectionCard}>
-          <h2 style={sectionTitle}>📝 Changes to This Policy</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><FileEdit size={18} strokeWidth={2} /> Changes to This Policy</h2>
           <p style={bodyText}>
             If we make material changes to this policy, we&apos;ll update the
             &quot;Last updated&quot; date above and, where required, ask for your
@@ -331,7 +334,7 @@ export default function PrivacyPolicyPage() {
           background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           borderRadius: '16px', padding: '24px 28px',
         }}>
-          <h2 style={sectionTitle}>📬 Questions or Concerns</h2>
+          <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={18} strokeWidth={2} /> Questions or Concerns</h2>
           <p style={bodyText}>
             For anything related to this policy or your personal data, contact our
             appointed Grievance Officer:
