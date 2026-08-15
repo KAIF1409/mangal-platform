@@ -7,7 +7,7 @@ import Image from 'next/image';
 import ThemeToggle from '../../../components/ThemeToggle';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/authRedirect';
-import { Users, ThumbsUp, BookOpen, Star } from 'lucide-react';
+import { Users, ThumbsUp, BookOpen, Star, ArrowLeft } from 'lucide-react';
 
 // ── KaTube — Step 3: watch page ──
 // Clicking a video card on /katube now opens this page, which loads the
@@ -520,7 +520,8 @@ export default function KaTubeWatchPage() {
           <Link href="/katube" className="mangal-watch-back" style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap',
-          }}>← <span className="mangal-watch-back-text">Back to KaTube</span></Link>
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+          }}><ArrowLeft size={13} strokeWidth={2} /> <span className="mangal-watch-back-text">Back to KaTube</span></Link>
         </div>
       </nav>
 
@@ -533,7 +534,7 @@ export default function KaTubeWatchPage() {
         ) : notFound || !video ? (
           <div style={{ textAlign: 'center', padding: '80px 20px', width: '100%' }}>
             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px' }}>This video doesn&apos;t exist or was removed.</p>
-            <Link href="/katube" style={{ fontSize: '13px', fontWeight: 700, color: '#f97316' }}>← Back to KaTube</Link>
+            <Link href="/katube" style={{ fontSize: '13px', fontWeight: 700, color: '#f97316', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={13} strokeWidth={2} /> Back to KaTube</Link>
           </div>
         ) : (
           <>
