@@ -9,6 +9,11 @@ import { useKCircleTheme, KC_DARK_VARS } from './theme';
 import NotificationBell from '../components/NotificationBell';
 import { supabase } from '../lib/supabase';
 import { setPostLoginRedirect } from '../lib/authRedirect';
+import {
+  Search, Home, MessageCircle, Clapperboard, Megaphone, Bookmark,
+  X, Circle, Globe, Tag, Camera, BarChart3, Sparkles, Pin, Check,
+  Heart, User,
+} from 'lucide-react';
 
 // ── K Circle — Instagram-style social layer for MANGAL ──
 // Posts + likes + comments + stories + DMs (chat is a separate route,
@@ -624,15 +629,15 @@ function KalpanaCircleInner() {
             flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '280px',
             fontSize: '12.5px', color: 'var(--text-tertiary)', background: 'var(--bg-card)',
             border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 14px', cursor: 'pointer',
-          }}>🔍 Search</button>
+          }}><Search size={14} strokeWidth={2.5} /> Search</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexShrink: 0 }}>
-          <Link href="/kalpana-circle" title="Home" style={{ fontSize: '19px', textDecoration: 'none', color: RADIANT_SOLID }}>🏠</Link>
-          <Link href={navHref('/kalpana-circle/chat')} title="Chat" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
-          <Link href={navHref('/kalpana-circle/watch-together')} title="Watch Together" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🎬</Link>
-          <Link href={navHref('/kalpana-circle/broadcasts')} title="Broadcasts" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>📣</Link>
-          <Link href={navHref('/kalpana-circle/saved')} title="Saved" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🔖</Link>
+          <Link href="/kalpana-circle" title="Home" style={{ display: 'flex', textDecoration: 'none', color: RADIANT_SOLID }}><Home size={19} /></Link>
+          <Link href={navHref('/kalpana-circle/chat')} title="Chat" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><MessageCircle size={19} /></Link>
+          <Link href={navHref('/kalpana-circle/watch-together')} title="Watch Together" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Clapperboard size={19} /></Link>
+          <Link href={navHref('/kalpana-circle/broadcasts')} title="Broadcasts" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Megaphone size={19} /></Link>
+          <Link href={navHref('/kalpana-circle/saved')} title="Saved" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Bookmark size={19} /></Link>
           <button onClick={() => fileInputRef.current?.click()} title="Create post" style={{
             background: RADIANT, border: 'none', width: '32px', height: '32px', borderRadius: '9px',
             fontSize: '16px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -671,7 +676,7 @@ function KalpanaCircleInner() {
                   border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', outline: 'none',
                 }}
               />
-              <button onClick={closeSearch} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)' }}>✕</button>
+              <button onClick={closeSearch} style={{ background: 'none', border: 'none', display: 'flex', cursor: 'pointer', color: 'var(--text-primary)' }}><X size={18} /></button>
             </div>
             <div style={{ overflowY: 'auto', padding: '4px 0' }}>
               {searchLoading ? (
@@ -751,8 +756,8 @@ function KalpanaCircleInner() {
         })}
       </div>
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 14px 12px', textAlign: 'right' }}>
-        <Link href={navHref('/kalpana-circle/close-friends')} style={{ fontSize: '10.5px', fontWeight: 700, color: GREEN, textDecoration: 'none' }}>
-          🟢 Manage Close Friends
+        <Link href={navHref('/kalpana-circle/close-friends')} style={{ fontSize: '10.5px', fontWeight: 700, color: GREEN, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          <Circle size={8} fill={GREEN} stroke="none" /> Manage Close Friends
         </Link>
       </div>
 
@@ -766,12 +771,14 @@ function KalpanaCircleInner() {
               width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: '10px', marginBottom: '8px',
               border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)',
               cursor: postingStory ? 'wait' : 'pointer', fontSize: '13px', fontWeight: 700,
-            }}>🌍 Everyone</button>
+              display: 'flex', alignItems: 'center', gap: '8px',
+            }}><Globe size={15} /> Everyone</button>
             <button onClick={() => uploadStory(true)} disabled={postingStory} style={{
               width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: '10px', marginBottom: '14px',
               border: `1px solid ${GREEN}`, background: 'rgba(34,197,94,0.1)', color: GREEN,
               cursor: postingStory ? 'wait' : 'pointer', fontSize: '13px', fontWeight: 700,
-            }}>🟢 Close Friends</button>
+              display: 'flex', alignItems: 'center', gap: '8px',
+            }}><Circle size={10} fill={GREEN} stroke="none" /> Close Friends</button>
             <button onClick={() => setPendingStoryFile(null)} disabled={postingStory} style={{
               width: '100%', textAlign: 'center', padding: '8px', border: 'none', background: 'transparent',
               color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: '12px',
@@ -788,8 +795,8 @@ function KalpanaCircleInner() {
         }}>
           <button onClick={(e) => { e.stopPropagation(); setViewingStory(null); }} style={{
             position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.15)', border: 'none',
-            color: '#fff', width: '34px', height: '34px', borderRadius: '50%', fontSize: '18px', cursor: 'pointer', zIndex: 2,
-          }}>✕</button>
+            color: '#fff', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2,
+          }}><X size={18} /></button>
           <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', display: 'flex', gap: '4px' }}>
             {stories[viewingStory.groupIdx].stories.map((_, i) => (
               <div key={i} style={{ flex: 1, height: '2.5px', borderRadius: '2px', background: i <= viewingStory.storyIdx ? '#fff' : 'rgba(255,255,255,0.35)' }} />
@@ -799,8 +806,8 @@ function KalpanaCircleInner() {
             <Avatar name={stories[viewingStory.groupIdx].username} size={30} />
             <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>{stories[viewingStory.groupIdx].username}</span>
             {stories[viewingStory.groupIdx].stories[viewingStory.storyIdx].closeFriendsOnly && (
-              <span style={{ fontSize: '10px', fontWeight: 800, color: GREEN, background: 'rgba(34,197,94,0.18)', padding: '2px 8px', borderRadius: '10px' }}>
-                🟢 Close Friends
+              <span style={{ fontSize: '10px', fontWeight: 800, color: GREEN, background: 'rgba(34,197,94,0.18)', padding: '2px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Circle size={7} fill={GREEN} stroke="none" /> Close Friends
               </span>
             )}
           </div>
@@ -823,7 +830,7 @@ function KalpanaCircleInner() {
             border: '1px solid rgba(124,58,237,0.3)', fontSize: '12.5px', fontWeight: 600, color: '#a78bfa',
           }}>
             <span>Showing posts tagged &ldquo;{tagFilter}&rdquo;</span>
-            <Link href="/kalpana-circle" style={{ color: '#a78bfa', fontWeight: 800, textDecoration: 'none' }}>✕ Clear</Link>
+            <Link href="/kalpana-circle" style={{ color: '#a78bfa', fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><X size={13} strokeWidth={2.5} /> Clear</Link>
           </div>
         </div>
       )}
@@ -850,16 +857,19 @@ function KalpanaCircleInner() {
             />
           </div>
           {userId && (
-            <input
-              value={composerTag}
-              onChange={e => setComposerTag(e.target.value)}
-              placeholder="🏷️ Tag a series (optional) — e.g. exact series title"
-              style={{
-                width: '100%', marginTop: '8px', padding: '7px 10px', borderRadius: '8px',
-                border: '1px solid var(--border-color)', background: 'transparent',
-                color: 'var(--text-secondary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box',
-              }}
-            />
+            <div style={{ position: 'relative', marginTop: '8px' }}>
+              <Tag size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+              <input
+                value={composerTag}
+                onChange={e => setComposerTag(e.target.value)}
+                placeholder="Tag a series (optional) — e.g. exact series title"
+                style={{
+                  width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px',
+                  border: '1px solid var(--border-color)', background: 'transparent',
+                  color: 'var(--text-secondary)', fontSize: '12px', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+            </div>
           )}
           {composerPreview && (
             <div style={{ position: 'relative', marginTop: '10px', borderRadius: '10px', overflow: 'hidden', maxHeight: '260px' }}>
@@ -867,8 +877,8 @@ function KalpanaCircleInner() {
               <img src={composerPreview} alt="preview" style={{ width: '100%', maxHeight: '260px', objectFit: 'cover', display: 'block' }} />
               <button onClick={() => { setComposerImage(null); setComposerPreview(null); }} style={{
                 position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.55)', border: 'none',
-                color: '#fff', width: '26px', height: '26px', borderRadius: '50%', cursor: 'pointer',
-              }}>✕</button>
+                color: '#fff', width: '26px', height: '26px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              }}><X size={14} /></button>
             </div>
           )}
           {pollMode && (
@@ -888,8 +898,8 @@ function KalpanaCircleInner() {
                   />
                   {pollOptions.length > 2 && (
                     <button onClick={() => setPollOptions(prev => prev.filter((_, j) => j !== i))} style={{
-                      background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: '15px', padding: '0 4px',
-                    }}>✕</button>
+                      background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 4px',
+                    }}><X size={15} /></button>
                   )}
                 </div>
               ))}
@@ -907,12 +917,14 @@ function KalpanaCircleInner() {
               <button onClick={() => fileInputRef.current?.click()} disabled={!userId} style={{
                 fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', background: 'transparent',
                 border: '1px solid var(--border-color)', borderRadius: '8px', padding: '7px 12px', cursor: userId ? 'pointer' : 'not-allowed',
-              }}>📷 Photo</button>
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+              }}><Camera size={14} /> Photo</button>
               <button onClick={() => setPollMode(v => !v)} disabled={!userId} style={{
                 fontSize: '12px', fontWeight: 700, color: pollMode ? RADIANT_SOLID : 'var(--text-secondary)',
                 background: 'transparent', border: `1px solid ${pollMode ? RADIANT_SOLID : 'var(--border-color)'}`,
                 borderRadius: '8px', padding: '7px 12px', cursor: userId ? 'pointer' : 'not-allowed',
-              }}>📊 Poll</button>
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+              }}><BarChart3 size={14} /> Poll</button>
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleComposerFile} style={{ display: 'none' }} />
             {userId ? (
@@ -947,7 +959,7 @@ function KalpanaCircleInner() {
               <div style={{
                 padding: '6px 14px', fontSize: '11px', fontWeight: 800, color: '#27272a', background: RADIANT,
                 display: 'flex', alignItems: 'center', gap: '5px',
-              }}>🌟 Dreamer of the Week</div>
+              }}><Sparkles size={13} /> Dreamer of the Week</div>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}>
               <Avatar name={post.author?.username ?? 'dreamer'} size={34} />
@@ -957,9 +969,9 @@ function KalpanaCircleInner() {
               </div>
               {isCreator && post.author_id === userId && (
                 <button onClick={() => togglePin(post)} title={post.pinnedAt ? 'Unpin' : 'Pin as Dreamer of the Week'} style={{
-                  background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px',
+                  background: 'none', border: 'none', cursor: 'pointer', display: 'flex',
                   color: post.pinnedAt ? RADIANT_SOLID : 'var(--text-tertiary)', flexShrink: 0,
-                }}>📌</button>
+                }}><Pin size={15} /></button>
               )}
             </div>
 
@@ -991,8 +1003,8 @@ function KalpanaCircleInner() {
                           position: 'absolute', inset: 0, width: `${pct}%`, background: mine ? 'rgba(113,113,122,0.28)' : 'rgba(113,113,122,0.14)',
                           transition: 'width 0.25s ease',
                         }} />
-                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                          <span>{mine ? '✓ ' : ''}{opt.option_text}</span>
+                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>{mine && <Check size={13} strokeWidth={3} />}{opt.option_text}</span>
                           <span style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}>{pct}% · {opt.votes}</span>
                         </div>
                       </button>
@@ -1008,15 +1020,15 @@ function KalpanaCircleInner() {
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: '12.5px', color: post.likedByMe ? '#ef4444' : 'var(--text-tertiary)',
                 display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700,
-              }}>{post.likedByMe ? '❤️' : '🤍'} {post.likeCount}</button>
+              }}><Heart size={15} fill={post.likedByMe ? '#ef4444' : 'none'} /> {post.likeCount}</button>
               <button onClick={() => toggleComments(post.id)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: '12.5px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700,
-              }}>💬 {post.commentCount}</button>
+              }}><MessageCircle size={15} /> {post.commentCount}</button>
               <button onClick={() => toggleSave(post)} title={post.savedByMe ? 'Unsave' : 'Save'} style={{
-                background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: 'auto',
-                fontSize: '15px', color: post.savedByMe ? RADIANT_SOLID : 'var(--text-tertiary)',
-              }}>{post.savedByMe ? '🔖' : '📑'}</button>
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: 'auto', display: 'flex',
+                color: post.savedByMe ? RADIANT_SOLID : 'var(--text-tertiary)',
+              }}><Bookmark size={15} fill={post.savedByMe ? RADIANT_SOLID : 'none'} /></button>
             </div>
 
             {openComments === post.id && (
@@ -1062,17 +1074,17 @@ function KalpanaCircleInner() {
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)', borderTop: '1px solid var(--border-color)',
         alignItems: 'center', justifyContent: 'space-around', height: '58px', maxWidth: '640px', margin: '0 auto',
       }}>
-        <Link href="/kalpana-circle" style={{ fontSize: '20px', textDecoration: 'none', color: RADIANT_SOLID }}>🏠</Link>
-        <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', fontSize: '20px', color: 'var(--text-tertiary)', cursor: 'pointer' }}>🔍</button>
+        <Link href="/kalpana-circle" style={{ display: 'flex', textDecoration: 'none', color: RADIANT_SOLID }}><Home size={20} /></Link>
+        <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', display: 'flex', color: 'var(--text-tertiary)', cursor: 'pointer' }}><Search size={20} /></button>
         <button onClick={() => fileInputRef.current?.click()} style={{
           background: RADIANT, border: 'none', width: '34px', height: '34px', borderRadius: '9px',
           fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>+</button>
-        <Link href={navHref('/kalpana-circle/chat')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
-        <Link href={navHref('/kalpana-circle/watch-together')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🎬</Link>
-        <Link href={navHref('/kalpana-circle/broadcasts')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>📣</Link>
-        <Link href={navHref('/kalpana-circle/saved')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🔖</Link>
-        <Link href={userId ? (myUsername ? `/creator/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle'} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>👤</Link>
+        <Link href={navHref('/kalpana-circle/chat')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><MessageCircle size={20} /></Link>
+        <Link href={navHref('/kalpana-circle/watch-together')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Clapperboard size={20} /></Link>
+        <Link href={navHref('/kalpana-circle/broadcasts')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Megaphone size={20} /></Link>
+        <Link href={navHref('/kalpana-circle/saved')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Bookmark size={20} /></Link>
+        <Link href={userId ? (myUsername ? `/creator/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle'} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><User size={20} /></Link>
       </div>
     </div>
   );
