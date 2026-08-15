@@ -252,16 +252,16 @@ export default function HomePage() {
         gap: '8px',
       }}>
         {/* Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
+        <Link href="/WebMangal" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
           <Image
-            src="/icon.png"
-            alt="MANGAL"
-            width={36}
-            height={36}
-            style={{ display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
+            src="/webmangal-logo.png"
+            alt="WebMangal"
+            width={120}
+            height={120}
+            style={{ display: 'block', height: '36px', width: '36px', objectFit: 'contain' }}
             priority
           />
-          <span className="mangal-home-brand-text" style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
+          <span className="mangal-home-brand-text" style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>WebMangal</span>
         </Link>
 
         {/* Center Nav Links */}
@@ -642,8 +642,8 @@ export default function HomePage() {
       {/* ── FOOTER ── */}
       <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🔥</div>
-          <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>MANGAL</span>
+          <Image src="/webmangal-logo.png" alt="WebMangal" width={100} height={100} style={{ display: 'block', height: '28px', width: '28px', objectFit: 'contain' }} />
+          <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>WebMangal</span>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: 0 }}>Made with ❤️ in India · Free to read, forever.</p>
       </footer>

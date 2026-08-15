@@ -103,10 +103,13 @@ export default function RankingsPage() {
       `}</style>
       <Navbar
         variant="custom"
+        platformName="WebMangal"
+        logoSrc="/webmangal-logo.png"
+        href="/WebMangal"
         centerSlot={
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
-              { label: 'Browse', href: '/' },
+              { label: 'Browse', href: '/WebMangal' },
               { label: '🏆 Rankings', href: '/rankings' },
               { label: '🔍 Search', href: '/WebMangal/search' },
               { label: 'Tags', href: '/tags' },

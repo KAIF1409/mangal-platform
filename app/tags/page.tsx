@@ -49,7 +49,7 @@ export default function TagsIndexPage() {
         }
       `}</style>
       <div className="mangal-tags-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px' }}>
-        <a href="/home" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to MANGAL</a>
+        <a href="/home" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to WebMangal</a>
         <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, margin: '12px 0 8px', letterSpacing: '-0.02em' }}>
           Browse by Tag
         </h1>
