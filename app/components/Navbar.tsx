@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from './ThemeToggle';
+import { ArrowLeft } from 'lucide-react';
 
 interface NavbarProps {
   /** "legal" = logo + "← Back to Home" only (privacy/terms/grievance style).
@@ -118,8 +119,8 @@ export default function Navbar({
               MANGAL landing page instead of that product's own home. Now reuses
               the same `href` prop the logo link above already uses, so callers
               that pass e.g. href="/katube" get a correct product-scoped link. */}
-          <Link href={href} style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            ← Back to Home
+          <Link href={href} style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <ArrowLeft size={12} strokeWidth={2} /> Back to Home
           </Link>
         </div>
       ) : (
