@@ -3174,3 +3174,52 @@ mutual follow yet.
 file: 0 errors (same pre-existing `<img>` warning). Full-project
 `eslint .` unchanged at the same 13 pre-existing errors. Single-file
 change, committed and pushed directly to `main`.
+
+## §41 — Not built yet — Affiliate "AI Toolkit" page for creators (idea discussed, backlog)
+
+**What:** A dedicated page (`/dashboard/ai-tools` for the logged-in
+creator view, possibly also a public `/tools` version for SEO/acquisition)
+that curates third-party AI tools relevant to each product's creators —
+not our own tools (that's `/dashboard/tools`, which already exists for
+native platform tools like the chapter uploader). Three category tabs
+matching the three products:
+
+- **WebMangal creators** — art/writing tools (image gen, translation
+  helpers, grammar tools)
+- **KaTube creators** — video/voice tools (Runway, InVideo, ElevenLabs,
+  Murf, etc.)
+- **K Circle** — community/growth/scheduling tools
+
+**Monetization:** Each tool card links out via an affiliate/referral
+link where available, with a visible "Sponsored/Affiliate link" label
+on each card (legally required disclosure, not optional). Confirmed via
+research before listing any tool:
+- Video tools with public affiliate programs: Synthesia, InVideo, Veed,
+  HeyGen, Descript, Pictory. Runway's paid affiliate rate is behind a
+  login but it has a public in-app referral.
+- Voice tools with recurring-commission affiliate programs: ElevenLabs
+  (22% for 12 months) and Murf (20% for 24 months, longest recurring
+  window in that category), both on PartnerStack.
+- Dead ends — do NOT list these as revenue-generating: Midjourney has
+  no affiliate program at all; Canva's affiliate program is currently
+  closed to new applicants. Can still list them as free useful tools
+  without a monetized link if we want completeness, just not pretend
+  they earn commission.
+
+**Implementation plan (not started):**
+1. `ai_tools` table (name, category, product tag, description,
+   affiliate_url, icon, active) instead of a hardcoded array — lets the
+   list be updated as new tools/deals appear without a code push.
+2. Optional `tool_clicks` table for our own internal analytics (which
+   tool, which user, when) — separate from whatever tracking the
+   affiliate network itself does — to see which tools creators actually
+   use before negotiating the next batch of deals.
+3. Apply to each affiliate program individually first (approval isn't
+   guaranteed or instant) before adding a tool's card/link live.
+4. Consider a public, logged-out version too (not just inside
+   /dashboard) — "best AI tools for webnovel writers"-style content
+   can pull in new users who don't know about WebMangal/KaTube yet, not
+   just serve existing creators.
+
+Nothing built yet — this is scoped for whenever it's picked up next.
+
