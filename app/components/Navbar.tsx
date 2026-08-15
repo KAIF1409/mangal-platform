@@ -112,7 +112,13 @@ export default function Navbar({
       {variant === 'legal' ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
           <ThemeToggle size={30} />
-          <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          {/* BUG FIX: this used to be hardcoded to href="/" regardless of what
+              the caller passed in via the `href` prop, so every "legal"-variant
+              Navbar (e.g. KaTube's dashboard) sent "Back to Home" to the root
+              MANGAL landing page instead of that product's own home. Now reuses
+              the same `href` prop the logo link above already uses, so callers
+              that pass e.g. href="/katube" get a correct product-scoped link. */}
+          <Link href={href} style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             ← Back to Home
           </Link>
         </div>

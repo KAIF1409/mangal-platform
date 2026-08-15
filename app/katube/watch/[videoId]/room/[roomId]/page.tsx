@@ -120,7 +120,7 @@ export default function WatchRoomPage() {
     let cancelled = false;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setPostLoginRedirect(window.location.pathname); router.push('/login'); return; }
+      if (!user) { setPostLoginRedirect(window.location.pathname); router.push('/login?next=' + encodeURIComponent(window.location.pathname)); return; }
       if (cancelled) return;
       setUserId(user.id);
 

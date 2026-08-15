@@ -70,7 +70,7 @@ export default function KaTubeProfilePage() {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
         setPostLoginRedirect('/katube/dashboard');
-        window.location.href = '/login';
+        window.location.href = '/login?next=' + encodeURIComponent('/katube/dashboard');
         return;
       }
       setUser(data.user);
@@ -127,7 +127,7 @@ export default function KaTubeProfilePage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      <Navbar />
+      <Navbar href="/katube" platformName="KaTube" logoSrc="/katube-logo.png" />
 
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 24px 60px' }}>
         <div style={{ fontSize: '11px', fontWeight: 800, color: '#2563eb', letterSpacing: '0.06em', marginBottom: '10px' }}>

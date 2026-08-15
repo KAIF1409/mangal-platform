@@ -16,9 +16,17 @@ const COOKIE_NAME = 'mangal_post_login_redirect';
 /** Call this right before supabase.auth.signInWithOAuth(). */
 export function setPostLoginRedirect(path: string) {
   if (typeof document === 'undefined') return;
-  // 5 minutes is plenty for an OAuth round trip; short-lived on purpose so a
-  // stale cookie can never redirect a later, unrelated login.
-  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(path)}; path=/; max-age=300; SameSite=Lax`;
+  // 10 minutes — long enough to cover a real-world Google sign-in that
+  // involves an account picker, 2FA/PIN prompt, and a consent screen
+  // (previously 5 minutes, which is tight on a first-time device/account
+  // and would silently expire mid-flow, dropping the intended redirect).
+  // Still short-lived on purpose so a stale cookie can never redirect a
+  // later, unrelated login.
+  // `Secure` is explicit here (not just implied by the site being HTTPS) —
+  // some browsers/extensions are stricter about accepting cookies that
+  // don't declare it, even when the page itself is served over HTTPS.
+  const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(path)}; path=/; max-age=600; SameSite=Lax${secure}`;
 }
 
 export const POST_LOGIN_REDIRECT_COOKIE = COOKIE_NAME;

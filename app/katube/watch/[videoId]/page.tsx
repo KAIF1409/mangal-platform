@@ -330,7 +330,7 @@ export default function KaTubeWatchPage() {
     if (!video) return;
     if (!userId) {
       setPostLoginRedirect(window.location.pathname);
-      window.location.href = '/login';
+      window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
       return;
     }
     if (userId === video.creatorId) return; // can't follow your own channel
@@ -361,7 +361,7 @@ export default function KaTubeWatchPage() {
     if (!video) return;
     if (!userId) {
       setPostLoginRedirect(window.location.pathname);
-      window.location.href = '/login';
+      window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
       return;
     }
     const text = commentText.trim();
@@ -390,7 +390,7 @@ export default function KaTubeWatchPage() {
     if (!video) return;
     if (!userId) {
       setPostLoginRedirect(window.location.pathname);
-      window.location.href = '/login';
+      window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
       return;
     }
     if (myStars < 1) return;
@@ -424,7 +424,7 @@ export default function KaTubeWatchPage() {
     if (!video) return;
     if (!userId) {
       setPostLoginRedirect(window.location.pathname);
-      window.location.href = '/login';
+      window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
       return;
     }
     setCreatingRoom(true);
@@ -448,7 +448,7 @@ export default function KaTubeWatchPage() {
     if (!video) return;
     if (!userId) {
       setPostLoginRedirect(window.location.pathname);
-      window.location.href = '/login';
+      window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
       return;
     }
     if (likeLockRef.current) return;
@@ -661,7 +661,7 @@ export default function KaTubeWatchPage() {
                     {[1, 2, 3, 4, 5].map(n => (
                       <button
                         key={n}
-                        onClick={() => userId ? setMyStars(n) : (setPostLoginRedirect(window.location.pathname), window.location.href = '/login')}
+                        onClick={() => userId ? setMyStars(n) : (setPostLoginRedirect(window.location.pathname), window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname))}
                         onMouseEnter={() => setHoverStars(n)}
                         onMouseLeave={() => setHoverStars(0)}
                         aria-label={`${n} star${n > 1 ? 's' : ''}`}
