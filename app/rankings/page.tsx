@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { Flame, Eye, Star, Trophy, Search, ScrollText, type LucideIcon } from 'lucide-react';
 
 interface Series {
   id: string;
@@ -20,10 +21,10 @@ interface Series {
 type Tab = 'trending' | 'views' | 'rating';
 type ContentTypeFilter = 'all' | 'mangal' | 'novel';
 
-const TABS: { value: Tab; label: string; stat: string }[] = [
-  { value: 'trending', label: '🔥 Trending', stat: 'views this week' },
-  { value: 'views', label: '👁 Most Read', stat: 'all-time views' },
-  { value: 'rating', label: '⭐ Top Rated', stat: 'avg rating' },
+const TABS: { value: Tab; label: string; stat: string; icon: LucideIcon }[] = [
+  { value: 'trending', label: 'Trending', stat: 'views this week', icon: Flame },
+  { value: 'views', label: 'Most Read', stat: 'all-time views', icon: Eye },
+  { value: 'rating', label: 'Top Rated', stat: 'avg rating', icon: Star },
 ];
 
 const CONTENT_TABS: { value: ContentTypeFilter; label: string }[] = [
@@ -109,15 +110,16 @@ export default function RankingsPage() {
         centerSlot={
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
-              { label: 'Browse', href: '/WebMangal' },
-              { label: '🏆 Rankings', href: '/rankings' },
-              { label: '🔍 Search', href: '/WebMangal/search' },
-              { label: 'Tags', href: '/tags' },
+              { label: 'Browse', href: '/WebMangal', icon: null as LucideIcon | null },
+              { label: 'Rankings', href: '/rankings', icon: Trophy },
+              { label: 'Search', href: '/WebMangal/search', icon: Search },
+              { label: 'Tags', href: '/tags', icon: null as LucideIcon | null },
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
                 color: link.href === '/rankings' ? '#d97706' : 'var(--text-secondary)', textDecoration: 'none',
-              }}>{link.label}</a>
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+              }}>{link.icon && <link.icon size={13} strokeWidth={2} />}{link.label}</a>
             ))}
           </div>
         }
@@ -142,9 +144,10 @@ export default function RankingsPage() {
                 cursor: 'pointer', border: `1px solid ${tab === t.value ? '#d97706' : 'var(--border-color)'}`,
                 background: tab === t.value ? 'rgba(217,119,6,0.12)' : 'var(--bg-card)',
                 color: tab === t.value ? '#d97706' : 'var(--text-secondary)',
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
               }}
             >
-              {t.label}
+              <t.icon size={14} strokeWidth={2} /> {t.label}
             </button>
           ))}
         </div>
@@ -189,10 +192,10 @@ export default function RankingsPage() {
 
 function RankRow({ series, rank, statLabel, tab }: { series: Series; rank: number; statLabel: string; tab: Tab }) {
   const [hovered, setHovered] = useState(false);
-  const statValue =
-    tab === 'rating'
-      ? `★ ${(series.avg_rating ?? 0).toFixed(1)} (${series.rating_count ?? 0})`
-      : (series.views ?? 0).toLocaleString('en-IN');
+  const isRating = tab === 'rating';
+  const statValue = isRating
+    ? `${(series.avg_rating ?? 0).toFixed(1)} (${series.rating_count ?? 0})`
+    : (series.views ?? 0).toLocaleString('en-IN');
 
   const rankColor = rank === 1 ? '#d97706' : rank === 2 ? 'var(--text-secondary)' : rank === 3 ? '#92400e' : 'var(--text-faint)';
 
@@ -220,7 +223,7 @@ function RankRow({ series, rank, statLabel, tab }: { series: Series; rank: numbe
         {series.cover_url ? (
           <Image src={series.cover_url} alt={series.title} fill sizes="46px" style={{ objectFit: 'cover' }} />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📜</div>
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ScrollText size={18} strokeWidth={1.5} color="var(--text-faint)" /></div>
         )}
       </div>
 
@@ -247,7 +250,7 @@ function RankRow({ series, rank, statLabel, tab }: { series: Series; rank: numbe
       </div>
 
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-soft)' }}>{statValue}</div>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-soft)', display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>{isRating && <Star size={12} strokeWidth={2} fill="currentColor" />}{statValue}</div>
         <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{statLabel}</div>
       </div>
     </a>
