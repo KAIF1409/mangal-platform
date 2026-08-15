@@ -619,7 +619,7 @@ export default function KaTubePage() {
             <HamburgerIcon />
           </button>
           <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
-            <Image src="/katube-logo.png" alt="KaTube" width={140} height={140} style={{ display: 'block', height: '32px', width: '32px', objectFit: 'contain', borderRadius: '8px' }} priority />
+            <Image src="/katube-logo.png" alt="KaTube" width={140} height={140} style={{ display: 'block', height: '42px', width: '42px', objectFit: 'contain' }} priority />
             <span style={{ fontWeight: 900, fontSize: '16px', color: '#2563eb', letterSpacing: '-0.02em' }}>Tube</span>
             <span className="katube-subtitle" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.01em', whiteSpace: 'nowrap', marginLeft: '4px' }}>
               powered by MANGAL
@@ -666,12 +666,12 @@ export default function KaTubePage() {
             <span className="katube-label-mobile">+</span>
           </Link>
           <Link href="/kalpana-circle" style={{
-            padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+            padding: '6px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: '#7c3aed', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
-            whiteSpace: 'nowrap',
+            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px',
           }}>
-            <span className="katube-label-full">💬 K Circle</span>
-            <span className="katube-label-mobile">💬</span>
+            <Image src="/kcircle-logo.png" alt="" width={70} height={70} style={{ height: '22px', width: '22px', objectFit: 'contain' }} />
+            <span className="katube-label-full">Circle</span>
           </Link>
           <span className="katube-theme-toggle">
             <ThemeToggle size={30} onChange={setIsLight} defaultLight={false} syncGlobal={false} />

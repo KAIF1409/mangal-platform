@@ -284,21 +284,23 @@ export default function HomePage() {
             >{link.label}</a>
           ))}
           <a href="/katube" style={{
+            display: 'flex', alignItems: 'center', gap: '5px',
             padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
             color: '#2563eb', textDecoration: 'none', whiteSpace: 'nowrap',
             transition: 'color 0.15s, background 0.15s',
           }}
-            onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
-            onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
-          >🎬 KaTube</a>
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          ><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '18px', width: '18px', objectFit: 'contain' }} />Tube</a>
           <a href="/kalpana-circle" style={{
+            display: 'flex', alignItems: 'center', gap: '5px',
             padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
             color: '#c4b5fd', textDecoration: 'none', whiteSpace: 'nowrap',
             transition: 'color 0.15s, background 0.15s',
           }}
-            onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
-            onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
-          >💬 K Circle</a>
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          ><Image src="/kcircle-logo.png" alt="" width={70} height={70} style={{ height: '18px', width: '18px', objectFit: 'contain' }} />Circle</a>
         </div>
 
         {/* Right side */}

@@ -208,7 +208,7 @@ export default function KaTubeUploadPage() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-          <Image src="/katube-logo.png" alt="KaTube" width={140} height={140} style={{ display: 'block', height: '34px', width: '34px', objectFit: 'contain', borderRadius: '8px' }} priority />
+          <Image src="/katube-logo.png" alt="KaTube" width={140} height={140} style={{ display: 'block', height: '44px', width: '44px', objectFit: 'contain' }} priority />
           <span style={{ fontWeight: 900, fontSize: '17px', color: '#2563eb', letterSpacing: '-0.02em' }}>Tube</span>
         </div>
 

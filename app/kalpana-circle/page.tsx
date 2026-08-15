@@ -590,15 +590,15 @@ function KalpanaCircleInner() {
           <Image src="/icon.png" alt="MANGAL" width={28} height={28} style={{ display: 'block', borderRadius: '7px', flexShrink: 0 }} />
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={130} style={{ display: 'block', height: '28px', width: '28px', objectFit: 'contain', borderRadius: '50%' }} priority />
+          <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={130} style={{ display: 'block', height: '38px', width: '38px', objectFit: 'contain' }} priority />
           <span style={{ fontWeight: 900, fontSize: '15px', color: '#7c3aed', letterSpacing: '-0.02em' }}>Circle</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           <Link href="/katube" className="kc-katube-badge" style={{
-            padding: '7px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700,
+            padding: '6px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700,
             color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)',
-            whiteSpace: 'nowrap',
-          }}>🎬<span className="kc-katube-badge-text"> KaTube</span></Link>
+            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px',
+          }}><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '20px', width: '20px', objectFit: 'contain' }} /><span className="kc-katube-badge-text">Tube</span></Link>
           <NotificationBell userId={userId} iconSize={18} />
           <ThemeToggle size={28} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
         </div>
@@ -617,7 +617,7 @@ function KalpanaCircleInner() {
             <Image src="/icon.png" alt="MANGAL" width={30} height={30} style={{ display: 'block', borderRadius: '8px' }} />
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            <Image src="/kcircle-logo.png" alt="K Circle" width={150} height={150} style={{ display: 'block', height: '32px', width: '32px', objectFit: 'contain', borderRadius: '50%' }} priority />
+            <Image src="/kcircle-logo.png" alt="K Circle" width={150} height={150} style={{ display: 'block', height: '42px', width: '42px', objectFit: 'contain' }} priority />
             <span style={{ fontWeight: 900, fontSize: '16px', color: '#7c3aed', letterSpacing: '-0.02em' }}>Circle</span>
           </div>
           <button onClick={() => setShowSearch(true)} style={{
@@ -642,9 +642,10 @@ function KalpanaCircleInner() {
             <Avatar name={myUsername ?? 'you'} size={28} />
           </Link>
           <Link href="/katube" style={{
-            padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+            padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
             color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)', whiteSpace: 'nowrap',
-          }}>🎬 KaTube</Link>
+            display: 'flex', alignItems: 'center', gap: '5px',
+          }}><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '20px', width: '20px', objectFit: 'contain' }} />Tube</Link>
           <ThemeToggle size={28} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
         </div>
       </nav>

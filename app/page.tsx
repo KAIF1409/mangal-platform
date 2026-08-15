@@ -408,19 +408,21 @@ export default function LandingPage() {
               >{link.label}</a>
             ))}
             <a href="/katube" data-cursor-hover="true" style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
               padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
               color: '#2563eb', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'color 0.15s, background 0.15s',
             }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
-            >🎬 KaTube</a>
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            ><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '20px', width: '20px', objectFit: 'contain' }} />Tube</a>
             <a href="/kalpana-circle" data-cursor-hover="true" style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
               padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
               color: '#c4b5fd', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'color 0.15s, background 0.15s',
             }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
-            >💬 K Circle</a>
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            ><Image src="/kcircle-logo.png" alt="" width={70} height={70} style={{ height: '20px', width: '20px', objectFit: 'contain' }} />Circle</a>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -477,15 +479,16 @@ export default function LandingPage() {
             { label: 'Rankings', href: '/rankings' },
             { label: 'Genres', href: '/WebMangal' },
             { label: 'New Releases', href: '/WebMangal' },
-            { label: '🎬 KaTube', href: '/katube' },
-            { label: '💬 K Circle', href: '/kalpana-circle' },
+            { label: 'Tube', href: '/katube', icon: '/katube-logo.png' },
+            { label: 'Circle', href: '/kalpana-circle', icon: '/kcircle-logo.png' },
             { label: 'Log in', href: '/login' },
           ].map(link => (
             <a key={link.label} href={link.href} onClick={() => setMobileMenuOpen(false)} style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
               padding: '14px 20px', fontSize: '14px', fontWeight: 600,
               color: 'var(--text-secondary)', textDecoration: 'none',
               borderBottom: '1px solid var(--border-color)',
-            }}>{link.label}</a>
+            }}>{link.icon && <Image src={link.icon} alt="" width={70} height={70} style={{ height: '20px', width: '20px', objectFit: 'contain' }} />}{link.label}</a>
           ))}
         </div>
 
