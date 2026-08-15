@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { ArrowLeft } from 'lucide-react';
 
 // ── K Circle — manage close friends (story audience) ──
 // Backend: kcircle_close_friends (user_id -> friend_id, owner-only RLS —
@@ -94,7 +95,7 @@ export default function CloseFriendsPage() {
         borderBottom: '1px solid var(--border-color)', padding: '0 16px', height: '58px',
         display: 'flex', alignItems: 'center', gap: '12px',
       }}>
-        <Link href="/kalpana-circle" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>←</Link>
+        <Link href="/kalpana-circle" style={{ textDecoration: 'none', color: 'var(--text-tertiary)', display: 'flex' }}><ArrowLeft size={18} strokeWidth={2} /></Link>
         <div>
           <div style={{ fontWeight: 800, fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: GREEN, display: 'inline-block' }} />
