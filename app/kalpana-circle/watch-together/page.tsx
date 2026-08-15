@@ -7,6 +7,9 @@ import Image from 'next/image';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
 import { supabase } from '../../lib/supabase';
+import {
+  Clapperboard, Crown, Zap, ChevronRight, MessageCircle, Lock, Globe, X, Paperclip,
+} from 'lucide-react';
 
 // ── Kalpana Circle — Watch Together tab ──
 // Second entry point into Sync-Play Watch Rooms (the first is the
@@ -252,7 +255,7 @@ export default function WatchTogetherPage() {
             <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={130} style={{ height: '38px', width: '38px', objectFit: 'contain' }} />
             <span style={{ fontWeight: 900, fontSize: '15px', color: '#7c3aed', letterSpacing: '-0.02em' }}>Circle</span>
           </Link>
-          <span style={{ fontSize: '15px', fontWeight: 800 }}>🎬 Watch Together</span>
+          <span style={{ fontSize: '15px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Clapperboard size={15} /> Watch Together</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={() => setCreateStep('pick-mode')} style={{
@@ -277,9 +280,9 @@ export default function WatchTogetherPage() {
                   textDecoration: 'none', color: 'var(--text-primary)',
                 }}>
                   <span style={{ fontSize: '13.5px', fontWeight: 600 }}>
-                    {r.is_host ? '👑 ' : ''}{r.mode === 'shorts' ? '⚡ ' : '🎬 '}{r.title}
+                    {r.is_host && <Crown size={12} style={{ verticalAlign: 'middle', marginRight: '2px' }} />}{r.mode === 'shorts' ? <Zap size={12} style={{ verticalAlign: 'middle', marginRight: '2px' }} /> : <Clapperboard size={12} style={{ verticalAlign: 'middle', marginRight: '2px' }} />}{r.title}
                   </span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Rejoin →</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>Rejoin <ChevronRight size={11} /></span>
                 </Link>
               ))}
             </div>
@@ -322,7 +325,7 @@ export default function WatchTogetherPage() {
                 }}>
                   <span>
                     <span style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      💬 You{t.otherNames.length > 0 ? `, ${t.otherNames.join(', ')}` : ''}
+                      <MessageCircle size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />You{t.otherNames.length > 0 ? `, ${t.otherNames.join(', ')}` : ''}
                     </span>
                     {t.lastMessagePreview && (
                       <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--text-tertiary)', marginTop: '2px', maxWidth: '440px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -330,7 +333,7 @@ export default function WatchTogetherPage() {
                       </span>
                     )}
                   </span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', flexShrink: 0 }}>Open →</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '2px' }}>Open <ChevronRight size={11} /></span>
                 </button>
               ))}
             </div>
@@ -352,7 +355,7 @@ export default function WatchTogetherPage() {
                 borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-card)',
               }}>
                 <div>
-                  <p style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>{r.mode === 'shorts' ? '⚡ ' : '🎬 '}{r.title}</p>
+                  <p style={{ fontSize: '14px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>{r.mode === 'shorts' ? <Zap size={13} /> : <Clapperboard size={13} />}{r.title}</p>
                   <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '4px 0 0' }}>
                     Hosted by {r.hostName} · {r.memberCount} watching
                   </p>
@@ -394,7 +397,7 @@ export default function WatchTogetherPage() {
                     display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px',
                     border: `1px solid ${RADIANT_SOLID}`, background: 'var(--bg-primary)', cursor: 'pointer', textAlign: 'left',
                   }}>
-                    <span style={{ fontSize: '26px' }}>⚡</span>
+                    <Zap size={26} />
                     <span>
                       <span style={{ display: 'block', fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)' }}>Fast tap — Shorts</span>
                       <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--text-tertiary)' }}>Scroll Shorts together, side-by-side chat</span>
@@ -404,7 +407,7 @@ export default function WatchTogetherPage() {
                     display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px',
                     border: '1px solid var(--border-color)', background: 'var(--bg-primary)', cursor: 'pointer', textAlign: 'left',
                   }}>
-                    <span style={{ fontSize: '26px' }}>🎬</span>
+                    <Clapperboard size={26} />
                     <span>
                       <span style={{ display: 'block', fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)' }}>Slow tap — Long video</span>
                       <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--text-tertiary)' }}>Synced player, chat below</span>
@@ -437,11 +440,11 @@ export default function WatchTogetherPage() {
                       <button disabled={creating} onClick={() => createRoom(v, 'private')} style={{
                         fontSize: '11px', fontWeight: 700, padding: '5px 9px', borderRadius: '14px',
                         border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer',
-                      }}>🔒 Private</button>
+                      }}><Lock size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Private</button>
                       <button disabled={creating} onClick={() => createRoom(v, 'public')} style={{
                         fontSize: '11px', fontWeight: 700, padding: '5px 9px', borderRadius: '14px',
                         border: 'none', background: RADIANT_SOLID, color: '#fff', cursor: 'pointer',
-                      }}>🌐 Public</button>
+                      }}><Globe size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Public</button>
                     </div>
                   ))}
                   {videoQuery.trim().length >= 2 && videoResults.length === 0 && (
@@ -462,11 +465,11 @@ export default function WatchTogetherPage() {
                   <button disabled={creating} onClick={() => createShortsRoom('private')} style={{
                     flex: 1, fontSize: '12.5px', fontWeight: 700, padding: '10px 9px', borderRadius: '10px',
                     border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer',
-                  }}>🔒 Private</button>
+                  }}><Lock size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Private</button>
                   <button disabled={creating} onClick={() => createShortsRoom('public')} style={{
                     flex: 1, fontSize: '12.5px', fontWeight: 700, padding: '10px 9px', borderRadius: '10px',
                     border: 'none', background: RADIANT_SOLID, color: '#fff', cursor: 'pointer',
-                  }}>🌐 Public</button>
+                  }}><Globe size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Public</button>
                 </div>
               </>
             )}
@@ -540,7 +543,7 @@ function WatchThreadModal({ threadId, userId, onClose }: { threadId: string; use
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', borderRadius: '14px', width: '100%', maxWidth: '460px', maxHeight: '78vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border-color)' }}>
           <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>Watch Together chat</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-tertiary)' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex' }}><X size={18} /></button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {loading ? (
@@ -551,7 +554,7 @@ function WatchThreadModal({ threadId, userId, onClose }: { threadId: string; use
             <div key={m.id} style={{ fontSize: '13px' }}>
               {m.short_ref_id && (
                 <Link href={`/katube/shorts/${m.short_ref_id}`} style={{ display: 'block', fontSize: '10.5px', color: 'var(--text-tertiary)', marginBottom: '2px', textDecoration: 'none' }}>
-                  📎 About this Short — open it →
+                  <Paperclip size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />About this Short — open it <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
                 </Link>
               )}
               <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{m.senderName}: </span>
