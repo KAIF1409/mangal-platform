@@ -7,6 +7,9 @@ import Link from 'next/link';
 import ThemeToggle from '../components/ThemeToggle';
 
 import { setPostLoginRedirect } from '../lib/authRedirect';
+import {
+  Flame, Clock, Trash2, ScrollText, BookText, BookOpen, Heart, Play, X,
+} from 'lucide-react';
 // Reading History — pulls from reading_progress table.
 // One row per reader+series (UNIQUE constraint), holds the last-read chapter + page.
 // Ordered by updated_at DESC so most recently read appears first.
@@ -237,7 +240,7 @@ export default function HistoryPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
-            <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
+            <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Flame size={15} /></div>
             <span style={{ fontWeight: 900, fontSize: '17px', color: 'var(--text-primary)' }}>MANGAL</span>
           </Link>
           <span className="mangal-hist-crumb" style={{ color: 'var(--text-faint)' }}>›</span>
@@ -252,7 +255,7 @@ export default function HistoryPage() {
       {/* HEADER */}
       <div className="mangal-hist-header" style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 className="mangal-hist-title" style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🕐 Reading History</h1>
+          <h1 className="mangal-hist-title" style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px' }}><Clock size={26} /> Reading History</h1>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>{counterText()}</p>
         </div>
         {!loading && history.length > 0 && (
@@ -277,7 +280,7 @@ export default function HistoryPage() {
               onClick={() => setConfirmClear(true)}
               style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }}
             >
-              🗑 Clear History
+              <Trash2 size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Clear History
             </button>
           )
         )}
@@ -288,8 +291,8 @@ export default function HistoryPage() {
         <div className="mangal-hist-pills-wrap" style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 20px' }}>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button onClick={() => handleContentTypeToggle('all')}    style={pillStyle('all')}>All</button>
-            <button onClick={() => handleContentTypeToggle('mangal')} style={pillStyle('mangal')}>📜 Mangal</button>
-            <button onClick={() => handleContentTypeToggle('novel')}  style={pillStyle('novel')}>📕 Novel</button>
+            <button onClick={() => handleContentTypeToggle('mangal')} style={pillStyle('mangal')}><ScrollText size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Mangal</button>
+            <button onClick={() => handleContentTypeToggle('novel')}  style={pillStyle('novel')}><BookText size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Novel</button>
           </div>
         </div>
       )}
@@ -298,13 +301,13 @@ export default function HistoryPage() {
       <div className="mangal-hist-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '36px', marginBottom: '12px' }}>🕐</div>
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Clock size={36} /></div>
             <div>Loading history...</div>
           </div>
         ) : history.length === 0 ? (
           /* Empty — no history at all */
           <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📖</div>
+            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}><BookOpen size={48} /></div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Nothing read yet</p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 24px' }}>
               Start reading a series and it&apos;ll appear here automatically.
@@ -321,7 +324,7 @@ export default function HistoryPage() {
           /* Empty — filter returned zero results */
           <div style={{ textAlign: 'center', padding: '60px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <div style={{ fontSize: '40px', marginBottom: '14px' }}>
-              {activeContentType === 'novel' ? '📕' : '📜'}
+              {activeContentType === 'novel' ? <BookText size={13} /> : <ScrollText size={13} />}
             </div>
             <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
               No {activeContentType === 'novel' ? 'novels' : 'mangal'} in history
@@ -356,10 +359,10 @@ export default function HistoryPage() {
       {/* FOOTER */}
       <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '10px' }}>
-          <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>🔥</div>
+          <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Flame size={13} /></div>
           <span style={{ fontWeight: 900, fontSize: '15px', color: 'var(--footer-text)' }}>MANGAL</span>
         </div>
-        <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 12px' }}>Made with ❤️ in India · Free to read, forever.</p>
+        <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>Made with <Heart size={12} fill="currentColor" /> in India · Free to read, forever.</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
           {['/privacy', '/terms', '/grievance'].map(href => (
             <a key={href} href={href} style={{ fontSize: '11px', color: 'var(--footer-link)', textDecoration: 'none' }}>
@@ -399,7 +402,7 @@ function HistoryRow({
     ? 'linear-gradient(90deg, #4c1d95, #6d28d9)'
     : 'linear-gradient(90deg, #7f1d1d, #d97706)';
 
-  const coverFallbackIcon = isNovel ? '📕' : '📜';
+  const coverFallbackIcon = isNovel ? <BookText size={20} /> : <ScrollText size={20} />;
   const coverBg = isNovel ? '#1a0a2e' : '#1a0a0a';
 
   // Content type badge
@@ -468,7 +471,7 @@ function HistoryRow({
             color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
           }}
         >
-          ▶ Continue
+          <Play size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Continue
         </a>
         {confirmRemove ? (
           <div style={{ display: 'flex', gap: '5px' }}>
@@ -482,7 +485,7 @@ function HistoryRow({
               onClick={() => setConfirmRemove(false)}
               style={{ padding: '5px 9px', borderRadius: '6px', fontSize: '10px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-tertiary)', cursor: 'pointer' }}
             >
-              ✕
+              <X size={12} />
             </button>
           </div>
         ) : (
@@ -490,7 +493,7 @@ function HistoryRow({
             onClick={() => setConfirmRemove(true)}
             style={{ padding: '5px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 600, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-faint)', cursor: 'pointer' }}
           >
-            🗑
+            <Trash2 size={12} />
           </button>
         )}
       </div>
