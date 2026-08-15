@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { isMinor, isPlausibleDateOfBirth, PARENT_CONSENT_PENDING_COPY } from '../lib/dpdp';
 import { setPostLoginRedirect } from '../lib/authRedirect';
+import { ArrowLeft } from 'lucide-react';
 
 // 'dob'     = Google OAuth new users — skipped register form so no DOB yet
 // 'pending' = minor whose parent hasn't confirmed yet
@@ -692,9 +693,9 @@ export default function AuthPage() {
               </div>
               <button
                 onClick={() => switchMode('login')}
-                style={{ background: 'none', border: 'none', color: 'rgba(226,220,209,0.55)', fontSize: '12px', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', color: 'rgba(226,220,209,0.55)', fontSize: '12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               >
-                ← Back to sign in
+                <ArrowLeft size={12} strokeWidth={2} /> Back to sign in
               </button>
             </div>
           </GlassCard>
