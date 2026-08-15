@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../../components/ThemeToggle';
+import { useKCircleTheme } from '../theme';
 import { supabase } from '../../lib/supabase';
 
 // ── Kalpana Circle — Watch Together tab ──
@@ -60,6 +61,7 @@ function roomHref(r: { mode: RoomMode; video_id: string | null; id: string }) {
 }
 
 export default function WatchTogetherPage() {
+  const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [publicRooms, setPublicRooms] = useState<PublicRoom[]>([]);
@@ -193,7 +195,7 @@ export default function WatchTogetherPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <div style={{
         position: 'sticky', top: 0, zIndex: 10, background: 'var(--nav-bg)', borderBottom: '1px solid var(--border-color)',
         padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -209,7 +211,7 @@ export default function WatchTogetherPage() {
             fontSize: '13px', fontWeight: 700, color: '#fff', background: RADIANT_SOLID,
             border: 'none', borderRadius: '20px', padding: '8px 16px', cursor: 'pointer',
           }}>+ Create Room</button>
-          <ThemeToggle />
+          <ThemeToggle onChange={setIsLight} defaultLight={false} syncGlobal={false} />
         </div>
       </div>
 

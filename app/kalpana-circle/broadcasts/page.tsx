@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import ThemeToggle from '../../components/ThemeToggle';
+import { useKCircleTheme } from '../theme';
 
 // ── K Circle — Broadcast channel discovery feed ──
 // Before this page, a fan had to already be on a creator's profile to find
@@ -38,6 +40,7 @@ function timeAgo(iso: string) {
 }
 
 export default function BroadcastDiscoveryPage() {
+  const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
@@ -119,7 +122,7 @@ export default function BroadcastDiscoveryPage() {
   if (!checkedAuth) return null;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <style>{`
         .kcb-header { padding: 20px 16px; }
         @media (min-width: 768px) { .kcb-header { padding: 28px 24px 16px; } }
@@ -129,6 +132,9 @@ export default function BroadcastDiscoveryPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
           <Link href="/kalpana-circle" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-primary)' }}>←</Link>
           <h1 style={{ fontSize: '17px', fontWeight: 800, margin: 0 }}>📣 Broadcasts</h1>
+          <div style={{ marginLeft: 'auto' }}>
+            <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
+          </div>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 18px', paddingLeft: '30px' }}>
           Updates from creators you can follow — like &amp; comment, no reply-noise.
