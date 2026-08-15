@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -14,6 +14,12 @@ import Footer from '../components/Footer';
 import Link from 'next/link';
 
 import { setPostLoginRedirect } from '../lib/authRedirect';
+import {
+  BookOpen, Eye, Star, TrendingUp, MessageCircle, Bookmark, PenLine,
+  ScrollText, ChevronDown, ChevronRight as ChevronRightIcon, BookText,
+  CheckCircle2, Edit3, Trash2, Clock, Globe, Map, TrendingDown, Circle,
+  Newspaper,
+} from 'lucide-react';
 interface Story {
   id: string;
   title: string;
@@ -68,7 +74,7 @@ interface AnalyticsData {
 
 // Step 28 — mirrors formatViews used on homepage/search cards for consistent display
 // Small inline stat used inside the per-series detail card (Views / Chapters / Words / Status)
-function SeriesMiniStat({ label, value, dotColor }: { label: string; value: string; dotColor?: string }) {
+function SeriesMiniStat({ label, value, dotColor }: { label: string; value: ReactNode; dotColor?: string }) {
   return (
     <div>
       <div style={{ fontSize: '9px', color: 'var(--text-tertiary)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -474,7 +480,7 @@ export default function Dashboard() {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ width: '100%', maxWidth: '420px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '40px 32px', textAlign: 'center' as const, boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
-          <div style={{ fontSize: '36px', marginBottom: '14px' }}>📖</div>
+          <div style={{ marginBottom: '14px', display: 'flex', justifyContent: 'center' }}><BookOpen size={36} /></div>
           <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 8px' }}>{t('forCreatorsTitle')}</h2>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 28px' }}>
             {t('forCreatorsBody')}
@@ -492,12 +498,12 @@ export default function Dashboard() {
   }
 
   const statCards = analytics ? [
-    { label: t('totalViews'), value: formatCount(analytics.totalViews), icon: '👁️' },
-    { label: t('totalFollowers'), value: formatCount(analytics.totalFollowers), icon: '⭐' },
-    { label: t('newFollowers7d'), value: `+${analytics.newFollowersThisWeek}`, icon: '📈' },
-    { label: t('totalComments'), value: formatCount(analytics.totalComments), icon: '💬' },
-    { label: t('totalChapters'), value: formatCount(analytics.totalChapters), icon: '📑' },
-    { label: t('totalWords'), value: formatCount(analytics.totalWords), icon: '✍️' },
+    { label: t('totalViews'), value: formatCount(analytics.totalViews), icon: <Eye size={20} /> },
+    { label: t('totalFollowers'), value: formatCount(analytics.totalFollowers), icon: <Star size={20} /> },
+    { label: t('newFollowers7d'), value: `+${analytics.newFollowersThisWeek}`, icon: <TrendingUp size={20} /> },
+    { label: t('totalComments'), value: formatCount(analytics.totalComments), icon: <MessageCircle size={20} /> },
+    { label: t('totalChapters'), value: formatCount(analytics.totalChapters), icon: <Bookmark size={20} /> },
+    { label: t('totalWords'), value: formatCount(analytics.totalWords), icon: <PenLine size={20} /> },
   ] : [];
 
   const selectedStory = stories.find((s) => s.id === selectedSeriesId) || stories[0];
@@ -648,7 +654,7 @@ export default function Dashboard() {
               <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('loadingSeries')}</p>
             ) : stories.length === 0 ? (
               <div style={{ textAlign: 'center' as const, padding: '60px 0', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px' }}>
-                <div style={{ fontSize: '40px', marginBottom: '12px' }}>📖</div>
+                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><BookOpen size={40} /></div>
                 <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', marginBottom: '16px' }}>{t('noSeriesYet')}</p>
                 <a href="/upload" style={{
                   display: 'inline-block', padding: '12px 28px', borderRadius: '10px',
@@ -682,7 +688,7 @@ export default function Dashboard() {
                         {story.cover_url ? (
                           <Image src={story.cover_url} alt={story.title} fill sizes="120px" style={{ objectFit: 'cover' }} />
                         ) : (
-                          <span style={{ fontSize: '20px' }}>📜</span>
+                          <ScrollText size={20} />
                         )}
                       </div>
                     </a>
@@ -726,19 +732,19 @@ export default function Dashboard() {
                             transition: 'all 0.15s',
                           }}
                         >
-                          {expandedSeriesId === story.id ? '▾' : '▸'} {story.chapterCount} chapter{story.chapterCount === 1 ? '' : 's'}
+                          {expandedSeriesId === story.id ? <ChevronDown size={12} style={{ verticalAlign: 'middle' }} /> : <ChevronRightIcon size={12} style={{ verticalAlign: 'middle' }} />} {story.chapterCount} chapter{story.chapterCount === 1 ? '' : 's'}
                         </button>
                         <span style={{
                           fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '5px',
                           background: story.content_type === 'novel' ? 'rgba(124,58,237,0.15)' : 'var(--bg-input)',
                           color: story.content_type === 'novel' ? '#a78bfa' : 'var(--text-tertiary)',
                         }}>
-                          {story.content_type === 'novel' ? '📕 Novel' : (story.reading_mode === 'scroll' ? '📜 Scroll' : '📖 Page')}
+                          {story.content_type === 'novel' ? <><BookText size={12} style={{ verticalAlign: 'middle' }} /> Novel</> : (story.reading_mode === 'scroll' ? <><ScrollText size={12} style={{ verticalAlign: 'middle' }} /> Scroll</> : <><BookOpen size={12} style={{ verticalAlign: 'middle' }} /> Page</>)}
                         </span>
 
                         {/* Step 28 — view count, previously only visible in the Analytics tab */}
                         <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', padding: '2px 7px' }}>
-                          👁 {formatViews(story.views ?? 0)}
+                          <Eye size={11} style={{ verticalAlign: 'middle' }} /> {formatViews(story.views ?? 0)}
                         </span>
 
                         <button
@@ -769,7 +775,7 @@ export default function Dashboard() {
                               background: STATUS_CONFIG[story.completion_status].dot,
                             }} />
                           </span>
-                          {story.completion_status === 'completed' ? '✓ ' : ''}{STATUS_CONFIG[story.completion_status].label}
+                          {story.completion_status === 'completed' && <CheckCircle2 size={11} style={{ verticalAlign: 'middle', marginRight: '2px' }} />}{STATUS_CONFIG[story.completion_status].label}
                         </button>
                       </div>
 
@@ -899,7 +905,7 @@ export default function Dashboard() {
                             fontWeight: 600, cursor: 'pointer',
                           }}
                         >
-                          ✏️
+                          <Edit3 size={14} />
                         </button>
 
                         {confirmDeleteId === story.id ? (
@@ -923,7 +929,7 @@ export default function Dashboard() {
                               fontWeight: 600, cursor: 'pointer',
                             }}
                           >
-                            🗑️
+                            <Trash2 size={14} />
                           </button>
                         )}
                       </div>
@@ -961,7 +967,7 @@ export default function Dashboard() {
                       {selectedStory.cover_url ? (
                         <Image src={selectedStory.cover_url} alt={selectedStory.title} fill sizes="52px" style={{ objectFit: 'cover' }} />
                       ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📜</div>
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ScrollText size={18} /></div>
                       )}
                     </div>
 
@@ -992,7 +998,7 @@ export default function Dashboard() {
                       <SeriesMiniStat label={t('views')} value={formatCount(selectedStory.views ?? 0)} />
                       <SeriesMiniStat label={t('tabMySeries') === 'My Series' ? 'Chapters' : 'चैप्टर्स'} value={String(selectedStory.chapterCount ?? 0)} />
                       <SeriesMiniStat label={t('totalWords')} value={formatCount(analytics.wordsBySeriesId[selectedStory.id] || 0)} />
-                      <SeriesMiniStat label={STATUS_CONFIG[selectedStory.completion_status]?.label ?? ''} value={selectedStory.content_type === 'novel' ? '📕' : '📜'} dotColor={STATUS_CONFIG[selectedStory.completion_status]?.dot} />
+                      <SeriesMiniStat label={STATUS_CONFIG[selectedStory.completion_status]?.label ?? ''} value={selectedStory.content_type === 'novel' ? <BookText size={14} /> : <ScrollText size={14} />} dotColor={STATUS_CONFIG[selectedStory.completion_status]?.dot} />
                     </div>
                   </div>
                 )}
@@ -1034,7 +1040,7 @@ export default function Dashboard() {
                     Real data: analytics.hourlyViews (24 buckets), sourced from
                     view_events.created_at in the browser's local time. */}
                 <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                  🕐 Reading Time Distribution
+                  <Clock size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Reading Time Distribution
                 </h3>
                 <div style={{
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
@@ -1078,7 +1084,7 @@ export default function Dashboard() {
                     Gender donut. Real data: countryCounts from view_events.country_code,
                     genderCounts from followers' self-reported profiles.gender. */}
                 <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                  🌍 Audience Insights
+                  <Globe size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Audience Insights
                 </h3>
                 <div style={{
                   display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(160px, 1fr)', gap: '14px', marginBottom: '24px',
@@ -1096,7 +1102,7 @@ export default function Dashboard() {
                       if (entries.length === 0) {
                         return (
                           <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: '12px', padding: '30px 0' }}>
-                            🗺️ No geo data yet — shows up as readers view chapters
+                            <Map size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />No geo data yet — shows up as readers view chapters
                           </div>
                         );
                       }
@@ -1159,7 +1165,7 @@ export default function Dashboard() {
                     Plain inline SVG so we don't pull in a charting library.
                     Real data: analytics.dailyViews, sourced from view_events. */}
                 <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                  📉 Reader Trends (7 days)
+                  <TrendingDown size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Reader Trends (7 days)
                 </h3>
                 <div style={{
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
@@ -1191,14 +1197,14 @@ export default function Dashboard() {
                     ))}
                   </div>
                   <div style={{ display: 'flex', gap: '16px', marginTop: '14px', fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                    <span><span style={{ color: 'var(--accent)' }}>●</span> Views ({analytics.dailyViews.reduce((s, d) => s + d.count, 0)} total this week)</span>
+                    <span><Circle size={8} fill="var(--accent)" stroke="none" style={{ verticalAlign: 'middle' }} /> Views ({analytics.dailyViews.reduce((s, d) => s + d.count, 0)} total this week)</span>
                   </div>
                 </div>
 
                 {/* News & Updates — mirrors inkstone's News/Inbox tabbed panel.
                     Static for now since there's no announcements table yet. */}
                 <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                  📰 News &amp; Updates
+                  <Newspaper size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />News &amp; Updates
                 </h3>
                 <div style={{
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
@@ -1223,7 +1229,7 @@ export default function Dashboard() {
                     Avg words/chapter is real (totalWords / totalChapters); completion
                     rate isn't tracked yet, shown as a placeholder like the note below. */}
                 <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                  📈 Release Stats
+                  <TrendingUp size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Release Stats
                 </h3>
                 <div style={{
                   display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '24px',
