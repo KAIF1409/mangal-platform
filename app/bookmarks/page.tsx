@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -11,6 +11,10 @@ import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 import Link from 'next/link';
 
 import { setPostLoginRedirect } from '../lib/authRedirect';
+import {
+  BookOpen, BookText, Trophy, Search, Bell, Wrench, Bookmark, Inbox,
+  ScrollText, Play, BellOff,
+} from 'lucide-react';
 // NOTE: "bookmarks" on MANGAL = followed series (follows table).
 // This page is an alias/friendlier entry point to the same data as /library.
 // No separate bookmarks table needed — follows IS the bookmark system.
@@ -48,10 +52,10 @@ interface ChapterRow {
   chapter_number: number;
 }
 
-const CONTENT_TYPE_OPTIONS: { value: 'all' | 'mangal' | 'novel'; label: string }[] = [
+const CONTENT_TYPE_OPTIONS: { value: 'all' | 'mangal' | 'novel'; label: ReactNode }[] = [
   { value: 'all', label: 'All' },
-  { value: 'mangal', label: '📖 Manga' },
-  { value: 'novel', label: '📕 Novel' },
+  { value: 'mangal', label: <><BookOpen size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Manga</> },
+  { value: 'novel', label: <><BookText size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Novel</> },
 ];
 const CONTENT_TYPE_STORAGE_KEY = 'mangal_content_type';
 
@@ -213,19 +217,20 @@ export default function BookmarksPage() {
         centerSlot={
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
-              { label: 'Browse', href: '/WebMangal' },
-              { label: '🏆 Rankings', href: '/rankings' },
-              { label: '🔍 Search', href: '/WebMangal/search' },
-              { label: '🔔 Library', href: '/library' },
+              { label: 'Browse', href: '/WebMangal', icon: null as ReactNode },
+              { label: 'Rankings', href: '/rankings', icon: <Trophy size={13} /> },
+              { label: 'Search', href: '/WebMangal/search', icon: <Search size={13} /> },
+              { label: 'Library', href: '/library', icon: <Bell size={13} /> },
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
                 color: 'var(--text-secondary)', textDecoration: 'none',
                 transition: 'color 0.15s, background 0.15s',
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
               }}
                 onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
                 onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
-              >{link.label}</a>
+              >{link.icon}{link.label}</a>
             ))}
           </div>
         }
@@ -236,7 +241,7 @@ export default function BookmarksPage() {
                 padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
                 background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
                 color: '#d97706', textDecoration: 'none',
-              }}>🛠 Studio</a>
+              }}><Wrench size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Studio</a>
             )}
             {user && <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />}
           </div>
@@ -245,7 +250,7 @@ export default function BookmarksPage() {
 
       {/* HEADER */}
       <div className="mangal-bm-header" style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px 20px' }}>
-        <h1 className="mangal-bm-title" style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🔖 Bookmarks</h1>
+        <h1 className="mangal-bm-title" style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px' }}><Bookmark size={26} /> Bookmarks</h1>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 16px' }}>
           {loading ? '' : series.length === 0
             ? 'No bookmarks yet.'
@@ -301,12 +306,12 @@ export default function BookmarksPage() {
       <div className="mangal-bm-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '36px', marginBottom: '12px' }}>🔖</div>
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Bookmark size={36} /></div>
             <div>Loading bookmarks...</div>
           </div>
         ) : series.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
+            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}><Inbox size={48} /></div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>No bookmarks yet</p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 24px' }}>
               Follow a series to bookmark it — you&apos;ll find them all here.
@@ -321,7 +326,7 @@ export default function BookmarksPage() {
           </div>
         ) : filteredSeries.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>{activeContentType === 'novel' ? '📕' : '📖'}</div>
+            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>{activeContentType === 'novel' ? <BookText size={48} /> : <BookOpen size={48} />}</div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>
               No {activeContentType === 'novel' ? 'novels' : 'manga'} bookmarked
             </p>
@@ -393,7 +398,7 @@ function BookmarkCard({
             />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', color: 'var(--text-faint)' }}>
-              {series.content_type === 'novel' ? '📕' : '📜'}
+              {series.content_type === 'novel' ? <BookText size={16} /> : <ScrollText size={16} />}
             </div>
           )}
         </div>
@@ -454,7 +459,7 @@ function BookmarkCard({
                 : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
               color: '#fff', textDecoration: 'none', textAlign: 'center',
             }}>
-              ▶ Read Ch.{series.latest_chapter_number}
+              <Play size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Read Ch.{series.latest_chapter_number}
             </a>
           )}
           {confirmUnfollow ? (
@@ -477,7 +482,7 @@ function BookmarkCard({
               onClick={() => setConfirmUnfollow(true)}
               style={{ padding: '7px', borderRadius: '7px', fontSize: '11px', fontWeight: 600, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer' }}
             >
-              🔕 Remove Bookmark
+              <BellOff size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Remove Bookmark
             </button>
           )}
         </div>
