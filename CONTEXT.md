@@ -3117,3 +3117,34 @@ files: 0 errors (same pre-existing `<img>` warning). Full-project
 applied live via `Supabase:apply_migration`. Committed in two batches
 (migration only; then both frontend files together) and pushed directly
 to `main`.
+
+## §39 — KCircle Watch Together (Shorts room): fix invite-choice trigger (bugfix on §37/§38)
+
+**What:** §37's reactive "pendingJoin" banner — shown to whoever newly
+joined a room that already had a chatting group — was the wrong UX:
+the continue-vs-new-thread choice was appearing to the wrong person
+(the newcomer / reactively to whoever happened to be present) instead
+of the person actually doing the inviting. Replaced with an
+invite-time confirmation: clicking "Add friend" and picking someone,
+when a thread already exists, now asks **only the inviter**, once,
+right before the invite is sent — nobody else in the room and not the
+invited friend ever sees it. Short copy, explicit Yes/No buttons.
+
+- New `confirmInvite` state (only ever set by `startInvite`, right
+  before `sendInviteNotification` fires) replaces the old
+  `pendingJoin`/`resolvingChoice` reactive-presence machinery entirely.
+  The presence-resolution effect is back to the plain automatic
+  §36 version — no more `kcircle_find_watch_thread_for_superset`
+  lookup or superset detection.
+- **Bugfix within this fix:** the JSX for the old `pendingJoin` banner
+  (referencing `pendingJoin`/`resolvingChoice`/`resolvePendingJoin`/
+  `pendingJoinNames`) had been left in place from an incomplete prior
+  session after the state/handlers backing it were already removed —
+  didn't compile. Deleted the dead block.
+- No schema changes — reuses the existing `kcircle_get_or_create_watch_thread`
+  and `kcircle_expand_watch_thread` RPCs from §36/§37's migrations.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on the touched
+file: 0 errors (same pre-existing `<img>` warning). Full-project
+`eslint .` unchanged at the same 13 pre-existing errors. Single-file
+change, committed and pushed directly to `main`.
