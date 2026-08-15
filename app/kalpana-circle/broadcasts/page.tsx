@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
-import { Radio } from 'lucide-react';
+import { Radio, ArrowLeft } from 'lucide-react';
 
 // ── K Circle — Broadcast channel discovery feed ──
 // Before this page, a fan had to already be on a creator's profile to find
@@ -131,7 +131,7 @@ export default function BroadcastDiscoveryPage() {
 
       <div className="kcb-header" style={{ maxWidth: '640px', margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-          <Link href="/kalpana-circle" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-primary)' }}>←</Link>
+          <Link href="/kalpana-circle" style={{ textDecoration: 'none', color: 'var(--text-primary)', display: 'flex' }}><ArrowLeft size={18} strokeWidth={2} /></Link>
           <h1 style={{ fontSize: '17px', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '7px' }}><Radio size={16} strokeWidth={2} /> Broadcasts</h1>
           <div style={{ marginLeft: 'auto' }}>
             <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
