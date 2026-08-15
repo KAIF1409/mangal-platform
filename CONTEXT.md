@@ -2531,3 +2531,102 @@ testing whether anyone will pay today.
 
 **Not a decision yet** — founder hasn't picked which of these to act on;
 recorded for reference the next time prioritization comes up.
+
+## 31. CEO decision — feature freeze, revenue-first sequencing, 90-day checkpoint (decided this session)
+
+Founder, acting as CEO in response to §30's investor critique, made the
+following calls. Recorded as the operating decision going forward, not
+open for casual re-litigation — a real reason is needed to revisit, not
+just a feature "feeling important."
+
+1. **Feature freeze on the discovery/collab/social layer.** K
+   Circle, Visual Quests (§26), Creator Bounties, and the Collab pipeline
+   (§29) stay as-is — nothing further gets built in this direction until
+   the creator-count target in decision 4 is hit. §27/§28/§29 remain
+   backlog-only, not started.
+2. **Payment provider (Razorpay) decision — targeted this week**, not
+   deferred further. This has been sitting unresolved behind every
+   monetization idea in §27/§28d; it's now explicitly a this-week
+   decision, not a someday item.
+3. **Ship one small paid feature this month** — ₹49/month "ad-free +
+   early chapter access" on the MANGAL/novel side. This is the company's
+   first real revenue test: whether anyone converts determines whether
+   the rest of the monetization roadmap is worth building out.
+4. **Distribution target: 20 real creators this month, 50 within 3
+   months.** Founder's own time shifts toward direct outreach/pitching
+   (same approach as the earlier MANGAL YouTube growth push — direct
+   DMs, Groover/Vampr/Instagram), not more coding sessions, until this
+   target is hit. Discovery/collab features (decision 1) stay frozen
+   until 50+ active creators exist.
+5. **Weekly traction tracking starts immediately** — signups/week,
+   uploads/week, day-7 retention. Simple raw-number tracking (a Supabase
+   query or spreadsheet), not a dashboard build — the point is visibility
+   into real numbers, not another feature.
+6. **90-day checkpoint.** At 90 days, review creator count, revenue-test
+   conversion %, and retention numbers to decide whether to scale toward
+   discovery/collab features or pivot. This checkpoint is the only
+   sanctioned point to revisit the feature freeze in decision 1.
+
+**Summary framing:** shift from builder mode to operator mode — the
+product is already feature-rich; the open question is whether real users
+will use it and pay, not whether more features can be built.
+
+## 32. Official market-launch playbook (backlog — method to use once product is launch-ready, not started)
+
+Founder asked for the go-to-market method to use once MANGAL is actually
+ready for an official public launch (distinct from §30/§31's
+pre-launch distribution push, which is about getting early creators in
+now). This is the launch-day/launch-week playbook to execute once the
+product, the §31 revenue test, and the creator base are in a
+launch-ready state — not started, reference for later.
+
+**Pre-launch (weeks before launch day)**
+- **Waitlist with referral incentive** — early signups get a perk (early
+  creator badge, founding-member status, or similar) for referring
+  others; builds a list to notify on launch day instead of launching to
+  zero audience.
+- **Teaser content on the existing MANGAL YouTube channel** (@MANGAL_MUSICs)
+  and founder's own social — the channel/audience already being built
+  (per earlier sessions) is a free pre-launch distribution asset, worth
+  using deliberately for a launch countdown rather than only music
+  content.
+- **Press kit prepared in advance** — one-pager covering what MANGAL is,
+  the founder's story, screenshots/demo video, so it's ready to hand to
+  any press contact without scrambling day-of.
+
+**Launch day / launch week**
+- **Product Hunt launch** — standard zero-cost distribution channel for
+  an India-founder / indie-platform story; needs a launch-day post,
+  founder actively responding to comments, and ideally a small group of
+  early users ready to upvote/comment at launch.
+- **Reddit — relevant communities** (e.g. r/SideProject, r/webnovels,
+  r/manga-adjacent communities, r/India startup-focused subs) — organic
+  post explaining the platform, not an ad; matches the direct,
+  founder-voice approach already used in creator outreach.
+- **Indian tech/startup press outreach** — YourStory, Inc42, and similar
+  outlets that cover early-stage Indian founders; a founder-story angle
+  (solo builder, zero-budget architecture, AI-era platform) is a
+  realistic pitch angle given the project's actual background.
+- **LinkedIn founder-story post** — the "how/why I built this" narrative,
+  which tends to travel well organically and costs nothing.
+- **Leverage the creator base already onboarded** (per §31 decision 4's
+  20–50 creator target) — ask early creators to share their channel/
+  profile link on launch day; their own existing audiences (however
+  small) are the platform's actual distribution muscle at this stage,
+  more so than any single press hit.
+
+**Launch-day operational checklist**
+- Confirm Vercel/Supabase can handle a traffic spike (check current
+  Supabase plan limits — relevant given the storage/bandwidth
+  constraints already documented in §20).
+- Have a visible feedback channel ready (in-app or a simple form) to
+  catch bugs/complaints fast during the highest-traffic window.
+- Founder available and actively monitoring/responding across whichever
+  channels the launch post goes out on (Product Hunt comments, Reddit
+  replies, etc.) for at least the first 24–48 hours.
+
+**Explicitly not decided yet:** exact launch date, which single channel
+leads (Product Hunt vs. Reddit vs. press) if only one can be done well
+with founder's solo bandwidth, and what "launch-ready" actually means in
+concrete terms (this depends on where §31's revenue test and creator
+targets land at the 90-day checkpoint).
