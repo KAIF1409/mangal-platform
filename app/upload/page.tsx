@@ -550,7 +550,7 @@ function UploadFlow() {
         setPages(refreshedPages.map(p => ({ kind: 'existing' as const, id: p.id, image_url: p.image_url })));
       }
 
-      setMessage(`Chapter ${chapterNumber} updated! 🎉 Taking you back...`);
+      setMessage(`Chapter ${chapterNumber} updated! Taking you back...`);
       setLoading(false);
       // Hard navigation (not Next.js client-side routing) so the series page
       // re-fetches fresh data on load instead of potentially serving a
@@ -616,7 +616,7 @@ function UploadFlow() {
       }),
     }).catch((err) => console.warn('[upload] notify-followers failed silently:', err));
 
-    setMessage(`Chapter ${chapterNumber} is live! 🎉 ${pages.length} pages published.`);
+    setMessage(`Chapter ${chapterNumber} is live! ${pages.length} pages published.`);
     setJustPublishedChapterId(chapter.id);
     setPages([]);
     setLoading(false);
@@ -712,7 +712,7 @@ function UploadFlow() {
       clearDraft(seriesId, chapterNumber);
       setMessage(isFutureSchedule
         ? `Chapter ${chapterNumber} scheduled for ${new Date(scheduledAt).toLocaleString()}. Taking you back...`
-        : `Chapter ${chapterNumber} updated! 🎉 ${wordCount} words. Taking you back...`);
+        : `Chapter ${chapterNumber} updated! ${wordCount} words. Taking you back...`);
       setLoading(false);
       setTimeout(() => { window.location.href = `/series/${seriesId}`; }, 1200);
       return;
@@ -752,8 +752,8 @@ function UploadFlow() {
     }
 
     setMessage(isFutureSchedule
-      ? `Chapter ${chapterNumber} scheduled for ${new Date(scheduledAt).toLocaleString()}. 🗓️`
-      : `Chapter ${chapterNumber} is live! 🎉 ${wordCount} words published.`);
+      ? `Chapter ${chapterNumber} scheduled for ${new Date(scheduledAt).toLocaleString()}.`
+      : `Chapter ${chapterNumber} is live! ${wordCount} words published.`);
     setJustPublishedChapterId(chapter.id);
     setNovelContent('');
     setLoading(false);
@@ -1196,7 +1196,7 @@ function UploadFlow() {
                   <div>
                     <label style={labelStyle}>Author&apos;s Note — Before Chapter (optional)</label>
                     <textarea
-                      placeholder="e.g. Sorry for the late update! Thanks for 1k reads 🙏"
+                      placeholder="e.g. Sorry for the late update! Thanks for 1k reads"
                       value={authorNoteBefore}
                       onChange={(e) => setAuthorNoteBefore(e.target.value)}
                       rows={2}
