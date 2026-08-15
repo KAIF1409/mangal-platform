@@ -410,6 +410,13 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
 
         .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 200px)); }
 
+        /* Hide the "powered by MANGAL" subtitle on very narrow phones so the
+           centered WebMangal wordmark never gets squeezed against the
+           hamburger/search icons on the left or login/avatar on the right. */
+        @media (max-width: 380px) {
+          .mangal-webmangal-mobile-subtitle { display: none; }
+        }
+
         /* ── Tablet & small laptop ───────────────────────────────────── */
         @media (max-width: 768px) {
           .mangal-search-container { padding: 20px 16px 48px; }
@@ -421,7 +428,6 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
           .mangal-search-navbar-mobile { display: block; }
 
           .mangal-search-container { padding: 16px 12px 40px; }
-
           /* Only one search UI on phones — the header icon opens the
              full-screen overlay instead, so the inline bar is hidden here. */
           .mangal-search-bar-inline { display: none; }
@@ -551,6 +557,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
           <Link href="/WebMangal" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', minWidth: 0, flex: 1, justifyContent: 'center' }}>
             <Image src="/webmangal-logo.png" alt="WebMangal" width={200} height={200} style={{ display: 'block', height: '34px', width: '34px', objectFit: 'contain', flexShrink: 0 }} priority />
             <span style={{ fontWeight: 900, fontSize: '16px', color: '#f9fafb', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>WebMangal</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.01em', whiteSpace: 'nowrap', marginLeft: '2px' }} className="mangal-webmangal-mobile-subtitle">powered by MANGAL</span>
           </Link>
 
           {user ? (
