@@ -27,7 +27,7 @@ const DEFAULT_FOOTER_LINKS: FooterLink[] = [
 ];
 
 export default function Footer({
-  tagline = "India's home for original comics & novels. Made with ❤️ in Bharat.",
+  tagline = "India's home for original comics & novels. Made with love in Bharat.",
   links = DEFAULT_FOOTER_LINKS,
   platformName = 'MANGAL',
   logoSize = 28,

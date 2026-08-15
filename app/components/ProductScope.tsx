@@ -6,13 +6,15 @@
 // pattern, not a router). Each tab owns its own state for the selected
 // scope and passes it down to whatever query/copy needs to branch on it.
 
+import { Sparkles, BookOpen, PlaySquare, Users2, type LucideIcon } from 'lucide-react';
+
 export type ProductScope = 'all' | 'webmangal' | 'katube' | 'kcircle';
 
-const OPTIONS: { value: ProductScope; label: string; emoji: string }[] = [
-  { value: 'all', label: 'All', emoji: '✨' },
-  { value: 'webmangal', label: 'WebMangal', emoji: '📖' },
-  { value: 'katube', label: 'KaTube', emoji: '▶️' },
-  { value: 'kcircle', label: 'Kalpana Circle', emoji: '🌀' },
+const OPTIONS: { value: ProductScope; label: string; icon: LucideIcon }[] = [
+  { value: 'all', label: 'All', icon: Sparkles },
+  { value: 'webmangal', label: 'WebMangal', icon: BookOpen },
+  { value: 'katube', label: 'KaTube', icon: PlaySquare },
+  { value: 'kcircle', label: 'Kalpana Circle', icon: Users2 },
 ];
 
 export default function ProductScopeSwitcher({
@@ -66,7 +68,7 @@ export default function ProductScopeSwitcher({
               transition: 'background 0.15s ease, color 0.15s ease',
             }}
           >
-            <span>{opt.emoji}</span>
+            <opt.icon size={14} strokeWidth={2} />
             <span>{opt.label}</span>
           </button>
         );

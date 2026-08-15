@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
 
 const STORAGE_KEY = 'mangal_theme';
 
@@ -82,13 +83,13 @@ export default function ThemeToggle({
         width: size, height: size, flexShrink: 0, cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         borderRadius: '50%', border: '1px solid var(--border-color)',
-        background: 'var(--bg-card)', fontSize: size * 0.5,
+        background: 'var(--bg-card)', color: 'var(--text-secondary)',
         transition: 'border-color 0.15s, transform 0.15s',
       }}
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-color)'; }}
     >
-      {isLight ? '🌙' : '☀️'}
+      {isLight ? <Moon size={size * 0.5} strokeWidth={2} /> : <Sun size={size * 0.5} strokeWidth={2} />}
     </button>
   );
 }

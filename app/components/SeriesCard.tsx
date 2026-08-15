@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { formatViews } from '../lib/format';
+import { BookText, ScrollText, Star, Eye } from 'lucide-react';
 
 export interface SeriesCardData {
   id: string;
@@ -68,8 +69,8 @@ export default function SeriesCard({
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 220px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>
-              {isNovel ? '📕' : '📜'}
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
+              {isNovel ? <BookText size={36} strokeWidth={1.5} /> : <ScrollText size={36} strokeWidth={1.5} />}
             </div>
           )}
 
@@ -100,7 +101,7 @@ export default function SeriesCard({
               background: 'rgba(0,0,0,0.65)', borderRadius: '5px', padding: '2px 6px',
               fontSize: '10px', fontWeight: 700, color: '#fbbf24',
             }}>
-              ★ {series.avg_rating.toFixed(1)}
+              <Star size={9} strokeWidth={2} fill="#fbbf24" /> {series.avg_rating.toFixed(1)}
             </div>
           )}
 
@@ -129,7 +130,9 @@ export default function SeriesCard({
               background: isNovel ? 'rgba(109,40,217,0.9)' : 'rgba(127,29,29,0.9)',
               padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
             }}>
-              {isNovel ? '📕 Novel' : '📖 Mangal'}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                {isNovel ? <BookText size={9} strokeWidth={2} /> : <ScrollText size={9} strokeWidth={2} />} {isNovel ? 'Novel' : 'Mangal'}
+              </span>
             </span>
             {!isNovel && series.reading_mode && (
               <span style={{
@@ -172,7 +175,7 @@ export default function SeriesCard({
               {typeof series.chapter_count === 'number' && (
                 <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{series.chapter_count} ch</span>
               )}
-              <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
+              <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}><Eye size={10} strokeWidth={2} /> {formatViews(series.views ?? 0)}</span>
             </div>
           </div>
         </div>

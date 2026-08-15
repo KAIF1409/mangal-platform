@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Flag, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 import { setPostLoginRedirect } from '../lib/authRedirect';
@@ -95,7 +96,7 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
         onMouseEnter={e => { (e.target as HTMLElement).style.color = '#ef4444'; }}
         onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-muted)'; }}
       >
-        🚩 {variant === 'text' ? 'Report' : ''}
+        <Flag size={13} strokeWidth={2} /> {variant === 'text' ? 'Report' : ''}
       </button>
 
       {open && (
@@ -119,7 +120,7 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
           >
             {submitted ? (
               <div style={{ textAlign: 'center', padding: '12px 0' }}>
-                <div style={{ fontSize: '32px', marginBottom: '10px' }}>✅</div>
+                <div style={{ display: 'flex', justifyContent: 'center', color: '#22c55e', marginBottom: '10px' }}><CheckCircle2 size={32} strokeWidth={2} /></div>
                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '0 0 18px' }}>
                   Thanks — your report has been submitted for review.
                 </p>

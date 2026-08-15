@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { Bell, Radio } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 // ── K Circle notification bell — dropdown panel + unread badge ──
@@ -42,7 +43,7 @@ function labelFor(n: Notification) {
     case 'comment': return `${who} commented: ${n.preview ?? ''}`.trim();
     case 'message': return `${who} sent you a message`;
     case 'group_add': return `${who} added you to a group`;
-    case 'broadcast': return `📣 ${who} posted an update: ${n.preview ?? ''}`.trim();
+    case 'broadcast': return `${who} posted an update: ${n.preview ?? ''}`.trim();
     case 'watch_invite': return `${who} added you to Watch Together${n.preview ? `: ${n.preview}` : ''}`;
     default: return `${who} did something`;
   }
@@ -128,9 +129,9 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
     <div ref={panelRef} style={{ position: 'relative' }}>
       <button onClick={openPanel} title="Notifications" style={{
         background: 'none', border: 'none', cursor: 'pointer', position: 'relative',
-        fontSize: `${iconSize}px`, color, display: 'flex', alignItems: 'center', padding: 0,
+        color, display: 'flex', alignItems: 'center', padding: 0,
       }}>
-        🔔
+        <Bell size={iconSize} strokeWidth={2} />
         {unread > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -6, minWidth: '15px', height: '15px', borderRadius: '8px',
@@ -158,7 +159,10 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
               display: 'block', width: '100%', textAlign: 'left', background: n.read ? 'transparent' : 'var(--bg-card)',
               border: 'none', borderBottom: '1px solid var(--border-color)', padding: '10px 14px', cursor: 'pointer',
             }}>
-              <div style={{ fontSize: '12.5px', color: 'var(--text-primary)', lineHeight: 1.4 }}>{labelFor(n)}</div>
+              <div style={{ fontSize: '12.5px', color: 'var(--text-primary)', lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                {n.type === 'broadcast' && <Radio size={12} strokeWidth={2} style={{ flexShrink: 0 }} />}
+                <span>{labelFor(n)}</span>
+              </div>
               <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{timeAgo(n.created_at)} ago</div>
             </button>
           ))}

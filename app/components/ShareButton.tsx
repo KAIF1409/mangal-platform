@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { Share2, MessageCircle, Link2, Check } from 'lucide-react';
 
 interface ShareButtonProps {
   /** e.g. series title, or "Series Name — Chapter 4" for the reader view */
@@ -52,7 +53,7 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
           display: 'flex', alignItems: 'center', gap: '6px',
         }}
       >
-        {compact ? '↗' : <>↗ Share</>}
+        {compact ? <Share2 size={15} strokeWidth={2} /> : <><Share2 size={14} strokeWidth={2} /> Share</>}
       </button>
 
       {open && (
@@ -74,7 +75,7 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
               borderBottom: '1px solid var(--border-color)',
             }}
           >
-            <span style={{ fontSize: '16px' }}>💬</span> Share on WhatsApp
+            <MessageCircle size={16} strokeWidth={2} /> Share on WhatsApp
           </a>
           <button
             onClick={handleCopy}
@@ -85,7 +86,7 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
               border: 'none', cursor: 'pointer', textAlign: 'left',
             }}
           >
-            <span style={{ fontSize: '16px' }}>{copied ? '✓' : '🔗'}</span> {copied ? 'Copied!' : 'Copy Link'}
+            {copied ? <Check size={16} strokeWidth={2} /> : <Link2 size={16} strokeWidth={2} />} {copied ? 'Copied!' : 'Copy Link'}
           </button>
         </div>
       )}
