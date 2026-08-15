@@ -11,16 +11,20 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SharedSeriesCard from '../components/SeriesCard';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
+import {
+  Trophy, Bell, Bookmark, Wrench, X, Menu, Search, Sparkles, BookOpen,
+  BookText, Circle, ArrowLeft,
+} from 'lucide-react';
 
 // Same links shown in the desktop nav's centerSlot — reused by the mobile
 // hamburger menu below so there's one source of truth for the nav items.
 const NAV_LINKS = [
   { label: 'Browse', href: '/' },
-  { label: '🏆 Rankings', href: '/rankings' },
+  { label: 'Rankings', icon: <Trophy size={13} />, href: '/rankings' },
   { label: 'Genres', href: '/#genres' },
   { label: 'New Releases', href: '/#new' },
-  { label: '🔔 Library', href: '/library' },
-  { label: '🔖 Bookmarks', href: '/bookmarks' },
+  { label: 'Library', icon: <Bell size={13} />, href: '/library' },
+  { label: 'Bookmarks', icon: <Bookmark size={13} />, href: '/bookmarks' },
 ];
 
 interface Series {
@@ -485,7 +489,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                 }}
                   onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
                   onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
-                >{link.label}</a>
+                >{link.icon} {link.label}</a>
               ))}
             </div>
           }
@@ -497,7 +501,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                     padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
                     background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
                     color: '#d97706', textDecoration: 'none',
-                  }}>🛠 Studio</a>
+                  }}><Wrench size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Studio</a>
                 )}
                 <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
               </div>
@@ -539,7 +543,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
               }}
             >
-              {mobileMenuOpen ? '✕' : '☰'}
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
             <button
               onClick={() => setMobileSearchOpen(true)}
@@ -550,7 +554,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
               }}
             >
-              🔍
+              <Search size={16} />
             </button>
           </div>
 
@@ -590,7 +594,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
                   style={{ padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: '#f9fafb', textDecoration: 'none' }}
-                >{link.label}</a>
+                >{link.icon} {link.label}</a>
               ))}
 
               <div style={{ height: '1px', background: '#1f1f2a', margin: '6px 4px' }} />
@@ -600,7 +604,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                   href="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
                   style={{ padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, color: '#d97706', textDecoration: 'none' }}
-                >🛠 Studio</a>
+                ><Wrench size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Studio</a>
               )}
 
               {!user && (
@@ -645,7 +649,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                 background: 'transparent', color: 'var(--text-primary)', fontSize: '18px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
               }}
-            >←</button>
+            ><ArrowLeft size={16} /></button>
             <input
               autoFocus
               type="text"
@@ -697,7 +701,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
         {/* ── SEARCH BAR (desktop/tablet only — phones use the header's
              full-screen overlay above instead, see .mangal-search-bar-inline) ── */}
         <div className="mangal-search-bar-inline" style={{ position: 'relative', marginBottom: '20px' }}>
-          <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', pointerEvents: 'none' }}>🔍</span>
+          <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}><Search size={16} /></span>
           <input
             ref={searchInputRef}
             type="text"
@@ -719,9 +723,9 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
              keyword has been typed. ── */}
         <div className="mangal-search-toggle-row" style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
           {([
-            { value: 'all' as ContentTypeFilter, emoji: '✨', label: 'All' },
-            { value: 'mangal' as ContentTypeFilter, emoji: '📖', label: 'Mangal' },
-            { value: 'novel' as ContentTypeFilter, emoji: '📕', label: 'Novel' },
+            { value: 'all' as ContentTypeFilter, emoji: <Sparkles size={13} />, label: 'All' },
+            { value: 'mangal' as ContentTypeFilter, emoji: <BookOpen size={13} />, label: 'Mangal' },
+            { value: 'novel' as ContentTypeFilter, emoji: <BookText size={13} />, label: 'Novel' },
           ]).map(opt => (
             <button
               key={opt.value}
@@ -803,7 +807,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
           }}>
             <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '6px' }}>Hot Tags</div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-              <span style={{ color: '#22c55e' }}>●</span> {series.length} series across {genreCounts.length} genres
+              <Circle size={9} fill="#22c55e" stroke="none" style={{ verticalAlign: 'middle' }} /> {series.length} series across {genreCounts.length} genres
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 16px' }}>
               {genreCounts.map(([genre, count]) => (
@@ -867,7 +871,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                   border: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
                 }}
               >
-                Clear filters ✕
+                Clear filters <X size={12} style={{ verticalAlign: 'middle' }} />
               </button>
             )}
           </div>
@@ -893,21 +897,21 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
         {/* ── RESULTS ── */}
         {loading ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><BookOpen size={32} /></div>
             <div style={{ fontSize: '14px' }}>Loading stories...</div>
           </div>
         ) : mode === 'search' && !q ? (
           /* Nothing searched yet — dedicated search route shouldn't dump the
              entire catalog like the old combined page did. */
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Search size={32} /></div>
             <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
               Search for a title, genre, or creator to get started.
             </div>
           </div>
         ) : results.length === 0 ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Search size={32} /></div>
             <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
               {query.trim()
                 ? <>No results found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.</>
