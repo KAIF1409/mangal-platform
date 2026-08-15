@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import ThemeToggle from '../../../components/ThemeToggle';
 import { useKCircleTheme } from '../../theme';
+import { Lock, Menu, X, Settings, Camera } from 'lucide-react';
 import {
   PERM, PERMISSION_LABELS, resolveBasePermissions, resolveChannelPermissions, can, highestRolePosition, canManageRoleAt,
   type RoleRow, type OverwriteRow,
@@ -318,7 +319,7 @@ export default function GroupChannelsPage() {
     return (
       <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '24px', textAlign: 'center' }}>
         <div>
-          <div style={{ fontSize: '32px', marginBottom: '10px' }}>🔒</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}><Lock size={32} strokeWidth={1.5} /></div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>You&apos;re not a member of this group.</p>
           <Link href="/kalpana-circle/chat" style={{ color: ACCENT, fontSize: '12px', fontWeight: 700 }}>← Back to Chat</Link>
         </div>
@@ -345,9 +346,9 @@ export default function GroupChannelsPage() {
         <button
           className="kc-group-hamburger"
           onClick={() => setMobileSidebarOpen(v => !v)}
-          style={{ display: 'none', background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)', alignItems: 'center', justifyContent: 'center' }}
+          style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)', alignItems: 'center', justifyContent: 'center' }}
           title="Channels"
-        >☰</button>
+        ><Menu size={18} strokeWidth={2} /></button>
         <span style={{ fontWeight: 800, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{groupTitle}</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px', flexShrink: 0 }}>
           {canManageChannels && (
@@ -366,7 +367,7 @@ export default function GroupChannelsPage() {
             className="kc-group-sidebar-close"
             onClick={() => setMobileSidebarOpen(false)}
             style={{ display: 'none', alignSelf: 'flex-end', background: 'none', border: 'none', fontSize: '13px', color: 'var(--text-tertiary)', cursor: 'pointer', marginBottom: '8px' }}
-          >✕ Close</button>
+          ><X size={13} strokeWidth={2.5} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />Close</button>
           {channels.map((c, i) => (
             <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               {canManageChannels && (
@@ -387,10 +388,10 @@ export default function GroupChannelsPage() {
                 color: activeChannelId === c.id ? 'var(--text-primary)' : 'var(--text-tertiary)', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}># {c.name}</button>
               {canManageChannels && (
-                <button onClick={() => deleteChannel(c.id)} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+                <button onClick={() => deleteChannel(c.id)} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', display: 'flex' }}><X size={11} strokeWidth={2.5} /></button>
               )}
               {canManageRoles && (
-                <button onClick={() => { setOverwriteChannelId(c.id); setPanel('overwrites'); }} title="Channel permissions" style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer' }}>⚙</button>
+                <button onClick={() => { setOverwriteChannelId(c.id); setPanel('overwrites'); }} title="Channel permissions" style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', display: 'flex' }}><Settings size={11} strokeWidth={2} /></button>
               )}
             </div>
           ))}
@@ -401,12 +402,12 @@ export default function GroupChannelsPage() {
           {!activeChannelId ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>Select a channel</div>
           ) : !canViewHere ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>🔒 You don&apos;t have access to this channel</div>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)', fontSize: '13px', gap: '6px' }}><Lock size={14} strokeWidth={2} /> You don&apos;t have access to this channel</div>
           ) : (
             <>
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {messages.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: '12.5px', marginTop: '40px' }}>No messages yet — say hi 👋</div>
+                  <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: '12.5px', marginTop: '40px' }}>No messages yet — say hi</div>
                 ) : messages.map(m => (
                   <div key={m.id} style={{ maxWidth: '80%' }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
@@ -433,7 +434,7 @@ export default function GroupChannelsPage() {
                             position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', borderRadius: '50%',
                             border: 'none', background: '#ef4444', color: '#fff', fontSize: '10px', fontWeight: 800, cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                          }}>✕</button>
+                          }}><X size={10} strokeWidth={2.5} /></button>
                         </div>
                         <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Photo attached</span>
                       </div>
@@ -443,8 +444,8 @@ export default function GroupChannelsPage() {
                       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAttachPick} style={{ display: 'none' }} />
                       <button
                         onClick={() => fileInputRef.current?.click()} title="Attach photo"
-                        style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >📷</button>
+                        style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      ><Camera size={14} strokeWidth={2} /></button>
                       <input
                         value={draft} onChange={e => setDraft(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
@@ -508,9 +509,9 @@ export default function GroupChannelsPage() {
                   >
                     <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: meta?.color ?? '#94a3b8', flexShrink: 0 }} />
                     <span style={{ fontSize: '12.5px', fontWeight: 700, flex: 1 }}>{meta?.name}{r.is_default ? ' (default)' : ''}</span>
-                    {!manageable && <span title="Ranked above your highest role — you can't manage this" style={{ fontSize: '11px' }}>🔒</span>}
+                    {!manageable && <span title="Ranked above your highest role — you can't manage this" style={{ display: 'flex' }}><Lock size={11} strokeWidth={2} /></span>}
                     {!r.is_default && manageable && (
-                      <button onClick={e => { e.stopPropagation(); deleteRole(r.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer' }}>✕</button>
+                      <button onClick={e => { e.stopPropagation(); deleteRole(r.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', display: 'flex' }}><X size={11} strokeWidth={2.5} /></button>
                     )}
                   </div>
                   {editingRoleId === r.id && manageable && (

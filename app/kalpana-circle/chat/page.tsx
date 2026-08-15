@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import NotificationBell from '../../components/NotificationBell';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
+import { Camera, X, Paperclip } from 'lucide-react';
 
 // ── K Circle chat — DMs + group chats. ──
 // Backend: kcircle_conversations (is_group/title/created_by),
@@ -162,7 +163,7 @@ export default function KCircleChatPage() {
     const lastByConvo = new Map<string, { text: string; created_at: string }>();
     (lastMessages ?? []).forEach(m => {
       if (!lastByConvo.has(m.conversation_id)) {
-        lastByConvo.set(m.conversation_id, { text: m.text ?? (m.attachment_url ? '📷 Photo' : ''), created_at: m.created_at });
+        lastByConvo.set(m.conversation_id, { text: m.text ?? (m.attachment_url ? 'Photo' : ''), created_at: m.created_at });
       }
     });
 
@@ -177,7 +178,7 @@ export default function KCircleChatPage() {
         title: isGroup ? (meta?.title || memberUsernames.join(', ') || 'Group') : (memberUsernames[0] ?? 'dreamer'),
         otherUserId: isGroup ? '' : (otherIds[0] ?? ''),
         memberUsernames,
-        lastMessage: lastByConvo.get(id)?.text ?? 'Say hi 👋',
+        lastMessage: lastByConvo.get(id)?.text ?? 'Say hi',
         lastAt: lastByConvo.get(id)?.created_at ?? '',
       };
     }).sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
@@ -249,7 +250,7 @@ export default function KCircleChatPage() {
         { event: 'INSERT', schema: 'public', table: 'kcircle_messages' },
         (payload) => {
           const row = payload.new as MessageRow;
-          const preview = row.text ?? (row.attachment_url ? '📷 Photo' : '');
+          const preview = row.text ?? (row.attachment_url ? 'Photo' : '');
           setConversations(prev => {
             if (!prev.some(c => c.id === row.conversation_id)) return prev;
             return prev
@@ -385,7 +386,7 @@ export default function KCircleChatPage() {
       { conversation_id: convo.id, user_id: userId },
       { conversation_id: convo.id, user_id: otherUserId },
     ]);
-    const newConvo: ConversationRow = { id: convo.id, isGroup: false, title: otherUsername, otherUserId, memberUsernames: [otherUsername], lastMessage: 'Say hi 👋', lastAt: '' };
+    const newConvo: ConversationRow = { id: convo.id, isGroup: false, title: otherUsername, otherUserId, memberUsernames: [otherUsername], lastMessage: 'Say hi', lastAt: '' };
     setConversations(prev => [newConvo, ...prev]);
     setActive(newConvo);
     resetComposer();
@@ -402,7 +403,7 @@ export default function KCircleChatPage() {
     ]);
     const newConvo: ConversationRow = {
       id: convo.id, isGroup: true, title, otherUserId: '',
-      memberUsernames: selected.map(s => s.username), lastMessage: 'Group created 🎉', lastAt: '',
+      memberUsernames: selected.map(s => s.username), lastMessage: 'Group created', lastAt: '',
     };
     setConversations(prev => [newConvo, ...prev]);
     setActive(newConvo);
@@ -534,7 +535,7 @@ export default function KCircleChatPage() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontWeight: 800, fontSize: '14px' }}>Group settings</span>
-              <button onClick={closeGroupSettings} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)' }}>✕</button>
+              <button onClick={closeGroupSettings} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex' }}><X size={18} strokeWidth={2} /></button>
             </div>
 
             <div>
@@ -618,7 +619,7 @@ export default function KCircleChatPage() {
                 <span key={s.user_id} onClick={() => setSelected(prev => prev.filter(p => p.user_id !== s.user_id))} style={{
                   fontSize: '11.5px', fontWeight: 700, padding: '5px 10px', borderRadius: '999px', cursor: 'pointer',
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                }}>{s.username} ✕</span>
+                }}>{s.username} <X size={10} strokeWidth={2.5} style={{ display: 'inline', verticalAlign: 'middle' }} /></span>
               ))}
             </div>
           )}
@@ -718,7 +719,7 @@ export default function KCircleChatPage() {
                       <Link href={`/katube/shorts/${m.short_ref_id}`} style={{
                         fontSize: '10px', color: 'var(--text-tertiary)', textDecoration: 'none',
                         display: 'flex', alignItems: 'center', gap: '4px',
-                      }}>📎 About a Short — open it →</Link>
+                      }}><Paperclip size={11} strokeWidth={2} /> About a Short — open it →</Link>
                     )}
                     {m.attachment_url && (
                       <img
@@ -757,7 +758,7 @@ export default function KCircleChatPage() {
                     position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%',
                     border: 'none', background: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-                  }}>✕</button>
+                  }}><X size={11} strokeWidth={2.5} /></button>
                 </div>
                 <span style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>Photo attached</span>
               </div>
@@ -771,9 +772,9 @@ export default function KCircleChatPage() {
                 style={{
                   width: '36px', height: '36px', borderRadius: '50%', border: '1px solid var(--border-color)',
                   background: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0,
-                  fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
-              >📷</button>
+              ><Camera size={16} strokeWidth={2} /></button>
               <input
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
