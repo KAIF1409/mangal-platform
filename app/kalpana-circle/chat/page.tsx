@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase';
 import NotificationBell from '../../components/NotificationBell';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
-import { Camera, X, Paperclip } from 'lucide-react';
+import { Camera, X, Paperclip, ArrowLeft, ArrowRight } from 'lucide-react';
 
 // ── K Circle chat — DMs + group chats. ──
 // Backend: kcircle_conversations (is_group/title/created_by),
@@ -491,9 +491,9 @@ export default function KCircleChatPage() {
         display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0,
       }}>
         {active ? (
-          <button onClick={() => setActive(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)' }}>←</button>
+          <button onClick={() => setActive(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex' }}><ArrowLeft size={18} strokeWidth={2} /></button>
         ) : (
-          <Link href="/kalpana-circle" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-primary)' }}>←</Link>
+          <Link href="/kalpana-circle" style={{ textDecoration: 'none', color: 'var(--text-primary)', display: 'flex' }}><ArrowLeft size={18} strokeWidth={2} /></Link>
         )}
         <span className="kc-chat-nav-title" style={{ fontWeight: 800, fontSize: '15px' }}>{active ? active.title : 'K Circle Chat'}</span>
         {active && active.isGroup && (
@@ -719,7 +719,7 @@ export default function KCircleChatPage() {
                       <Link href={`/katube/shorts/${m.short_ref_id}`} style={{
                         fontSize: '10px', color: 'var(--text-tertiary)', textDecoration: 'none',
                         display: 'flex', alignItems: 'center', gap: '4px',
-                      }}><Paperclip size={11} strokeWidth={2} /> About a Short — open it →</Link>
+                      }}><Paperclip size={11} strokeWidth={2} /> About a Short — open it <ArrowRight size={11} strokeWidth={2} /></Link>
                     )}
                     {m.attachment_url && (
                       <img
