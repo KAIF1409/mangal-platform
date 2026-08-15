@@ -3,27 +3,42 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  FolderKanban,
+  Wallet,
+  Rocket,
+  Gift,
+  GraduationCap,
+  Clapperboard,
+  Sparkles,
+  Wrench,
+  Inbox,
+  MessageCircle,
+  ShoppingBag,
+  type LucideIcon,
+} from 'lucide-react';
 
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   hasArrow?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-  { href: '/dashboard/workspace', label: 'Workspace', icon: '🗂️', hasArrow: true },
-  { href: '/dashboard/earnings', label: 'Earnings', icon: '💰' },
-  { href: '/dashboard/boost', label: 'Boost', icon: '🚀' },
-  { href: '/dashboard/perks', label: 'Perks', icon: '🎁' },
-  { href: '/dashboard/academy', label: 'Academy', icon: '🎓' },
-  { href: '/katube/dashboard', label: 'KaTube', icon: '🎬' },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/workspace', label: 'Workspace', icon: FolderKanban, hasArrow: true },
+  { href: '/dashboard/earnings', label: 'Earnings', icon: Wallet },
+  { href: '/dashboard/boost', label: 'Boost', icon: Rocket },
+  { href: '/dashboard/perks', label: 'Perks', icon: Gift },
+  { href: '/dashboard/academy', label: 'Academy', icon: GraduationCap },
+  { href: '/katube/dashboard', label: 'KaTube', icon: Clapperboard },
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [
-  { href: '/dashboard/nova', label: 'Nova', icon: '✨', hasArrow: true },
-  { href: '/dashboard/tools', label: 'Tools', icon: '🧰', hasArrow: true },
+  { href: '/dashboard/nova', label: 'Nova', icon: Sparkles, hasArrow: true },
+  { href: '/dashboard/tools', label: 'Tools', icon: Wrench, hasArrow: true },
 ];
 
 function useClock() {
@@ -75,7 +90,8 @@ export default function StudioSidebar() {
         .mg-studio-nav-item:hover { background: var(--bg-card) !important; }
         .mg-studio-clock { margin-top: auto; padding: 10px 14px; font-size: 11px; color: var(--text-tertiary); border-top: 1px solid var(--divider); }
         .mg-studio-bottom-icons { display: flex; gap: 8px; padding: 10px 4px 0; }
-        .mg-studio-bottom-icons a { flex: 1; text-align: center; padding: 8px 0; border-radius: 8px; background: var(--bg-card); border: 1px solid var(--border-color); font-size: 14px; }
+        .mg-studio-bottom-icons a { flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px 0; border-radius: 8px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-secondary); }
+        .mg-studio-bottom-icons a:hover { color: var(--accent); background: rgba(var(--accent-rgb), 0.1); }
 
         @media (max-width: 900px) {
           .mg-studio-sidebar { display: none; }
@@ -86,7 +102,7 @@ export default function StudioSidebar() {
         <div className="mg-studio-nav-list">
           {NAV_ITEMS.map((item) => (
             <Link key={item.href} href={item.href} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))}>
-              <span>{item.icon}</span>
+              <item.icon size={18} strokeWidth={2} />
               <span style={{ flex: 1 }}>{item.label}</span>
             </Link>
           ))}
@@ -97,7 +113,7 @@ export default function StudioSidebar() {
         <div className="mg-studio-nav-list">
           {BOTTOM_ITEMS.map((item) => (
             <Link key={item.href} href={item.href} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))}>
-              <span>{item.icon}</span>
+              <item.icon size={18} strokeWidth={2} />
               <span style={{ flex: 1 }}>{item.label}</span>
               {item.hasArrow && <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>›</span>}
             </Link>
@@ -110,9 +126,9 @@ export default function StudioSidebar() {
         </div>
 
         <div className="mg-studio-bottom-icons">
-          <Link href="/dashboard" title="Inbox">📥</Link>
-          <Link href="/dashboard" title="Messages">💬</Link>
-          <Link href="/dashboard" title="Shop">🛍️</Link>
+          <Link href="/dashboard" title="Inbox"><Inbox size={16} strokeWidth={2} /></Link>
+          <Link href="/dashboard" title="Messages"><MessageCircle size={16} strokeWidth={2} /></Link>
+          <Link href="/dashboard" title="Shop"><ShoppingBag size={16} strokeWidth={2} /></Link>
         </div>
       </aside>
     </>
