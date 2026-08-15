@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/authRedirect';
+import ThemeToggle from '../../../components/ThemeToggle';
+import { useKCircleTheme } from '../../theme';
 
 // ── K Circle — creator broadcast channel ──
 // Discord-style announcement channel: the creator posts, fans can only
@@ -41,6 +43,7 @@ interface BroadcastMsg {
 }
 
 export default function BroadcastChannelPage() {
+  const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const params = useParams();
   const router = useRouter();
   const username = decodeURIComponent(params.username as string);
@@ -191,12 +194,12 @@ export default function BroadcastChannelPage() {
   };
 
   if (loading) {
-    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-primary)' }}>Loading…</div>;
+    return <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-primary)' }}>Loading…</div>;
   }
 
   if (notFound || !creator) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '24px', textAlign: 'center' }}>
+      <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '24px', textAlign: 'center' }}>
         <div>
           <div style={{ fontSize: '32px', marginBottom: '10px' }}>🔍</div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>No creator named &ldquo;@{username}&rdquo; found.</p>
@@ -207,7 +210,7 @@ export default function BroadcastChannelPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100, background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)', padding: '0 16px', height: '58px',
@@ -221,6 +224,9 @@ export default function BroadcastChannelPage() {
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📣 Updates from @{creator.username}</div>
           <div style={{ fontSize: '10.5px', color: 'var(--text-tertiary)' }}>Broadcast channel · read + react</div>
+        </div>
+        <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
         </div>
       </nav>
 

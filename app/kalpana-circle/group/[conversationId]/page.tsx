@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
+import ThemeToggle from '../../../components/ThemeToggle';
+import { useKCircleTheme } from '../../theme';
 import {
   PERM, PERMISSION_LABELS, resolveBasePermissions, resolveChannelPermissions, can, highestRolePosition, canManageRoleAt,
   type RoleRow, type OverwriteRow,
@@ -38,6 +40,7 @@ function timeAgo(iso: string) {
 }
 
 export default function GroupChannelsPage() {
+  const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const params = useParams();
   const router = useRouter();
   const conversationId = params.conversationId as string;
@@ -308,12 +311,12 @@ export default function GroupChannelsPage() {
   };
 
   if (!checkedAuth || loading) {
-    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-primary)' }}>Loading…</div>;
+    return <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-primary)' }}>Loading…</div>;
   }
 
   if (notAllowed) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '24px', textAlign: 'center' }}>
+      <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '24px', textAlign: 'center' }}>
         <div>
           <div style={{ fontSize: '32px', marginBottom: '10px' }}>🔒</div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>You&apos;re not a member of this group.</p>
@@ -324,7 +327,7 @@ export default function GroupChannelsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
       <style>{`
         @media (max-width: 700px) {
           .kc-group-sidebar { display: none !important; }
@@ -353,6 +356,7 @@ export default function GroupChannelsPage() {
           {canManageRoles && (
             <button onClick={() => setPanel(p => p === 'roles' ? null : 'roles')} style={{ background: 'none', border: 'none', fontSize: '12.5px', fontWeight: 700, color: panel === 'roles' ? ACCENT : 'var(--text-tertiary)', cursor: 'pointer' }}>Roles</button>
           )}
+          <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
         </div>
       </nav>
 
