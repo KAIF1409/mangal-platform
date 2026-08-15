@@ -17,7 +17,16 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.supabase.co https://img.youtube.com https://i.ytimg.com",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+      // BUG FIX: connect-src previously only allowed https://*.supabase.co.
+      // Supabase Realtime (used by Kalpana Circle's NotificationBell and
+      // chat — supabase.channel(...).on('postgres_changes', ...)) connects
+      // over a WebSocket (wss://), which is a *different* CSP scheme match
+      // than https:// — the browser was silently blocking that connection,
+      // which threw an uncaught error and crashed the whole page ("This
+      // page couldn't load"). Every other product page that doesn't open a
+      // Realtime socket was unaffected, which is why only Kalpana Circle
+      // broke. Adding the wss:// scheme explicitly fixes it.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com",
       "frame-ancestors 'none'",
       "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
       "base-uri 'self'",
