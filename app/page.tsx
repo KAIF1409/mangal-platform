@@ -407,6 +407,14 @@ export default function LandingPage() {
                 onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
               >{link.label}</a>
             ))}
+            <a href="/WebMangal" data-cursor-hover="true" style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+              color: '#d97706', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'color 0.15s, background 0.15s',
+            }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(217,119,6,0.10)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            ><Image src="/webmangal-logo.png" alt="" width={70} height={70} style={{ height: '20px', width: '20px', objectFit: 'contain' }} />WebMangal</a>
             <a href="/katube" data-cursor-hover="true" style={{
               display: 'flex', alignItems: 'center', gap: '5px',
               padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
@@ -434,17 +442,6 @@ export default function LandingPage() {
               onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text-primary)'}
               onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-secondary)'}
             >Log in</a>
-            <motion.a
-              href="/login" className="mangal-landing-cta" data-cursor-hover="true"
-              whileHover={{ y: -1, boxShadow: '0 4px 24px rgba(127,29,29,0.55)' }}
-              whileTap={{ scale: 0.96 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-              style={{
-                padding: '9px 20px', borderRadius: '9px', fontSize: '13px', fontWeight: 700,
-                background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none',
-                whiteSpace: 'nowrap', boxShadow: '0 2px 16px rgba(127,29,29,0.4)',
-              }}
-            >Start Reading Free</motion.a>
             <button
               className="mangal-landing-hamburger"
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
@@ -479,6 +476,7 @@ export default function LandingPage() {
             { label: 'Rankings', href: '/rankings' },
             { label: 'Genres', href: '/WebMangal' },
             { label: 'New Releases', href: '/WebMangal' },
+            { label: 'WebMangal', href: '/WebMangal', icon: '/webmangal-logo.png' },
             { label: 'Tube', href: '/katube', icon: '/katube-logo.png' },
             { label: 'Circle', href: '/kalpana-circle', icon: '/kcircle-logo.png' },
             { label: 'Log in', href: '/login' },
