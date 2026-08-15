@@ -81,6 +81,29 @@ interface RoomMember {
 
 type PanelTab = 'chat' | 'comment';
 
+// Shared row for both the "Your friends" (mutual-follow) list and the
+// typed-search results below it — same look, same Invite/Invited button.
+function FriendRow({ user, invited, busy, onInvite }: {
+  user: { user_id: string; username: string }; invited: boolean; busy: boolean;
+  onInvite: (friendId: string, username: string) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0' }}>
+      <span style={{ fontSize: '13px' }}>@{user.username}</span>
+      <button
+        disabled={invited || busy}
+        onClick={() => onInvite(user.user_id, user.username)}
+        style={{
+          fontSize: '11px', fontWeight: 700, padding: '6px 12px', borderRadius: '8px', border: 'none',
+          background: invited ? 'rgba(255,255,255,0.1)' : '#7c3aed',
+          color: invited ? 'rgba(255,255,255,0.6)' : '#fff',
+          cursor: invited ? 'default' : 'pointer',
+        }}
+      >{invited ? 'Invited ✓' : busy ? '…' : 'Invite'}</button>
+    </div>
+  );
+}
+
 export default function FastTapWatchTogetherRoomPage() {
   const params = useParams();
   const router = useRouter();
@@ -116,6 +139,13 @@ export default function FastTapWatchTogetherRoomPage() {
   const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [friendQuery, setFriendQuery] = useState('');
   const [friendResults, setFriendResults] = useState<{ user_id: string; username: string }[]>([]);
+  // Mutual follows (you follow them AND they follow you) — shown by default
+  // the moment the picker opens, before typing anything, so the common case
+  // (inviting someone you already follow each other with) doesn't need a
+  // search at all. Typing still falls through to searchFriends against
+  // everyone, same as before, for anyone not in this list.
+  const [suggestedFriends, setSuggestedFriends] = useState<{ user_id: string; username: string }[]>([]);
+  const [suggestedLoading, setSuggestedLoading] = useState(false);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   // Set only when there's an existing thread to ask about (chatThreadId
@@ -466,9 +496,39 @@ export default function FastTapWatchTogetherRoomPage() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  // Mutual follows — you follow them, they follow you back — treated as
+  // "existing friends". Loaded once when the picker opens so the list is
+  // sitting there ready with no typing needed; excludes anyone already a
+  // room member (same rule as the search below).
+  const loadSuggestedFriends = useCallback(async () => {
+    if (!userId) return;
+    setSuggestedLoading(true);
+    const [{ data: following }, { data: followers }] = await Promise.all([
+      supabase.from('creator_follows').select('creator_id').eq('follower_id', userId),
+      supabase.from('creator_follows').select('follower_id').eq('creator_id', userId),
+    ]);
+    const followingIds = new Set((following ?? []).map(r => r.creator_id));
+    const mutualIds = [...new Set((followers ?? []).map(r => r.follower_id))].filter(id => followingIds.has(id));
+    if (mutualIds.length === 0) { setSuggestedFriends([]); setSuggestedLoading(false); return; }
+    const { data: profiles } = await supabase.from('creator_profiles').select('user_id, username').in('user_id', mutualIds);
+    const memberIds = new Set(members.map(m => m.user_id));
+    setSuggestedFriends((profiles ?? []).filter(u => !memberIds.has(u.user_id)));
+    setSuggestedLoading(false);
+  }, [userId, members]);
+
+  useEffect(() => {
+    // Same legitimate synchronous setState-in-effect exception as the
+    // chat-history effect above (loadSuggestedFriends' first line sets
+    // the loading flag before its first await) — reacting to the modal
+    // opening by kicking off a fetch, not deriving render state.
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    if (addFriendOpen) loadSuggestedFriends();
+  }, [addFriendOpen, loadSuggestedFriends]);
+
   // Searches by username, same pattern as starting a new K Circle chat
   // (app/kalpana-circle/chat/page.tsx's searchUsers) — excludes yourself
-  // and anyone already a room member.
+  // and anyone already a room member. Only used once the person actually
+  // types — for anyone not already a mutual-follow "friend" above.
   const searchFriends = async (q: string) => {
     setFriendQuery(q);
     if (!q.trim() || !userId) { setFriendResults([]); return; }
@@ -782,7 +842,9 @@ export default function FastTapWatchTogetherRoomPage() {
         </div>
       </div>
 
-      {/* Add friend picker — existing members only, per §37/§38 */}
+      {/* Add friend picker — existing members only, per §37/§38.
+          Opens straight to mutual-follow "Your friends" (§40) so the
+          common case needs no typing; search still covers everyone else. */}
       {addFriendOpen && (
         <div onClick={() => { setAddFriendOpen(false); setFriendQuery(''); setFriendResults([]); }} style={{
           position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.6)',
@@ -813,26 +875,34 @@ export default function FastTapWatchTogetherRoomPage() {
               </p>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {friendResults.map(u => {
-                const invited = invitedIds.has(u.user_id);
-                return (
-                  <div key={u.user_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0' }}>
-                    <span style={{ fontSize: '13px' }}>@{u.username}</span>
-                    <button
-                      disabled={invited || invitingId === u.user_id}
-                      onClick={() => startInvite(u.user_id, u.username)}
-                      style={{
-                        fontSize: '11px', fontWeight: 700, padding: '6px 12px', borderRadius: '8px', border: 'none',
-                        background: invited ? 'rgba(255,255,255,0.1)' : '#7c3aed',
-                        color: invited ? 'rgba(255,255,255,0.6)' : '#fff',
-                        cursor: invited ? 'default' : 'pointer',
-                      }}
-                    >{invited ? 'Invited ✓' : invitingId === u.user_id ? '…' : 'Invite'}</button>
-                  </div>
-                );
-              })}
-              {friendQuery.trim() && friendResults.length === 0 && (
-                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '10px 0' }}>No one found.</p>
+              {!friendQuery.trim() ? (
+                <>
+                  {suggestedFriends.length > 0 && (
+                    <p style={{ fontSize: '10.5px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.03em', margin: '0 0 2px' }}>
+                      Your friends
+                    </p>
+                  )}
+                  {suggestedFriends.map(u => (
+                    <FriendRow key={u.user_id} user={u} invited={invitedIds.has(u.user_id)} busy={invitingId === u.user_id} onInvite={startInvite} />
+                  ))}
+                  {suggestedLoading && suggestedFriends.length === 0 && (
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '10px 0' }}>Loading…</p>
+                  )}
+                  {!suggestedLoading && suggestedFriends.length === 0 && (
+                    <p style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '10px 0', lineHeight: 1.5 }}>
+                      No mutual friends to suggest yet — search by username above.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  {friendResults.map(u => (
+                    <FriendRow key={u.user_id} user={u} invited={invitedIds.has(u.user_id)} busy={invitingId === u.user_id} onInvite={startInvite} />
+                  ))}
+                  {friendResults.length === 0 && (
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '10px 0' }}>No one found.</p>
+                  )}
+                </>
               )}
             </div>
           </div>
