@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { Bookmark } from 'lucide-react';
 
 // ── K Circle — Saved posts (bookmarks) ──
 // Private list, backed by kcircle_saved_posts (user_id, post_id), RLS
@@ -104,7 +105,7 @@ export default function SavedPostsPage() {
       <div className="kcs-header" style={{ maxWidth: '640px', margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
           <Link href="/kalpana-circle" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-primary)' }}>←</Link>
-          <h1 style={{ fontSize: '17px', fontWeight: 800, margin: 0 }}>🔖 Saved</h1>
+          <h1 style={{ fontSize: '17px', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Bookmark size={17} strokeWidth={2} /> Saved</h1>
         </div>
 
         {loading ? (
@@ -112,7 +113,7 @@ export default function SavedPostsPage() {
         ) : posts.length === 0 ? (
           <div style={{ padding: '20px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
             <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-              Nothing saved yet — tap 📑 on any post in the feed to bookmark it here.
+              Nothing saved yet — tap the bookmark icon on any post in the feed to bookmark it here.
             </p>
           </div>
         ) : posts.map(post => (
@@ -133,8 +134,8 @@ export default function SavedPostsPage() {
                 </div>
               </Link>
               <button onClick={() => unsave(post.id)} title="Unsave" style={{
-                background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', color: '#71717a', padding: '4px',
-              }}>🔖</button>
+                background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', padding: '4px', display: 'flex',
+              }}><Bookmark size={15} strokeWidth={2} fill="currentColor" /></button>
             </div>
 
             {post.caption && (
