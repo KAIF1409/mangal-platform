@@ -11,7 +11,7 @@ import ThemeToggle from './components/ThemeToggle';
 import ParticleField from './components/ParticleField';
 import CustomCursor from './components/CustomCursor';
 import { supabase } from './lib/supabase';
-import { ScrollText, Flame, Smartphone, PenLine, X, Menu, Tag, Eye, BookOpen, Book } from 'lucide-react';
+import { ScrollText, Flame, Smartphone, PenLine, X, Menu, Tag, Eye, BookOpen, Book, ArrowDown, ArrowRight } from 'lucide-react';
 
 // ── Public landing page — no auth required ──
 // Authenticated users are redirected to /home automatically.
@@ -555,13 +555,13 @@ export default function LandingPage() {
               position: 'absolute', bottom: '28px', left: '28px', zIndex: 3,
               width: 'clamp(64px,8vw,96px)', height: 'clamp(64px,8vw,96px)', borderRadius: '50%',
               border: '2px solid rgba(217,119,6,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontSize: '22px', textDecoration: 'none', transition: 'all 0.4s ease',
+              color: '#fff', textDecoration: 'none', transition: 'all 0.4s ease',
               background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(4px)',
             }}
             onMouseEnter={e => { e.currentTarget.style.background = '#d97706'; e.currentTarget.style.transform = 'scale(0.85)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.2)'; e.currentTarget.style.transform = 'none'; }}
           >
-            ↓
+            <ArrowDown size={22} strokeWidth={2} />
           </a>
         </section>
 
@@ -694,8 +694,9 @@ export default function LandingPage() {
                     <a href="/login?creator=1" data-cursor-hover="true" style={{
                       flexShrink: 0, fontSize: '13px', fontWeight: 700, color: '#fff', textDecoration: 'none',
                       padding: '9px 18px', borderRadius: '9px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', whiteSpace: 'nowrap',
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
                     }}>
-                      Publish yours →
+                      Publish yours <ArrowRight size={14} strokeWidth={2} />
                     </a>
                   </div>
                 )}
@@ -711,7 +712,7 @@ export default function LandingPage() {
                   display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: '#fff',
                   textDecoration: 'none', padding: '10px 20px', borderRadius: '10px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
                 }}>
-                  Become a Creator →
+                  Become a Creator <ArrowRight size={14} strokeWidth={2} />
                 </a>
               </div>
             )}
@@ -723,7 +724,7 @@ export default function LandingPage() {
           <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
               <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}><Tag size={22} /> Browse by Tag</h2>
-              <Link href="/tags" data-cursor-hover="true" style={{ fontSize: '13px', fontWeight: 700, color: '#d97706', textDecoration: 'none' }}>See all tags →</Link>
+              <Link href="/tags" data-cursor-hover="true" style={{ fontSize: '13px', fontWeight: 700, color: '#d97706', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>See all tags <ArrowRight size={13} strokeWidth={2} /></Link>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {tagCloud.map(tag => (
