@@ -3445,3 +3445,41 @@ next up per §43's stated order.
   value but never used` warnings on both retrofitted files, present
   before this change too — `user` is set from the auth check but only
   used for the redirect gate, not rendered).
+
+## §45 — Earnings tab gets a real "Performance" section (cross-product, real data)
+
+**Status: done.** Founder asked to see per-product metrics (views/reads/
+engagement) now, separately from earnings (₹) which is still blocked on
+the payment-provider decision (§43). Split the Earnings tab into two
+clearly-labeled sections under the same switcher instead of building a
+new route:
+
+- **Performance (real, live data)** — fetched once on mount, three
+  parallel-ish queries per product:
+  - WebMangal: `series.views` summed + `follows` (same table/policy the
+    root `/dashboard` Analytics tab already reads via the
+    `20260809101500_creator_can_view_own_series_analytics.sql` policy) →
+    Total Reads, Followers (+this week), Series Published.
+  - KaTube: `videos.views`/`videos.likes` summed (both denormalized
+    counter columns, not re-derived from `video_likes`) → Total Views,
+    Total Likes, Videos Uploaded.
+  - Kalpana Circle: `kcircle_posts` count + `kcircle_post_likes` count
+    (public-read policy, no RLS issue) → Posts (+this week), Total Likes.
+  - On "All" scope: renders all three product blocks stacked, each
+    labeled with its emoji/name. On a specific scope: just that one
+    block, unlabeled (redundant once you've already picked it).
+- **Earnings (still stub, unchanged numbers)** — kept below Performance,
+  same ₹0 stat boxes as before. Copy now explicitly says the payout
+  button is disabled because of the payment-provider decision, not just
+  "no earnings yet" — so it's clear this is a known gap, not a bug.
+
+**Not done / explicitly out of scope for this pass:**
+- No new tables or RLS policies — every query reuses columns/tables/
+  policies that already existed for other features (series analytics,
+  KaTube's denormalized counters, kcircle's public-read likes).
+- No time-series/trend view (WebMangal's root dashboard has hourly/daily
+  view buckets via `view_events` — not replicated here; this section is
+  totals + "this week" deltas only, not full history).
+- Earnings numbers are still not real — that's still gated on picking a
+  payment provider (Razorpay or similar), which the founder hasn't
+  decided yet as of this session.
