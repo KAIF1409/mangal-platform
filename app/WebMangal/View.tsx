@@ -544,9 +544,9 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
             </button>
           </div>
 
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', minWidth: 0, flex: 1, justifyContent: 'center' }}>
-            <Image src="/icon.png" alt="MANGAL" width={22} height={22} style={{ display: 'block', flexShrink: 0 }} />
-            <span style={{ fontWeight: 900, fontSize: '16px', color: '#f9fafb', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>MANGAL</span>
+          <Link href="/WebMangal" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', minWidth: 0, flex: 1, justifyContent: 'center' }}>
+            <Image src="/webmangal-logo.png" alt="WebMangal" width={200} height={200} style={{ display: 'block', height: '34px', width: '34px', objectFit: 'contain', flexShrink: 0 }} priority />
+            <span style={{ fontWeight: 900, fontSize: '16px', color: '#f9fafb', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>WebMangal</span>
           </Link>
 
           {user ? (
