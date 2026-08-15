@@ -7,7 +7,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
 import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
-import { FolderOpen, BookOpen, ScrollText, Smartphone, PlaySquare, Users2, type LucideIcon } from 'lucide-react';
+import { FolderOpen, BookOpen, ScrollText, Smartphone, PlaySquare, Users2, ArrowRight, type LucideIcon } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 
@@ -206,8 +206,9 @@ export default function WorkspacePage() {
                 </div>
                 <Link href={item.href} style={{
                   fontSize: '12px', fontWeight: 700, color: 'var(--accent)', textDecoration: 'none',
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
                 }}>
-                  Open →
+                  Open <ArrowRight size={12} strokeWidth={2} />
                 </Link>
               </div>
             ))}
