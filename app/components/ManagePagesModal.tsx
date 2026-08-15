@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import { Save, X, Check, ArrowLeft, ArrowRight, Trash2, Inbox, AlertTriangle } from 'lucide-react';
 
 interface PageRow {
   id: string;
@@ -265,21 +266,22 @@ export default function ManagePagesModal({
                     color: saving ? 'var(--text-muted)' : '#fff',
                     fontSize: '12px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
                     transition: 'all 0.15s',
+                    display: 'flex', alignItems: 'center', gap: '6px',
                   }}
                 >
-                  {saving ? 'Saving...' : '💾 Save Order'}
+                  {saving ? 'Saving...' : (<><Save size={14} strokeWidth={2} /> Save Order</>)}
                 </button>
               )}
               <button
                 onClick={onClose}
                 style={{
                   background: 'var(--divider)', border: '1px solid var(--border-light)',
-                  color: 'var(--text-tertiary)', fontSize: '16px', cursor: 'pointer',
+                  color: 'var(--text-tertiary)', cursor: 'pointer',
                   width: '34px', height: '34px', borderRadius: '8px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                ✕
+                <X size={16} strokeWidth={2} />
               </button>
             </div>
           </div>
@@ -298,16 +300,16 @@ export default function ManagePagesModal({
             <div style={{
               marginTop: '12px', padding: '8px 12px', borderRadius: '7px',
               background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
-              color: '#10b981', fontSize: '12px',
+              color: '#10b981', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px',
             }}>
-              ✓ {successMsg}
+              <Check size={13} strokeWidth={2.5} /> {successMsg}
             </div>
           )}
 
           {/* Reorder hint */}
           {!loading && pages.length > 1 && (
-            <p style={{ margin: '10px 0 0', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Use ⬅️ ➡️ to reorder · Changes are local until you hit <strong style={{ color: 'var(--text-secondary)' }}>Save Order</strong> · Click a thumbnail to preview
+            <p style={{ margin: '10px 0 0', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+              Use <ArrowLeft size={12} strokeWidth={2} style={{ display: 'inline' }} /> <ArrowRight size={12} strokeWidth={2} style={{ display: 'inline' }} /> to reorder · Changes are local until you hit <strong style={{ color: 'var(--text-secondary)' }}>Save Order</strong> · Click a thumbnail to preview
             </p>
           )}
         </div>
@@ -320,7 +322,7 @@ export default function ManagePagesModal({
             </div>
           ) : pages.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', gap: '8px' }}>
-              <div style={{ fontSize: '32px' }}>📭</div>
+              <Inbox size={32} strokeWidth={1.5} />
               <p style={{ fontSize: '13px', margin: 0 }}>No pages in this chapter yet.</p>
             </div>
           ) : (
@@ -414,11 +416,11 @@ export default function ManagePagesModal({
                             background: 'none', border: 'none',
                             color: i === 0 ? '#2a2a3a' : 'var(--text-tertiary)',
                             cursor: i === 0 ? 'default' : 'pointer',
-                            fontSize: '13px', padding: '2px 4px',
+                            padding: '2px 4px', display: 'flex',
                             transition: 'color 0.1s',
                           }}
                         >
-                          ⬅️
+                          <ArrowLeft size={13} strokeWidth={2} />
                         </button>
 
                         {/* Delete — two-click confirm */}
@@ -446,10 +448,10 @@ export default function ManagePagesModal({
                             style={{
                               background: 'none', border: 'none',
                               color: 'var(--text-tertiary)', cursor: 'pointer',
-                              fontSize: '13px', padding: '2px 4px',
+                              padding: '2px 4px', display: 'flex',
                             }}
                           >
-                            🗑️
+                            <Trash2 size={13} strokeWidth={2} />
                           </button>
                         )}
 
@@ -461,11 +463,11 @@ export default function ManagePagesModal({
                             background: 'none', border: 'none',
                             color: i === pages.length - 1 ? '#2a2a3a' : 'var(--text-tertiary)',
                             cursor: i === pages.length - 1 ? 'default' : 'pointer',
-                            fontSize: '13px', padding: '2px 4px',
+                            padding: '2px 4px', display: 'flex',
                             transition: 'color 0.1s',
                           }}
                         >
-                          ➡️
+                          <ArrowRight size={13} strokeWidth={2} />
                         </button>
                       </div>
                     </div>
@@ -521,8 +523,8 @@ export default function ManagePagesModal({
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             flexShrink: 0,
           }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              {isDirty ? '⚠️ Unsaved order changes' : `${pages.length} pages · order saved`}
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              {isDirty ? (<><AlertTriangle size={12} strokeWidth={2} /> Unsaved order changes</>) : `${pages.length} pages · order saved`}
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
               {confirmDeleteId && (
@@ -547,9 +549,10 @@ export default function ManagePagesModal({
                     border: '1px solid #7f1d1d',
                     color: saving ? 'var(--text-muted)' : '#fff',
                     fontSize: '11px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '6px',
                   }}
                 >
-                  {saving ? 'Saving...' : '💾 Save Order'}
+                  {saving ? 'Saving...' : (<><Save size={13} strokeWidth={2} /> Save Order</>)}
                 </button>
               )}
             </div>
