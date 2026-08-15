@@ -10,7 +10,7 @@ import ThemeToggle from '../../components/ThemeToggle';
 import SeriesCard from '../../components/SeriesCard';
 import { formatViews } from '../../lib/format';
 import { hasCreatorAccess, isDeveloperRole } from '../../lib/roles';
-import { Trophy, Search, BookOpen, Sparkles, Eye, ScrollText, BookText } from 'lucide-react';
+import { Trophy, Search, BookOpen, Sparkles, Eye, ScrollText, BookText, ArrowRight } from 'lucide-react';
 import { useUiLanguage, LANGUAGES } from '../../lib/i18n';
 import Link from 'next/link';
 
@@ -754,7 +754,7 @@ function FeaturedCard({ series }: { series: Series }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {series.language && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg-input)', padding: '2px 7px', borderRadius: '4px' }}>{series.language}</span>}
             <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}><Eye size={10} strokeWidth={2} /> {formatViews(series.views ?? 0)}</span>
-            <span style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginLeft: 'auto' }}>Read →</span>
+            <span style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>Read <ArrowRight size={11} strokeWidth={2} /></span>
           </div>
         </div>
       </div>
