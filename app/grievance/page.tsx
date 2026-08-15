@@ -24,6 +24,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ArrowLeft, Scale, Timer, FileEdit, CheckCircle2, Check, Send } from 'lucide-react';
 
 // ── CONFIGURE THESE BEFORE GOING LIVE ────────────────────────────────────────
 const GRIEVANCE_OFFICER_NAME = 'Mohammed Kaif';
@@ -133,8 +134,8 @@ export default function GrievancePage() {
             {PLATFORM_NAME}
           </span>
         </Link>
-        <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
-          ← Back to Home
+        <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          <ArrowLeft size={12} strokeWidth={2} /> Back to Home
         </Link>
       </nav>
 
@@ -176,9 +177,8 @@ export default function GrievancePage() {
             width: '56px', height: '56px', borderRadius: '14px', flexShrink: 0,
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '22px',
           }}>
-            ⚖️
+            <Scale size={22} strokeWidth={1.75} color="#fff" />
           </div>
 
           <div style={{ flex: 1, minWidth: '200px' }}>
@@ -208,8 +208,8 @@ export default function GrievancePage() {
           borderRadius: '12px', padding: '16px 20px', marginBottom: '32px',
         }}>
           <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.7 }}>
-            <strong style={{ color: '#d97706', display: 'block', marginBottom: '8px' }}>
-              ⏱️ Response & Appeal Timeline (IT Rules 2021 as amended)
+            <strong style={{ color: '#d97706', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Timer size={13} strokeWidth={2} /> Response & Appeal Timeline (IT Rules 2021 as amended)
             </strong>
             <ul style={{ margin: '0', paddingLeft: '20px' }}>
               <li>Acknowledgement: <strong>24 hours</strong></li>
@@ -229,8 +229,8 @@ export default function GrievancePage() {
           background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           borderRadius: '16px', padding: '28px', marginBottom: '32px',
         }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px' }}>
-            📝 Submit a Grievance
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileEdit size={16} strokeWidth={2} /> Submit a Grievance
           </h2>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 24px', lineHeight: 1.5 }}>
             All fields marked * are required. You will receive an email acknowledgement within 24 hours.
@@ -242,7 +242,7 @@ export default function GrievancePage() {
               background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)',
               borderRadius: '12px',
             }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>✅</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><CheckCircle2 size={40} strokeWidth={1.5} color="#10b981" /></div>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#10b981', margin: '0 0 8px' }}>
                 Grievance Received
               </h3>
@@ -332,7 +332,7 @@ export default function GrievancePage() {
                     fontSize: '11px',
                     color: description.length < 30 ? 'var(--text-muted)' : '#10b981',
                   }}>
-                    {description.length} characters {description.length < 30 ? `(${30 - description.length} more needed)` : '✓'}
+                    {description.length} characters {description.length < 30 ? `(${30 - description.length} more needed)` : <Check size={12} strokeWidth={2.5} style={{ display: 'inline', verticalAlign: 'middle' }} />}
                   </span>
                 </div>
               </div>
@@ -359,9 +359,10 @@ export default function GrievancePage() {
                   color: formState === 'submitting' ? 'var(--text-muted)' : '#fff',
                   fontSize: '13px', fontWeight: 700,
                   cursor: formState === 'submitting' ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}
               >
-                {formState === 'submitting' ? 'Submitting...' : '📨 Submit Grievance'}
+                {formState === 'submitting' ? 'Submitting...' : (<><Send size={14} strokeWidth={2} /> Submit Grievance</>)}
               </button>
 
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', margin: 0, lineHeight: 1.6 }}>
