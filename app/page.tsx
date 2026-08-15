@@ -166,13 +166,13 @@ export default function LandingPage() {
   // light-default (founder's call — same local-override pattern as
   // KaTube, see CONTEXT.md §18). ThemeToggle's `syncGlobal={false}` keeps
   // this page's toggle from touching the global <html> attribute/localStorage,
-  // so flipping it here never changes what /home, /read, etc. default to.
+  // so flipping it here never changes what /WebMangal/home, /read, etc. default to.
   const [isLight, setIsLight] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) router.replace('/home');
+      if (data.user) router.replace('/WebMangal/home');
     });
   }, [router]);
 

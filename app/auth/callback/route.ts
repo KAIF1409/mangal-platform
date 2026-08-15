@@ -28,10 +28,10 @@ import { cookies } from 'next/headers';
 import { POST_LOGIN_REDIRECT_COOKIE } from '../../lib/authRedirect';
 
 function safeNextPath(raw: string | null | undefined): string {
-  if (!raw) return '/home';
+  if (!raw) return '/WebMangal/home';
   // Must be an internal relative path: exactly one leading slash, no
   // scheme, no protocol-relative "//host" trick, no backslash trick.
-  if (!/^\/(?!\/|\\)/.test(raw)) return '/home';
+  if (!/^\/(?!\/|\\)/.test(raw)) return '/WebMangal/home';
   return raw;
 }
 

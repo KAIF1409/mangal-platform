@@ -426,11 +426,11 @@ export default function AuthPage() {
   };
 
   // Where to send the user after a successful login — read from
-  // /login?next=..., defaults to /home. Threaded through Google OAuth's
-  // redirectTo (as a query param on /auth/callback) and used directly for
-  // email/password login, so e.g. clicking "Log in" from /katube/upload
-  // actually returns you to /katube/upload instead of always landing on
-  // /home.
+  // /login?next=..., defaults to /WebMangal/home. Threaded through Google
+  // OAuth's redirectTo (as a query param on /auth/callback) and used
+  // directly for email/password login, so e.g. clicking "Log in" from
+  // /katube/upload actually returns you to /katube/upload instead of
+  // always landing on /WebMangal/home.
   //
   // IMPORTANT: read via useState's lazy initializer (runs synchronously
   // during the client render, before any paint), NOT inside a useEffect.
@@ -438,13 +438,13 @@ export default function AuthPage() {
   // asynchronous — if the user clicked "Continue with Google" before that
   // timeout fired (which turned out to happen most of the time in
   // practice, not just occasionally), handleGoogleLogin would close over
-  // the still-default '/home' and silently drop the intended return path.
-  // A lazy initializer has no such window: it's guaranteed to have run
-  // before the button is even interactive.
+  // the still-default '/WebMangal/home' and silently drop the intended
+  // return path. A lazy initializer has no such window: it's guaranteed to
+  // have run before the button is even interactive.
   const [nextPath] = useState(() => {
-    if (typeof window === 'undefined') return '/home';
+    if (typeof window === 'undefined') return '/WebMangal/home';
     const raw = new URLSearchParams(window.location.search).get('next');
-    return raw && /^\/(?!\/|\\)/.test(raw) ? raw : '/home';
+    return raw && /^\/(?!\/|\\)/.test(raw) ? raw : '/WebMangal/home';
   });
 
   // Surface errors that /auth/callback redirects back with (e.g. Google
@@ -625,7 +625,7 @@ export default function AuthPage() {
     // (root) with the code still attached — a second, separate bug from
     // the localhost one above, also confirmed 11 Aug 2026. `next` goes
     // through a short-lived cookie instead (see app/lib/authRedirect.ts).
-    if (nextPath && nextPath !== '/home') setPostLoginRedirect(nextPath);
+    if (nextPath && nextPath !== '/WebMangal/home') setPostLoginRedirect(nextPath);
     const callbackUrl = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callbackUrl } });
     if (error) { setError(error.message); setIsGoogleLoading(false); }

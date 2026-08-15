@@ -91,7 +91,7 @@ export default function KaTubeUploadPage() {
   const [success, setSuccess] = useState(false);
 
   // KaTube §6 — channel-ownership verification, gates the rest of the form.
-  // The one-time connect/verify flow itself now lives at /dashboard/katube
+  // The one-time connect/verify flow itself now lives at /katube/dashboard
   // (a creator's KaTube profile) — this page only reads the status to decide
   // whether to show the upload form or point them there. Nobody is asked to
   // verify twice; this is a read-only check every visit, not a re-ask.
@@ -260,7 +260,7 @@ export default function KaTubeUploadPage() {
               one-time step — after that, every upload here is checked automatically
               and you won&apos;t be asked again.
             </p>
-            <Link href="/dashboard/katube" style={{
+            <Link href="/katube/dashboard" style={{
               display: 'inline-block', padding: '10px 18px', borderRadius: '10px',
               background: '#f97316', color: '#fff', fontSize: '13px', fontWeight: 700,
               textDecoration: 'none',
@@ -272,7 +272,7 @@ export default function KaTubeUploadPage() {
             padding: '10px 14px', borderRadius: '10px', marginBottom: '20px',
             background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.25)',
             fontSize: '12px', fontWeight: 700, color: '#f97316',
-          }}>✅ Verified channel — every upload is still checked against it. <Link href="/dashboard/katube" style={{ color: '#f97316' }}>View KaTube profile</Link></div>
+          }}>✅ Verified channel — every upload is still checked against it. <Link href="/katube/dashboard" style={{ color: '#f97316' }}>View KaTube profile</Link></div>
           <form onSubmit={handleSubmit}>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
               YouTube link

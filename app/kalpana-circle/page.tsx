@@ -540,7 +540,7 @@ function KalpanaCircleInner() {
   const closeSearch = () => { setShowSearch(false); setSearchQuery(''); setUserResults([]); setPostResults([]); };
 
   const navHref = (path: string) => (userId ? path : `/login?next=${encodeURIComponent(path)}`);
-  const profileHref = userId ? (myUsername ? `/creator/${myUsername}` : '/home') : '/login?next=/kalpana-circle';
+  const profileHref = userId ? (myUsername ? `/creator/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle';
 
   return (
     <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' } as CSSProperties} className="kc-page">
@@ -563,7 +563,7 @@ function KalpanaCircleInner() {
           .kc-page { padding-bottom: 40px; }
         }
         /* Very-small-phone tier (same 380px breakpoint app/page.tsx and
-           app/home/page.tsx already use for their own nav bars) — the
+           app/WebMangal/home/page.tsx already use for their own nav bars) — the
            mobile nav's three chunks (MANGAL icon, K Circle wordmark logo,
            KaTube pill + theme toggle) were sized only for >=~320px and had
            no room to give up, so anything narrower silently squeezed the
@@ -1072,7 +1072,7 @@ function KalpanaCircleInner() {
         <Link href={navHref('/kalpana-circle/watch-together')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🎬</Link>
         <Link href={navHref('/kalpana-circle/broadcasts')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>📣</Link>
         <Link href={navHref('/kalpana-circle/saved')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🔖</Link>
-        <Link href={userId ? (myUsername ? `/creator/${myUsername}` : '/home') : '/login?next=/kalpana-circle'} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>👤</Link>
+        <Link href={userId ? (myUsername ? `/creator/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle'} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>👤</Link>
       </div>
     </div>
   );

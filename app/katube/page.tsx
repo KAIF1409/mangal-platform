@@ -677,13 +677,13 @@ export default function KaTubePage() {
             <ThemeToggle size={30} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
           </span>
           {/* KaTube profile — channel verification + metrics live at
-              /dashboard/katube (part of the main MANGAL dashboard, see
+              /katube/dashboard (part of the main MANGAL dashboard, see
               CONTEXT.md §6). Swap for the founder's real logo image whenever
               it's ready; still just a "K" placeholder visually. Name next to
               the avatar (template reference) only renders when a user is
               actually logged in — graceful fallback to avatar-only otherwise. */}
           <Link
-            href="/dashboard/katube"
+            href="/katube/dashboard"
             aria-label="KaTube profile"
             title="KaTube profile"
             style={{

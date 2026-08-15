@@ -68,6 +68,23 @@ const nextConfig: NextConfig = {
         destination: "/katube",
         permanent: true,
       },
+      // /home moved under the WebMangal namespace (it's WebMangal's own
+      // signed-in home feed, not an ecosystem-level home) — keep old
+      // bookmarks/shares working.
+      {
+        source: "/home",
+        destination: "/WebMangal/home",
+        permanent: true,
+      },
+      // KaTube's creator-profile/channel-verify tab moved out of the
+      // shared /dashboard namespace into /katube/dashboard, so every
+      // KaTube-product page lives under /katube (per-product namespacing,
+      // see CONTEXT.md). Same page, same StudioSidebar shell — URL only.
+      {
+        source: "/dashboard/katube",
+        destination: "/katube/dashboard",
+        permanent: true,
+      },
       // Old /search links carried a `?q=` search keyword — those go to the
       // new dedicated search route with the param renamed to `?keyword=`
       // (matches m.webnovel.com/search?keyword=... which this route now
