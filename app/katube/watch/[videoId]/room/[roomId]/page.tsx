@@ -6,7 +6,7 @@ import Link from 'next/link';
 import ThemeToggle from '../../../../../components/ThemeToggle';
 import { supabase } from '../../../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../../../lib/authRedirect';
-import { Users, Lock, Globe, Check, Link2, Crown, MessageCircle } from 'lucide-react';
+import { Users, Lock, Globe, Check, Link2, Crown, MessageCircle, ArrowLeft } from 'lucide-react';
 
 // ── Sync-Play Watch Rooms ──
 // Third of the three retention-strategy ideas from CONTEXT.md §25 (Review
@@ -334,7 +334,7 @@ export default function WatchRoomPage() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
         <p style={{ fontSize: '15px' }}>{loadError}</p>
-        <Link href={`/katube/watch/${videoId}`} style={{ color: 'var(--text-secondary)' }}>← Back to video</Link>
+        <Link href={`/katube/watch/${videoId}`} style={{ color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={14} strokeWidth={2} /> Back to video</Link>
       </div>
     );
   }
@@ -350,7 +350,7 @@ export default function WatchRoomPage() {
         padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-          <Link href={`/katube/watch/${videoId}`} style={{ color: 'var(--text-tertiary)', textDecoration: 'none', fontSize: '18px' }}>←</Link>
+          <Link href={`/katube/watch/${videoId}`} style={{ color: 'var(--text-tertiary)', textDecoration: 'none', display: 'flex' }}><ArrowLeft size={18} strokeWidth={2} /></Link>
           <span style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Users size={14} /> {room.title}
           </span>
