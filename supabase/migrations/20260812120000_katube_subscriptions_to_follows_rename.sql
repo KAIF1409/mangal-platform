@@ -1,5 +1,5 @@
 -- Rename "subscribe" concept to "follow" to match the rest of the app's
--- terminology (MangaNovels already has a `follows` table for series) and
+-- terminology (WebMangal already has a `follows` table for series) and
 -- because KaTube isn't sub-for-sub / YouTube-style subscription — it's a
 -- follow, same as everywhere else on the platform.
 alter table creator_subscriptions rename to creator_follows;

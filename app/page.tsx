@@ -605,7 +605,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── TILT CARDS: MangaNovels / KaTube / K Circle ── */}
+        {/* ── TILT CARDS: WebMangal / KaTube / K Circle ── */}
         <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1300px', margin: '0 auto' }}>
           <div id="mangal-card-grid" style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'center', gap: '20px', height: '78vh', flexWrap: 'wrap', perspective: '1200px' }}>
             {DOORS.map(door => (

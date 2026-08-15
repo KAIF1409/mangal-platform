@@ -8,7 +8,7 @@ loves the same stuff.
 
 It has **three parts** that work together:
 
-### 1. MangaNovels — read manga, comics & novels
+### 1. WebMangal — read manga, comics & novels
 The original MANGAL. Anyone can create an account and start reading manga,
 comics, and web novels for free. Writers and artists can also publish their
 own original work here — chapters, covers, updates — directly to readers,
@@ -41,7 +41,7 @@ to life. Kalpana Circle is where the fans gather to talk about it.*
   scale, and no copyright risk, because every video is original content made
   by the creator who owns the story it's based on — never pirated or reposted
   anime.
-- **One account, three products.** A reader on MangaNovels is already a
+- **One account, three products.** A reader on WebMangal is already a
   potential viewer on KaTube and a potential community member on Kalpana
   Circle. Each product feeds the other two instead of competing for the same
   attention, which is rare — most platforms have to build an audience three

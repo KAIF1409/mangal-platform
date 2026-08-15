@@ -19,7 +19,7 @@ const AI_TOOL_OPTIONS = ['Sora', 'Kling', 'Runway', 'Pika', 'Hailuo', 'Veo', 'Ot
 // come later alongside the real Shorts row (still placeholder data on the
 // main /katube page as of this step).
 //
-// No creator_profiles gating — matches the existing MangaNovels upload page
+// No creator_profiles gating — matches the existing WebMangal upload page
 // (app/upload/page.tsx), which only requires being logged in, not a
 // separate "creator" flag.
 

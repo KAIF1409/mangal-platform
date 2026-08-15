@@ -14,7 +14,7 @@ ecosystem, all under one Next.js app, one Supabase project, one Vercel deploymen
 
 | Part | Route | What it is | Status |
 |---|---|---|---|
-| **MangaNovels** | `/`, `/search`, `/read/...` | The original MANGAL platform — read manga, comics, and novels. Fully live. | ✅ Live, in active use |
+| **WebMangal** | `/`, `/search`, `/read/...` | The original MANGAL platform — read manga, comics, and novels. Fully live. | ✅ Live, in active use |
 | **KaTube** | `/katube` (redirected from `/kalpanaverse`) | A YouTube-style discovery platform for **AI-generated anime videos made by MANGAL creators**, adapted from their own MANGAL series. Includes a Shorts row and full-screen Shorts feed. Brand: white + blue (distinct from Kalpana Circle's purple). | 🟢 Grid, Shorts (row + full-screen feed), watch page (incl. tag-based recommendations), upload flow, channel verification, content moderation, ranking/filtering, and like/comment/subscribe engagement all live on real Supabase data (see §4, §11) |
 | **Kalpana Circle** | `/kalpana-circle` | A standalone community space for anime discussion — theories, fan art, reactions, requests for what to adapt next. Deliberately separate from the video platform, not a tab inside it. Brand: purple/violet. | 🟢 Posts, stories, likes, comments, saved posts, image-attachment DMs/group chats, live search, group settings, series↔Circle cross-link (tag filter), and creator broadcast channels all live on real Supabase data (see §12–§12g). Notifications, polls, close friends, voice/video, and channels/roles are not built yet (see §14). |
 
@@ -168,7 +168,7 @@ re-deriving the business case from scratch.
   own* series (`series` where `creator_id = auth.uid()`) to link it to.
   Submits straight to `videos` (RLS already allowed owner-insert, no migration
   needed), then redirects to the new video's watch page. No `creator_profiles`
-  gating — matches the existing MangaNovels upload page's convention of
+  gating — matches the existing WebMangal upload page's convention of
   "logged in is enough." Reachable via the blue "⬆ Upload" nav button on
   `/katube`.
 - **Shorts row — real data:** the Shorts row now fetches `videos` where
@@ -193,7 +193,7 @@ re-deriving the business case from scratch.
 - Brand: unchanged purple/violet (`#7c3aed`/`#c4b5fd` family)
 
 ### Landing page / nav
-- `app/page.tsx` (public landing): three-door section under the hero (MangaNovels /
+- `app/page.tsx` (public landing): three-door section under the hero (WebMangal /
   KaTube / Kalpana Circle), plus nav links for both
 - `app/home/page.tsx` (authenticated landing): same nav links added
 - Theme: the whole site defaults to **light/white** (`data-theme="light"` set by a
@@ -1127,7 +1127,7 @@ Kalpana Circle went from a static UI demo (§ "Placeholder discussion feed", dis
 - **Feed (`99c1175`)** — stories bar (add/view, seen/unseen rings), real
   posts with photo upload, like, threaded comments, Instagram-style bottom
   nav (Home / Search-placeholder / Post / Chat / Profile) — no Reels tab.
-  Radiant-grey theme, distinct from both MangaNovels and KaTube's palettes.
+  Radiant-grey theme, distinct from both WebMangal and KaTube's palettes.
 - **Chat (`82d87f1`)** — `/kalpana-circle/chat`: inbox list, username
   search to start a DM, real thread view with send + 3s polling (no
   realtime subscription yet, polling is the current mechanism).
@@ -1780,7 +1780,7 @@ this was additive, not a rewrite.
   subtext, search bar, and genre pills now stagger in on load via a shared
   `fadeUp` + `staggerContainer` Framer Motion variant pair (defined once
   near the top of `page.tsx`, reused across every section below).
-- **Scroll reveals:** three-door section (MangaNovels/KaTube/K Circle)
+- **Scroll reveals:** three-door section (WebMangal/KaTube/K Circle)
   alternates slide-in-from-left/right per door on `whileInView`
   (`viewport={{ once: true }}`, so it doesn't replay on scroll-up).
   Trending showcase grid, tag cloud, features grid, and the "Got a story
