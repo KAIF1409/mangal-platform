@@ -7,6 +7,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { CheckCircle2, ThumbsUp, XCircle, Clock, AlertTriangle, type LucideIcon } from 'lucide-react';
 
 type ConsentStatus =
   | 'success'
@@ -17,34 +18,34 @@ type ConsentStatus =
 
 const CONFIG: Record<
   ConsentStatus,
-  { emoji: string; title: string; body: string; color: string }
+  { Icon: LucideIcon; title: string; body: string; color: string }
 > = {
   success: {
-    emoji: '✅',
+    Icon: CheckCircle2,
     title: 'Consent Confirmed',
     body: "You've successfully given parental consent. Your child's MANGAL account is now active. They can log in and start reading.",
     color: '#16a34a',
   },
   already_confirmed: {
-    emoji: '👍',
+    Icon: ThumbsUp,
     title: 'Already Confirmed',
     body: "This consent was already given earlier. Your child's account is active — nothing more to do.",
     color: '#d97706',
   },
   invalid: {
-    emoji: '❌',
+    Icon: XCircle,
     title: 'Invalid Link',
     body: 'This confirmation link is not valid. It may have been copied incorrectly. Ask your child to re-register so a fresh link can be sent.',
     color: '#991b1b',
   },
   expired: {
-    emoji: '⏳',
+    Icon: Clock,
     title: 'Link Expired',
     body: 'This confirmation link has expired (links are valid for 7 days). Ask your child to log in again — MANGAL will automatically send a new confirmation email.',
     color: '#991b1b',
   },
   error: {
-    emoji: '⚠️',
+    Icon: AlertTriangle,
     title: 'Something Went Wrong',
     body: "We couldn't process this request right now. Please try clicking the link again. If the problem persists, contact us at grievance@mangal.in.",
     color: '#991b1b',
@@ -56,7 +57,7 @@ function ConsentResult() {
   const raw = params.get('result') ?? 'error';
   const status: ConsentStatus =
     raw in CONFIG ? (raw as ConsentStatus) : 'error';
-  const { emoji, title, body, color } = CONFIG[status];
+  const { Icon, title, body, color } = CONFIG[status];
 
   return (
     <div
@@ -96,9 +97,9 @@ function ConsentResult() {
           MANGAL
         </div>
 
-        {/* Emoji */}
-        <div style={{ fontSize: '56px', marginBottom: '20px', lineHeight: 1 }}>
-          {emoji}
+        {/* Status icon */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px', color }}>
+          <Icon size={56} strokeWidth={1.75} />
         </div>
 
         {/* Title */}
