@@ -3348,16 +3348,37 @@ naturally cross-product (writing tips / AI help aren't WebMangal-only).
 Others — Earnings and Workspace especially — need the switcher front and
 center since the underlying data is structurally different per product.
 
-**Open question, founder to decide before Perks is touched:** should
-Perks' reader-count tiers count *combined* readers across all three
-products, or does each product get its own tier ladder? This is a
-business call about what's actually being rewarded, not an engineering
-one — flagged here so it isn't decided by accident mid-build.
+**Perks question — DECIDED: per-product tiers + a cross-product
+Ecosystem Bonus, not pure combined or pure separate.** Neither extreme
+was right: pure combined lets a creator who's weak on one product coast
+on Elite perks earned entirely on another (unfair); pure separate gives
+zero incentive for the exact cross-product discovery loop the ecosystem
+exists for (§2 — "readers discover videos → follow series → become
+MANGAL readers"). Decision:
+1. **Each product keeps its own tier ladder on its own metric**
+   (WebMangal = readers, KaTube = viewers, Kalpana Circle =
+   followers/engagement) — this is what a creator's Perks progress is
+   primarily based on, so nobody gets a product's perks for effort spent
+   on a different product.
+2. **On top of that, an "Ecosystem Bonus"** for creators active across
+   more than one product — e.g. a distinct "MANGAL Creator" badge, and/or
+   a small (~10%) boost to tier-progress counting, unlocked once a
+   creator clears a minimum threshold (e.g. 500+) on more than one
+   product. Exact threshold/number and whether it's a badge vs a
+   percentage boost vs both is an implementation detail to work out when
+   this tab is actually built, not re-litigated as a concept.
+3. Net effect: a solo WebMangal creator and a solo KaTube creator are
+   each judged fairly on their own numbers; a multi-product creator gets
+   the same fair per-product judging *plus* a reward for being
+   ecosystem-wide, which is the behavior the founder wants to encourage.
+   Pattern is meant to extend cleanly if a 4th product is ever added.
 
 **Not started:** no code changes yet for this section. Implementation
 plan for whoever picks this up next:
-1. Decide the Perks question above first (blocks that one tab only, not
-   the rest).
+1. Build Perks per the decision above (per-product ladder + Ecosystem
+   Bonus) when that tab is retrofitted — no further sign-off needed on
+   the concept, just implementation choices (exact thresholds, badge vs
+   percentage boost) at build time.
 2. Add a shared `ProductScope` switcher component (WebMangal / KaTube /
    Kalpana Circle / All where relevant) — likely lives in
    `app/components/`, used the same way across tabs.
