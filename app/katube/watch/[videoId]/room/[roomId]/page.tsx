@@ -6,6 +6,7 @@ import Link from 'next/link';
 import ThemeToggle from '../../../../../components/ThemeToggle';
 import { supabase } from '../../../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../../../lib/authRedirect';
+import { Users, Lock, Globe, Check, Link2, Crown, MessageCircle } from 'lucide-react';
 
 // ── Sync-Play Watch Rooms ──
 // Third of the three retention-strategy ideas from CONTEXT.md §25 (Review
@@ -350,18 +351,19 @@ export default function WatchRoomPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <Link href={`/katube/watch/${videoId}`} style={{ color: 'var(--text-tertiary)', textDecoration: 'none', fontSize: '18px' }}>←</Link>
-          <span style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            👥 {room.title}
+          <span style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Users size={14} /> {room.title}
           </span>
-          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--bg-card)', color: 'var(--text-tertiary)' }}>
-            {room.visibility === 'private' ? '🔒 Private' : '🌐 Public'} room
+          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--bg-card)', color: 'var(--text-tertiary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            {room.visibility === 'private' ? <Lock size={10} /> : <Globe size={10} />} {room.visibility === 'private' ? 'Private' : 'Public'} room
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button onClick={copyInvite} style={{
             fontSize: '12px', padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--border-color)',
             background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer',
-          }}>{copied ? '✓ Copied' : '🔗 Invite a friend'}</button>
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+          }}>{copied ? <><Check size={13} /> Copied</> : <><Link2 size={13} /> Invite a friend</>}</button>
           <button onClick={leaveRoom} style={{
             fontSize: '12px', padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--border-color)',
             background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer',
@@ -386,7 +388,7 @@ export default function WatchRoomPage() {
                 fontSize: '11px', padding: '4px 10px', borderRadius: '12px', background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)', color: 'var(--text-secondary)',
               }}>
-                {m.user_id === room.host_id ? '👑 ' : ''}{m.username}
+                {m.user_id === room.host_id ? <Crown size={11} style={{ display: 'inline', verticalAlign: '-2px', marginRight: '3px' }} /> : ''}{m.username}
               </span>
             ))}
           </div>
@@ -396,8 +398,8 @@ export default function WatchRoomPage() {
           flex: '1 1 300px', minWidth: '280px', display: 'flex', flexDirection: 'column',
           border: '1px solid var(--border-color)', borderRadius: '12px', background: 'var(--bg-card)', maxHeight: '560px',
         }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-color)', fontSize: '13px', fontWeight: 700 }}>
-            💬 Room chat
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-color)', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <MessageCircle size={14} /> Room chat
           </div>
           <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {messages.map(m => (

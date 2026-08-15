@@ -7,6 +7,7 @@ import Image from 'next/image';
 import ThemeToggle from '../../../components/ThemeToggle';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/authRedirect';
+import { Users, ThumbsUp, BookOpen, Star } from 'lucide-react';
 
 // ── KaTube — Step 3: watch page ──
 // Clicking a video card on /katube now opens this page, which loads the
@@ -570,7 +571,7 @@ export default function KaTubeWatchPage() {
                     display: 'flex', alignItems: 'center', gap: '8px',
                   }}
                 >
-                  👥 {creatingRoom ? 'Setting up room...' : 'Watch with Friends'}
+                  <Users size={15} /> {creatingRoom ? 'Setting up room...' : 'Watch with Friends'}
                 </button>
               )}
 
@@ -620,7 +621,7 @@ export default function KaTubeWatchPage() {
                       opacity: likeBusy ? 0.6 : 1,
                     }}
                   >
-                    {liked ? '👍' : '👍🏻'} {video.likes.toLocaleString()}
+                    <ThumbsUp size={14} fill={liked ? '#f97316' : 'none'} /> {video.likes.toLocaleString()}
                   </button>
                 </div>
 
@@ -630,7 +631,7 @@ export default function KaTubeWatchPage() {
                     background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
                     padding: '4px 11px', borderRadius: '20px', whiteSpace: 'nowrap',
                   }}>
-                    📖 Based on {video.basedOn}
+                    <BookOpen size={13} /> Based on {video.basedOn}
                   </Link>
                 )}
               </div>
@@ -642,12 +643,12 @@ export default function KaTubeWatchPage() {
                   borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-card)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
-                    <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                      📖 Review Hub — accuracy to source
+                    <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <BookOpen size={14} /> Review Hub — accuracy to source
                     </h2>
                     {accuracyReviews.length > 0 && (
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700 }}>
-                        {(accuracyReviews.reduce((s, r) => s + r.stars, 0) / accuracyReviews.length).toFixed(1)} ★ avg
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Star size={12} fill="#f97316" stroke="none" /> {(accuracyReviews.reduce((s, r) => s + r.stars, 0) / accuracyReviews.length).toFixed(1)} avg
                         {' · '}{accuracyReviews.length.toLocaleString()} {accuracyReviews.length === 1 ? 'review' : 'reviews'}
                       </span>
                     )}
@@ -667,10 +668,10 @@ export default function KaTubeWatchPage() {
                         aria-label={`${n} star${n > 1 ? 's' : ''}`}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
-                          fontSize: '22px', lineHeight: 1,
+                          display: 'flex', lineHeight: 1,
                           color: (hoverStars || myStars) >= n ? '#f97316' : 'var(--border-color)',
                         }}
-                      >★</button>
+                      ><Star size={22} fill={(hoverStars || myStars) >= n ? '#f97316' : 'none'} /></button>
                     ))}
                   </div>
 
@@ -708,7 +709,11 @@ export default function KaTubeWatchPage() {
                         <div key={r.id}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.reviewerName}</span>
-                            <span style={{ fontSize: '11px', color: '#f97316' }}>{'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)}</span>
+                            <span style={{ fontSize: '11px', color: '#f97316', display: 'inline-flex', gap: '1px' }}>
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star key={i} size={11} fill={i < r.stars ? '#f97316' : 'none'} stroke={i < r.stars ? 'none' : '#f97316'} />
+                              ))}
+                            </span>
                           </div>
                           <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, wordBreak: 'break-word' }}>
                             {r.review_text}

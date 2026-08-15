@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
 import { supabase } from '../lib/supabase';
+import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 // ── KaTube — Step 3 (video grid + watch page) + Step 4 (upload flow,
 // including Shorts) ──
@@ -122,19 +124,19 @@ type SidebarItem = 'home' | 'fast' | 'slow' | 'saved';
 // behavior as before, just organized under section headers instead of one
 // flat list, plus a pinned "+ Create" CTA at the bottom of the sidebar
 // (see the JSX below) matching the template's pinned "Upload Video" button.
-const SIDEBAR_GROUPS: { label: string; items: { id: SidebarItem; label: string; icon: string }[] }[] = [
+const SIDEBAR_GROUPS: { label: string; items: { id: SidebarItem; label: string; icon: LucideIcon }[] }[] = [
   {
     label: 'Menu',
     items: [
-      { id: 'home', label: 'Home', icon: '🏠' },
-      { id: 'fast', label: 'Fast tap', icon: '⚡' },
-      { id: 'slow', label: 'Slow tap', icon: '▶' },
+      { id: 'home', label: 'Home', icon: Home },
+      { id: 'fast', label: 'Fast tap', icon: Zap },
+      { id: 'slow', label: 'Slow tap', icon: Play },
     ],
   },
   {
     label: 'Library',
     items: [
-      { id: 'saved', label: 'Saved', icon: '🔖' },
+      { id: 'saved', label: 'Saved', icon: Bookmark },
     ],
   },
 ];
@@ -200,7 +202,7 @@ function SidebarNav({
                       transition: 'background 0.15s, color 0.15s',
                     }}
                   >
-                    <span style={{ fontSize: '22px', width: '24px', textAlign: 'center' }}>{item.icon}</span>
+                    <span style={{ display: 'flex', width: '24px', justifyContent: 'center' }}><item.icon size={20} /></span>
                     {item.label}
                   </button>
                 ))}
@@ -218,7 +220,7 @@ function SidebarNav({
             width: '100%', padding: '11px 0', borderRadius: '10px', textDecoration: 'none',
             background: '#f97316', color: '#fff', fontSize: '13px', fontWeight: 800,
             letterSpacing: '0.01em', marginBottom: '12px',
-          }}>⬆ Upload video</Link>
+          }}><ArrowUp size={15} strokeWidth={2.5} /> Upload video</Link>
           <Link href="/" style={{
             display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none',
             fontSize: '12.5px', fontWeight: 700, color: 'var(--text-tertiary)', whiteSpace: 'nowrap',
@@ -257,7 +259,8 @@ function DemoShortCard({ short }: { short: DemoShort }) {
       <span style={{
         position: 'absolute', top: '10px', left: '10px', fontSize: '11px', fontWeight: 800, color: '#fff',
         background: 'rgba(0,0,0,0.5)', padding: '3px 9px', borderRadius: '20px', letterSpacing: '0.02em',
-      }}>⚡ SHORTS</span>
+        display: 'inline-flex', alignItems: 'center', gap: '3px',
+      }}><Zap size={11} fill="#fff" /> SHORTS</span>
       <div style={{
         position: 'relative', width: '100%', padding: '24px 14px 14px',
         background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
@@ -295,7 +298,8 @@ function RealShortCard({ short }: { short: RealShort }) {
       <span style={{
         position: 'absolute', top: '10px', left: '10px', fontSize: '11px', fontWeight: 800, color: '#fff',
         background: 'rgba(0,0,0,0.5)', padding: '3px 9px', borderRadius: '20px', letterSpacing: '0.02em',
-      }}>⚡ SHORTS</span>
+        display: 'inline-flex', alignItems: 'center', gap: '3px',
+      }}><Zap size={11} fill="#fff" /> SHORTS</span>
       <div style={{
         position: 'relative', width: '100%', padding: '24px 14px 14px',
         background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
@@ -364,8 +368,9 @@ function RealVideoCard({ video }: { video: RealVideo }) {
                 fontSize: '10.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
                 background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
                 padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
               }}>
-              📖 {video.basedOn}
+              <BookOpen size={11} /> {video.basedOn}
             </Link>
           )}
           <span style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>{video.views} views</span>
@@ -639,8 +644,8 @@ export default function KaTubePage() {
           <div style={{ position: 'relative', width: '100%', maxWidth: '560px' }}>
             <span aria-hidden="true" style={{
               position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)',
-              fontSize: '14px', color: 'var(--text-tertiary)', pointerEvents: 'none',
-            }}>🔍</span>
+              display: 'flex', color: 'var(--text-tertiary)', pointerEvents: 'none',
+            }}><Search size={15} /></span>
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -865,8 +870,8 @@ export default function KaTubePage() {
       {/* Saved — no backing data yet */}
       {activeSidebar === 'saved' && (
         <div style={{ maxWidth: '600px', margin: '40px auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
-          <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-            🔖 Saved videos aren&apos;t wired up yet — this is a placeholder for the sidebar item. Coming in a later step.
+          <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <Bookmark size={13} /> Saved videos aren&apos;t wired up yet — this is a placeholder for the sidebar item. Coming in a later step.
           </p>
         </div>
       )}

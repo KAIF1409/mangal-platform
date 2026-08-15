@@ -7,6 +7,7 @@ import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { Clapperboard, CheckCircle2 } from 'lucide-react';
 
 // ── KaTube profile — lives inside the main MANGAL dashboard (one profile,
 // one email, one channel — see CONTEXT.md §6). This is now the ONLY place
@@ -130,8 +131,8 @@ export default function KaTubeProfilePage() {
       <Navbar href="/katube" platformName="KaTube" logoSrc="/katube-logo.png" />
 
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 24px 60px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: '#2563eb', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          🎬 KATUBE
+        <div style={{ fontSize: '11px', fontWeight: 800, color: '#2563eb', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Clapperboard size={12} /> KATUBE
         </div>
         <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.02em' }}>Your KaTube channel</h1>
         <p style={{ color: 'var(--text-tertiary)', fontSize: '13.5px', margin: '0 0 32px', lineHeight: 1.6 }}>
@@ -168,7 +169,7 @@ export default function KaTubeProfilePage() {
             }}>
               {channelStatus?.verifiedChannelId ? (
                 <>
-                  <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px' }}>✅ Channel verified</h2>
+                  <h2 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}><CheckCircle2 size={16} /> Channel verified</h2>
                   <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', lineHeight: 1.6, marginBottom: '14px' }}>
                     {channelStatus.channelHandle ? <>Connected to <strong>{channelStatus.channelHandle}</strong>. </> : null}
                     Every video you upload is checked against this channel — you won&apos;t be asked to verify again.

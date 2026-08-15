@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from '../../components/ThemeToggle';
 import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { CheckCircle2, Zap, Megaphone } from 'lucide-react';
 
 const CATEGORY_OPTIONS = ['Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Dark Fantasy', 'Supernatural', 'Science Fiction', 'Trailers'];
 const AI_TOOL_OPTIONS = ['Sora', 'Kling', 'Runway', 'Pika', 'Hailuo', 'Veo', 'Other'];
@@ -271,8 +272,8 @@ export default function KaTubeUploadPage() {
           <div style={{
             padding: '10px 14px', borderRadius: '10px', marginBottom: '20px',
             background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.25)',
-            fontSize: '12px', fontWeight: 700, color: '#f97316',
-          }}>✅ Verified channel — every upload is still checked against it. <Link href="/katube/dashboard" style={{ color: '#f97316' }}>View KaTube profile</Link></div>
+            fontSize: '12px', fontWeight: 700, color: '#f97316', display: 'flex', alignItems: 'center', gap: '6px',
+          }}><CheckCircle2 size={14} /> Verified channel — every upload is still checked against it. <Link href="/katube/dashboard" style={{ color: '#f97316' }}>View KaTube profile</Link></div>
           <form onSubmit={handleSubmit}>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
               YouTube link
@@ -381,7 +382,7 @@ export default function KaTubeUploadPage() {
                 style={{ width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <span style={{ fontSize: '13px' }}>
-                <span style={{ fontWeight: 700 }}>⚡ This is a Short</span>
+                <span style={{ fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Zap size={13} /> This is a Short</span>
                 <span style={{ color: 'var(--text-tertiary)' }}> — vertical/short-form, shows in the Shorts row instead of the main grid</span>
               </span>
             </label>
@@ -401,7 +402,7 @@ export default function KaTubeUploadPage() {
                 style={{ width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <span style={{ fontSize: '13px' }}>
-                <span style={{ fontWeight: 700 }}>📣 Auto-post to K Circle</span>
+                <span style={{ fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Megaphone size={13} /> Auto-post to K Circle</span>
                 <span style={{ color: 'var(--text-tertiary)' }}> — off by default, only for this video</span>
               </span>
             </label>

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
+import { Heart, MessageCircle, Share2, VolumeX, Volume2 } from 'lucide-react';
 
 // ── KaTube §7 — Fast Tap full-screen Shorts/Reels feed ──
 // Full-screen vertical snap-scroll feed for is_short=true videos, replacing
@@ -223,21 +224,21 @@ export default function KaTubeShortsFeedPage() {
                       onClick={() => showToast('Like isn\u2019t built yet')}
                       style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
                     >
-                      <span style={{ fontSize: '26px' }}>❤️</span>
+                      <Heart size={26} color="#fff" fill="#ef4444" stroke="#ef4444" />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>{short.likes.toLocaleString()}</span>
                     </button>
                     <button
                       onClick={() => showToast('Comments aren\u2019t built yet')}
                       style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
                     >
-                      <span style={{ fontSize: '24px' }}>💬</span>
+                      <MessageCircle size={24} color="#fff" />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Comment</span>
                     </button>
                     <button
                       onClick={() => showToast('Share isn\u2019t built yet')}
                       style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
                     >
-                      <span style={{ fontSize: '24px' }}>↗️</span>
+                      <Share2 size={24} color="#fff" />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Share</span>
                     </button>
                     {isActive && (
@@ -247,7 +248,7 @@ export default function KaTubeShortsFeedPage() {
                         title={muted ? 'Unmute' : 'Mute'}
                         style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
                       >
-                        <span style={{ fontSize: '24px' }}>{muted ? '🔇' : '🔊'}</span>
+                        {muted ? <VolumeX size={24} color="#fff" /> : <Volume2 size={24} color="#fff" />}
                         <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>{muted ? 'Muted' : 'Sound'}</span>
                       </button>
                     )}
