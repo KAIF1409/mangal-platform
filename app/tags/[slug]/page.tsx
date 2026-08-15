@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
+import { ScrollText, BookMarked, BookOpen, Eye, ArrowLeft, Search, BookOpenText } from 'lucide-react';
 
 interface Series {
   id: string;
@@ -39,7 +40,7 @@ function TagCard({ series }: { series: Series }) {
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ScrollText size={36} strokeWidth={1.5} color="var(--text-faint)" /></div>
           )}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -50,8 +51,9 @@ function TagCard({ series }: { series: Series }) {
               fontSize: '9px', fontWeight: 700, color: '#fff',
               background: series.content_type === 'novel' ? 'rgba(109,40,217,0.9)' : 'rgba(127,29,29,0.9)',
               padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
+              display: 'inline-flex', alignItems: 'center', gap: '3px',
             }}>
-              {series.content_type === 'novel' ? '📕 Novel' : '📖 Mangal'}
+              {series.content_type === 'novel' ? (<><BookMarked size={9} strokeWidth={2.5} /> Novel</>) : (<><BookOpen size={9} strokeWidth={2.5} /> Mangal</>)}
             </span>
           </div>
         </div>
@@ -62,7 +64,7 @@ function TagCard({ series }: { series: Series }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Eye size={10} strokeWidth={2} /> {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
       </div>
@@ -102,13 +104,13 @@ export default function TagPage({ params }: { params: Promise<{ slug: string }> 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px 24px' }}>
-        <Link href="/tags" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← All Tags</Link>
+        <Link href="/tags" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> All Tags</Link>
 
         {loading ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>Loading...</div>
         ) : notFound ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><Search size={32} strokeWidth={1.5} /></div>
             <div style={{ fontSize: '14px' }}>Tag not found.</div>
           </div>
         ) : (
@@ -122,7 +124,7 @@ export default function TagPage({ params }: { params: Promise<{ slug: string }> 
 
             {series.length === 0 ? (
               <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
-                <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><BookOpenText size={32} strokeWidth={1.5} /></div>
                 <div style={{ fontSize: '14px' }}>No series with this tag yet.</div>
               </div>
             ) : (
