@@ -248,8 +248,9 @@ export default function WatchTogetherPage() {
         padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Link href="/kalpana-circle" style={{ display: 'flex' }}>
-            <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={56} style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />
+          <Link href="/kalpana-circle" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}>
+            <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={130} style={{ height: '28px', width: '28px', objectFit: 'contain', borderRadius: '50%' }} />
+            <span style={{ fontWeight: 900, fontSize: '15px', color: '#7c3aed', letterSpacing: '-0.02em' }}>Circle</span>
           </Link>
           <span style={{ fontSize: '15px', fontWeight: 800 }}>🎬 Watch Together</span>
         </div>

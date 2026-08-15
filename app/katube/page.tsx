@@ -618,9 +618,10 @@ export default function KaTubePage() {
           >
             <HamburgerIcon />
           </button>
-          <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
-            <Image src="/katube-logo.png" alt="KaTube" width={140} height={70} style={{ display: 'block', height: '32px', width: 'auto', objectFit: 'contain' }} priority />
-            <span className="katube-subtitle" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
+          <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
+            <Image src="/katube-logo.png" alt="KaTube" width={140} height={140} style={{ display: 'block', height: '32px', width: '32px', objectFit: 'contain', borderRadius: '8px' }} priority />
+            <span style={{ fontWeight: 900, fontSize: '16px', color: '#2563eb', letterSpacing: '-0.02em' }}>Tube</span>
+            <span className="katube-subtitle" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.01em', whiteSpace: 'nowrap', marginLeft: '4px' }}>
               powered by MANGAL
             </span>
           </Link>

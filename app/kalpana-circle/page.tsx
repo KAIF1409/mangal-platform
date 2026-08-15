@@ -589,7 +589,10 @@ function KalpanaCircleInner() {
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
           <Image src="/icon.png" alt="MANGAL" width={28} height={28} style={{ display: 'block', borderRadius: '7px', flexShrink: 0 }} />
         </Link>
-        <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={56} style={{ display: 'block', height: '28px', width: 'auto', objectFit: 'contain' }} priority />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={130} style={{ display: 'block', height: '28px', width: '28px', objectFit: 'contain', borderRadius: '50%' }} priority />
+          <span style={{ fontWeight: 900, fontSize: '15px', color: '#7c3aed', letterSpacing: '-0.02em' }}>Circle</span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           <Link href="/katube" className="kc-katube-badge" style={{
             padding: '7px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700,
@@ -613,7 +616,10 @@ function KalpanaCircleInner() {
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
             <Image src="/icon.png" alt="MANGAL" width={30} height={30} style={{ display: 'block', borderRadius: '8px' }} />
           </Link>
-          <Image src="/kcircle-logo.png" alt="K Circle" width={150} height={64} style={{ display: 'block', height: '32px', width: 'auto', objectFit: 'contain' }} priority />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <Image src="/kcircle-logo.png" alt="K Circle" width={150} height={150} style={{ display: 'block', height: '32px', width: '32px', objectFit: 'contain', borderRadius: '50%' }} priority />
+            <span style={{ fontWeight: 900, fontSize: '16px', color: '#7c3aed', letterSpacing: '-0.02em' }}>Circle</span>
+          </div>
           <button onClick={() => setShowSearch(true)} style={{
             flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '280px',
             fontSize: '12.5px', color: 'var(--text-tertiary)', background: 'var(--bg-card)',
