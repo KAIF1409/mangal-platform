@@ -3148,3 +3148,29 @@ invited friend ever sees it. Short copy, explicit Yes/No buttons.
 file: 0 errors (same pre-existing `<img>` warning). Full-project
 `eslint .` unchanged at the same 13 pre-existing errors. Single-file
 change, committed and pushed directly to `main`.
+
+## §40 — KCircle Watch Together (Shorts room): "Your friends" default list in Add friend picker
+
+**What:** The Add friend picker (§38) was search-only — typing a
+username was the only way to find anyone, even someone the inviter
+already follows and is followed back by. Now the picker opens straight
+to a "Your friends" section listing mutual follows (both directions,
+via `creator_follows`), excluding existing room members, so the common
+case (inviting an actual mutual) needs no typing. The username search
+still works exactly as before, falling through for anyone not a
+mutual follow yet.
+
+- `loadSuggestedFriends` — two `creator_follows` queries (who the
+  inviter follows, who follows the inviter back), intersected
+  client-side for mutuals, then `creator_profiles` for usernames.
+  Fires once when the picker opens (`addFriendOpen` effect).
+- Extracted invite-row markup into a `FriendRow` component so the
+  suggested list and search results share the same look and the same
+  Invite/Invited button state, rather than duplicating the row JSX.
+- No schema changes — reuses `creator_follows` (public-read RLS
+  already in place from KaTube's follow feature).
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on the touched
+file: 0 errors (same pre-existing `<img>` warning). Full-project
+`eslint .` unchanged at the same 13 pre-existing errors. Single-file
+change, committed and pushed directly to `main`.
