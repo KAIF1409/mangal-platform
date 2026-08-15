@@ -17,7 +17,7 @@ import {
   BookOpen, BookText, ScrollText, AlertCircle, ArrowLeft, CheckCircle2,
   Star, Play, RotateCcw, Zap, Bell, AlertTriangle, Trash2, MessageCircle,
   Library, ArrowDown, ArrowUp, Inbox, Clapperboard, Circle, Trophy,
-  Edit3, PenLine, ThumbsUp, Heart, ChevronRight, Eye, Pause, ChevronUp,
+  Edit3, PenLine, ThumbsUp, Heart, ChevronRight, Eye, Pause, ChevronUp, Flame,
 } from 'lucide-react';
 
 interface Series {
@@ -1450,7 +1450,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       {/* ── FOOTER ── */}
       <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🔥</div>
+          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Flame size={14} fill="currentColor" /></div>
           <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>MANGAL</span>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>Made with <Heart size={12} fill="currentColor" /> in India · Free to read, forever.</p>
