@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
 import Link from 'next/link';
+import { Search, ArrowLeft, Flame, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText } from 'lucide-react';
 
 interface Series {
   id: string;
@@ -168,7 +169,7 @@ export default function CreatorProfilePage() {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' as const, backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ width: '100%', maxWidth: '420px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '40px 32px', textAlign: 'center' as const, boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
-            <div style={{ fontSize: '36px', marginBottom: '14px' }}>🔍</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}><Search size={36} strokeWidth={1.5} color="var(--text-tertiary)" /></div>
             <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 8px' }}>Creator Not Found</h2>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 28px' }}>
               No creator with the username &ldquo;@{username}&rdquo; exists.
@@ -178,7 +179,7 @@ export default function CreatorProfilePage() {
               background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
               color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: '13px',
             }}>
-              ← Back to Browse
+              <ArrowLeft size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle' }} /> Back to Browse
             </Link>
           </div>
         </div>
@@ -221,10 +222,10 @@ export default function CreatorProfilePage() {
             width: '36px', height: '36px', borderRadius: '10px',
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-          }}>🔥</div>
+          }}><Flame size={18} strokeWidth={2} color="#fff" /></div>
           <span style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
         </Link>
-        <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to Browse</Link>
+        <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> Back to Browse</Link>
       </nav>
 
       <div className="mangal-creator-grid" style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px 60px' }}>
@@ -270,14 +271,15 @@ export default function CreatorProfilePage() {
                 <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginLeft: '5px' }}>series</span>
               </div>
               <div>
-                <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>👁 {formatViews(totalViews)}</span>
+                <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Eye size={14} strokeWidth={2} /> {formatViews(totalViews)}</span>
                 <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginLeft: '5px' }}>total views</span>
               </div>
               <Link href={`/kalpana-circle/broadcast/${creator.username}`} style={{
                 fontSize: '11.5px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none',
                 padding: '6px 12px', borderRadius: '8px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)',
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
               }}>
-                📣 Updates
+                <Megaphone size={12} strokeWidth={2} /> Updates
               </Link>
               {isDeveloper && accountActive && (
                 banConfirm ? (
@@ -289,9 +291,10 @@ export default function CreatorProfilePage() {
                         padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
                         background: '#7f1d1d', border: '1px solid #991b1b', color: '#fff',
                         cursor: banning ? 'wait' : 'pointer', opacity: banning ? 0.7 : 1,
+                        display: 'inline-flex', alignItems: 'center', gap: '5px',
                       }}
                     >
-                      {banning ? 'Banning...' : '⚠️ Confirm Ban'}
+                      {banning ? 'Banning...' : (<><AlertTriangle size={13} strokeWidth={2} /> Confirm Ban</>)}
                     </button>
                     <button
                       onClick={() => setBanConfirm(false)}
@@ -312,9 +315,10 @@ export default function CreatorProfilePage() {
                       padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
                       background: 'rgba(153,27,27,0.1)', border: '1px solid rgba(153,27,27,0.3)',
                       color: '#ef4444', cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
                     }}
                   >
-                    🚫 Ban User
+                    <Ban size={13} strokeWidth={2} /> Ban User
                   </button>
                 )
               )}
@@ -329,7 +333,7 @@ export default function CreatorProfilePage() {
 
         {series.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><BookOpen size={32} strokeWidth={1.5} color="var(--text-faint)" /></div>
             <div style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>No published series yet.</div>
           </div>
         ) : (
@@ -362,7 +366,7 @@ function SeriesCard({ series }: { series: Series }) {
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ScrollText size={36} strokeWidth={1.5} color="var(--text-faint)" /></div>
           )}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -386,7 +390,7 @@ function SeriesCard({ series }: { series: Series }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Eye size={10} strokeWidth={2} /> {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
       </div>
