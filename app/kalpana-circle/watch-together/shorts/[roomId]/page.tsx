@@ -123,6 +123,13 @@ export default function FastTapWatchTogetherRoomPage() {
   const [muted, setMuted] = useState(true);
   const [pendingJoinNames, setPendingJoinNames] = useState<string[]>([]);
 
+  // ── Add friend (existing members only) ──
+  const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [friendQuery, setFriendQuery] = useState('');
+  const [friendResults, setFriendResults] = useState<{ user_id: string; username: string }[]>([]);
+  const [invitingId, setInvitingId] = useState<string | null>(null);
+  const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
+
   const isHost = !!(room && userId && room.host_id === userId);
   const isHostRef = useRef(false);
   const activeIndexRef = useRef(0);
@@ -540,6 +547,32 @@ export default function FastTapWatchTogetherRoomPage() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  // Searches by username, same pattern as starting a new K Circle chat
+  // (app/kalpana-circle/chat/page.tsx's searchUsers) — excludes yourself
+  // and anyone already a room member.
+  const searchFriends = async (q: string) => {
+    setFriendQuery(q);
+    if (!q.trim() || !userId) { setFriendResults([]); return; }
+    const { data } = await supabase.from('creator_profiles').select('user_id, username').ilike('username', `%${q.trim()}%`).limit(8);
+    const memberIds = new Set(members.map(m => m.user_id));
+    setFriendResults((data ?? []).filter(u => u.user_id !== userId && !memberIds.has(u.user_id)));
+  };
+
+  // Doesn't add them to watch_room_members directly — RLS only lets a
+  // user insert their own membership row (self_insert policy), same as
+  // the plain share-link flow. This just tells them, in-app, that a room
+  // is waiting; they join themselves the moment they open it, same as
+  // anyone else who has the link.
+  const inviteFriend = async (friendId: string) => {
+    if (!userId || !room) return;
+    setInvitingId(friendId);
+    const { error } = await supabase.from('kcircle_notifications').insert({
+      recipient_id: friendId, actor_id: userId, type: 'watch_invite', room_id: room.id, preview: room.title,
+    });
+    setInvitingId(null);
+    if (!error) setInvitedIds(prev => new Set(prev).add(friendId));
+  };
+
   const leaveRoom = async () => {
     if (userId && room) await supabase.from('watch_room_members').delete().eq('room_id', room.id).eq('user_id', userId);
     router.push('/kalpana-circle/watch-together');
@@ -734,6 +767,10 @@ export default function FastTapWatchTogetherRoomPage() {
           </div>
 
           <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 20, display: 'flex', gap: '8px' }}>
+            <button onClick={() => setAddFriendOpen(true)} style={{
+              fontSize: '11px', fontWeight: 700, padding: '7px 10px', borderRadius: '14px', border: 'none',
+              background: 'rgba(0,0,0,0.5)', color: '#fff', cursor: 'pointer',
+            }}>➕ Add friend</button>
             <button onClick={copyInvite} style={{
               fontSize: '11px', fontWeight: 700, padding: '7px 10px', borderRadius: '14px', border: 'none',
               background: 'rgba(0,0,0,0.5)', color: '#fff', cursor: 'pointer',
@@ -835,6 +872,64 @@ export default function FastTapWatchTogetherRoomPage() {
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: '340px' }}>{PanelInner}</div>
         </div>
       </div>
+
+      {/* Add friend picker — existing members only, per §37 */}
+      {addFriendOpen && (
+        <div onClick={() => { setAddFriendOpen(false); setFriendQuery(''); setFriendResults([]); }} style={{
+          position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: '100%', maxWidth: '360px', maxHeight: '70vh', background: '#0a0a0a',
+            borderRadius: '16px', border: '1px solid rgba(255,255,255,0.12)',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            <div style={{ padding: '14px', borderBottom: '1px solid rgba(255,255,255,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800 }}>➕ Add a friend</span>
+              <button onClick={() => { setAddFriendOpen(false); setFriendQuery(''); setFriendResults([]); }} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ padding: '12px 14px 0' }}>
+              <input
+                value={friendQuery}
+                onChange={e => searchFriends(e.target.value)}
+                placeholder="Search by username…"
+                autoFocus
+                style={{
+                  width: '100%', fontSize: '13px', padding: '9px 12px', borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)', color: '#fff',
+                }}
+              />
+              <p style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.45)', margin: '6px 0 0' }}>
+                They&apos;ll get a notification straight to this room — no history unless whoever&apos;s
+                already chatting chooses to bring them in.
+              </p>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {friendResults.map(u => {
+                const invited = invitedIds.has(u.user_id);
+                return (
+                  <div key={u.user_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0' }}>
+                    <span style={{ fontSize: '13px' }}>@{u.username}</span>
+                    <button
+                      disabled={invited || invitingId === u.user_id}
+                      onClick={() => inviteFriend(u.user_id)}
+                      style={{
+                        fontSize: '11px', fontWeight: 700, padding: '6px 12px', borderRadius: '8px', border: 'none',
+                        background: invited ? 'rgba(255,255,255,0.1)' : '#7c3aed',
+                        color: invited ? 'rgba(255,255,255,0.6)' : '#fff',
+                        cursor: invited ? 'default' : 'pointer',
+                      }}
+                    >{invited ? 'Invited ✓' : invitingId === u.user_id ? '…' : 'Invite'}</button>
+                  </div>
+                );
+              })}
+              {friendQuery.trim() && friendResults.length === 0 && (
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '10px 0' }}>No one found.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

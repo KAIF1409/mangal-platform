@@ -15,9 +15,10 @@ import { supabase } from '../lib/supabase';
 interface Notification {
   id: string;
   actor_id: string | null;
-  type: 'like' | 'comment' | 'message' | 'group_add' | 'broadcast';
+  type: 'like' | 'comment' | 'message' | 'group_add' | 'broadcast' | 'watch_invite';
   post_id: string | null;
   conversation_id: string | null;
+  room_id: string | null;
   preview: string | null;
   read: boolean;
   created_at: string;
@@ -42,6 +43,7 @@ function labelFor(n: Notification) {
     case 'message': return `${who} sent you a message`;
     case 'group_add': return `${who} added you to a group`;
     case 'broadcast': return `📣 ${who} posted an update: ${n.preview ?? ''}`.trim();
+    case 'watch_invite': return `${who} added you to Watch Together${n.preview ? `: ${n.preview}` : ''}`;
     default: return `${who} did something`;
   }
 }
@@ -60,7 +62,7 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
   const load = useCallback(async () => {
     if (!userId) return;
     const { data: rows } = await supabase.from('kcircle_notifications')
-      .select('id, actor_id, type, post_id, conversation_id, preview, read, created_at')
+      .select('id, actor_id, type, post_id, conversation_id, room_id, preview, read, created_at')
       .eq('recipient_id', userId).order('created_at', { ascending: false }).limit(20);
     const actorIds = Array.from(new Set((rows ?? []).map(r => r.actor_id).filter(Boolean))) as string[];
     const { data: profs } = actorIds.length
@@ -103,6 +105,7 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
   const goTo = (n: Notification) => {
     setOpen(false);
     if (n.type === 'message' || n.type === 'group_add') router.push('/kalpana-circle/chat');
+    else if (n.type === 'watch_invite' && n.room_id) router.push(`/kalpana-circle/watch-together/shorts/${n.room_id}`);
     else if (n.type === 'broadcast' && n.actorUsername) router.push(`/kalpana-circle/broadcast/${n.actorUsername}`);
     else if (n.post_id) router.push('/kalpana-circle');
   };

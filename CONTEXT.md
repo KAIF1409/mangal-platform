@@ -3071,3 +3071,49 @@ documented). Full-project `eslint .` still shows the same 13 pre-existing
 errors, all in files this session never touched. Migration applied live
 via `Supabase:apply_migration`. Committed in two batches (migration only;
 then the frontend file) and pushed directly to `main`.
+
+## §38 — KCircle Watch Together: "Add friend" button (extends §37)
+
+**What:** §37 only handled the *reactive* half — what happens once a new
+person shows up in an already-chatting room (via the raw share link).
+There was no actual in-app action for an existing member to pick a friend
+and pull them in; the only invite mechanism was the 🔗 copy-link button.
+This adds a real "➕ Add friend" button in the room header.
+
+- **Schema** (`supabase/migrations/20260815234500_kcircle_watch_room_invite_notification.sql`,
+  applied live via `Supabase:apply_migration`): `kcircle_notifications`
+  gets a new `'watch_invite'` type value and a nullable `room_id` column
+  (references `watch_rooms`, `conversation_id` doesn't fit since a room
+  isn't a `kcircle_conversations` row) — additive only, reuses the
+  existing notifications table/RLS rather than a parallel invite schema.
+  Deliberately did **not** touch `watch_room_members`' RLS (`self_insert`
+  only) — an existing member still can't insert a membership row for
+  someone else; the invited friend joins themselves the same way anyone
+  with the link already does, just now they're told to via a notification
+  instead of needing the URL shared outside the app.
+- **`shorts/[roomId]/page.tsx`** — "➕ Add friend" button next to
+  🔗/Leave in the room header opens a picker: username search against
+  `creator_profiles` (same `ilike` pattern as starting a new K Circle chat
+  in `app/kalpana-circle/chat/page.tsx`), excluding yourself and anyone
+  already a room member. Picking someone inserts a `watch_invite`
+  notification (`room_id` + room title as `preview`) rather than adding
+  them to the room directly — matches the "self-join via link" model,
+  just notified instead of DM'd a URL. Button shows "Invited ✓" per
+  friend after send so you can't double-invite by mistake.
+- **`app/components/NotificationBell.tsx`** — new `watch_invite` case:
+  label ("X added you to Watch Together: <room title>") and routes
+  straight to `/kalpana-circle/watch-together/shorts/<room_id>` on click,
+  landing them in the room where §37's join-choice banner takes over from
+  there for whoever's already chatting.
+
+**Not done (flagged as follow-up, not started this session):** no "who's
+already been invited but hasn't joined yet" list on the room itself —
+the inviter only sees their own session's "Invited ✓" state, not a
+persistent pending-invites view.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on both touched
+files: 0 errors (same pre-existing `<img>` warning). Full-project
+`eslint .` unchanged at the same 13 pre-existing errors. Migration
+applied live via `Supabase:apply_migration`. Committed in two batches
+(migration only; then both frontend files together) and pushed directly
+to `main`.
