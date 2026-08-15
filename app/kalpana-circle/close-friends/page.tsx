@@ -108,7 +108,7 @@ export default function CloseFriendsPage() {
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="🔍 Search by username to add…"
+          placeholder="Search by username to add…"
           style={{
             width: '100%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px',
             border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)',
@@ -145,7 +145,7 @@ export default function CloseFriendsPage() {
         </div>
         {friends.length === 0 ? (
           <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-faint)', fontSize: '12.5px' }}>
-            Add people here, then choose &ldquo;🟢 Close Friends&rdquo; when posting a story to share with only them.
+            Add people here, then choose &ldquo;Close Friends&rdquo; when posting a story to share with only them.
           </div>
         ) : (
           friends.map(f => (

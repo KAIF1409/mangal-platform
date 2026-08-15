@@ -572,7 +572,7 @@ export default function LandingPage() {
               <div key={copy} className="mangal-marquee-in">
                 {GENRE_PILLS.map(g => (
                   <a key={g} href={`/WebMangal?genre=${encodeURIComponent(g)}`} data-cursor-hover="true" style={{ textDecoration: 'none' }}>
-                    <span>{g} 🔥</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{g} <Flame size={12} strokeWidth={2} /></span>
                   </a>
                 ))}
               </div>
@@ -834,7 +834,7 @@ export default function LandingPage() {
                   <span style={{ fontWeight: 900, fontSize: '18px', color: '#0d0d14' }}>MANGAL</span>
                 </div>
                 <p style={{ fontSize: '12px', color: 'rgba(13,13,20,0.75)', maxWidth: '200px', lineHeight: 1.6, margin: '0 0 16px', fontWeight: 600 }}>
-                  India&apos;s home for original comics &amp; novels. Made with ❤️ in Bharat.
+                  India&apos;s home for original comics &amp; novels. Made with love in Bharat.
                 </p>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {SOCIAL_ICONS.map(({ name, path }) => (

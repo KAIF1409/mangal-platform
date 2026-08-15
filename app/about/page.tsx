@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { ScrollText, PenLine, Handshake, type LucideIcon } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -13,19 +14,19 @@ const STATS = [
   { label: 'Made in', value: '🇮🇳 Bharat' },
 ];
 
-const VALUES = [
+const VALUES: { icon: LucideIcon; title: string; desc: string }[] = [
   {
-    icon: '📜',
+    icon: ScrollText,
     title: 'Stories rooted in culture',
     desc: 'Mythology, folk tales, street life — genres that mainstream platforms rarely make room for get a real home here.',
   },
   {
-    icon: '✍️',
+    icon: PenLine,
     title: 'No gatekeepers',
     desc: 'Any creator can publish a comic or novel directly, with real tools and no approval queue standing between them and readers.',
   },
   {
-    icon: '🤝',
+    icon: Handshake,
     title: 'Readers first',
     desc: 'No paywalls, no ad clutter, no pay-to-skip chapters. Every story on MANGAL is free to read, permanently.',
   },
@@ -67,7 +68,7 @@ export default function AboutPage() {
               display: 'flex', gap: '16px', padding: '18px 20px', borderRadius: '12px',
               background: 'var(--bg-card)', border: '1px solid var(--border-color)',
             }}>
-              <div style={{ fontSize: '26px', flexShrink: 0 }}>{v.icon}</div>
+              <div style={{ flexShrink: 0, color: 'var(--accent)' }}><v.icon size={24} strokeWidth={1.75} /></div>
               <div>
                 <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>{v.title}</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-tertiary)', lineHeight: 1.6 }}>{v.desc}</div>

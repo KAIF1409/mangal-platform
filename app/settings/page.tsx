@@ -15,6 +15,7 @@ import { supabase } from '../lib/supabase';
 import { CONSENT_VERSION } from '../lib/dpdp';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
 import Link from 'next/link';
+import { Flame, User } from 'lucide-react';
 
 const PLATFORM_NAME = 'MANGAL';
 
@@ -195,8 +196,8 @@ export default function SettingsPage() {
           <div style={{
             width: '32px', height: '32px', borderRadius: '8px',
             background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
-          }}>🔥</div>
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+          }}><Flame size={16} strokeWidth={2} /></div>
           <span className="mangal-settings-brand-text" style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             {PLATFORM_NAME}
           </span>
@@ -244,7 +245,7 @@ export default function SettingsPage() {
 
         {/* Profile — optional gender, feeds real Audience Insights for creators */}
         <div className={sectionCardClass} style={sectionCard}>
-          <h2 style={sectionTitle}>👤 Profile</h2>
+          <h2 style={sectionTitle}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><User size={16} strokeWidth={2} /> Profile</span></h2>
           <p style={bodyText}>
             Optional. If you share this, it helps creators understand their audience —
             shown in aggregate only, never tied to your identity. Leave it unset if you&apos;d rather not say.
