@@ -97,16 +97,6 @@ export default function FastTapWatchTogetherRoomPage() {
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
   const [busyMsgId, setBusyMsgId] = useState<string | null>(null);
 
-  // "Add a friend mid-session" choice — set when someone new joins a room
-  // that already had a resolved chat thread with >=2 people (nobody left,
-  // someone was added). addedIds is who's new; isNewcomer is whether *this*
-  // client belongs to one of those new ids (a newcomer can wait or start a
-  // fresh thread, but can't grant themselves access into the old one).
-  const [pendingJoin, setPendingJoin] = useState<{
-    oldThreadId: string; newSorted: string[]; addedIds: string[]; isNewcomer: boolean;
-  } | null>(null);
-  const [resolvingChoice, setResolvingChoice] = useState(false);
-
   const [shorts, setShorts] = useState<ShortItem[]>([]);
   const [shortsLoading, setShortsLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -121,7 +111,6 @@ export default function FastTapWatchTogetherRoomPage() {
   const [copied, setCopied] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false); // mobile bottom sheet
   const [muted, setMuted] = useState(true);
-  const [pendingJoinNames, setPendingJoinNames] = useState<string[]>([]);
 
   // ── Add friend (existing members only) ──
   const [addFriendOpen, setAddFriendOpen] = useState(false);
@@ -129,6 +118,13 @@ export default function FastTapWatchTogetherRoomPage() {
   const [friendResults, setFriendResults] = useState<{ user_id: string; username: string }[]>([]);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
+  // Set only when there's an existing thread to ask about (chatThreadId
+  // resolved, >=2 already present) and the inviter just picked someone —
+  // this is the ONLY place the continue-vs-new choice is ever shown, and
+  // only to the person doing the inviting. Nobody else in the room, and
+  // not the invited friend either, ever sees this.
+  const [confirmInvite, setConfirmInvite] = useState<{ friendId: string; username: string } | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const isHost = !!(room && userId && room.host_id === userId);
   const isHostRef = useRef(false);
@@ -267,105 +263,28 @@ export default function FastTapWatchTogetherRoomPage() {
   // Resolve the current present set to a thread id whenever it changes
   // (debounced by only re-calling when the sorted key actually changes —
   // presence 'sync' can fire more than once for the same effective set).
-  //
-  // Two cases are treated differently:
-  //  - Exact-set reunion, or a mix where someone also left, or a totally
-  //    fresh gathering -> resolve automatically as before (§36).
-  //  - Pure addition to a group that was already chatting (nobody left,
-  //    someone new showed up) -> don't silently switch everyone to a new
-  //    thread; surface a choice instead (below).
+  // Always automatic (§36) — the continue-vs-new-thread choice, when it's
+  // relevant, is only ever asked once, up front, of whoever clicks
+  // "Add friend" (see confirmInvite below), never reactively to whoever
+  // happens to already be in the room.
   const lastResolvedKeyRef = useRef<string>('');
-  const lastResolvedSortedRef = useRef<string[]>([]);
-  const lastThreadIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!userId) return;
     const sorted = [...new Set(presentIds)].sort();
     if (sorted.length < 2) {
       lastResolvedKeyRef.current = '';
-      lastResolvedSortedRef.current = [];
-      lastThreadIdRef.current = null;
       /* eslint-disable-next-line react-hooks/set-state-in-effect */
-      setPendingJoin(null);
       setChatThreadId(null);
       return;
     }
     const key = sorted.join(',');
     if (key === lastResolvedKeyRef.current) return;
-
-    const prevSorted = lastResolvedSortedRef.current;
-    const isPureAdditionKnownLocally = prevSorted.length >= 2 && !!lastThreadIdRef.current &&
-      prevSorted.every(id => sorted.includes(id)) && sorted.length > prevSorted.length;
-
-    if (isPureAdditionKnownLocally) {
-      const addedIds = sorted.filter(id => !prevSorted.includes(id));
-      setPendingJoin({ oldThreadId: lastThreadIdRef.current!, newSorted: sorted, addedIds, isNewcomer: addedIds.includes(userId) });
-      return; // stay on the old thread until someone decides — see below
-    }
-
-    // This client has no local memory of a prior thread for this room yet
-    // (e.g. it's the newcomer's own tab, just mounted) — ask the server
-    // whether an existing thread already covers a subset of who's present,
-    // rather than assuming it's a fresh gathering and racing ahead to
-    // create one.
+    lastResolvedKeyRef.current = key;
     (async () => {
-      const { data: subsetRows } = await supabase.rpc('kcircle_find_watch_thread_for_superset', { p_participant_ids: sorted });
-      const subset = Array.isArray(subsetRows) && subsetRows.length > 0 ? subsetRows[0] as { conversation_id: string; participant_ids: string[] } : null;
-      if (subset) {
-        const addedIds = sorted.filter(id => !subset.participant_ids.includes(id));
-        setPendingJoin({ oldThreadId: subset.conversation_id, newSorted: sorted, addedIds, isNewcomer: addedIds.includes(userId) });
-        return;
-      }
-      lastResolvedKeyRef.current = key;
-      lastResolvedSortedRef.current = sorted;
       const { data, error } = await supabase.rpc('kcircle_get_or_create_watch_thread', { p_participant_ids: sorted });
-      if (!error && data) { lastThreadIdRef.current = data as string; setChatThreadId(data as string); }
+      if (!error && data) setChatThreadId(data as string);
     })();
   }, [presentIds, userId]);
-
-  const resolvePendingJoin = useCallback(async (choice: 'continue' | 'new') => {
-    if (!pendingJoin || resolvingChoice) return;
-    setResolvingChoice(true);
-    try {
-      if (choice === 'continue') {
-        const { data, error } = await supabase.rpc('kcircle_expand_watch_thread', {
-          p_conversation_id: pendingJoin.oldThreadId, p_full_participant_ids: pendingJoin.newSorted,
-        });
-        if (error) { setChatError("Couldn't add them to the thread — try again."); return; }
-        if (data) {
-          lastResolvedKeyRef.current = pendingJoin.newSorted.join(',');
-          lastResolvedSortedRef.current = pendingJoin.newSorted;
-          lastThreadIdRef.current = data as string;
-          setChatThreadId(data as string);
-        }
-      } else {
-        const { data, error } = await supabase.rpc('kcircle_get_or_create_watch_thread', { p_participant_ids: pendingJoin.newSorted });
-        if (error) { setChatError("Couldn't start a new thread — try again."); return; }
-        if (data) {
-          lastResolvedKeyRef.current = pendingJoin.newSorted.join(',');
-          lastResolvedSortedRef.current = pendingJoin.newSorted;
-          lastThreadIdRef.current = data as string;
-          setChatThreadId(data as string);
-        }
-      }
-    } finally {
-      setResolvingChoice(false);
-      setPendingJoin(null);
-    }
-  }, [pendingJoin, resolvingChoice]);
-
-  useEffect(() => {
-    if (!pendingJoin) {
-      /* eslint-disable-next-line react-hooks/set-state-in-effect */
-      setPendingJoinNames([]);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const names = await Promise.all(pendingJoin.addedIds.map(resolveUsername));
-      if (!cancelled) setPendingJoinNames(names);
-    })();
-    return () => { cancelled = true; };
-  }, [pendingJoin, resolveUsername]);
 
   // ── navigation sync — ephemeral Broadcast channel, host-authoritative ──
   // Mirrors the long-video room's playback sync channel (see that file's
@@ -563,7 +482,7 @@ export default function FastTapWatchTogetherRoomPage() {
   // the plain share-link flow. This just tells them, in-app, that a room
   // is waiting; they join themselves the moment they open it, same as
   // anyone else who has the link.
-  const inviteFriend = async (friendId: string) => {
+  const sendInviteNotification = async (friendId: string) => {
     if (!userId || !room) return;
     setInvitingId(friendId);
     const { error } = await supabase.from('kcircle_notifications').insert({
@@ -571,6 +490,36 @@ export default function FastTapWatchTogetherRoomPage() {
     });
     setInvitingId(null);
     if (!error) setInvitedIds(prev => new Set(prev).add(friendId));
+  };
+
+  // Clicking "Invite" on a friend: if there's no active chat thread yet
+  // (nothing to continue), just send the invite. If there IS one, ask —
+  // once, right here, only the person clicking this button — whether the
+  // new friend should be brought into it or get a fresh thread instead.
+  const startInvite = (friendId: string, username: string) => {
+    if (chatThreadId) { setConfirmInvite({ friendId, username }); return; }
+    sendInviteNotification(friendId);
+  };
+
+  const confirmInviteContinue = async () => {
+    if (!confirmInvite || !chatThreadId || !userId || confirming) return;
+    setConfirming(true);
+    const sorted = [...new Set([...presentIds, confirmInvite.friendId])].sort();
+    const { error } = await supabase.rpc('kcircle_expand_watch_thread', {
+      p_conversation_id: chatThreadId, p_full_participant_ids: sorted,
+    });
+    setConfirming(false);
+    if (error) { setChatError("Couldn't add them to the thread — try again."); setConfirmInvite(null); return; }
+    await sendInviteNotification(confirmInvite.friendId);
+    setConfirmInvite(null);
+  };
+
+  const confirmInviteNew = async () => {
+    if (!confirmInvite || confirming) return;
+    setConfirming(true);
+    await sendInviteNotification(confirmInvite.friendId);
+    setConfirming(false);
+    setConfirmInvite(null);
   };
 
   const leaveRoom = async () => {
@@ -622,46 +571,6 @@ export default function FastTapWatchTogetherRoomPage() {
 
       {tab === 'chat' ? (
         <>
-          {pendingJoin && (
-            <div style={{
-              margin: '10px 14px', padding: '12px', borderRadius: '10px',
-              background: 'rgba(124,58,237,0.14)', border: '1px solid rgba(124,58,237,0.35)',
-            }}>
-              {pendingJoin.isNewcomer ? (
-                <>
-                  <p style={{ fontSize: '12px', color: '#e9d5ff', lineHeight: 1.5, margin: 0 }}>
-                    👋 There&apos;s already a chat going between the others here. You can wait for one of
-                    them to bring you into it, or start a brand-new thread with everyone currently
-                    present (no old messages, just from now on).
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                    <button disabled={resolvingChoice} onClick={() => resolvePendingJoin('new')} style={{
-                      fontSize: '11.5px', fontWeight: 800, padding: '8px 12px', borderRadius: '8px', border: 'none',
-                      background: '#7c3aed', color: '#fff', cursor: 'pointer',
-                    }}>Start new thread</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p style={{ fontSize: '12px', color: '#e9d5ff', lineHeight: 1.5, margin: 0 }}>
-                    👋 {pendingJoinNames.length > 0 ? pendingJoinNames.join(', ') : 'Someone new'} just joined.
-                    Bring {pendingJoinNames.length === 1 ? 'them' : 'them'} into this chat (they&apos;ll see everything
-                    you&apos;ve all said so far), or keep this thread as-is and start a fresh one instead?
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                    <button disabled={resolvingChoice} onClick={() => resolvePendingJoin('continue')} style={{
-                      fontSize: '11.5px', fontWeight: 800, padding: '8px 12px', borderRadius: '8px', border: 'none',
-                      background: '#7c3aed', color: '#fff', cursor: 'pointer',
-                    }}>Continue in this thread</button>
-                    <button disabled={resolvingChoice} onClick={() => resolvePendingJoin('new')} style={{
-                      fontSize: '11.5px', fontWeight: 800, padding: '8px 12px', borderRadius: '8px',
-                      border: '1px solid rgba(255,255,255,0.25)', background: 'transparent', color: '#fff', cursor: 'pointer',
-                    }}>Start new thread</button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
           {!chatThreadId ? (
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', padding: '16px', lineHeight: 1.5 }}>
               👋 Waiting for at least one more person to join this room — Chat saves automatically as a Watch Together
@@ -873,7 +782,7 @@ export default function FastTapWatchTogetherRoomPage() {
         </div>
       </div>
 
-      {/* Add friend picker — existing members only, per §37 */}
+      {/* Add friend picker — existing members only, per §37/§38 */}
       {addFriendOpen && (
         <div onClick={() => { setAddFriendOpen(false); setFriendQuery(''); setFriendResults([]); }} style={{
           position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.6)',
@@ -900,8 +809,7 @@ export default function FastTapWatchTogetherRoomPage() {
                 }}
               />
               <p style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.45)', margin: '6px 0 0' }}>
-                They&apos;ll get a notification straight to this room — no history unless whoever&apos;s
-                already chatting chooses to bring them in.
+                They&apos;ll get a notification straight to this room.
               </p>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -912,7 +820,7 @@ export default function FastTapWatchTogetherRoomPage() {
                     <span style={{ fontSize: '13px' }}>@{u.username}</span>
                     <button
                       disabled={invited || invitingId === u.user_id}
-                      onClick={() => inviteFriend(u.user_id)}
+                      onClick={() => startInvite(u.user_id, u.username)}
                       style={{
                         fontSize: '11px', fontWeight: 700, padding: '6px 12px', borderRadius: '8px', border: 'none',
                         background: invited ? 'rgba(255,255,255,0.1)' : '#7c3aed',
@@ -927,6 +835,46 @@ export default function FastTapWatchTogetherRoomPage() {
                 <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '10px 0' }}>No one found.</p>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Continue-vs-new choice — shown ONLY to whoever clicked Invite,
+          right before the invite goes out, only when there's an existing
+          thread to ask about. Nobody else in the room, and not the
+          invited friend, ever sees this. */}
+      {confirmInvite && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.65)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+        }}>
+          <div style={{
+            width: '100%', maxWidth: '340px', background: '#0a0a0a', borderRadius: '16px',
+            border: '1px solid rgba(124,58,237,0.4)', padding: '18px',
+          }}>
+            <p style={{ fontSize: '13.5px', fontWeight: 800, margin: 0 }}>Add @{confirmInvite.username}?</p>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, margin: '8px 0 0' }}>
+              <strong style={{ color: '#e9d5ff' }}>Continue in this thread</strong> — they&apos;ll see everything
+              you&apos;ve all chatted so far.
+            </p>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, margin: '6px 0 0' }}>
+              <strong style={{ color: '#e9d5ff' }}>Start new thread</strong> — fresh chat, your current
+              messages stay private to the rest of you.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button disabled={confirming} onClick={confirmInviteContinue} style={{
+                flex: 1, fontSize: '12px', fontWeight: 800, padding: '10px 0', borderRadius: '9px', border: 'none',
+                background: '#7c3aed', color: '#fff', cursor: 'pointer',
+              }}>Yes, continue</button>
+              <button disabled={confirming} onClick={confirmInviteNew} style={{
+                flex: 1, fontSize: '12px', fontWeight: 800, padding: '10px 0', borderRadius: '9px',
+                border: '1px solid rgba(255,255,255,0.25)', background: 'transparent', color: '#fff', cursor: 'pointer',
+              }}>No, start new</button>
+            </div>
+            <button disabled={confirming} onClick={() => setConfirmInvite(null)} style={{
+              width: '100%', marginTop: '10px', fontSize: '11px', color: 'rgba(255,255,255,0.45)',
+              background: 'none', border: 'none', cursor: 'pointer',
+            }}>Cancel</button>
           </div>
         </div>
       )}
