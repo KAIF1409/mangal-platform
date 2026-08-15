@@ -26,6 +26,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { CheckCircle2 } from 'lucide-react';
 
 // This page runs entirely client-side against the anon key. It only needs to
 // read a profile by parent_consent_token (a random uuid, unguessable, acts
@@ -135,8 +136,8 @@ export default function ParentConsentPage() {
     return (
       <div style={wrapperStyle}>
         <div style={cardStyle}>
-          <h1 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '12px', color: '#10b981' }}>
-            ✓ Account confirmed
+          <h1 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={20} strokeWidth={2} /> Account confirmed
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.7 }}>
             Thank you. The account is now active. As required under India&apos;s
