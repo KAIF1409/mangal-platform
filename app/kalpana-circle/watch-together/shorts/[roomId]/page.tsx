@@ -174,7 +174,7 @@ export default function FastTapWatchTogetherRoomPage() {
     let cancelled = false;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push(`/login?next=/kalpana-circle/watch-together/shorts/${roomId}`); return; }
+      if (!user) { router.push(`/login?next=/kalpana-circle`); return; }
       if (cancelled) return;
       setUserId(user.id);
 

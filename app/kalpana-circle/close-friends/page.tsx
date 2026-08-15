@@ -40,7 +40,7 @@ export default function CloseFriendsPage() {
     const load = async () => {
       const { data } = await supabase.auth.getUser();
       const uid = data.user?.id ?? null;
-      if (!uid) { router.push('/login?next=/kalpana-circle/close-friends'); return; }
+      if (!uid) { router.push('/login?next=/kalpana-circle'); return; }
       setUserId(uid);
       await loadFriends(uid);
       setLoading(false);

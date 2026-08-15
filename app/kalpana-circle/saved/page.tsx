@@ -48,7 +48,7 @@ export default function SavedPostsPage() {
       const uid = data.session?.user?.id ?? null;
       setUserId(uid);
       setCheckedAuth(true);
-      if (!uid) router.replace('/login?next=/kalpana-circle/saved');
+      if (!uid) router.replace('/login?next=/kalpana-circle');
     });
   }, [router]);
 

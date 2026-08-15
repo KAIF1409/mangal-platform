@@ -79,7 +79,7 @@ export default function GroupChannelsPage() {
       const uid = data.session?.user?.id ?? null;
       setUserId(uid);
       setCheckedAuth(true);
-      if (!uid) router.replace(`/login?next=/kalpana-circle/group/${conversationId}`);
+      if (!uid) router.replace(`/login?next=/kalpana-circle`);
     });
   }, [router, conversationId]);
 

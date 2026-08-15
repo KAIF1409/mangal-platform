@@ -165,7 +165,7 @@ export default function WatchTogetherPage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login?next=/kalpana-circle/watch-together'); return; }
+      if (!user) { router.push('/login?next=/kalpana-circle'); return; }
       setUserId(user.id);
       loadRooms(user.id);
       loadWatchThreads(user.id);

@@ -169,7 +169,7 @@ export default function BroadcastChannelPage() {
   };
 
   const toggleLike = async (msg: BroadcastMsg) => {
-    if (!userId) { setPostLoginRedirect(`/kalpana-circle/broadcast/${username}`); router.push(`/login?next=${encodeURIComponent(`/kalpana-circle/broadcast/${username}`)}`); return; }
+    if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push(`/login?next=${encodeURIComponent('/kalpana-circle')}`); return; }
     setMessages(prev => prev.map(m => m.id === msg.id
       ? { ...m, likedByMe: !m.likedByMe, likeCount: m.likeCount + (m.likedByMe ? -1 : 1) }
       : m));

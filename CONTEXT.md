@@ -3223,3 +3223,72 @@ research before listing any tool:
 
 Nothing built yet — this is scoped for whenever it's picked up next.
 
+## §42 — Per-product URL namespacing + Kalpana Circle's "always return to root" login rule
+
+**Founder's directive (research-first):** `app/page.tsx` (`/`) is the
+*only* official company landing page — everything else must live under a
+product namespace: `/WebMangal/*`, `/katube/*`, `/kalpana-circle/*`. No
+product page should sit outside its own namespace (e.g. `/dashboard/katube`
+was wrong — KaTube's own dashboard tab belongs at `/katube/dashboard`).
+Products should not cross-link into each other's URLs except via the
+existing top-right product switcher UI.
+
+**Research done before touching code:** the "stash the originating URL,
+redirect back to it after auth" pattern this app already uses
+(`setPostLoginRedirect` cookie + `safeNextPath` validation in
+`/auth/callback`) is the standard OAuth/OIDC approach — equivalent to
+using the `state` parameter to carry a return URL (Auth0, Okta, Google's
+own docs all describe the same shape: stash intended destination
+client-side before the redirect, restore it after token exchange). So the
+existing infrastructure is the right foundation; this section is about
+*where* each product's default landing zone is, not about changing that
+mechanism.
+
+**What shipped:**
+- **`app/home` → `app/WebMangal/home`.** It's WebMangal's own signed-in
+  home feed, not an ecosystem-level page, so it belongs under
+  `/WebMangal`. Every reference updated (`/auth/callback`'s default,
+  `/login`'s `nextPath` defaults, Kalpana Circle's profile-icon fallback,
+  `/tags`'s back-link). Permanent redirect `/home → /WebMangal/home`
+  added in `next.config.ts` for old bookmarks/shares.
+- **`app/dashboard/katube` → `app/katube/dashboard`.** Same page, same
+  `StudioSidebar` shell (new `app/katube/dashboard/layout.tsx` replicates
+  `app/dashboard/layout.tsx`'s wrapper) — this does **not** reopen §10's
+  "one MANGAL profile / one login, not a standalone KaTube profile
+  system" decision, it only moves the URL out of the shared `/dashboard`
+  prefix into KaTube's own namespace. `StudioSidebar`'s nav entry,
+  `/katube`'s "K" avatar link, and `/katube/upload`'s profile links all
+  updated. Permanent redirect `/dashboard/katube → /katube/dashboard`
+  added for old links.
+- **Kalpana Circle now has a deliberately different post-login rule than
+  WebMangal/KaTube.** WebMangal and KaTube pages return the user to the
+  *exact* page they were on (existing `next=` mechanism, unchanged). Every
+  Kalpana Circle page — the main feed, chat, close-friends, saved,
+  broadcasts, a specific broadcast, a group DM, a Watch Together room —
+  now always sends `next=/kalpana-circle` on its login redirect, so
+  logging in from anywhere inside Kalpana Circle always lands back on the
+  Kalpana Circle root, never on the specific sub-page (this was a
+  founder-specified exception, not a technical constraint: Kalpana Circle
+  is meant to work as "land here, then explore," distinct from
+  WebMangal/KaTube's deep-link-back behavior). Fixed in
+  `app/kalpana-circle/{page,close-friends,chat,watch-together,broadcasts,
+  saved}/page.tsx`, `app/kalpana-circle/broadcast/[username]/page.tsx`,
+  `app/kalpana-circle/group/[conversationId]/page.tsx`, and
+  `app/kalpana-circle/watch-together/shorts/[roomId]/page.tsx`.
+
+**Not done / flagged for the founder:** `/dashboard`'s other tabs
+(Workspace, Earnings, Boost, Perks, Academy, Nova, Tools) are still
+un-namespaced — they're WebMangal/ecosystem-wide creator tools, not
+KaTube-specific, so they weren't touched. If the intent is *every* product
+page under its own namespace with nothing left at bare `/dashboard`,
+that's a much larger follow-up (each tab would need to move under
+`/WebMangal/dashboard/...` or similar) — flagging rather than guessing at
+scope.
+
+**Verified:** `tsc --noEmit` clean project-wide. `npx eslint .` — 13
+errors, 35 warnings, same count as the documented pre-existing baseline
+(no new issues introduced). `next build` could not be verified in this
+sandbox (network sandbox blocks `fonts.googleapis.com`, used by
+`next/font/google` in `app/layout.tsx`); Vercel's own build environment
+has normal internet access, so this shouldn't apply there — worth
+watching the next Vercel deploy log if anything looks off.

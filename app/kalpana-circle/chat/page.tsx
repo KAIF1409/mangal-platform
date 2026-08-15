@@ -130,7 +130,7 @@ export default function KCircleChatPage() {
   }, []);
 
   useEffect(() => {
-    if (checkedAuth && !userId) router.replace('/login?next=/kalpana-circle/chat');
+    if (checkedAuth && !userId) router.replace('/login?next=/kalpana-circle');
   }, [checkedAuth, userId, router]);
 
   const loadConversations = useCallback(async () => {

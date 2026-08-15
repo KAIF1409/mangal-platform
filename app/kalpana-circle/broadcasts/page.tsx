@@ -57,7 +57,7 @@ export default function BroadcastDiscoveryPage() {
       // 20260813120000_kcircle_broadcast_channels.sql), so a signed-out
       // visitor would just see an always-empty list — send them to log in
       // instead, same as ../saved and ../chat.
-      if (!uid) router.replace('/login?next=/kalpana-circle/broadcasts');
+      if (!uid) router.replace('/login?next=/kalpana-circle');
     });
   }, [router]);
 
