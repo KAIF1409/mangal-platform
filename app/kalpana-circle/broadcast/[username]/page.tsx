@@ -7,6 +7,7 @@ import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/authRedirect';
 import ThemeToggle from '../../../components/ThemeToggle';
 import { useKCircleTheme } from '../../theme';
+import { Search, ArrowLeft, Megaphone, Heart, MessageCircle } from 'lucide-react';
 
 // ── K Circle — creator broadcast channel ──
 // Discord-style announcement channel: the creator posts, fans can only
@@ -201,9 +202,9 @@ export default function BroadcastChannelPage() {
     return (
       <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '24px', textAlign: 'center' }}>
         <div>
-          <div style={{ fontSize: '32px', marginBottom: '10px' }}>🔍</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}><Search size={32} strokeWidth={1.5} color="var(--text-tertiary)" /></div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>No creator named &ldquo;@{username}&rdquo; found.</p>
-          <Link href="/kalpana-circle" style={{ color: '#a78bfa', fontSize: '12px', fontWeight: 700 }}>← Back to Kalpana Circle</Link>
+          <Link href="/kalpana-circle" style={{ color: '#a78bfa', fontSize: '12px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> Back to Kalpana Circle</Link>
         </div>
       </div>
     );
@@ -216,13 +217,13 @@ export default function BroadcastChannelPage() {
         borderBottom: '1px solid var(--border-color)', padding: '0 16px', height: '58px',
         display: 'flex', alignItems: 'center', gap: '12px',
       }}>
-        <Link href="/kalpana-circle" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>←</Link>
+        <Link href="/kalpana-circle" style={{ textDecoration: 'none', color: 'var(--text-tertiary)', display: 'flex' }}><ArrowLeft size={18} strokeWidth={2} /></Link>
         <div style={{
           width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, background: RADIANT,
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: '#27272a',
         }}>{initials(creator.username)}</div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📣 Updates from @{creator.username}</div>
+          <div style={{ fontWeight: 800, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}><Megaphone size={13} strokeWidth={2} /> Updates from @{creator.username}</div>
           <div style={{ fontSize: '10.5px', color: 'var(--text-tertiary)' }}>Broadcast channel · read + react</div>
         </div>
         <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
@@ -251,14 +252,15 @@ export default function BroadcastChannelPage() {
               <button onClick={postBroadcast} disabled={posting || !draft.trim()} style={{
                 fontSize: '12.5px', fontWeight: 800, padding: '8px 20px', borderRadius: '8px', border: 'none',
                 background: RADIANT, color: '#27272a', cursor: posting ? 'wait' : 'pointer', opacity: draft.trim() ? 1 : 0.6,
-              }}>{posting ? 'Posting…' : '📣 Broadcast'}</button>
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+              }}>{posting ? 'Posting…' : (<><Megaphone size={13} strokeWidth={2} /> Broadcast</>)}</button>
             </div>
           </div>
         )}
 
         {!conversationId ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '10px' }}>📣</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}><Megaphone size={32} strokeWidth={1.5} color="var(--text-faint)" /></div>
             <div style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>@{creator.username} hasn&apos;t started broadcasting yet.</div>
           </div>
         ) : messages.length === 0 ? (
@@ -279,10 +281,10 @@ export default function BroadcastChannelPage() {
                     background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px',
                     color: msg.likedByMe ? '#a78bfa' : 'var(--text-tertiary)', fontWeight: msg.likedByMe ? 800 : 500,
                     display: 'flex', alignItems: 'center', gap: '4px',
-                  }}>{msg.likedByMe ? '💜' : '🤍'} {msg.likeCount > 0 ? msg.likeCount : ''}</button>
+                  }}><Heart size={13} strokeWidth={2} fill={msg.likedByMe ? '#a78bfa' : 'none'} /> {msg.likeCount > 0 ? msg.likeCount : ''}</button>
                   <button onClick={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, showComments: !m.showComments } : m))}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--text-tertiary)' }}>
-                    💬 {msg.comments.length > 0 ? msg.comments.length : 'Comment'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--text-tertiary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <MessageCircle size={13} strokeWidth={2} /> {msg.comments.length > 0 ? msg.comments.length : 'Comment'}
                   </button>
                 </div>
 
