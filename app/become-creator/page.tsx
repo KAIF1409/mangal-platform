@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import { setPostLoginRedirect } from '../lib/authRedirect';
+import { Check, Rocket, PartyPopper } from 'lucide-react';
 
 type Step = 'loading' | 'confirm-account' | 'details' | 'submitting' | 'done';
 
@@ -247,8 +248,9 @@ export default function BecomeCreatorPage() {
                 width: '100%', padding: '13px', borderRadius: '10px',
                 background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', border: 'none',
                 color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               }}>
-                ✓ Use This Account — Continue
+                <Check size={14} strokeWidth={2.5} /> Use This Account — Continue
               </button>
               <button onClick={handleConfirmAccount} style={{
                 width: '100%', padding: '12px', borderRadius: '10px',
@@ -330,9 +332,10 @@ export default function BecomeCreatorPage() {
                   background: step === 'submitting' ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
                   border: 'none', color: step === 'submitting' ? 'var(--text-tertiary)' : '#fff',
                   fontSize: '13px', fontWeight: 700, cursor: step === 'submitting' ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}
               >
-                {step === 'submitting' ? 'Setting up your studio...' : '🚀 Become a Creator'}
+                {step === 'submitting' ? 'Setting up your studio...' : (<><Rocket size={14} strokeWidth={2} /> Become a Creator</>)}
               </button>
             </div>
           </>
@@ -341,7 +344,7 @@ export default function BecomeCreatorPage() {
         {/* ── STEP: Done ── */}
         {step === 'done' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎉</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><PartyPopper size={40} strokeWidth={1.5} color="#d97706" /></div>
             <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 8px' }}>You&apos;re a Creator Now</h2>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Taking you to your new Dashboard...</p>
           </div>
