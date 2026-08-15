@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import ThemeToggle from '../../../components/ThemeToggle';
 import { useKCircleTheme } from '../../theme';
-import { Lock, Menu, X, Settings, Camera } from 'lucide-react';
+import { Lock, Menu, X, Settings, Camera, ArrowLeft } from 'lucide-react';
 import {
   PERM, PERMISSION_LABELS, resolveBasePermissions, resolveChannelPermissions, can, highestRolePosition, canManageRoleAt,
   type RoleRow, type OverwriteRow,
@@ -321,7 +321,7 @@ export default function GroupChannelsPage() {
         <div>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}><Lock size={32} strokeWidth={1.5} /></div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>You&apos;re not a member of this group.</p>
-          <Link href="/kalpana-circle/chat" style={{ color: ACCENT, fontSize: '12px', fontWeight: 700 }}>← Back to Chat</Link>
+          <Link href="/kalpana-circle/chat" style={{ color: ACCENT, fontSize: '12px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> Back to Chat</Link>
         </div>
       </div>
     );
@@ -342,7 +342,7 @@ export default function GroupChannelsPage() {
         borderBottom: '1px solid var(--border-color)', padding: '0 14px', height: '56px',
         display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0,
       }}>
-        <Link href="/kalpana-circle/chat" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-primary)' }}>←</Link>
+        <Link href="/kalpana-circle/chat" style={{ textDecoration: 'none', color: 'var(--text-primary)', display: 'flex' }}><ArrowLeft size={18} strokeWidth={2} /></Link>
         <button
           className="kc-group-hamburger"
           onClick={() => setMobileSidebarOpen(v => !v)}
