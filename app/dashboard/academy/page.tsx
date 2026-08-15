@@ -1,29 +1,59 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
 import { GraduationCap } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
+
+// Academy retrofit per CONTEXT.md §43 — flagged as "naturally cross-product,
+// barely needs the switcher" since writing/growth tips aren't WebMangal-only
+// in spirit. In practice the article set was 100% WebMangal-specific before
+// this change, so this pass adds real KaTube- and Kalpana Circle-specific
+// articles alongside the existing WebMangal ones and a light product filter
+// — "All" (default) shows everything, product-scoped shows just that
+// product's articles plus anything tagged universal.
+
 interface Article {
   title: string;
   blurb: string;
   tag: string;
+  product: 'webmangal' | 'katube' | 'kcircle' | 'universal';
 }
 
 const ARTICLES: Article[] = [
-  { tag: 'Getting Started', title: 'How to publish your first chapter', blurb: 'A quick walkthrough of formatting, cover art, and going live.' },
-  { tag: 'Growth', title: 'Why consistent upload schedules matter', blurb: 'Readers follow series that show up reliably — here is how to plan one.' },
-  { tag: 'Writing', title: 'Hooking readers in the first 500 words', blurb: 'Opening lines that make people tap "next chapter" instead of leaving.' },
-  { tag: 'Community', title: 'Turning comments into loyal readers', blurb: 'Simple ways to reply to your audience without burning out.' },
+  // Universal — applies across every product
+  { tag: 'Community', title: 'Turning comments into loyal fans', blurb: 'Simple ways to reply to your audience without burning out — same principles whether it\u2019s a chapter, a video, or a post.', product: 'universal' },
+  { tag: 'Growth', title: 'Why consistent posting schedules matter', blurb: 'Readers, viewers, and dreamers all follow creators who show up reliably — here\u2019s how to plan one.', product: 'universal' },
+
+  // WebMangal
+  { tag: 'Getting Started', title: 'How to publish your first chapter', blurb: 'A quick walkthrough of formatting, cover art, and going live.', product: 'webmangal' },
+  { tag: 'Writing', title: 'Hooking readers in the first 500 words', blurb: 'Opening lines that make people tap "next chapter" instead of leaving.', product: 'webmangal' },
+
+  // KaTube
+  { tag: 'Getting Started', title: 'How to verify your channel and upload', blurb: 'A quick walkthrough of channel verification and your first video upload.', product: 'katube' },
+  { tag: 'Video', title: 'Making a Short that hooks in the first 3 seconds', blurb: 'What keeps a viewer from swiping away — pacing, framing, and the first cut.', product: 'katube' },
+
+  // Kalpana Circle
+  { tag: 'Getting Started', title: 'Posting your first theory or fan art', blurb: 'How to write a post and pick tags that actually get discovered.', product: 'kcircle' },
+  { tag: 'Community', title: 'Starting a discussion people actually reply to', blurb: 'The difference between a post that scrolls by and one that gets a thread going.', product: 'kcircle' },
 ];
+
+const SCOPE_TITLE: Record<ProductScope, string> = {
+  all: 'Guides and tips to help you grow as a creator on MANGAL.',
+  webmangal: 'Guides and tips to help you grow as a storyteller on WebMangal.',
+  katube: 'Guides and tips to help you grow as a video creator on KaTube.',
+  kcircle: 'Guides and tips to help you grow your presence on Kalpana Circle.',
+};
 
 export default function AcademyPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scope, setScope] = useState<ProductScope>('all');
 
   useEffect(() => {
     const init = async () => {
@@ -39,6 +69,11 @@ export default function AcademyPage() {
     init();
   }, []);
 
+  const visibleArticles = useMemo(() => {
+    if (scope === 'all') return ARTICLES;
+    return ARTICLES.filter((a) => a.product === scope || a.product === 'universal');
+  }, [scope]);
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <Navbar />
@@ -48,15 +83,17 @@ export default function AcademyPage() {
           <GraduationCap size={12} strokeWidth={2.5} /> ACADEMY
         </div>
         <h1 style={{ fontSize: '30px', fontWeight: 900, margin: '0 0 8px' }}>Creator Academy</h1>
-        <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 32px' }}>
-          Guides and tips to help you grow as a storyteller on Mangal.
+        <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 24px' }}>
+          {SCOPE_TITLE[scope]}
         </p>
+
+        <ProductScopeSwitcher value={scope} onChange={setScope} />
 
         {loading ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-tertiary)' }}>Loading…</div>
         ) : (
           <div style={{ display: 'grid', gap: '10px' }}>
-            {ARTICLES.map((a) => (
+            {visibleArticles.map((a) => (
               <div key={a.title} style={{
                 background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                 borderRadius: '12px', padding: '18px 20px', cursor: 'default',
