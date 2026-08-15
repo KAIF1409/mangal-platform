@@ -171,12 +171,6 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) router.replace('/WebMangal/home');
-    });
-  }, [router]);
-
-  useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -435,7 +429,7 @@ export default function LandingPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <ThemeToggle size={32} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
-            <a href="/login" className="mangal-landing-login-link" data-cursor-hover="true" style={{
+            <a href="/login?next=%2F" className="mangal-landing-login-link" data-cursor-hover="true" style={{
               padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
               color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s',
             }}
@@ -479,7 +473,7 @@ export default function LandingPage() {
             { label: 'WebMangal', href: '/WebMangal', icon: '/webmangal-logo.png' },
             { label: 'Tube', href: '/katube', icon: '/katube-logo.png' },
             { label: 'Circle', href: '/kalpana-circle', icon: '/kcircle-logo.png' },
-            { label: 'Log in', href: '/login' },
+            { label: 'Log in', href: '/login?next=%2F' },
           ].map(link => (
             <a key={link.label} href={link.href} onClick={() => setMobileMenuOpen(false)} style={{
               display: 'flex', alignItems: 'center', gap: '8px',
@@ -859,7 +853,7 @@ export default function LandingPage() {
                   { label: 'Genres', href: '/WebMangal' }, { label: 'New Releases', href: '/WebMangal' },
                 ]} />
                 <FooterCol title="Account" links={[
-                  { label: 'Log In', href: '/login' }, { label: 'Sign Up', href: '/login' }, { label: 'Become a Creator', href: '/login?creator=1' },
+                  { label: 'Log In', href: '/login?next=%2F' }, { label: 'Sign Up', href: '/login?next=%2F' }, { label: 'Become a Creator', href: '/login?creator=1' },
                 ]} />
                 <FooterCol title="Company" links={[{ label: 'About', href: '/about' }, { label: 'Help Center', href: '/help' }]} />
                 <FooterCol title="Legal" links={[
