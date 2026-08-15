@@ -44,7 +44,7 @@ export async function sendParentConsentEmail(
         <tr><td>
           <!-- Logo -->
           <div style="text-align:center;margin-bottom:28px;">
-            <span style="font-size:32px;">🔥</span>
+            <span style="font-size:32px;">&#9889;</span>
             <h1 style="font-size:28px;font-weight:900;color:#fff;margin:8px 0 4px;letter-spacing:-0.03em;">MANGAL</h1>
             <p style="font-size:11px;color:#6b7280;margin:0;letter-spacing:0.12em;text-transform:uppercase;">India's Manga Platform</p>
           </div>
@@ -75,7 +75,7 @@ export async function sendParentConsentEmail(
           <div style="text-align:center;margin-bottom:24px;">
             <a href="${confirmUrl}"
                style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#7f1d1d,#b45309);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:0.04em;">
-              ✅ Confirm my child's account
+              Confirm my child's account
             </a>
           </div>
 
@@ -172,7 +172,7 @@ export async function sendNewChapterEmail(
         <tr><td>
           <!-- Logo -->
           <div style="text-align:center;margin-bottom:28px;">
-            <span style="font-size:32px;">🔥</span>
+            <span style="font-size:32px;">&#9889;</span>
             <h1 style="font-size:28px;font-weight:900;color:#fff;margin:8px 0 4px;letter-spacing:-0.03em;">MANGAL</h1>
             <p style="font-size:11px;color:#6b7280;margin:0;letter-spacing:0.12em;text-transform:uppercase;">India's Manga Platform</p>
           </div>
@@ -181,7 +181,7 @@ export async function sendNewChapterEmail(
           <div style="height:1px;background:linear-gradient(to right,transparent,#dc2626,transparent);margin-bottom:28px;"></div>
 
           <!-- Headline -->
-          <p style="font-size:12px;color:#d97706;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">New Chapter Alert 🔔</p>
+          <p style="font-size:12px;color:#d97706;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">New Chapter Alert</p>
           <h2 style="font-size:22px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.2;">${seriesTitle}</h2>
           <p style="font-size:14px;color:#9ca3af;margin:0 0 28px;">${chapterLabel} is now live!</p>
 
@@ -189,7 +189,7 @@ export async function sendNewChapterEmail(
           <div style="text-align:center;margin-bottom:28px;">
             <a href="${readUrl}"
                style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#7f1d1d,#991b1b);color:#fff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;letter-spacing:0.04em;">
-              📖 Read Now
+              Read Now
             </a>
           </div>
 
