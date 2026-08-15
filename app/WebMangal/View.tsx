@@ -465,6 +465,10 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
       <div className="mangal-search-navbar-desktop">
         <Navbar
           variant="custom"
+          platformName="WebMangal"
+          logoSrc="/webmangal-logo.png"
+          href="/WebMangal"
+          subtitle="powered by MANGAL"
           centerSlot={
             <div className="mangal-search-nav-links">
               {NAV_LINKS.map(link => (

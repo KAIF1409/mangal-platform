@@ -22,6 +22,15 @@ interface NavbarProps {
    *  Pass true for a flat always-solid nav (legal pages, dashboard). */
   scrolled?: boolean;
   platformName?: string;
+  /** Logo image path. Defaults to the umbrella "/icon.png" (MANGAL). Pass a
+   *  product-specific logo (e.g. "/webmangal-logo.png") for pages that want
+   *  their own brand mark here instead of the generic MANGAL one. */
+  logoSrc?: string;
+  /** Where the logo links to. Defaults to "/" (homepage). */
+  href?: string;
+  /** Optional small subtitle under/after the wordmark, e.g. "powered by MANGAL"
+   *  — only shown when set, so existing callers are unaffected. */
+  subtitle?: string;
   /** Optional className on the <nav> itself — needed if your globals.css
    *  has responsive rules targeting a specific class (e.g. "mangal-dash-nav"). */
   navClassName?: string;
@@ -36,6 +45,9 @@ export default function Navbar({
   logoSize = 32,
   scrolled = true,
   platformName = 'MANGAL',
+  logoSrc = '/icon.png',
+  href = '/',
+  subtitle,
   navClassName,
   brandWrapperClassName,
 }: NavbarProps) {
@@ -72,19 +84,24 @@ export default function Navbar({
         style={{ display: 'flex', alignItems: 'center', gap: '32px', minWidth: 0 }}
       >
         <Link
-          href="/"
+          href={href}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}
         >
           <Image
-            src="/icon.png"
+            src={logoSrc}
             alt={platformName}
             width={logoSize}
             height={logoSize}
-            style={{ display: 'block', filter: 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' }}
+            style={{ display: 'block', filter: logoSrc === '/icon.png' ? 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' : undefined }}
           />
           <span className="mangal-shared-nav-brand-text" style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             {platformName}
           </span>
+          {subtitle && (
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
+              {subtitle}
+            </span>
+          )}
         </Link>
 
         {variant === 'custom' && centerSlot && (
