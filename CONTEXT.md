@@ -2132,3 +2132,73 @@ via `Promise.resolve().then(...)`, same pattern already used for the
 - Average/count is computed client-side from the fetched rows, not a DB
   view/RPC — fine at current scale, would need a proper aggregate query
   once a video has hundreds of reviews.
+
+## 26. Series page — Creator Bounties, "Visual Quests" (DONE, this session)
+
+Second of the three retention-strategy ideas from §25. Authors post a
+request for a specific scene needing a KaTube visual; fan animators
+submit a YouTube link; the community votes; the author picks the winner
+as the official adaptation.
+
+- **Three new tables** (migration `series_visual_quests_bounties` via
+  `Supabase:apply_migration`, project `rfxlavwzhpnbhwoumaha`):
+  - `visual_quests` — `series_id`, `creator_id`, optional `chapter_label`,
+    `description`, `status` ('open'/'closed'), `winner_submission_id`
+    (FK added after `visual_quest_submissions` exists, since it's a
+    forward reference). RLS: public read; insert restricted to the
+    series' actual owner via an `exists (select 1 from series where
+    series.creator_id = auth.uid())` check, not just `creator_id =
+    auth.uid()` alone (which someone could otherwise spoof by inserting
+    with their own id on someone else's series); update/delete scoped to
+    the quest's own `creator_id`.
+  - `visual_quest_submissions` — `quest_id`, `submitter_id`,
+    `youtube_url`, optional `note`. RLS: public read, own insert, own
+    delete.
+  - `visual_quest_votes` — **primary key is `(quest_id, voter_id)`**, not
+    `(submission_id, voter_id)` — deliberate: a voter gets exactly one
+    vote per quest, so switching their vote to a different submission in
+    the same quest is an `upsert` on that composite key (moves the vote)
+    rather than allowing a second row. RLS: public read (vote counts are
+    visible to everyone, not just participants), own insert/update/delete.
+- **UI on `app/series/[seriesId]/page.tsx`** — new "🎬 Visual Quests"
+  section between the existing Fan Theories & Art (K Circle cross-link)
+  preview and the Written Reviews section. Section only renders if there
+  are existing quests or the viewer `isCreator` (so a series with zero
+  quests and a non-owner viewer doesn't show an empty section). Creator
+  gets a "+ Post a Visual Quest" form (chapter label + description).
+  Each quest card shows status (open/closed), the description, a picked
+  winner (if any, with a 🏆 badge and link) shown separately from the
+  regular submission list, then remaining submissions each with a vote
+  button (shows count, highlights if it's the viewer's current vote) and
+  — creator-only, while open — a "🏆 Pick" button that sets
+  `winner_submission_id` and flips `status` to `closed` in one update.
+  Fans get a two-field inline form (YouTube link + optional note) at the
+  bottom of each open quest card.
+- **Data fetch (`fetchQuests`)** batches submitter usernames via a single
+  `creator_profiles` `.in()` query (comments/reviews pattern) and
+  vote-counts client-side from the full `visual_quest_votes` rows for the
+  series' quests, rather than a per-submission count query — fine at
+  current scale.
+
+**Verified:** `tsc --noEmit` clean project-wide; `eslint` on the touched
+file: 0 errors. Hit one `react-hooks/set-state-in-effect` error on the
+initial `useEffect(() => { if (seriesId) fetchQuests(); }, ...)` — fixed
+by wrapping the call in a nested `(async () => { await fetchQuests();
+})()` IIFE (matching the existing `load()` pattern already used
+elsewhere on this page) instead of calling the named function directly;
+also removed an eager `setQuestsLoading(true)` at the top of `fetchQuests`
+(state already defaults to `true`) since that synchronous call was the
+other trigger for the same rule. Remaining 3 warnings are
+`exhaustive-deps` on missing-callback-in-deps-array — two are
+pre-existing (`fetchChapters`, unrelated to this change), one is the same
+pattern on the new `fetchQuests` effect; not fixed, matches how the
+pre-existing ones were already left as-is.
+
+**Not done (flagged as follow-ups, not started this session):**
+- Sync-Play Watch Rooms — the third pitched idea from §25, not built.
+- No notification to the author when a new submission/vote comes in, and
+  no notification to submitters when a winner is picked.
+- No limit on quests-per-series or submissions-per-quest; no report/flag
+  button on a submitted YouTube link (unlike comments, which have
+  `ReportButton` elsewhere on this page) — worth adding before this is
+  fan-facing at scale.

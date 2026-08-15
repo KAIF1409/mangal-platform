@@ -121,6 +121,38 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   }
   const [circlePosts, setCirclePosts] = useState<CirclePostPreview[]>([]);
 
+  // Step 28 — Creator Bounties ("Visual Quests"). Author posts a request
+  // for a specific scene, fans submit YouTube links, the community votes,
+  // the author picks the winner.
+  interface QuestSubmission {
+    id: string;
+    submitter_id: string;
+    youtube_url: string;
+    note: string | null;
+    submitterName: string;
+    voteCount: number;
+  }
+  interface VisualQuest {
+    id: string;
+    chapter_label: string | null;
+    description: string;
+    status: 'open' | 'closed';
+    winner_submission_id: string | null;
+    created_at: string;
+    submissions: QuestSubmission[];
+  }
+  const [quests, setQuests] = useState<VisualQuest[]>([]);
+  const [questsLoading, setQuestsLoading] = useState(true);
+  const [myVotes, setMyVotes] = useState<Map<string, string>>(new Map()); // quest_id -> submission_id
+  const [showQuestForm, setShowQuestForm] = useState(false);
+  const [questChapterLabel, setQuestChapterLabel] = useState('');
+  const [questDescription, setQuestDescription] = useState('');
+  const [questSubmitting, setQuestSubmitting] = useState(false);
+  const [submissionDrafts, setSubmissionDrafts] = useState<Map<string, { url: string; note: string }>>(new Map());
+  const [submissionBusy, setSubmissionBusy] = useState<string | null>(null); // quest_id currently submitting
+  const [voteBusy, setVoteBusy] = useState<string | null>(null); // quest_id currently voting
+  const [pickBusy, setPickBusy] = useState<string | null>(null); // submission_id currently being picked
+
   // Pulled out of the main load() below so it can also be called on its own
   // whenever the tab/page becomes visible again (see effect below) — we only
   // want to refresh the chapter list itself in that case, not redo the view
@@ -426,6 +458,123 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   const [sortDesc, setSortDesc] = useState(false);
+
+  // Step 28 — Creator Bounties ("Visual Quests")
+  const fetchQuests = async () => {
+    const { data: questRows } = await supabase
+      .from('visual_quests')
+      .select('id, chapter_label, description, status, winner_submission_id, created_at')
+      .eq('series_id', seriesId)
+      .order('created_at', { ascending: false });
+
+    if (!questRows || questRows.length === 0) {
+      setQuests([]);
+      setQuestsLoading(false);
+      return;
+    }
+
+    const questIds = questRows.map(q => q.id);
+    const [{ data: subRows }, { data: voteRows }] = await Promise.all([
+      supabase.from('visual_quest_submissions')
+        .select('id, quest_id, submitter_id, youtube_url, note, created_at')
+        .in('quest_id', questIds).order('created_at', { ascending: true }),
+      supabase.from('visual_quest_votes').select('quest_id, submission_id, voter_id').in('quest_id', questIds),
+    ]);
+
+    const submitterIds = [...new Set((subRows || []).map(s => s.submitter_id))];
+    const { data: profiles } = submitterIds.length
+      ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', submitterIds)
+      : { data: [] as { user_id: string; username: string }[] };
+    const nameMap = new Map((profiles || []).map(p => [p.user_id, p.username]));
+
+    const voteCountBySubmission = new Map<string, number>();
+    (voteRows || []).forEach(v => {
+      voteCountBySubmission.set(v.submission_id, (voteCountBySubmission.get(v.submission_id) || 0) + 1);
+    });
+
+    if (user) {
+      const mine = new Map<string, string>();
+      (voteRows || []).forEach(v => { if (v.voter_id === user.id) mine.set(v.quest_id, v.submission_id); });
+      setMyVotes(mine);
+    }
+
+    setQuests(questRows.map(q => ({
+      ...q,
+      status: q.status as 'open' | 'closed',
+      submissions: (subRows || []).filter(s => s.quest_id === q.id).map(s => ({
+        id: s.id,
+        submitter_id: s.submitter_id,
+        youtube_url: s.youtube_url,
+        note: s.note,
+        submitterName: nameMap.get(s.submitter_id) || 'MANGAL Fan',
+        voteCount: voteCountBySubmission.get(s.id) || 0,
+      })),
+    })));
+    setQuestsLoading(false);
+  };
+
+  useEffect(() => {
+    if (!seriesId) return;
+    (async () => { await fetchQuests(); })();
+  }, [seriesId, user]);
+
+  const submitQuest = async () => {
+    if (!user || !isCreator) return;
+    const desc = questDescription.trim();
+    if (!desc || questSubmitting) return;
+    setQuestSubmitting(true);
+    const { error } = await supabase.from('visual_quests').insert({
+      series_id: seriesId, creator_id: user.id,
+      chapter_label: questChapterLabel.trim() || null,
+      description: desc,
+    });
+    setQuestSubmitting(false);
+    if (!error) {
+      setQuestChapterLabel('');
+      setQuestDescription('');
+      setShowQuestForm(false);
+      fetchQuests();
+    }
+  };
+
+  const submitEntry = async (questId: string) => {
+    if (!user) { window.location.assign('/login'); return; }
+    const draft = submissionDrafts.get(questId);
+    const url = draft?.url.trim();
+    if (!url || submissionBusy) return;
+    setSubmissionBusy(questId);
+    const { error } = await supabase.from('visual_quest_submissions').insert({
+      quest_id: questId, submitter_id: user.id, youtube_url: url, note: draft?.note.trim() || null,
+    });
+    setSubmissionBusy(null);
+    if (!error) {
+      setSubmissionDrafts(prev => { const next = new Map(prev); next.delete(questId); return next; });
+      fetchQuests();
+    }
+  };
+
+  const castVote = async (questId: string, submissionId: string) => {
+    if (!user) { window.location.assign('/login'); return; }
+    if (voteBusy) return;
+    setVoteBusy(questId);
+    const { error } = await supabase
+      .from('visual_quest_votes')
+      .upsert({ quest_id: questId, submission_id: submissionId, voter_id: user.id }, { onConflict: 'quest_id,voter_id' });
+    setVoteBusy(null);
+    if (!error) fetchQuests();
+  };
+
+  const pickWinner = async (questId: string, submissionId: string) => {
+    if (!user || !isCreator || pickBusy) return;
+    setPickBusy(submissionId);
+    const { error } = await supabase
+      .from('visual_quests')
+      .update({ winner_submission_id: submissionId, status: 'closed' })
+      .eq('id', questId).eq('creator_id', user.id);
+    setPickBusy(null);
+    if (!error) fetchQuests();
+  };
+
   const displayedChapters = sortDesc ? [...chapters].reverse() : chapters;
 
   // Creator-only: delete a chapter (and its child rows) from the series.
@@ -977,6 +1126,201 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
               {circlePosts.map(p => <CirclePostCard key={p.id} post={p} seriesTitle={series.title} />)}
             </div>
+          </section>
+        )}
+
+        {/* ── STEP 28 — VISUAL QUESTS (Creator Bounties) ── */}
+        {(quests.length > 0 || isCreator) && (
+          <section style={{ padding: '40px 0 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: '10px', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                🎬 Visual Quests {quests.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({quests.length})</span>}
+              </h2>
+              {isCreator && !showQuestForm && (
+                <button
+                  onClick={() => setShowQuestForm(true)}
+                  style={{
+                    padding: '9px 18px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)', color: '#d97706', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                  }}
+                >+ Post a Visual Quest</button>
+              )}
+            </div>
+
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+              Request a KaTube visual for a scene — fan animators submit their take, the community votes, and you pick the official one.
+            </p>
+
+            {showQuestForm && (
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '20px', marginBottom: '24px' }}>
+                <input
+                  type="text"
+                  value={questChapterLabel}
+                  onChange={e => setQuestChapterLabel(e.target.value)}
+                  placeholder="Chapter / scene label (optional, e.g. 'Chapter 12')"
+                  maxLength={80}
+                  style={{
+                    width: '100%', padding: '11px 14px', borderRadius: '10px', marginBottom: '10px',
+                    background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-primary)',
+                    fontSize: '13px', outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit',
+                  }}
+                />
+                <textarea
+                  value={questDescription}
+                  onChange={e => setQuestDescription(e.target.value)}
+                  placeholder="What visual are you looking for? (e.g. 'I need a KaTube visual for the dragon fight')"
+                  rows={3}
+                  maxLength={500}
+                  style={{
+                    width: '100%', padding: '11px 14px', borderRadius: '10px',
+                    background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-primary)',
+                    fontSize: '13px', outline: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit', resize: 'vertical' as const,
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                  <button
+                    onClick={() => setShowQuestForm(false)}
+                    style={{ padding: '10px 18px', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border-light)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                  >Cancel</button>
+                  <button
+                    onClick={submitQuest}
+                    disabled={questSubmitting || !questDescription.trim()}
+                    style={{
+                      padding: '10px 20px', borderRadius: '10px', border: 'none',
+                      background: (questSubmitting || !questDescription.trim()) ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #d97706)',
+                      color: 'var(--text-primary)', fontSize: '12px', fontWeight: 700,
+                      cursor: (questSubmitting || !questDescription.trim()) ? 'not-allowed' : 'pointer',
+                    }}
+                  >{questSubmitting ? 'Posting...' : 'Post Quest'}</button>
+                </div>
+              </div>
+            )}
+
+            {questsLoading ? (
+              <div style={{ padding: '20px 0', color: 'var(--text-faint)', fontSize: '13px' }}>Loading quests…</div>
+            ) : quests.length === 0 ? (
+              <div style={{ padding: '20px 0', color: 'var(--text-faint)', fontSize: '13px' }}>
+                No Visual Quests posted yet{isCreator ? ' — post one to invite fan animators.' : '.'}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {quests.map(q => {
+                  const draft = submissionDrafts.get(q.id) || { url: '', note: '' };
+                  const myVote = myVotes.get(q.id);
+                  const winner = q.submissions.find(s => s.id === q.winner_submission_id);
+                  return (
+                    <div key={q.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '18px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' as const }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {q.chapter_label && (
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.28)', borderRadius: '20px', padding: '3px 10px' }}>
+                              {q.chapter_label}
+                            </span>
+                          )}
+                          <span style={{
+                            fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.03em',
+                            color: q.status === 'open' ? '#22c55e' : 'var(--text-muted)',
+                          }}>{q.status === 'open' ? '● Open' : '✓ Closed'}</span>
+                        </div>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                          {new Date(q.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 14px' }}>{q.description}</p>
+
+                      {winner && (
+                        <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '10px', background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.28)' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#d97706', marginBottom: '4px' }}>🏆 Official visual — by {winner.submitterName}</div>
+                          <a href={winner.youtube_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12.5px', color: 'var(--text-primary)', wordBreak: 'break-all' as const }}>
+                            {winner.youtube_url}
+                          </a>
+                        </div>
+                      )}
+
+                      {q.submissions.filter(s => s.id !== q.winner_submission_id).length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: q.status === 'open' ? '14px' : 0 }}>
+                          {q.submissions.filter(s => s.id !== q.winner_submission_id).map(s => (
+                            <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-input)', flexWrap: 'wrap' as const }}>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '2px' }}>{s.submitterName}</div>
+                                <a href={s.youtube_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: 'var(--text-primary)', wordBreak: 'break-all' as const }}>
+                                  {s.youtube_url}
+                                </a>
+                                {s.note && <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', margin: '4px 0 0' }}>{s.note}</p>}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                <button
+                                  onClick={() => castVote(q.id, s.id)}
+                                  disabled={q.status !== 'open' || voteBusy === q.id}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                    padding: '5px 12px', borderRadius: '8px', cursor: q.status !== 'open' ? 'default' : 'pointer',
+                                    border: myVote === s.id ? '1px solid rgba(217,119,6,0.4)' : '1px solid var(--border-color)',
+                                    background: myVote === s.id ? 'rgba(217,119,6,0.1)' : 'transparent',
+                                    color: myVote === s.id ? '#d97706' : 'var(--text-tertiary)',
+                                    fontSize: '11px', fontWeight: 700, opacity: q.status !== 'open' ? 0.6 : 1,
+                                  }}
+                                >
+                                  ▲ {s.voteCount > 0 ? s.voteCount : 'Vote'}
+                                </button>
+                                {isCreator && q.status === 'open' && (
+                                  <button
+                                    onClick={() => pickWinner(q.id, s.id)}
+                                    disabled={pickBusy === s.id}
+                                    style={{
+                                      padding: '5px 12px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                                      background: 'transparent', color: 'var(--text-tertiary)', fontSize: '11px', fontWeight: 700,
+                                      cursor: 'pointer', opacity: pickBusy === s.id ? 0.5 : 1,
+                                    }}
+                                  >🏆 Pick</button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {q.status === 'open' && (
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' as const }}>
+                          <input
+                            value={draft.url}
+                            onChange={e => setSubmissionDrafts(prev => new Map(prev).set(q.id, { ...draft, url: e.target.value }))}
+                            placeholder={user ? 'Paste your YouTube link…' : 'Log in to submit your visual'}
+                            disabled={submissionBusy === q.id}
+                            style={{
+                              flex: '1 1 200px', minWidth: 0, padding: '9px 14px', borderRadius: '20px',
+                              border: '1px solid var(--border-color)', background: 'var(--bg-input)',
+                              color: 'var(--text-primary)', fontSize: '12.5px', outline: 'none',
+                            }}
+                          />
+                          <input
+                            value={draft.note}
+                            onChange={e => setSubmissionDrafts(prev => new Map(prev).set(q.id, { ...draft, note: e.target.value }))}
+                            placeholder="Note (optional)"
+                            disabled={submissionBusy === q.id}
+                            style={{
+                              flex: '1 1 140px', minWidth: 0, padding: '9px 14px', borderRadius: '20px',
+                              border: '1px solid var(--border-color)', background: 'var(--bg-input)',
+                              color: 'var(--text-primary)', fontSize: '12.5px', outline: 'none',
+                            }}
+                          />
+                          <button
+                            onClick={() => submitEntry(q.id)}
+                            disabled={submissionBusy === q.id || !draft.url.trim()}
+                            style={{
+                              fontSize: '12px', fontWeight: 700, color: '#fff', background: '#d97706',
+                              border: 'none', borderRadius: '20px', padding: '0 16px', cursor: 'pointer',
+                              opacity: (submissionBusy === q.id || !draft.url.trim()) ? 0.5 : 1, flexShrink: 0,
+                            }}
+                          >Submit</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
 
