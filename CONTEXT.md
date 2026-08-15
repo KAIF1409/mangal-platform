@@ -2992,3 +2992,82 @@ in files this session never touched. Migration applied live via
 `supabase/migrations/20260815210000_kcircle_watch_together_threads.sql`.
 Committed in two batches (migration only; then both frontend files
 together) and pushed directly to `main`.
+
+## §37 — KCircle Watch Together: "add a friend mid-session" choice (extends §36)
+
+**What:** §36's presence-driven resolution was fully automatic — any
+change to the present set silently resolved to a (possibly brand new)
+thread via `participant_key`, no say from anyone in the room. Reported
+gap: if Riya/Suraj/Mohan are mid-conversation and add a 4th friend
+(Natasha), the group had no way to choose whether Natasha sees the
+existing history or starts fresh — it just silently swapped everyone to
+an empty new thread. Also covers: if a member (Mohan) later leaves and
+comes back with the exact same set, §36 already reuses the old thread
+correctly — that part needed no change, only the "someone new joins an
+already-chatting group" case was missing a choice.
+
+- **Schema** (`supabase/migrations/20260815230000_kcircle_watch_thread_join_choice.sql`,
+  applied live via `Supabase:apply_migration`, no table changes — two new
+  RPCs only):
+  - `kcircle_find_watch_thread_for_superset(p_participant_ids uuid[])` —
+    given the currently-present set, finds the most recently active
+    existing watch thread whose participant set is a smaller subset of it
+    (`participant_key`'s ids `<@` the given set, size 2..<full size).
+    `security definer`, callable by anyone in the given id list (not
+    required to already be a participant of the found thread) — needed so
+    a just-joined newcomer's own client can detect "there's already a
+    thread here" even though it has no local memory of it.
+  - `kcircle_expand_watch_thread(p_conversation_id, p_full_participant_ids)`
+    — the "Continue in this thread" outcome: adds the new participant(s)
+    to the **existing** conversation row (real read access via the
+    already-existing participant-only RLS on `kcircle_messages`, no new
+    grant needed) and repoints `participant_key` at the new full set.
+    Restricted to callers who are **already** participants of that
+    conversation — the newcomer can't grant themselves access, only an
+    existing member can pull them in. Races two "Continue" callers safely
+    (second call is a no-op update + idempotent participant inserts); a
+    race between "Continue" and "New" resolves to whichever committed
+    first and the loser's RPC hands back that same thread id instead of
+    erroring.
+  - "Start a new thread" needed no new RPC — it's the existing
+    `kcircle_get_or_create_watch_thread` with the full new set, which is
+    a different `participant_key`, so it creates a fresh empty thread and
+    leaves the old one/its history untouched for whoever doesn't join it.
+
+- **`shorts/[roomId]/page.tsx`** — the presence-resolution effect now
+  branches:
+  - Exact-set reunion, a mix where someone also left, or a totally fresh
+    gathering → resolves automatically exactly as §36 did.
+  - Pure addition detected **locally** (this client already had a
+    resolved thread for a smaller set that's a subset of the new one) →
+    doesn't auto-resolve; sets `pendingJoin` and keeps `chatThreadId`
+    pointed at the old thread so existing members keep chatting
+    uninterrupted while the choice is pending.
+  - Pure addition **not** knowable locally (this client has no prior
+    resolved thread this session — i.e. it's the newcomer's own tab that
+    just mounted) → calls `kcircle_find_watch_thread_for_superset` to ask
+    the server instead of assuming a fresh gathering and racing ahead to
+    create one.
+  - New `pendingJoin` banner in the Chat tab: existing members see
+    "Continue in this thread" / "Start new thread" buttons; the newcomer
+    (their own id is in `addedIds`) only sees "Start new thread" — they
+    can't self-approve into the old thread, matching the RPC restriction.
+    Names in the banner resolved via the existing `resolveUsername`
+    cache.
+
+**Not done (flagged as follow-ups, not started this session):**
+- If the group's set changes twice in quick succession while a choice is
+  still pending (e.g. a 5th person joins before anyone resolves the
+  4th), the second change just recomputes `pendingJoin` against the
+  latest set — there's no queue of "join events," only ever one live
+  choice reflecting whoever's present right now.
+- No push/in-app notification for the pending choice itself beyond the
+  in-panel banner — same as §36's existing chat notification scope, not
+  added here.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on the touched
+file: 0 errors (same one pre-existing-style `<img>` warning §36 already
+documented). Full-project `eslint .` still shows the same 13 pre-existing
+errors, all in files this session never touched. Migration applied live
+via `Supabase:apply_migration`. Committed in two batches (migration only;
+then the frontend file) and pushed directly to `main`.

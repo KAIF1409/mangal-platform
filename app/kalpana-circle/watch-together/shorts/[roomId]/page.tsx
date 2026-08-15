@@ -97,6 +97,16 @@ export default function FastTapWatchTogetherRoomPage() {
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
   const [busyMsgId, setBusyMsgId] = useState<string | null>(null);
 
+  // "Add a friend mid-session" choice — set when someone new joins a room
+  // that already had a resolved chat thread with >=2 people (nobody left,
+  // someone was added). addedIds is who's new; isNewcomer is whether *this*
+  // client belongs to one of those new ids (a newcomer can wait or start a
+  // fresh thread, but can't grant themselves access into the old one).
+  const [pendingJoin, setPendingJoin] = useState<{
+    oldThreadId: string; newSorted: string[]; addedIds: string[]; isNewcomer: boolean;
+  } | null>(null);
+  const [resolvingChoice, setResolvingChoice] = useState(false);
+
   const [shorts, setShorts] = useState<ShortItem[]>([]);
   const [shortsLoading, setShortsLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -111,6 +121,7 @@ export default function FastTapWatchTogetherRoomPage() {
   const [copied, setCopied] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false); // mobile bottom sheet
   const [muted, setMuted] = useState(true);
+  const [pendingJoinNames, setPendingJoinNames] = useState<string[]>([]);
 
   const isHost = !!(room && userId && room.host_id === userId);
   const isHostRef = useRef(false);
@@ -249,24 +260,105 @@ export default function FastTapWatchTogetherRoomPage() {
   // Resolve the current present set to a thread id whenever it changes
   // (debounced by only re-calling when the sorted key actually changes —
   // presence 'sync' can fire more than once for the same effective set).
+  //
+  // Two cases are treated differently:
+  //  - Exact-set reunion, or a mix where someone also left, or a totally
+  //    fresh gathering -> resolve automatically as before (§36).
+  //  - Pure addition to a group that was already chatting (nobody left,
+  //    someone new showed up) -> don't silently switch everyone to a new
+  //    thread; surface a choice instead (below).
   const lastResolvedKeyRef = useRef<string>('');
+  const lastResolvedSortedRef = useRef<string[]>([]);
+  const lastThreadIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!userId) return;
     const sorted = [...new Set(presentIds)].sort();
     if (sorted.length < 2) {
       lastResolvedKeyRef.current = '';
+      lastResolvedSortedRef.current = [];
+      lastThreadIdRef.current = null;
       /* eslint-disable-next-line react-hooks/set-state-in-effect */
+      setPendingJoin(null);
       setChatThreadId(null);
       return;
     }
     const key = sorted.join(',');
     if (key === lastResolvedKeyRef.current) return;
-    lastResolvedKeyRef.current = key;
+
+    const prevSorted = lastResolvedSortedRef.current;
+    const isPureAdditionKnownLocally = prevSorted.length >= 2 && !!lastThreadIdRef.current &&
+      prevSorted.every(id => sorted.includes(id)) && sorted.length > prevSorted.length;
+
+    if (isPureAdditionKnownLocally) {
+      const addedIds = sorted.filter(id => !prevSorted.includes(id));
+      setPendingJoin({ oldThreadId: lastThreadIdRef.current!, newSorted: sorted, addedIds, isNewcomer: addedIds.includes(userId) });
+      return; // stay on the old thread until someone decides — see below
+    }
+
+    // This client has no local memory of a prior thread for this room yet
+    // (e.g. it's the newcomer's own tab, just mounted) — ask the server
+    // whether an existing thread already covers a subset of who's present,
+    // rather than assuming it's a fresh gathering and racing ahead to
+    // create one.
     (async () => {
+      const { data: subsetRows } = await supabase.rpc('kcircle_find_watch_thread_for_superset', { p_participant_ids: sorted });
+      const subset = Array.isArray(subsetRows) && subsetRows.length > 0 ? subsetRows[0] as { conversation_id: string; participant_ids: string[] } : null;
+      if (subset) {
+        const addedIds = sorted.filter(id => !subset.participant_ids.includes(id));
+        setPendingJoin({ oldThreadId: subset.conversation_id, newSorted: sorted, addedIds, isNewcomer: addedIds.includes(userId) });
+        return;
+      }
+      lastResolvedKeyRef.current = key;
+      lastResolvedSortedRef.current = sorted;
       const { data, error } = await supabase.rpc('kcircle_get_or_create_watch_thread', { p_participant_ids: sorted });
-      if (!error && data) setChatThreadId(data as string);
+      if (!error && data) { lastThreadIdRef.current = data as string; setChatThreadId(data as string); }
     })();
   }, [presentIds, userId]);
+
+  const resolvePendingJoin = useCallback(async (choice: 'continue' | 'new') => {
+    if (!pendingJoin || resolvingChoice) return;
+    setResolvingChoice(true);
+    try {
+      if (choice === 'continue') {
+        const { data, error } = await supabase.rpc('kcircle_expand_watch_thread', {
+          p_conversation_id: pendingJoin.oldThreadId, p_full_participant_ids: pendingJoin.newSorted,
+        });
+        if (error) { setChatError("Couldn't add them to the thread — try again."); return; }
+        if (data) {
+          lastResolvedKeyRef.current = pendingJoin.newSorted.join(',');
+          lastResolvedSortedRef.current = pendingJoin.newSorted;
+          lastThreadIdRef.current = data as string;
+          setChatThreadId(data as string);
+        }
+      } else {
+        const { data, error } = await supabase.rpc('kcircle_get_or_create_watch_thread', { p_participant_ids: pendingJoin.newSorted });
+        if (error) { setChatError("Couldn't start a new thread — try again."); return; }
+        if (data) {
+          lastResolvedKeyRef.current = pendingJoin.newSorted.join(',');
+          lastResolvedSortedRef.current = pendingJoin.newSorted;
+          lastThreadIdRef.current = data as string;
+          setChatThreadId(data as string);
+        }
+      }
+    } finally {
+      setResolvingChoice(false);
+      setPendingJoin(null);
+    }
+  }, [pendingJoin, resolvingChoice]);
+
+  useEffect(() => {
+    if (!pendingJoin) {
+      /* eslint-disable-next-line react-hooks/set-state-in-effect */
+      setPendingJoinNames([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const names = await Promise.all(pendingJoin.addedIds.map(resolveUsername));
+      if (!cancelled) setPendingJoinNames(names);
+    })();
+    return () => { cancelled = true; };
+  }, [pendingJoin, resolveUsername]);
 
   // ── navigation sync — ephemeral Broadcast channel, host-authoritative ──
   // Mirrors the long-video room's playback sync channel (see that file's
@@ -496,12 +588,53 @@ export default function FastTapWatchTogetherRoomPage() {
       </div>
 
       {tab === 'chat' ? (
-        !chatThreadId ? (
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', padding: '16px', lineHeight: 1.5 }}>
-            👋 Waiting for at least one more person to join this room — Chat saves automatically as a Watch Together
-            chat with whoever&apos;s actually watching with you. Use Comment meanwhile, it&apos;s public.
-          </p>
-        ) : (
+        <>
+          {pendingJoin && (
+            <div style={{
+              margin: '10px 14px', padding: '12px', borderRadius: '10px',
+              background: 'rgba(124,58,237,0.14)', border: '1px solid rgba(124,58,237,0.35)',
+            }}>
+              {pendingJoin.isNewcomer ? (
+                <>
+                  <p style={{ fontSize: '12px', color: '#e9d5ff', lineHeight: 1.5, margin: 0 }}>
+                    👋 There&apos;s already a chat going between the others here. You can wait for one of
+                    them to bring you into it, or start a brand-new thread with everyone currently
+                    present (no old messages, just from now on).
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <button disabled={resolvingChoice} onClick={() => resolvePendingJoin('new')} style={{
+                      fontSize: '11.5px', fontWeight: 800, padding: '8px 12px', borderRadius: '8px', border: 'none',
+                      background: '#7c3aed', color: '#fff', cursor: 'pointer',
+                    }}>Start new thread</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: '12px', color: '#e9d5ff', lineHeight: 1.5, margin: 0 }}>
+                    👋 {pendingJoinNames.length > 0 ? pendingJoinNames.join(', ') : 'Someone new'} just joined.
+                    Bring {pendingJoinNames.length === 1 ? 'them' : 'them'} into this chat (they&apos;ll see everything
+                    you&apos;ve all said so far), or keep this thread as-is and start a fresh one instead?
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <button disabled={resolvingChoice} onClick={() => resolvePendingJoin('continue')} style={{
+                      fontSize: '11.5px', fontWeight: 800, padding: '8px 12px', borderRadius: '8px', border: 'none',
+                      background: '#7c3aed', color: '#fff', cursor: 'pointer',
+                    }}>Continue in this thread</button>
+                    <button disabled={resolvingChoice} onClick={() => resolvePendingJoin('new')} style={{
+                      fontSize: '11.5px', fontWeight: 800, padding: '8px 12px', borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.25)', background: 'transparent', color: '#fff', cursor: 'pointer',
+                    }}>Start new thread</button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {!chatThreadId ? (
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', padding: '16px', lineHeight: 1.5 }}>
+              👋 Waiting for at least one more person to join this room — Chat saves automatically as a Watch Together
+              chat with whoever&apos;s actually watching with you. Use Comment meanwhile, it&apos;s public.
+            </p>
+          ) : (
           <>
             <div ref={chatScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <p style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
@@ -529,7 +662,8 @@ export default function FastTapWatchTogetherRoomPage() {
             </div>
             {chatError && <p style={{ fontSize: '11px', color: '#f87171', padding: '0 14px' }}>{chatError}</p>}
           </>
-        )
+          )}
+        </>
       ) : (
         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <p style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
