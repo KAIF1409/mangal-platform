@@ -2386,3 +2386,69 @@ already noted in §27 (need to pick Razorpay/similar), and don't need
 real traffic the way sponsorship/ads does. Sponsorship stays parked
 until there's an audience worth showing sponsors, same as §4 already
 said.
+
+## 29. Not built yet — Novel-to-video Creator Collaboration pipeline (backlog, discussed this session)
+
+Founder's pitch: when a novel/series builds up readers who want a video
+adaptation, there should be a structured path connecting the novel's
+creator with a top KaTube creator to collaborate — distinct from §26's
+Visual Quests (which are open, community-voted, any-fan-can-submit).
+This is a **direct 1-on-1 negotiated partnership** between two
+established creators, discussed privately via K Circle. Complements §26
+rather than replacing it — Visual Quests suit smaller/casual demand,
+this suits high-value demand where the novel creator wants a specific,
+credited, ongoing collaborator rather than an open contest. Nothing
+below is started — pure backlog, design-level only.
+
+**1. Demand signal capture (readers → data)**
+- "🎥 Request Video Adaptation" button on the series page — a reader
+  click registers demand (needs a table, e.g. `adaptation_requests`:
+  `series_id`, `reader_id`, `created_at`, unique per reader per series —
+  same shape as `follows`/`video_likes`).
+- Once demand crosses a threshold (e.g. 50+ requests, or a % of the
+  series' followers), the series gets a visible **"🔥 High Demand for
+  Adaptation"** badge — surfaced on the series page and to KaTube
+  creators (see next item).
+
+**2. Discovery — surfacing demand to the right KaTube creators**
+- An **"Adaptation Opportunities" board** — high-demand novels matched to
+  top KaTube creators by genre/tag overlap (reuses the existing tag
+  system, §25 area, and the leaderboard/ranking data pitched in §27 item
+  9).
+- Matched creators get a notification: their genre has a
+  novel trending with unmet video demand.
+
+**3. Connect + discuss via K Circle (the core mechanic)**
+- A "Propose Collab" button (either side can initiate — novel creator
+  reaching out to a KaTube creator, or a KaTube creator expressing
+  interest in a high-demand novel) creates a **private Collab Room** in
+  K Circle automatically, scoped to just those two creators. Reuses the
+  existing K Circle channels/roles infrastructure (§17) rather than
+  building new messaging infra from scratch.
+- Terms get negotiated inside that room: which chapter/scene, credit,
+  revenue split (once tipping/monetization from §27/§28d exists).
+
+**4. Tracking + status**
+- New table (not yet built): `collaborations` — `series_id`,
+  `novel_creator_id`, `katube_creator_id`, `status` ('proposed' →
+  'accepted' → 'in_progress' → 'completed'), `video_id` (linked once the
+  video is published).
+- A **"🤝 Official Collab"** badge on both the series page and the
+  KaTube video/channel — distinguishes a negotiated partnership from a
+  Visual Quest community submission (§26), signaling to viewers this was
+  made *with* the novel's creator, not just inspired by it.
+
+**5. Reward loop**
+- Cross-promotion once a collab video goes live — series page already
+  has a "based on" tag pattern (§8/§22) to extend; the video itself
+  should show "Official adaptation, made with @novel-creator."
+- Sets up a natural future monetization hook: once tipping exists
+  (§27/§28d), a collab video's tips could be split between both
+  creators — not designed yet, just noted as a natural next step once
+  the payment layer exists.
+
+**Explicitly not designed yet:** the demand-threshold number, how
+matching/ranking actually scores genre overlap, whether either creator
+can decline/exit a collab room, and how a completed collab's revenue
+split would actually be enforced (depends entirely on the payment layer
+in §27/§28d landing first).
