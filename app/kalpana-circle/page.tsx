@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense, CSSProperties } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
+import { useKCircleTheme, KC_DARK_VARS } from './theme';
 import NotificationBell from '../components/NotificationBell';
 import { supabase } from '../lib/supabase';
 import { setPostLoginRedirect } from '../lib/authRedirect';
@@ -100,7 +101,10 @@ function Avatar({ name, size = 40 }: { name: string; size?: number }) {
 export default function KalpanaCirclePage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
+      // Hardcoded dark (K Circle's default) — avoids a light flash before
+      // KalpanaCircleInner's own theme state mounts, same reasoning as
+      // KaTube's Suspense fallback.
+      <div data-theme="dark" style={{ ...KC_DARK_VARS, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' } as CSSProperties}>
         Loading...
       </div>
     }>
@@ -110,6 +114,7 @@ export default function KalpanaCirclePage() {
 }
 
 function KalpanaCircleInner() {
+  const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tagFilter = searchParams.get('tag'); // set when arriving via a series page's "Discuss on Kalpana Circle" link
@@ -538,7 +543,7 @@ function KalpanaCircleInner() {
   const profileHref = userId ? (myUsername ? `/creator/${myUsername}` : '/home') : '/login?next=/kalpana-circle';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }} className="kc-page">
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' } as CSSProperties} className="kc-page">
 
       {/* Responsive rules (plain <style> tag: media queries can't be
           expressed with inline style={{}} objects) — same pattern as
@@ -592,7 +597,7 @@ function KalpanaCircleInner() {
             whiteSpace: 'nowrap',
           }}>🎬<span className="kc-katube-badge-text"> KaTube</span></Link>
           <NotificationBell userId={userId} iconSize={18} />
-          <ThemeToggle size={28} />
+          <ThemeToggle size={28} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
         </div>
       </nav>
 
@@ -634,7 +639,7 @@ function KalpanaCircleInner() {
             padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
             color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)', whiteSpace: 'nowrap',
           }}>🎬 KaTube</Link>
-          <ThemeToggle size={28} />
+          <ThemeToggle size={28} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
         </div>
       </nav>
 

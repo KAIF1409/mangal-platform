@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import NotificationBell from '../../components/NotificationBell';
+import ThemeToggle from '../../components/ThemeToggle';
+import { useKCircleTheme } from '../theme';
 
 // ── K Circle chat — DMs + group chats. ──
 // Backend: kcircle_conversations (is_group/title/created_by),
@@ -87,6 +89,7 @@ interface MessageRow {
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
 export default function KCircleChatPage() {
+  const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
@@ -474,7 +477,7 @@ export default function KCircleChatPage() {
   if (!checkedAuth) return null;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
       <style>{`
         @media (max-width: 480px) {
           .kc-chat-nav-title { font-size: 14px !important; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -500,11 +503,18 @@ export default function KCircleChatPage() {
             <button onClick={openGroupSettings} style={{
               background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-primary)',
             }} title="Group settings">ⓘ</button>
+            <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
+          </div>
+        )}
+        {active && !active.isGroup && (
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+            <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
           </div>
         )}
         {!active && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
             <NotificationBell userId={userId} iconSize={18} />
+            <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
             <button className="kc-chat-new-btn" onClick={() => { setShowNew(v => !v); if (showNew) resetComposer(); }} style={{
               fontSize: '12px', fontWeight: 800, padding: '6px 12px', borderRadius: '8px', border: 'none',
               background: RADIANT, color: '#27272a', cursor: 'pointer',
