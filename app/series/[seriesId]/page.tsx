@@ -13,6 +13,12 @@ import { estimateReadTime } from '../../lib/novelEditor';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 import Link from 'next/link';
 import ThemeToggle from '../../components/ThemeToggle';
+import {
+  BookOpen, BookText, ScrollText, AlertCircle, ArrowLeft, CheckCircle2,
+  Star, Play, RotateCcw, Zap, Bell, AlertTriangle, Trash2, MessageCircle,
+  Library, ArrowDown, ArrowUp, Inbox, Clapperboard, Circle, Trophy,
+  Edit3, PenLine, ThumbsUp, Heart, ChevronRight, Eye, Pause, ChevronUp,
+} from 'lucide-react';
 
 interface Series {
   id: string;
@@ -676,7 +682,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
+        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><BookOpen size={32} /></div>
         <div>Loading series...</div>
       </div>
     </div>
@@ -685,9 +691,9 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   if (!series) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '32px', marginBottom: '12px' }}>😔</div>
+        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><AlertCircle size={32} /></div>
         <div>Series not found.</div>
-        <Link href="/" style={{ color: '#d97706', textDecoration: 'none', fontSize: '13px', marginTop: '8px', display: 'block' }}>← Back to Browse</Link>
+        <Link href="/" style={{ color: '#d97706', textDecoration: 'none', fontSize: '13px', marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={13} /> Back to Browse</Link>
       </div>
     </div>
   );
@@ -784,7 +790,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             {series.cover_url ? (
               <Image src={series.cover_url} alt={series.title} fill sizes="200px" style={{ objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>📜</div>
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ScrollText size={48} /></div>
             )}
           </div>
 
@@ -807,7 +813,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 background: isNovel ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.08)',
                 color: isNovel ? '#a78bfa' : '#c3c7cf',
               }}>
-                {isNovel ? '📕 Novel' : (series.reading_mode === 'scroll' ? '📜 Webtoon' : '📖 Mangal')}
+                {isNovel ? <><BookText size={13} /> Novel</> : (series.reading_mode === 'scroll' ? <><ScrollText size={13} /> Webtoon</> : <><BookOpen size={13} /> Mangal</>)}
               </span>
               {/* Step 12 — Series Status & Completion Badge (read-only here; creators
                   change it from the Dashboard). Hidden until the migration runs and
@@ -827,9 +833,9 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     series.completion_status === 'completed' ? '#10b981' :
                     series.completion_status === 'hiatus' ? '#c3c7cf' : '#d97706',
                 }}>
-                  {series.completion_status === 'completed' && '✓ Completed'}
-                  {series.completion_status === 'hiatus' && '⏸ On Hiatus'}
-                  {series.completion_status === 'ongoing' && '● Ongoing'}
+                  {series.completion_status === 'completed' && <><CheckCircle2 size={13} /> Completed</>}
+                  {series.completion_status === 'hiatus' && <><Pause size={13} /> On Hiatus</>}
+                  {series.completion_status === 'ongoing' && <><Circle size={9} fill="currentColor" stroke="none" /> Ongoing</>}
                 </span>
               )}
             </div>
@@ -917,7 +923,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                         transform: star <= displayStars ? 'scale(1.15)' : 'scale(1)',
                         opacity: ratingLoading ? 0.5 : 1,
                       }}
-                    >★</button>
+                    ><Star size={16} /></button>
                   ))}
                 </div>
                 <div style={{ fontSize: '10px', color: '#8a8f99', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>
@@ -938,7 +944,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   color: '#fff', textDecoration: 'none',
                   boxShadow: '0 4px 20px rgba(217,119,6,0.3)',
                 }}>
-                  ▶ Continue Reading → Ch.{progressChapter.chapter_number}
+                  <Play size={13} /> Continue Reading <ChevronRight size={13} /> Ch.{progressChapter.chapter_number}
                 </a>
               ) : firstChapter && (
                 <a href={`/read/${firstChapter.id}`} style={{
@@ -948,7 +954,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   color: '#fff', textDecoration: 'none',
                   boxShadow: '0 4px 20px rgba(217,119,6,0.3)',
                 }}>
-                  ▶ Start Reading
+                  <Play size={14} /> Start Reading
                 </a>
               )}
               {progressChapter && firstChapter && (
@@ -958,7 +964,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
                   color: '#c3c7cf', textDecoration: 'none',
                 }}>
-                  ↺ Start From Beginning
+                  <RotateCcw size={13} /> Start From Beginning
                 </a>
               )}
               {latestChapter && latestChapter.id !== firstChapter?.id && latestChapter.id !== progressChapter?.id && (
@@ -968,7 +974,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
                   color: '#c3c7cf', textDecoration: 'none',
                 }}>
-                  ⚡ Latest Chapter
+                  <Zap size={13} /> Latest Chapter
                 </a>
               )}
               {!isCreator && (
@@ -985,7 +991,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     transition: 'all 0.2s',
                   }}
                 >
-                  {followLoading ? '...' : isFollowing ? '🔔 Following' : '🔔 Follow'}
+                  {followLoading ? '...' : <><Bell size={13} /> {isFollowing ? 'Following' : 'Follow'}</>}
                 </button>
               )}
               {isCreator && (
@@ -1011,7 +1017,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                         cursor: deletingSeries ? 'wait' : 'pointer', opacity: deletingSeries ? 0.7 : 1,
                       }}
                     >
-                      {deletingSeries ? 'Deleting...' : '⚠️ Confirm Delete Series'}
+                      {deletingSeries ? 'Deleting...' : <><AlertTriangle size={13} /> Confirm Delete Series</>}
                     </button>
                     <button
                       onClick={() => setConfirmDeleteSeries(false)}
@@ -1035,7 +1041,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                       color: '#ef4444', cursor: 'pointer',
                     }}
                   >
-                    🗑️ Delete Series
+                    <Trash2 size={13} /> Delete Series
                   </button>
                 )
               )}
@@ -1049,7 +1055,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   color: '#a78bfa', textDecoration: 'none',
                 }}
               >
-                💬 Discuss on Kalpana Circle
+                <MessageCircle size={13} /> Discuss on Kalpana Circle
               </a>
               {/* Step 11 — WhatsApp Share */}
               <ShareButton title={series.title} url={typeof window !== 'undefined' ? window.location.href : ''} />
@@ -1067,7 +1073,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>
-            📚 {chapters.length} Chapter{chapters.length !== 1 ? 's' : ''}
+            <Library size={13} /> {chapters.length} Chapter{chapters.length !== 1 ? 's' : ''}
           </h2>
           <button
             onClick={() => setSortDesc(d => !d)}
@@ -1076,13 +1082,13 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
               background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer',
             }}
           >
-            {sortDesc ? '↓ Newest First' : '↑ Oldest First'}
+            {sortDesc ? <><ArrowDown size={12} /> Newest First</> : <><ArrowUp size={12} /> Oldest First</>}
           </button>
         </div>
 
         {chapters.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📭</div>
+            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Inbox size={32} /></div>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>No chapters published yet. Check back soon!</p>
           </div>
         ) : (
@@ -1118,10 +1124,10 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           <section style={{ padding: '40px 0 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-                💬 Fan Theories &amp; Art
+                <MessageCircle size={14} /> Fan Theories &amp; Art
               </h2>
               <a href={`/kalpana-circle?tag=${encodeURIComponent(series.title)}`} style={{ fontSize: '12.5px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none' }}>
-                See all →
+                See all <ChevronRight size={12} />
               </a>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
@@ -1135,7 +1141,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           <section style={{ padding: '40px 0 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: '10px', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-                🎬 Visual Quests {quests.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({quests.length})</span>}
+                <Clapperboard size={14} /> Visual Quests {quests.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({quests.length})</span>}
               </h2>
               {isCreator && !showQuestForm && (
                 <button
@@ -1221,7 +1227,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                           <span style={{
                             fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.03em',
                             color: q.status === 'open' ? '#22c55e' : 'var(--text-muted)',
-                          }}>{q.status === 'open' ? '● Open' : '✓ Closed'}</span>
+                          }}>{q.status === 'open' ? <><Circle size={9} fill="currentColor" stroke="none" /> Open</> : <><CheckCircle2 size={11} /> Closed</>}</span>
                         </div>
                         <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                           {new Date(q.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -1232,7 +1238,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
 
                       {winner && (
                         <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '10px', background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.28)' }}>
-                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#d97706', marginBottom: '4px' }}>🏆 Official visual — by {winner.submitterName}</div>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#d97706', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><Trophy size={12} /> Official visual — by {winner.submitterName}</div>
                           <a href={winner.youtube_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12.5px', color: 'var(--text-primary)', wordBreak: 'break-all' as const }}>
                             {winner.youtube_url}
                           </a>
@@ -1263,7 +1269,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                                     fontSize: '11px', fontWeight: 700, opacity: q.status !== 'open' ? 0.6 : 1,
                                   }}
                                 >
-                                  ▲ {s.voteCount > 0 ? s.voteCount : 'Vote'}
+                                  <ChevronUp size={12} style={{ verticalAlign: 'middle' }} /> {s.voteCount > 0 ? s.voteCount : 'Vote'}
                                 </button>
                                 {isCreator && q.status === 'open' && (
                                   <button
@@ -1274,7 +1280,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                                       background: 'transparent', color: 'var(--text-tertiary)', fontSize: '11px', fontWeight: 700,
                                       cursor: 'pointer', opacity: pickBusy === s.id ? 0.5 : 1,
                                     }}
-                                  >🏆 Pick</button>
+                                  ><Trophy size={12} /> Pick</button>
                                 )}
                               </div>
                             </div>
@@ -1339,14 +1345,14 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   background: 'var(--bg-card)', color: '#d97706', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
                 }}
               >
-                {myRating && reviews.some(r => r.reader_id === user.id) ? '✏️ Edit Your Review' : '✍️ Write a Review'}
+                {myRating && reviews.some(r => r.reader_id === user.id) ? <><Edit3 size={13} /> Edit Your Review</> : <><PenLine size={13} /> Write a Review</>}
               </button>
             )}
           </div>
 
           {!myRating && user && (
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-              Rate the series above (★) before writing a review.
+              Rate the series above (using the stars) before writing a review.
             </p>
           )}
 
@@ -1407,7 +1413,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                       <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{review.full_name}</span>
                       <span style={{ display: 'flex', gap: '1px' }}>
                         {[1, 2, 3, 4, 5].map(s => (
-                          <span key={s} style={{ fontSize: '11px', color: s <= review.stars ? '#d97706' : 'var(--border-color)' }}>★</span>
+                          <Star key={s} size={11} fill={s <= review.stars ? '#d97706' : 'none'} stroke={s <= review.stars ? '#d97706' : 'var(--border-color)'} />
                         ))}
                       </span>
                     </div>
@@ -1432,7 +1438,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                       fontSize: '11px', fontWeight: 700,
                     }}
                   >
-                    👍 Helpful{review.helpful_count > 0 ? ` (${review.helpful_count})` : ''}
+                    <ThumbsUp size={12} /> Helpful{review.helpful_count > 0 ? ` (${review.helpful_count})` : ''}
                   </button>
                 </div>
               ))}
@@ -1447,7 +1453,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>🔥</div>
           <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>MANGAL</span>
         </div>
-        <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 14px' }}>Made with ❤️ in India · Free to read, forever.</p>
+        <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>Made with <Heart size={12} fill="currentColor" /> in India · Free to read, forever.</p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
           {[
             { label: 'Privacy Policy', href: '/privacy' },
@@ -1562,7 +1568,7 @@ function ChapterRow({
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   textDecoration: 'none', flexShrink: 0,
                 }}
-              >✏️</a>
+              ><Edit3 size={14} /></a>
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmingDelete(true); }}
                 title="Delete chapter"
@@ -1573,7 +1579,7 @@ function ChapterRow({
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
                 }}
-              >🗑️</button>
+              ><Trash2 size={14} /></button>
             </>
           ) : (
             <>
@@ -1586,7 +1592,7 @@ function ChapterRow({
                   color: '#ef4444', cursor: deleting ? 'wait' : 'pointer', whiteSpace: 'nowrap',
                 }}
               >
-                {deleting ? 'Deleting...' : '⚠️ Confirm Delete'}
+                {deleting ? 'Deleting...' : <><AlertTriangle size={13} /> Confirm Delete</>}
               </button>
               {!deleting && (
                 <button
@@ -1606,7 +1612,7 @@ function ChapterRow({
       )}
 
       {/* Arrow indicator — purely visual, points into the chapter link */}
-      <span style={{ color: hovered ? '#d97706' : 'var(--text-faint)', fontSize: '18px', transition: 'color 0.15s', flexShrink: 0 }}>→</span>
+      <span style={{ color: hovered ? '#d97706' : 'var(--text-faint)', transition: 'color 0.15s', flexShrink: 0, display: 'flex' }}><ChevronRight size={18} /></span>
     </div>
   );
 }
@@ -1642,7 +1648,7 @@ function CirclePostCard({ post, seriesTitle }: { post: { id: string; caption: st
             <div style={{
               width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '14px', textAlign: 'center', fontSize: '12px', color: 'var(--text-tertiary)', lineHeight: 1.5,
-            }}>{post.caption ?? '💬'}</div>
+            }}>{post.caption ?? <MessageCircle size={14} />}</div>
           )}
         </div>
         <div style={{ padding: '8px 10px', fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1668,7 +1674,7 @@ function RelatedCard({ series }: { series: Series }) {
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>📜</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ScrollText size={36} /></div>
           )}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -1680,7 +1686,7 @@ function RelatedCard({ series }: { series: Series }) {
               background: series.content_type === 'novel' ? 'rgba(109,40,217,0.9)' : 'rgba(127,29,29,0.9)',
               padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
             }}>
-              {series.content_type === 'novel' ? '📕 Novel' : '📖 Mangal'}
+              {series.content_type === 'novel' ? <><BookText size={11} /> Novel</> : <><BookOpen size={11} /> Mangal</>}
             </span>
           </div>
         </div>
@@ -1691,7 +1697,7 @@ function RelatedCard({ series }: { series: Series }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '10px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}><Eye size={10} /> {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
       </div>
