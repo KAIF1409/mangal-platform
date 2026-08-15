@@ -2721,3 +2721,108 @@ and React's purity rules disallow impure calls there).
   its `limit(30)` and no filtering/search of rooms themselves (only the
   create-room video search) — fine at current scale.
 
+## 34. Fast tap (Shorts) Watch Together — extends §33 (DONE, this session)
+
+§33 shipped Sync-Play Watch Rooms for a single long video only. This session
+added the second mode the founder asked for: a Fast tap room where everyone
+scrolls KaTube Shorts together, with two distinct ways to talk — a public
+Comment (tied to the one Short on screen, same as normal KaTube comments)
+and a private Chat that posts into a *real, existing* K Circle group instead
+of living only in the room. Reused §33's `watch_rooms`/`watch_room_members`
+tables and host-authoritative Broadcast-sync philosophy rather than building
+a parallel system.
+
+- **Schema** (two migrations, applied live via `Supabase:execute_sql`
+  earlier and formalized into the repo as
+  `supabase/migrations/20260815062656_sync_watch_rooms_shorts_mode.sql` and
+  `20260815063915_kcircle_fast_tap_watch_together.sql` this session — they
+  existed live but were missing from git, now reconciled):
+  `watch_rooms.mode` (`'video'` default / `'shorts'`), `watch_rooms.
+  current_short_id` (which Short the room is currently on),
+  `watch_rooms.video_id` relaxed to nullable (a shorts room isn't "about"
+  one fixed video), `watch_rooms.linked_conversation_id` (which K Circle
+  group a room's Chat tab posts into — chosen by the host at creation),
+  `kcircle_messages.short_ref_id` (tags a group message with which Short it
+  was about, for the "📎 About a Short" pointer). No new RLS policies
+  needed — existing host-only/participant-only policies on both tables
+  apply unchanged regardless of which columns are set.
+- **Room-creation flow** (`app/kalpana-circle/watch-together/page.tsx`) —
+  "+ Create Room" now opens a mode picker first: **Fast tap (Shorts)** vs
+  **Slow tap (long video)**, replacing the old single video-search modal
+  (which is now just the Slow tap path, unchanged otherwise). Picking Fast
+  tap adds a step to choose which of the founder's own K Circle *groups*
+  (not 1:1 DMs) the room's Chat should post into — the room starts on the
+  most recent KaTube Short. "Your rooms" / public-room list rows now show a
+  ⚡/🎬 icon and route to the right room type via a small `roomHref()`
+  helper.
+- **New route `app/kalpana-circle/watch-together/shorts/[roomId]/page.tsx`**
+  — the Fast tap room itself:
+  - Shorts feed reuses `app/katube/shorts/[shortId]/page.tsx`'s vertical
+    snap-scroll/windowing pattern (±1 iframe mounting, thumbnail fallback
+    otherwise), but navigation is host-authoritative: only the host's
+    scroll position is real — everyone else's `IntersectionObserver`
+    still fires locally (feels responsive) but is a no-op for sync
+    purposes. The host's current index broadcasts over an ephemeral
+    channel (`watch-room-shorts-sync-<roomId>`, mirrors §33's playback
+    channel) plus a 5s heartbeat re-broadcast and a `request-sync` ask
+    from new joiners, and is persisted to `current_short_id` so a late
+    joiner lands on the right Short even before the first broadcast
+    arrives.
+  - **Comment tab** — public, inserts into `video_comments` for whichever
+    Short is currently active, visible to anyone (same table/behavior as
+    KaTube's own watch-page comments).
+  - **Chat tab** — inserts into `kcircle_messages` with the room's
+    `linked_conversation_id` and `short_ref_id` set to the active Short.
+    Gated on actual group membership (checked on room load via
+    `kcircle_conversation_participants`): a non-member sees a locked
+    explainer ("🔒 Chat here goes to *Group Name*, a private K Circle
+    group — you're not a member...") and Send stays disabled, but Comment
+    still works for them. Membership isn't re-checked per-send — relies on
+    `kcircle_messages`'s existing insert RLS as the real enforcement, the
+    client-side lock is just UX.
+  - **Layout** — desktop: persistent flexbox row, Shorts feed **left**,
+    Chat/Comment panel **right** (deliberately mirrors §33's video-top/
+    chat-bottom long-video room, per the founder's spec that Fast tap
+    should look different from Slow tap). Mobile (`≤860px`, CSS media
+    query in an inline `<style>` tag since this file has no persistent
+    layout width to key off of like the long-video room's flex-wrap does):
+    full-bleed 9:16 video matching KaTube's own Shorts feed, side panel
+    hidden, Chat/Comment collapsed into a Reels-style bottom sheet opened
+    by tapping the 💬/🗨️ icons on the video itself — no room for a
+    persistent panel at true full-screen 9:16, and a bottom sheet is the
+    pattern viewers already know from Instagram/YouTube.
+  - Sound defaults muted (browser autoplay requirement), toggled via the
+    YouTube postMessage API on the active iframe only, same approach as
+    `app/katube/shorts/[shortId]/page.tsx`.
+- **K Circle group chat** (`app/kalpana-circle/chat/page.tsx`) — the
+  regular group thread now renders a small "📎 About a Short — open it →"
+  link on any message carrying `short_ref_id`, linking to
+  `/katube/shorts/<id>`, so a Fast-tap Chat message is recognizable and
+  followable from inside the group's normal chat history later, not just
+  from inside the room itself.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on all
+touched/new files (`watch-together/page.tsx`, `watch-together/shorts/
+[roomId]/page.tsx`, `kalpana-circle/chat/page.tsx`): 0 errors — fixed three
+unescaped-apostrophe issues during the pass. One pre-existing-style `<img>`
+warning in the new Shorts room file, same as the two already-accepted `<img>`
+warnings in `kalpana-circle/chat/page.tsx` and the one in `katube/shorts/
+[shortId]/page.tsx` (YouTube-CDN thumbnail fallback, not swapped to
+`next/image` anywhere else in the codebase either). Full-project `eslint .`
+shows 13 pre-existing errors, all in files this session never touched
+(`app/read/[chapterId]/page.tsx` and others) — not introduced here.
+
+**Not done (flagged as follow-ups, not started this session):**
+- No host-transfer for Fast tap rooms either (same gap as §33's long-video
+  room) — if the host leaves mid-session, Shorts navigation simply stops
+  advancing for everyone else.
+- The Chat-tab membership lock is client-side UX only, not a second
+  server-side check beyond `kcircle_messages`' own RLS — fine since RLS is
+  the actual enforcement, but a member removed from the group mid-room
+  would still see an unlocked-looking tab until next reload.
+- No public/report hook on Fast-tap Chat messages beyond whatever
+  moderation the regular K Circle group chat already has; Comment reuses
+  KaTube's existing comment moderation as-is.
+- Shorts feed in the room is capped at the same `limit(50)` most-recent
+  window as KaTube's own Shorts feed — no pagination/infinite-scroll,
+  matching that file's existing scope.
