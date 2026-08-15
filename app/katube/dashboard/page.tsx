@@ -7,7 +7,7 @@ import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
-import { Clapperboard, CheckCircle2 } from 'lucide-react';
+import { Clapperboard, CheckCircle2, ArrowRight } from 'lucide-react';
 
 // ── KaTube profile — lives inside the main MANGAL dashboard (one profile,
 // one email, one channel — see CONTEXT.md §6). This is now the ONLY place
@@ -282,10 +282,10 @@ export default function KaTubeProfilePage() {
 
             {channelStatus?.verifiedChannelId && (
               <Link href="/katube/upload" style={{
-                display: 'block', textAlign: 'center', marginTop: '20px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textAlign: 'center', marginTop: '20px',
                 padding: '13px', borderRadius: '10px', textDecoration: 'none',
                 background: '#2563eb', color: '#fff', fontSize: '14px', fontWeight: 800,
-              }}>Upload a video →</Link>
+              }}>Upload a video <ArrowRight size={15} strokeWidth={2} /></Link>
             )}
           </>
         )}
