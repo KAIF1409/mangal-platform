@@ -2826,3 +2826,47 @@ shows 13 pre-existing errors, all in files this session never touched
 - Shorts feed in the room is capped at the same `limit(50)` most-recent
   window as KaTube's own Shorts feed — no pagination/infinite-scroll,
   matching that file's existing scope.
+
+## §35 — K Circle theme parity with KaTube/landing page (dark default)
+
+**What:** All 6 K Circle pages now use the same page-scoped dark-default
+theme as KaTube and the landing page, instead of the site-wide light
+default (or, for `watch-together/page.tsx`, the old global-sync
+`<ThemeToggle />`).
+
+**Shared hook** — `app/kalpana-circle/theme.ts` exports `useKCircleTheme()`
+plus `KC_DARK_VARS`/`KC_LIGHT_VARS`, the CSS var maps copied verbatim from
+KaTube's own dark/light tokens (`--bg-primary`, `--bg-card`, `--bg-input`,
+`--border-color`, `--text-primary/secondary/tertiary/faint`, `--nav-bg`,
+`--nav-bg-transparent`). Returns `{ isLight, setIsLight, themeVars,
+dataTheme }`; every page spreads `themeVars` onto its root div, sets
+`data-theme={dataTheme}`, and wires `<ThemeToggle onChange={setIsLight}
+defaultLight={false} syncGlobal={false} />` — page-scoped, never touches
+the global `<html data-theme>` attribute or the sitewide localStorage key.
+
+**Pages wired (all 6):**
+- `app/kalpana-circle/page.tsx` — root div + both existing ThemeToggles;
+  Suspense fallback hardcoded to dark (no light flash before mount).
+- `app/kalpana-circle/chat/page.tsx` — root div; ThemeToggle added to all
+  three nav states (conversation list, group chat, DM) — DM previously had
+  no toggle at all.
+- `app/kalpana-circle/group/[conversationId]/page.tsx` — all three return
+  states (loading, not-allowed, main) themed; toggle added to nav.
+- `app/kalpana-circle/broadcast/[username]/page.tsx` — same three-state
+  pattern; toggle added to nav.
+- `app/kalpana-circle/broadcasts/page.tsx` — root div + header toggle
+  (page had none before).
+- `app/kalpana-circle/watch-together/page.tsx` — converted from the old
+  global-sync `<ThemeToggle />` to the page-scoped pattern.
+
+**Deliberately untouched:** `app/kalpana-circle/watch-together/shorts/
+[roomId]/page.tsx` stays always-dark, no toggle — matches KaTube's own
+Shorts feed convention (see §34).
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` 0 errors on all
+6 touched files + `theme.ts` (one pre-existing, unrelated warning in
+`broadcasts/page.tsx` on an untouched line). Full-project `eslint .`
+still shows the same 13 pre-existing errors from files this session never
+touched. Committed in three batches (theme.ts+page.tsx+chat; group+
+broadcast; broadcasts+watch-together) and pushed directly to `main`.
+
