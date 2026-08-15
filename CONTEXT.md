@@ -3483,3 +3483,46 @@ new route:
 - Earnings numbers are still not real — that's still gated on picking a
   payment provider (Razorpay or similar), which the founder hasn't
   decided yet as of this session.
+
+## §46 — §43 continued: Perks tab retrofitted (per-product ladder + Ecosystem Bonus)
+
+**Status: done.** Picks up §43's plan item 3 for the Perks tab specifically
+— this one had a fully decided spec already (§43), so no new sign-off was
+needed, just implementation.
+
+**Built:**
+- `app/dashboard/perks/page.tsx` now uses `ProductScopeSwitcher` (same
+  component Workspace/Earnings use) and fetches real per-product metrics
+  on mount: WebMangal = summed `series.views` ("total reads"), KaTube =
+  summed `videos.views` ("total views"), Kalpana Circle = count of
+  `kcircle_post_likes` across the creator's own `kcircle_posts` ("total
+  likes" — no follower/engagement table exists for Circle yet, so likes
+  received is the closest available engagement signal).
+- Each product gets its own 3-tier ladder (Starter / Rising / Elite) on
+  its own metric, per §43's decision — thresholds are a implementation
+  choice (§43 explicitly left these open): WebMangal/KaTube use
+  1,000 / 10,000; Kalpana Circle uses 250 / 2,500 (scaled down since
+  likes accumulate slower than views). The tier the creator is
+  currently in is marked CURRENT; the next tier up shows a progress bar
+  (current metric / threshold).
+- **Ecosystem Bonus**, per §43 item 2: a banner above the per-product
+  ladders. Unlocks once the creator clears 500+ on their metric on 2 or
+  more products — shows a "MANGAL Creator" badge/copy and states a 10%
+  tier-progress boost (copy-only for now, not yet applied to the actual
+  progress-bar math — see Not done below). Below threshold, the banner
+  explains what's needed to unlock it.
+- On "All" scope: renders all three product ladders stacked, each
+  labeled. On a specific scope: just that product's ladder.
+
+**Not done / left for later:**
+- The 10% Ecosystem Bonus is currently descriptive copy only — it does
+  not yet actually inflate the progress-bar percentage or move anyone
+  into a tier they haven't numerically reached. Implementing the real
+  10% boost math (and deciding exactly how it should visually interact
+  with the progress bar) is a follow-up, not blocking since §43 said the
+  exact mechanic was an implementation detail.
+- No new tables/migrations — reuses `series`, `videos`, `kcircle_posts`,
+  `kcircle_post_likes`, same RLS-safe query pattern Earnings already
+  established.
+- Boost, Academy, Nova, Tools are still untouched — next up per §43's
+  stated order (Boost next).
