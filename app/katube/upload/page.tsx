@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from '../../components/ThemeToggle';
 import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
-import { CheckCircle2, Zap, Megaphone } from 'lucide-react';
+import { CheckCircle2, Zap, Megaphone, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const CATEGORY_OPTIONS = ['Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Dark Fantasy', 'Supernatural', 'Science Fiction', 'Trailers'];
 const AI_TOOL_OPTIONS = ['Sora', 'Kling', 'Runway', 'Pika', 'Hailuo', 'Veo', 'Other'];
@@ -218,7 +218,8 @@ export default function KaTubeUploadPage() {
           <Link href="/katube" className="mangal-upload-back" style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap',
-          }}>← <span className="mangal-upload-back-text">Back to KaTube</span></Link>
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+          }}><ArrowLeft size={13} strokeWidth={2} /> <span className="mangal-upload-back-text">Back to KaTube</span></Link>
         </div>
       </nav>
 
@@ -262,10 +263,10 @@ export default function KaTubeUploadPage() {
               and you won&apos;t be asked again.
             </p>
             <Link href="/katube/dashboard" style={{
-              display: 'inline-block', padding: '10px 18px', borderRadius: '10px',
+              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px',
               background: '#f97316', color: '#fff', fontSize: '13px', fontWeight: 700,
               textDecoration: 'none',
-            }}>Go to my KaTube profile →</Link>
+            }}>Go to my KaTube profile <ArrowRight size={13} strokeWidth={2} /></Link>
           </div>
         ) : (
           <>
