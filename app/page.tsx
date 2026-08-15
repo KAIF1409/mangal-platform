@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type ComponentType } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -11,6 +11,7 @@ import ThemeToggle from './components/ThemeToggle';
 import ParticleField from './components/ParticleField';
 import CustomCursor from './components/CustomCursor';
 import { supabase } from './lib/supabase';
+import { ScrollText, Flame, Smartphone, PenLine, X, Menu, Tag, Eye, BookOpen, Book } from 'lucide-react';
 
 // ── Public landing page — no auth required ──
 // Authenticated users are redirected to /home automatically.
@@ -51,10 +52,10 @@ function formatViews(n: number): string {
 }
 
 const FEATURE_CARDS = [
-  { icon: '📜', title: 'Desi Stories', desc: 'Mythology, Folk Tales, Street Life — genres born from Bharat.' },
-  { icon: '🔥', title: 'New Every Week', desc: 'Fresh chapters drop constantly from creators across India.' },
-  { icon: '📱', title: 'Read Anywhere', desc: 'Scroll or page mode. Mobile-first. Zero ads, forever free.' },
-  { icon: '✍️', title: 'Be a Creator', desc: 'Publish your own Mangal or Novel — no gatekeepers.' },
+  { icon: ScrollText, title: 'Desi Stories', desc: 'Mythology, Folk Tales, Street Life — genres born from Bharat.' },
+  { icon: Flame, title: 'New Every Week', desc: 'Fresh chapters drop constantly from creators across India.' },
+  { icon: Smartphone, title: 'Read Anywhere', desc: 'Scroll or page mode. Mobile-first. Zero ads, forever free.' },
+  { icon: PenLine, title: 'Be a Creator', desc: 'Publish your own Mangal or Novel — no gatekeepers.' },
 ];
 
 const GENRE_PILLS = ['Mythology', 'Action', 'Romance', 'Folk Tale', 'Desi Horror', 'Thriller', 'Fantasy', 'School Life', 'Street Life', 'Sci-Fi'];
@@ -447,7 +448,7 @@ export default function LandingPage() {
                 color: 'var(--text-primary)', fontSize: '16px', cursor: 'pointer', flexShrink: 0,
               }}
             >
-              {mobileMenuOpen ? '✕' : '☰'}
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </nav>
@@ -648,8 +649,8 @@ export default function LandingPage() {
           minHeight: 'clamp(160px,26vh,260px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '32px 24px', textAlign: 'center',
         }}>
-          <h4 style={{ fontSize: 'clamp(18px,2.6vw,30px)', fontWeight: 900, textTransform: 'uppercase', color: '#0d0d14', maxWidth: '720px', lineHeight: 1.5, margin: 0 }}>
-            🔥 New chapters drop every week — bookmark your favorites and never miss a release
+          <h4 style={{ fontSize: 'clamp(18px,2.6vw,30px)', fontWeight: 900, textTransform: 'uppercase', color: '#0d0d14', maxWidth: '720px', lineHeight: 1.5, margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+            <Flame size={26} fill="#0d0d14" /> New chapters drop every week — bookmark your favorites and never miss a release
           </h4>
         </section>
 
@@ -665,8 +666,8 @@ export default function LandingPage() {
         {/* ── SHOWCASE ── */}
         <section style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ marginBottom: '48px' }}>
-            <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
-              🔥 Trending Now
+            <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 40px)', fontWeight: 900, margin: '0 0 28px', letterSpacing: '-0.03em', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Flame size={26} fill="#d97706" stroke="#d97706" /> Trending Now
             </h2>
             {loading ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 180px))', gap: '14px' }}>
@@ -701,7 +702,7 @@ export default function LandingPage() {
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '56px 24px', borderRadius: '16px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)' }}>
-                <div style={{ fontSize: '32px', marginBottom: '14px' }}>📜</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px', color: 'var(--text-tertiary)' }}><ScrollText size={30} /></div>
                 <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-secondary)', margin: '0 0 6px' }}>No stories published yet</p>
                 <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 20px', maxWidth: '360px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
                   MANGAL is a new platform — the first creators to publish here will be featured right in this spot.
@@ -721,7 +722,7 @@ export default function LandingPage() {
         {tagCloud.length > 0 && (
           <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
-              <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>🏷️ Browse by Tag</h2>
+              <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}><Tag size={22} /> Browse by Tag</h2>
               <Link href="/tags" data-cursor-hover="true" style={{ fontSize: '13px', fontWeight: 700, color: '#d97706', textDecoration: 'none' }}>See all tags →</Link>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
@@ -800,7 +801,7 @@ export default function LandingPage() {
 
         {/* ── CREATOR CTA ── */}
         <section style={{ padding: 'clamp(70px,10vw,120px) 24px', textAlign: 'center', maxWidth: '680px', margin: '0 auto' }}>
-          <div style={{ fontSize: '40px', marginBottom: '24px', filter: 'drop-shadow(0 0 20px rgba(217,119,6,0.6))' }}>🔥</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px', filter: 'drop-shadow(0 0 20px rgba(217,119,6,0.6))', color: '#d97706' }}><Flame size={40} fill="#d97706" /></div>
           <h2 style={{ fontSize: 'clamp(28px,4vw,46px)', fontWeight: 900, margin: '0 0 16px', letterSpacing: '-0.04em', color: 'var(--text-primary)' }}>Got a story in you?</h2>
           <p style={{ fontSize: 'clamp(14px,1.8vw,17px)', color: 'var(--text-tertiary)', margin: '0 0 36px', lineHeight: 1.65 }}>
             Publish your own Mangal or Novel on our platform. Free tools, real readers, no middlemen.
@@ -816,7 +817,7 @@ export default function LandingPage() {
               boxShadow: '0 4px 28px rgba(217,119,6,0.35)', display: 'inline-flex', alignItems: 'center', gap: '10px',
             }}
           >
-            ✍️ Become a Creator
+            <PenLine size={16} /> Become a Creator
           </motion.a>
         </section>
 
@@ -893,7 +894,7 @@ function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="(max-width: 768px) 32vw, 140px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px' }}>📜</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}><ScrollText size={28} /></div>
           )}
           {rank && rank <= 3 && (
             <div style={{
@@ -910,8 +911,9 @@ function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
               fontSize: '8px', fontWeight: 700, color: '#fff',
               background: series.content_type === 'novel' ? 'rgba(109,40,217,0.9)' : 'rgba(127,29,29,0.9)',
               padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
+              display: 'inline-flex', alignItems: 'center', gap: '3px',
             }}>
-              {series.content_type === 'novel' ? '📕 Novel' : '📖 Mangal'}
+              {series.content_type === 'novel' ? <><Book size={9} /> Novel</> : <><BookOpen size={9} /> Mangal</>}
             </span>
           </div>
         </div>
@@ -921,7 +923,7 @@ function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {series.genre ? <div style={{ fontSize: '9px', color: '#d97706' }}>{series.genre}</div> : <span />}
-            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Eye size={10} /> {formatViews(series.views ?? 0)}</span>
           </div>
         </div>
       </div>
@@ -931,7 +933,7 @@ function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
 
 
 /* ── FEATURE CARD ── */
-function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function FeatureCard({ icon: Icon, title, desc }: { icon: ComponentType<{ size?: number }>; title: string; desc: string }) {
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -946,7 +948,7 @@ function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc:
         boxShadow: hovered ? '0 8px 32px rgba(217,119,6,0.08)' : 'none',
       }}
     >
-      <div style={{ fontSize: '30px', marginBottom: '14px' }}>{icon}</div>
+      <div style={{ color: '#d97706', marginBottom: '14px' }}><Icon size={28} /></div>
       <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>{title}</div>
       <div style={{ fontSize: '13px', color: 'var(--text-tertiary)', lineHeight: 1.6 }}>{desc}</div>
     </div>
