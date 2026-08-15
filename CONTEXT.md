@@ -3292,3 +3292,80 @@ sandbox (network sandbox blocks `fonts.googleapis.com`, used by
 `next/font/google` in `app/layout.tsx`); Vercel's own build environment
 has normal internet access, so this shouldn't apply there — worth
 watching the next Vercel deploy log if anything looks off.
+## §43 — 🔴 HIGH PRIORITY, NOT STARTED — Unify /dashboard's other tabs as one shell with a product-scope switcher
+
+**Status: plan only, agreed by founder, nothing built yet. Read this before
+touching Workspace/Earnings/Boost/Perks/Academy/Nova/Tools.**
+
+**The question this answers:** §42 moved KaTube's dashboard tab to its own
+namespace (`/katube/dashboard`) and flagged the remaining `/dashboard`
+tabs (Workspace, Earnings, Boost, Perks, Academy, Nova, Tools) as
+un-namespaced. The founder asked whether those seven should become three
+separate copies (one full set per product) or stay common. Researched
+before deciding — this is that research + the decision.
+
+**Current state (as of this section, unchanged so far):** all seven tabs
+are 100% WebMangal content today — series drafts, chapter uploads,
+reader-count tiers, writing tips. None of them are KaTube- or Kalpana
+Circle-aware yet. So this was a build-it-forward decision, not a bug fix.
+
+**Research:** the standard pattern for "one account, multiple
+products/brands" in real platforms is neither of the two options as
+originally framed (fully separate vs fully merged) — it's a third shape:
+**one dashboard shell, with a context/workspace switcher that scopes the
+data shown inside each tab**, not a switcher that navigates to a
+different app. Notion's workspace switcher is the clean example:
+switching workspace re-populates the *same* sidebar and pages with that
+workspace's data rather than taking you somewhere else, so the user never
+has to wonder if they're looking at the right thing. YouTube Studio
+(channel switcher), Stripe (business switcher), and Google Ads
+(account/property switcher) all do the same thing: one shell, one URL
+structure, a scope selector that changes what's rendered.
+
+**Decision: one shell per tab, not three.** Reasons:
+- The app already has a "one MANGAL profile, one login" principle (the
+  reason `/dashboard/katube` existed inside the shared dashboard in the
+  first place instead of a standalone KaTube account system — see §10).
+  Three fully separate dashboards would quietly break that: a creator
+  active in both WebMangal and KaTube would have to remember which URL
+  has which earnings number.
+- Fully separate means 21 near-duplicate pages (7 tabs × 3 products)
+  instead of 7. Every future fix or design change has to be made three
+  times and *will* drift out of sync over time.
+- A naively fully-merged dashboard (one Earnings page, identical view for
+  everyone) is also wrong — the products' data isn't comparable. KaTube
+  revenue flows through YouTube itself, not through the platform (§41),
+  while WebMangal earnings are platform-native. Merging those into one
+  number would be actively misleading.
+
+**What "one shell" means concretely:** each tab keeps a single URL
+(`/dashboard/earnings`, `/dashboard/workspace`, etc.) with a small
+product-scope switcher at the top (WebMangal / KaTube / Kalpana Circle,
+or "All" where that makes sense) — the tab's content conditionally
+renders per-product data underneath the switcher, not a single merged
+number. Some tabs barely need the switcher: Academy and Nova are
+naturally cross-product (writing tips / AI help aren't WebMangal-only).
+Others — Earnings and Workspace especially — need the switcher front and
+center since the underlying data is structurally different per product.
+
+**Open question, founder to decide before Perks is touched:** should
+Perks' reader-count tiers count *combined* readers across all three
+products, or does each product get its own tier ladder? This is a
+business call about what's actually being rewarded, not an engineering
+one — flagged here so it isn't decided by accident mid-build.
+
+**Not started:** no code changes yet for this section. Implementation
+plan for whoever picks this up next:
+1. Decide the Perks question above first (blocks that one tab only, not
+   the rest).
+2. Add a shared `ProductScope` switcher component (WebMangal / KaTube /
+   Kalpana Circle / All where relevant) — likely lives in
+   `app/components/`, used the same way across tabs.
+3. Retrofit each of the seven tabs one at a time to read the switcher's
+   selected scope and filter/branch its queries and copy accordingly —
+   Earnings and Workspace first (most product-dependent), Academy and
+   Nova last (least product-dependent, may not need real branching, just
+   the switcher for consistency).
+4. No route changes needed for this part — these tabs stay under
+   `/dashboard/*` as-is; this section is purely about what renders inside
+   them, not where they live.
