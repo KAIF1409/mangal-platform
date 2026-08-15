@@ -71,6 +71,11 @@ interface MessageRow {
   text: string | null;
   attachment_url: string | null;
   attachment_type: string | null;
+  // Set when this message was sent from the "Chat" tab of a Fast tap
+  // (Shorts) Watch Together room — points at which short it was about, so
+  // the thread can show a small pointer back to it (see
+  // app/kalpana-circle/watch-together/shorts/[roomId]/page.tsx).
+  short_ref_id: string | null;
   created_at: string;
 }
 
@@ -182,7 +187,7 @@ export default function KCircleChatPage() {
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
   const loadMessages = useCallback(async (conversationId: string) => {
-    const { data } = await supabase.from('kcircle_messages').select('id, conversation_id, sender_id, text, attachment_url, attachment_type, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: true });
+    const { data } = await supabase.from('kcircle_messages').select('id, conversation_id, sender_id, text, attachment_url, attachment_type, short_ref_id, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: true });
     setMessages(data ?? []);
     setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
   }, []);
@@ -699,6 +704,12 @@ export default function KCircleChatPage() {
                     </span>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '75%', alignItems: mine ? 'flex-end' : 'flex-start' }}>
+                    {m.short_ref_id && (
+                      <Link href={`/katube/shorts/${m.short_ref_id}`} style={{
+                        fontSize: '10px', color: 'var(--text-tertiary)', textDecoration: 'none',
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                      }}>📎 About a Short — open it →</Link>
+                    )}
                     {m.attachment_url && (
                       <img
                         src={m.attachment_url}
