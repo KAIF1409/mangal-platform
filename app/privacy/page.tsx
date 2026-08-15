@@ -23,7 +23,7 @@ import { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import {
-  X, Zap, BarChart3, Trash2, Baby, CheckCircle2, Link2, Lock, Cookie, FileEdit, Mail,
+  X, Zap, BarChart3, Trash2, Baby, CheckCircle2, Link2, Lock, Cookie, FileEdit, Mail, ArrowRight,
 } from 'lucide-react';
 
 // ── CONFIGURE THESE ─────────────────────────────────────────────────────────
@@ -349,12 +349,12 @@ export default function PrivacyPolicyPage() {
             {PLATFORM_ADDRESS}
           </div>
           <a href="/grievance" style={{
-            display: 'inline-block', marginTop: '16px',
+            display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '16px',
             padding: '9px 18px', borderRadius: '8px',
             background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)',
             color: '#d97706', fontSize: '12px', fontWeight: 700, textDecoration: 'none',
           }}>
-            Open Grievance Form →
+            Open Grievance Form <ArrowRight size={12} strokeWidth={2} />
           </a>
         </div>
 
