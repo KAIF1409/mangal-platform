@@ -45,9 +45,11 @@ interface VideoOption {
   youtube_id: string;
 }
 
-interface GroupOption {
+interface WatchThread {
   id: string;
-  name: string;
+  otherNames: string[];
+  lastMessageAt: string;
+  lastMessagePreview: string;
 }
 
 // Where a room's "open" link points — video-mode rooms use the existing
@@ -69,14 +71,20 @@ export default function WatchTogetherPage() {
   const [loading, setLoading] = useState(true);
 
   // Create-room flow: 'closed' -> 'pick-mode' (Fast tap/Shorts vs Slow
-  // tap/long video) -> 'pick-video' (Slow tap) or 'pick-group' (Fast tap,
-  // choosing which K Circle group a Fast tap room's "Chat" replies land in).
-  const [createStep, setCreateStep] = useState<'closed' | 'pick-mode' | 'pick-video' | 'pick-group'>('closed');
+  // tap/long video) -> 'pick-video' (Slow tap) or 'pick-visibility' (Fast
+  // tap — no group-picker step anymore; a Fast tap room's Chat now forms
+  // its own thread automatically from whoever's actually watching, see
+  // shorts/[roomId]/page.tsx).
+  const [createStep, setCreateStep] = useState<'closed' | 'pick-mode' | 'pick-video' | 'pick-visibility'>('closed');
   const [videoQuery, setVideoQuery] = useState('');
   const [videoResults, setVideoResults] = useState<VideoOption[]>([]);
-  const [groups, setGroups] = useState<GroupOption[]>([]);
-  const [loadingGroups, setLoadingGroups] = useState(false);
   const [creating, setCreating] = useState(false);
+
+  // Watch Together chat history — participant-set threads I'm part of.
+  const [watchThreads, setWatchThreads] = useState<WatchThread[]>([]);
+  const [threadsLoading, setThreadsLoading] = useState(true);
+  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
+  const [saveHistory, setSaveHistory] = useState(true);
 
   const loadRooms = useCallback(async (uid: string) => {
     const { data: publicRows } = await supabase
@@ -110,14 +118,68 @@ export default function WatchTogetherPage() {
     setLoading(false);
   }, []);
 
+  // Watch Together threads — conversations flagged is_watch_thread that
+  // I'm a participant in, with history_enabled true on MY row (so a
+  // thread I opted out of saving simply doesn't show up in my own list,
+  // even if it's still visible to the other side — see migration
+  // 20260815210000's header comment on why that's the chosen tradeoff).
+  const loadWatchThreads = useCallback(async (uid: string) => {
+    setThreadsLoading(true);
+    const { data: myRows } = await supabase
+      .from('kcircle_conversation_participants')
+      .select('conversation_id, history_enabled')
+      .eq('user_id', uid)
+      .eq('history_enabled', true);
+    const convoIds = (myRows ?? []).map(r => r.conversation_id);
+    if (convoIds.length === 0) { setWatchThreads([]); setThreadsLoading(false); return; }
+
+    const { data: convos } = await supabase
+      .from('kcircle_conversations')
+      .select('id, last_message_at')
+      .in('id', convoIds)
+      .eq('is_watch_thread', true)
+      .order('last_message_at', { ascending: false });
+    if (!convos || convos.length === 0) { setWatchThreads([]); setThreadsLoading(false); return; }
+
+    const withDetails = await Promise.all(convos.map(async c => {
+      const { data: participants } = await supabase
+        .from('kcircle_conversation_participants').select('user_id').eq('conversation_id', c.id);
+      const otherIds = (participants ?? []).map(p => p.user_id).filter(id => id !== uid);
+      const { data: profiles } = otherIds.length > 0
+        ? await supabase.from('creator_profiles').select('username').in('user_id', otherIds)
+        : { data: [] as { username: string }[] };
+      const { data: lastMsg } = await supabase
+        .from('kcircle_messages').select('text').eq('conversation_id', c.id)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      return {
+        id: c.id,
+        otherNames: (profiles ?? []).map(p => p.username),
+        lastMessageAt: c.last_message_at,
+        lastMessagePreview: lastMsg?.text ?? '',
+      };
+    }));
+    setWatchThreads(withDetails);
+    setThreadsLoading(false);
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/login?next=/kalpana-circle/watch-together'); return; }
       setUserId(user.id);
       loadRooms(user.id);
+      loadWatchThreads(user.id);
+      const { data: pref } = await supabase.from('kcircle_watch_history_prefs').select('save_history').eq('user_id', user.id).maybeSingle();
+      setSaveHistory(pref?.save_history ?? true);
     })();
-  }, [router, loadRooms]);
+  }, [router, loadRooms, loadWatchThreads]);
+
+  async function toggleSaveHistory() {
+    if (!userId) return;
+    const next = !saveHistory;
+    setSaveHistory(next);
+    await supabase.from('kcircle_watch_history_prefs').upsert({ user_id: userId, save_history: next, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  }
 
   // Debounced video title search for the "pick a video" step of room
   // creation — same ilike-on-title pattern KaTube's own search uses.
@@ -153,29 +215,14 @@ export default function WatchTogetherPage() {
     router.push(`/katube/watch/${video.id}/room/${newRoom.id}`);
   }
 
-  // Fast tap step 2 — load the K Circle groups I'm in, so I can pick which
-  // one a room's "Chat" replies get tagged into. Only groups (not 1:1 DMs)
-  // are offered, matching the founder's "goes to their group room" spec.
-  async function openPickGroup() {
-    setCreateStep('pick-group');
-    if (!userId || groups.length > 0) return;
-    setLoadingGroups(true);
-    const { data: memberships } = await supabase
-      .from('kcircle_conversation_participants').select('conversation_id').eq('user_id', userId);
-    const convoIds = (memberships ?? []).map(m => m.conversation_id);
-    if (convoIds.length > 0) {
-      const { data: convos } = await supabase
-        .from('kcircle_conversations').select('id, title, is_group').in('id', convoIds).eq('is_group', true);
-      setGroups((convos ?? []).map(c => ({ id: c.id, name: c.title || 'Untitled group' })));
-    }
-    setLoadingGroups(false);
-  }
-
   // Fast tap — a shorts-mode room isn't tied to one video. It starts on the
   // most recent KaTube short; video_id is set to that same short purely so
   // any code that assumes a room always has a video_id (e.g. an "open
   // room's underlying video" link elsewhere) doesn't need a mode branch.
-  async function createShortsRoom(groupConversationId: string, visibility: 'public' | 'private') {
+  // No group is chosen here anymore — the room's Chat resolves its own
+  // participant-set thread once people are actually in the room (see
+  // shorts/[roomId]/page.tsx), so creation only needs a visibility choice.
+  async function createShortsRoom(visibility: 'public' | 'private') {
     if (!userId || creating) return;
     setCreating(true);
     const { data: firstShort } = await supabase
@@ -185,7 +232,7 @@ export default function WatchTogetherPage() {
       .from('watch_rooms')
       .insert({
         video_id: firstShort.id, current_short_id: firstShort.id, host_id: userId, visibility,
-        title: 'Shorts together', mode: 'shorts', linked_conversation_id: groupConversationId,
+        title: 'Shorts together', mode: 'shorts',
       })
       .select('id')
       .single();
@@ -237,6 +284,57 @@ export default function WatchTogetherPage() {
             </div>
           </div>
         )}
+
+        <div style={{ marginBottom: '26px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <h2 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
+              Watch Together chats
+            </h2>
+            <button onClick={toggleSaveHistory} title="Save watch-together chat history" style={{
+              display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', fontWeight: 700,
+              color: saveHistory ? RADIANT_SOLID : 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+            }}>
+              <span style={{
+                width: '30px', height: '17px', borderRadius: '9px', position: 'relative', transition: 'background 0.15s',
+                background: saveHistory ? RADIANT_SOLID : 'var(--border-color)',
+              }}>
+                <span style={{
+                  position: 'absolute', top: '2px', left: saveHistory ? '15px' : '2px', width: '13px', height: '13px',
+                  borderRadius: '50%', background: '#fff', transition: 'left 0.15s',
+                }} />
+              </span>
+              Save history
+            </button>
+          </div>
+          {threadsLoading ? (
+            <p style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>Loading chats...</p>
+          ) : watchThreads.length === 0 ? (
+            <p style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>
+              No Watch Together chats yet — chat while scrolling Shorts together in a Fast tap room and it&rsquo;ll show up here.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
+              {watchThreads.map(t => (
+                <button key={t.id} onClick={() => setOpenThreadId(t.id)} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', textAlign: 'left',
+                  borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', cursor: 'pointer', width: '100%',
+                }}>
+                  <span>
+                    <span style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      💬 You{t.otherNames.length > 0 ? `, ${t.otherNames.join(', ')}` : ''}
+                    </span>
+                    {t.lastMessagePreview && (
+                      <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--text-tertiary)', marginTop: '2px', maxWidth: '440px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {t.lastMessagePreview}
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', flexShrink: 0 }}>Open →</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <h2 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '10px' }}>
           Open public rooms
@@ -291,7 +389,7 @@ export default function WatchTogetherPage() {
                   Pick a mode — each has its own room layout.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <button onClick={openPickGroup} style={{
+                  <button onClick={() => setCreateStep('pick-visibility')} style={{
                     display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '12px',
                     border: `1px solid ${RADIANT_SOLID}`, background: 'var(--bg-primary)', cursor: 'pointer', textAlign: 'left',
                   }}>
@@ -352,44 +450,119 @@ export default function WatchTogetherPage() {
               </>
             )}
 
-            {createStep === 'pick-group' && (
+            {createStep === 'pick-visibility' && (
               <>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px' }}>Where should Chat replies go?</h3>
-                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '12px' }}>
-                  While scrolling Shorts, anyone can tap Comment (public, on the Short itself) or Chat — Chat messages
-                  land right here, in this group&rsquo;s own chat, tagged with which Short they were about.
+                <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px' }}>Start a Fast tap room</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '14px' }}>
+                  Comment stays public on the Short itself. Chat is private — it&rsquo;ll automatically link to whoever
+                  you&rsquo;re actually watching with, saved as its own Watch Together chat below.
                 </p>
-                {loadingGroups ? (
-                  <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>Loading your groups...</p>
-                ) : groups.length === 0 ? (
-                  <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>
-                    You&rsquo;re not in any K Circle groups yet — create one from the Chat tab first.
-                  </p>
-                ) : (
-                  <div style={{ maxHeight: '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {groups.map(g => (
-                      <div key={g.id} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
-                        padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)',
-                      }}>
-                        <span style={{ fontSize: '12.5px', flex: 1, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>👥 {g.name}</span>
-                        <button disabled={creating} onClick={() => createShortsRoom(g.id, 'private')} style={{
-                          fontSize: '11px', fontWeight: 700, padding: '5px 9px', borderRadius: '14px',
-                          border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer',
-                        }}>🔒 Private</button>
-                        <button disabled={creating} onClick={() => createShortsRoom(g.id, 'public')} style={{
-                          fontSize: '11px', fontWeight: 700, padding: '5px 9px', borderRadius: '14px',
-                          border: 'none', background: RADIANT_SOLID, color: '#fff', cursor: 'pointer',
-                        }}>🌐 Public</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button disabled={creating} onClick={() => createShortsRoom('private')} style={{
+                    flex: 1, fontSize: '12.5px', fontWeight: 700, padding: '10px 9px', borderRadius: '10px',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer',
+                  }}>🔒 Private</button>
+                  <button disabled={creating} onClick={() => createShortsRoom('public')} style={{
+                    flex: 1, fontSize: '12.5px', fontWeight: 700, padding: '10px 9px', borderRadius: '10px',
+                    border: 'none', background: RADIANT_SOLID, color: '#fff', cursor: 'pointer',
+                  }}>🌐 Public</button>
+                </div>
               </>
             )}
           </div>
         </div>
       )}
+
+      {openThreadId && userId && (
+        <WatchThreadModal threadId={openThreadId} userId={userId} onClose={() => { setOpenThreadId(null); loadWatchThreads(userId); }} />
+      )}
+    </div>
+  );
+}
+
+// ── Watch Together thread history modal ──
+// Full message history for one participant-set thread, opened from the
+// "Watch Together chats" list above. Each message can be tapped through to
+// the Short it was about; each of MY OWN messages (and, per spec, ANY
+// message — "delete for both" isn't sender-restricted) can be removed
+// either just for me (kcircle_message_hidden_for) or for both sides (a
+// real delete, RLS-scoped to watch threads only — see migration).
+interface ThreadMessage {
+  id: string;
+  sender_id: string;
+  text: string | null;
+  short_ref_id: string | null;
+  created_at: string;
+  senderName: string;
+}
+
+function WatchThreadModal({ threadId, userId, onClose }: { threadId: string; userId: string; onClose: () => void }) {
+  const [messages, setMessages] = useState<ThreadMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [{ data: rows }, { data: hidden }] = await Promise.all([
+        supabase.from('kcircle_messages').select('id, sender_id, text, short_ref_id, created_at').eq('conversation_id', threadId).order('created_at', { ascending: true }),
+        supabase.from('kcircle_message_hidden_for').select('message_id').eq('user_id', userId),
+      ]);
+      if (cancelled || !rows) return;
+      const hiddenIds = new Set((hidden ?? []).map(h => h.message_id));
+      const visible = rows.filter(r => !hiddenIds.has(r.id));
+      const senderIds = [...new Set(visible.map(r => r.sender_id))];
+      const { data: profiles } = senderIds.length > 0 ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', senderIds) : { data: [] as { user_id: string; username: string }[] };
+      const nameMap = new Map((profiles ?? []).map(p => [p.user_id, p.username]));
+      if (!cancelled) setMessages(visible.map(r => ({ ...r, senderName: r.sender_id === userId ? 'You' : (nameMap.get(r.sender_id) ?? 'someone') })));
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [threadId, userId]);
+
+  async function deleteForMe(messageId: string) {
+    setBusyId(messageId);
+    await supabase.from('kcircle_message_hidden_for').insert({ message_id: messageId, user_id: userId });
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    setBusyId(null);
+  }
+
+  async function deleteForBoth(messageId: string) {
+    setBusyId(messageId);
+    await supabase.from('kcircle_messages').delete().eq('id', messageId);
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    setBusyId(null);
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: '20px' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', borderRadius: '14px', width: '100%', maxWidth: '460px', maxHeight: '78vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border-color)' }}>
+          <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>Watch Together chat</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-tertiary)' }}>✕</button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {loading ? (
+            <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>Loading...</p>
+          ) : messages.length === 0 ? (
+            <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>No messages here.</p>
+          ) : messages.map(m => (
+            <div key={m.id} style={{ fontSize: '13px' }}>
+              {m.short_ref_id && (
+                <Link href={`/katube/shorts/${m.short_ref_id}`} style={{ display: 'block', fontSize: '10.5px', color: 'var(--text-tertiary)', marginBottom: '2px', textDecoration: 'none' }}>
+                  📎 About this Short — open it →
+                </Link>
+              )}
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{m.senderName}: </span>
+              <span style={{ color: 'var(--text-primary)' }}>{m.text}</span>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '2px' }}>
+                <button disabled={busyId === m.id} onClick={() => deleteForMe(m.id)} style={{ fontSize: '10px', color: 'var(--text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete for me</button>
+                <button disabled={busyId === m.id} onClick={() => deleteForBoth(m.id)} style={{ fontSize: '10px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete for both</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

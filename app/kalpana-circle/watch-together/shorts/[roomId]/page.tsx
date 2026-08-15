@@ -19,14 +19,17 @@ import { supabase } from '../../../../lib/supabase';
 // types instead of one "room chat" —
 //   - "Comment" -> public, writes into video_comments (the same table the
 //     normal watch page uses) — visible to anyone, tied to that one short.
-//   - "Chat" -> private, writes into kcircle_messages for the room's
-//     linked_conversation_id (an *existing* K Circle group the host picked
-//     at room-creation time) — real, permanent group chat history, tagged
-//     with short_ref_id so the thread can point back at which short a
-//     message was about. Only actual members of that group can read/send
-//     it (enforced by kcircle_messages' existing RLS) — a non-member
-//     viewer sees a locked state on that tab instead, Comment still works
-//     for everyone since it's public.
+//   - "Chat" -> private, writes into kcircle_messages for a Watch Together
+//     thread resolved automatically from whoever's actually present in the
+//     room right now (Realtime Presence on the sync channel) — the
+//     "Participant-Set" approach: exact set of online user_ids -> a
+//     deterministic thread (kcircle_get_or_create_watch_thread RPC,
+//     see migration 20260815210000). Same set reunites -> same thread
+//     reused; set changes -> a different thread. Needs >=2 people present
+//     (1:1 is just the 2-person case). Real, permanent chat history —
+//     visible later from the "Watch Together chats" list on the parent
+//     page — tagged with short_ref_id so it can point back at which short
+//     a message was about.
 //
 // Layout: desktop is a flex row — short feed on the LEFT, chat/comment
 // panel on the RIGHT (deliberately the mirror of the long-video room,
@@ -45,8 +48,6 @@ interface RoomInfo {
   host_id: string;
   visibility: 'private' | 'public';
   title: string;
-  linked_conversation_id: string | null;
-  linkedGroupTitle: string;
 }
 
 interface ShortItem {
@@ -88,7 +89,13 @@ export default function FastTapWatchTogetherRoomPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [room, setRoom] = useState<RoomInfo | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isGroupMember, setIsGroupMember] = useState(false);
+
+  // Watch Together Chat — who's actually present right now (Presence),
+  // and the thread that set of people resolves to (null until >=2 are
+  // present and the RPC has resolved a thread id).
+  const [presentIds, setPresentIds] = useState<string[]>([]);
+  const [chatThreadId, setChatThreadId] = useState<string | null>(null);
+  const [busyMsgId, setBusyMsgId] = useState<string | null>(null);
 
   const [shorts, setShorts] = useState<ShortItem[]>([]);
   const [shortsLoading, setShortsLoading] = useState(true);
@@ -138,7 +145,7 @@ export default function FastTapWatchTogetherRoomPage() {
 
       const { data: roomRow, error } = await supabase
         .from('watch_rooms')
-        .select('id, host_id, visibility, title, is_active, mode, linked_conversation_id, current_short_id, video_id')
+        .select('id, host_id, visibility, title, is_active, mode, current_short_id, video_id')
         .eq('id', roomId)
         .single();
 
@@ -148,22 +155,8 @@ export default function FastTapWatchTogetherRoomPage() {
       }
       if (cancelled) return;
 
-      let linkedGroupTitle = '';
-      let groupMember = false;
-      if (roomRow.linked_conversation_id) {
-        const [{ data: convo }, { data: participantRow }] = await Promise.all([
-          supabase.from('kcircle_conversations').select('title').eq('id', roomRow.linked_conversation_id).single(),
-          supabase.from('kcircle_conversation_participants').select('user_id').eq('conversation_id', roomRow.linked_conversation_id).eq('user_id', user.id).maybeSingle(),
-        ]);
-        linkedGroupTitle = convo?.title || 'the group';
-        groupMember = !!participantRow;
-      }
-      if (cancelled) return;
-      setIsGroupMember(groupMember);
-
       setRoom({
-        id: roomRow.id, host_id: roomRow.host_id, visibility: roomRow.visibility,
-        title: roomRow.title, linked_conversation_id: roomRow.linked_conversation_id, linkedGroupTitle,
+        id: roomRow.id, host_id: roomRow.host_id, visibility: roomRow.visibility, title: roomRow.title,
       });
       isHostRef.current = roomRow.host_id === user.id;
 
@@ -234,6 +227,46 @@ export default function FastTapWatchTogetherRoomPage() {
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [room, userId, resolveUsername]);
+
+  // ── presence — who's actually here right now, drives the Chat thread ──
+  // Separate small channel from the nav-sync one (below) so presence
+  // tracking/untracking doesn't get tangled with the broadcast-heavy
+  // navigate/heartbeat traffic on that channel.
+  useEffect(() => {
+    if (!room || !userId) return;
+    const presenceChannel = supabase.channel(`watch-room-shorts-presence-${room.id}`, { config: { presence: { key: userId } } });
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        setPresentIds(Object.keys(state));
+      })
+      .subscribe(async (status: string) => {
+        if (status === 'SUBSCRIBED') await presenceChannel.track({ user_id: userId, online_at: new Date().toISOString() });
+      });
+    return () => { supabase.removeChannel(presenceChannel); };
+  }, [room, userId]);
+
+  // Resolve the current present set to a thread id whenever it changes
+  // (debounced by only re-calling when the sorted key actually changes —
+  // presence 'sync' can fire more than once for the same effective set).
+  const lastResolvedKeyRef = useRef<string>('');
+  useEffect(() => {
+    if (!userId) return;
+    const sorted = [...new Set(presentIds)].sort();
+    if (sorted.length < 2) {
+      lastResolvedKeyRef.current = '';
+      /* eslint-disable-next-line react-hooks/set-state-in-effect */
+      setChatThreadId(null);
+      return;
+    }
+    const key = sorted.join(',');
+    if (key === lastResolvedKeyRef.current) return;
+    lastResolvedKeyRef.current = key;
+    (async () => {
+      const { data, error } = await supabase.rpc('kcircle_get_or_create_watch_thread', { p_participant_ids: sorted });
+      if (!error && data) setChatThreadId(data as string);
+    })();
+  }, [presentIds, userId]);
 
   // ── navigation sync — ephemeral Broadcast channel, host-authoritative ──
   // Mirrors the long-video room's playback sync channel (see that file's
@@ -309,25 +342,30 @@ export default function FastTapWatchTogetherRoomPage() {
     return () => observer.disconnect();
   }, [shorts, room?.id]);
 
-  // ── chat history + realtime (only when the viewer is an actual group member) ──
+  // ── chat history + realtime — keyed on the resolved participant-set thread ──
   useEffect(() => {
-    if (!room?.linked_conversation_id || !isGroupMember) {
-      // Reacting to a prop change (no group / not a member) by clearing
-      // stale messages is the same legitimate synchronous setState-in-
-      // effect exception already used elsewhere in this codebase (see
-      // app/kalpana-circle/watch-together/page.tsx's video-search clear).
+    if (!chatThreadId || !userId) {
+      // Reacting to a prop change (thread not resolved yet / <2 present)
+      // by clearing stale messages is the same legitimate synchronous
+      // setState-in-effect exception already used elsewhere in this
+      // codebase (see app/kalpana-circle/watch-together/page.tsx's
+      // video-search clear).
       /* eslint-disable-next-line react-hooks/set-state-in-effect */
       setChatMessages([]);
       return;
     }
     let cancelled = false;
-    const conversationId = room.linked_conversation_id;
+    const conversationId = chatThreadId;
     (async () => {
-      const { data: rows } = await supabase
-        .from('kcircle_messages').select('id, sender_id, text, short_ref_id, created_at')
-        .eq('conversation_id', conversationId).order('created_at', { ascending: true }).limit(200);
+      const [{ data: rows }, { data: hidden }] = await Promise.all([
+        supabase.from('kcircle_messages').select('id, sender_id, text, short_ref_id, created_at')
+          .eq('conversation_id', conversationId).order('created_at', { ascending: true }).limit(200),
+        supabase.from('kcircle_message_hidden_for').select('message_id').eq('user_id', userId),
+      ]);
       if (cancelled || !rows) return;
-      const withNames = await Promise.all(rows.map(async r => ({ ...r, senderName: await resolveUsername(r.sender_id) })));
+      const hiddenIds = new Set((hidden ?? []).map(h => h.message_id));
+      const visible = rows.filter(r => !hiddenIds.has(r.id));
+      const withNames = await Promise.all(visible.map(async r => ({ ...r, senderName: await resolveUsername(r.sender_id) })));
       if (!cancelled) setChatMessages(withNames);
     })();
     const channel = supabase
@@ -339,9 +377,14 @@ export default function FastTapWatchTogetherRoomPage() {
           setChatMessages(prev => (prev.some(m => m.id === row.id) ? prev : [...prev, { ...row, senderName }]));
           setTimeout(() => chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' }), 50);
         })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'kcircle_messages', filter: `conversation_id=eq.${conversationId}` },
+        (payload) => {
+          const row = payload.old as { id: string };
+          setChatMessages(prev => prev.filter(m => m.id !== row.id));
+        })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [room?.linked_conversation_id, isGroupMember, resolveUsername]);
+  }, [chatThreadId, userId, resolveUsername]);
 
   // ── public comments for the current short ──
   useEffect(() => {
@@ -359,14 +402,30 @@ export default function FastTapWatchTogetherRoomPage() {
   }, [activeShort, resolveUsername]);
 
   const sendChat = async () => {
-    if (!draft.trim() || !room?.linked_conversation_id || !userId || !activeShort) return;
+    if (!draft.trim() || !chatThreadId || !userId || !activeShort) return;
     const text = draft.trim();
     setDraft(''); setChatError(''); setSending(true);
     const { error } = await supabase.from('kcircle_messages').insert({
-      conversation_id: room.linked_conversation_id, sender_id: userId, text, short_ref_id: activeShort.id,
+      conversation_id: chatThreadId, sender_id: userId, text, short_ref_id: activeShort.id,
     });
+    if (!error) await supabase.from('kcircle_conversations').update({ last_message_at: new Date().toISOString() }).eq('id', chatThreadId);
     setSending(false);
-    if (error) { setDraft(text); setChatError("Couldn't send — you may not be a member of this group."); }
+    if (error) { setDraft(text); setChatError("Couldn't send — try again."); }
+  };
+
+  const deleteMsgForMe = async (messageId: string) => {
+    if (!userId) return;
+    setBusyMsgId(messageId);
+    await supabase.from('kcircle_message_hidden_for').insert({ message_id: messageId, user_id: userId });
+    setChatMessages(prev => prev.filter(m => m.id !== messageId));
+    setBusyMsgId(null);
+  };
+
+  const deleteMsgForBoth = async (messageId: string) => {
+    setBusyMsgId(messageId);
+    await supabase.from('kcircle_messages').delete().eq('id', messageId);
+    setChatMessages(prev => prev.filter(m => m.id !== messageId));
+    setBusyMsgId(null);
   };
 
   const sendComment = async () => {
@@ -437,17 +496,16 @@ export default function FastTapWatchTogetherRoomPage() {
       </div>
 
       {tab === 'chat' ? (
-        !room.linked_conversation_id ? (
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', padding: '16px' }}>This room has no linked group.</p>
-        ) : !isGroupMember ? (
+        !chatThreadId ? (
           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', padding: '16px', lineHeight: 1.5 }}>
-            🔒 Chat here goes to <b>{room.linkedGroupTitle}</b>, a private K Circle group — you&apos;re not a member, so you can&apos;t see or send messages here. Use Comment instead, it&apos;s public.
+            👋 Waiting for at least one more person to join this room — Chat saves automatically as a Watch Together
+            chat with whoever&apos;s actually watching with you. Use Comment meanwhile, it&apos;s public.
           </p>
         ) : (
           <>
             <div ref={chatScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <p style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-                Chatting here posts into <b>{room.linkedGroupTitle}</b>&apos;s real group chat.
+                Saved as a Watch Together chat — view it anytime from K Circle&apos;s Watch Together tab.
               </p>
               {chatMessages.map(m => {
                 const refTitle = shortTitleFor(m.short_ref_id);
@@ -460,6 +518,10 @@ export default function FastTapWatchTogetherRoomPage() {
                     )}
                     <span style={{ fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>{m.senderName}: </span>
                     <span style={{ color: '#fff' }}>{m.text}</span>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+                      <button disabled={busyMsgId === m.id} onClick={() => deleteMsgForMe(m.id)} style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete for me</button>
+                      <button disabled={busyMsgId === m.id} onClick={() => deleteMsgForBoth(m.id)} style={{ fontSize: '9px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete for both</button>
+                    </div>
                   </div>
                 );
               })}
@@ -488,14 +550,14 @@ export default function FastTapWatchTogetherRoomPage() {
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') send(); }}
-          disabled={tab === 'chat' && (!room.linked_conversation_id || !isGroupMember)}
-          placeholder={tab === 'chat' ? 'Message the group…' : 'Add a public comment…'}
+          disabled={tab === 'chat' && !chatThreadId}
+          placeholder={tab === 'chat' ? 'Message…' : 'Add a public comment…'}
           style={{
             flex: 1, fontSize: '13px', padding: '8px 10px', borderRadius: '8px',
             border: '1px solid rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)', color: '#fff',
           }}
         />
-        <button onClick={send} disabled={sending || (tab === 'chat' && (!room.linked_conversation_id || !isGroupMember))} style={{
+        <button onClick={send} disabled={sending || (tab === 'chat' && !chatThreadId)} style={{
           fontSize: '13px', padding: '8px 14px', borderRadius: '8px', border: 'none',
           background: '#f97316', color: '#000', cursor: 'pointer', fontWeight: 700,
         }}>Send</button>
