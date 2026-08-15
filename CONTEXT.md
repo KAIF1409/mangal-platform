@@ -2870,3 +2870,125 @@ still shows the same 13 pre-existing errors from files this session never
 touched. Committed in three batches (theme.ts+page.tsx+chat; group+
 broadcast; broadcasts+watch-together) and pushed directly to `main`.
 
+
+## §36 — KCircle Watch Together: participant-set chat threads (replaces §34's group-picker Chat)
+
+**What:** §34 shipped Fast tap (Shorts) rooms with a Chat tab that posted
+into an *existing* K Circle group chosen by the host at room-creation
+time. Founder's follow-up spec replaced that with the "Participant-Set"
+approach: Chat now automatically resolves to a thread identified by the
+exact set of people actually present in the room (sorted user_ids ->
+deterministic key), not a pre-chosen group. Same set reunites -> same
+thread reused; set changes -> a new thread, old one untouched. 1:1 is just
+the 2-person case of the same mechanism. Scope, per founder: entirely
+inside K Circle (no KaTube tables touched), with the thread list living
+inside K Circle's own Watch Together tab as a scrollable section — not a
+separate route/page.
+
+- **Schema** (`supabase/migrations/20260815210000_kcircle_watch_together_threads.sql`,
+  applied live via `Supabase:apply_migration` and verified against
+  `information_schema`/`pg_policies`/`pg_proc`):
+  - `kcircle_conversations.is_watch_thread` (bool) + `.participant_key`
+    (text, partial-unique where `is_watch_thread`) — a watch thread is
+    just a flagged `kcircle_conversations` row, reusing existing
+    messages/attachments/realtime infra rather than a parallel schema.
+    Regular DM/group conversations are unaffected (`participant_key` is
+    null on them, no index conflict).
+  - `kcircle_conversation_participants.history_enabled` (bool, default
+    true) — a per-user, per-thread snapshot of that user's global
+    "save history" preference at the moment they were added to the
+    thread. **Documented approximation, not per-user data isolation**:
+    since this is one shared row both people can see live (not a
+    per-device copy), "my ON doesn't force your ON" is implemented as
+    "a thread with my `history_enabled=false` is left out of *my own*
+    Watch Together list afterward" — the message itself still exists for
+    the other participant if theirs is `true`. Flagging this explicitly
+    for the founder in case true per-user isolation (duplicated storage)
+    is wanted later.
+  - `kcircle_watch_history_prefs` (`user_id` PK, `save_history` default
+    `true`) — the actual global toggle, own-row RLS only. **Default is
+    opt-out (true)**, not opt-in — founder's spec left the default an
+    open question ("default state discuss karni hai"); chose opt-out so
+    the feature works without extra setup, easy to flip if opt-in-only is
+    preferred.
+  - `kcircle_message_hidden_for` (`message_id`, `user_id` composite PK) —
+    "delete for me": insert-only-if-participant, own-row RLS. Client
+    filters these out of history queries rather than a server-side view,
+    to keep the read path a plain query.
+  - New delete policy on `kcircle_messages`, **scoped to
+    `is_watch_thread = true` conversations only** — "delete for both" is
+    a real row delete, not sender-restricted (anyone in the thread can
+    delete any message in it, per spec: "bina doosre ki permission ke
+    turant dono taraf se delete"). Regular group/DM `kcircle_messages`
+    still has no delete policy at all — this migration does not touch
+    that.
+  - `kcircle_get_or_create_watch_thread(p_participant_ids uuid[])` RPC,
+    `security definer` — validates `auth.uid()` is one of the ids, sorts
+    + dedupes, looks up by `participant_key`, or creates the conversation
+    + all participant rows (copying each participant's *own* current
+    `save_history` pref onto their `history_enabled`) in one atomic call.
+    Security definer is needed here because a plain client insert can't
+    add *other* people's participant rows from the caller's own session.
+
+- **Room creation** (`app/kalpana-circle/watch-together/page.tsx`) — the
+  Fast tap path's `pick-group` step (load-my-groups, pick one) is gone
+  entirely; picking "Fast tap — Shorts" now goes straight to a
+  `pick-visibility` step (🔒 Private / 🌐 Public only) and creates the
+  room immediately, since Chat no longer needs anything chosen upfront.
+- **New "Watch Together chats" section** on the same page — scrollable
+  list (participant names + last-message preview) of threads where *my*
+  `history_enabled` is true, sorted by `last_message_at`. A "Save
+  history" pill toggle above the list reads/writes
+  `kcircle_watch_history_prefs` directly (this *is* the founder-requested
+  Settings/Profile toggle — kept inside K Circle's own Watch Together tab
+  rather than the site-wide `/settings` page, matching the "sirf kcircle
+  me" scope instruction). Tapping a thread row opens a modal
+  (`WatchThreadModal`, same file) showing full history, each message
+  tappable via its "📎 About this Short" link to `/katube/shorts/<id>`,
+  with **Delete for me** / **Delete for both** under every message.
+- **`shorts/[roomId]/page.tsx`** — `room.linked_conversation_id` /
+  `isGroupMember` removed entirely. New Supabase Realtime **Presence**
+  channel (`watch-room-shorts-presence-<roomId>`, separate from the
+  existing nav-sync Broadcast channel so presence tracking doesn't
+  entangle with that channel's broadcast-heavy traffic) tracks who's
+  actually online; a `presentIds` -> sorted-key effect calls the RPC only
+  when that key actually changes (guards against redundant calls from
+  repeated `presence sync` events for the same effective set), caching
+  the resolved `chatThreadId`. Chat tab: fewer than 2 people present shows
+  a "waiting for a friend to join" state instead of the old locked-group
+  message; Comment (public, `video_comments`) is unaffected either way.
+  Chat history load now also fetches the caller's
+  `kcircle_message_hidden_for` rows and filters them out client-side.
+  Realtime subscription on `kcircle_messages` now also listens for
+  `DELETE` (needed for "delete for both" to disappear live for the other
+  participant), not just `INSERT` as before.
+
+**Not done (flagged as follow-ups, not started this session):**
+- `history_enabled` is a one-time snapshot taken when a participant is
+  first added to a given thread, not re-synced if they flip the global
+  toggle afterward — an existing thread's participant row won't retro-
+  actively hide/show based on a later preference change. Would need an
+  explicit "apply to existing threads too" action if the founder wants
+  that.
+- No UI surfaces `history_enabled` per-thread individually (e.g. "you
+  turned history off for this specific chat only") — it's the single
+  global toggle only, applied at thread-creation time.
+- Presence-based thread resolution only fires while the shorts room tab
+  is open and the presence channel is subscribed — closing the tab
+  doesn't retroactively move earlier messages to a different thread if
+  the room's membership had been fluctuating; each stable 2+ window gets
+  its own correct thread already, this is just noting there's no
+  "merge" logic for messages sent right at a transition boundary.
+- No group-thread-specific push/in-app notification for new Watch
+  Together messages — same as regular K Circle chat's existing scope,
+  not added here.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on both touched
+files: 0 errors (one pre-existing-style `<img>` warning in the shorts room
+file, same pattern already accepted there and elsewhere in the codebase).
+Full-project `eslint .` still shows the same 13 pre-existing errors, all
+in files this session never touched. Migration applied live via
+`Supabase:apply_migration` and reconciled into
+`supabase/migrations/20260815210000_kcircle_watch_together_threads.sql`.
+Committed in two batches (migration only; then both frontend files
+together) and pushed directly to `main`.
