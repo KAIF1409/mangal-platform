@@ -6,10 +6,11 @@ import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
+import { Upload, PenTool, BarChart3, Globe, CalendarClock, Wrench, type LucideIcon } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 interface Tool {
-  icon: string;
+  icon: LucideIcon;
   title: string;
   desc: string;
   href: string;
@@ -17,11 +18,11 @@ interface Tool {
 }
 
 const TOOLS: Tool[] = [
-  { icon: '📤', title: 'Chapter Uploader', desc: 'Publish a new chapter to any of your series.', href: '/upload', live: true },
-  { icon: '🖋️', title: 'Series Editor', desc: 'Edit titles, synopsis, cover and genre from your dashboard.', href: '/dashboard', live: true },
-  { icon: '📊', title: 'Word Counter', desc: 'Check chapter length before publishing.', href: '#', live: false },
-  { icon: '🌐', title: 'Translation Helper', desc: 'Draft chapters in multiple languages.', href: '#', live: false },
-  { icon: '🗓️', title: 'Release Scheduler', desc: 'Queue chapters to publish automatically on a schedule.', href: '#', live: false },
+  { icon: Upload, title: 'Chapter Uploader', desc: 'Publish a new chapter to any of your series.', href: '/upload', live: true },
+  { icon: PenTool, title: 'Series Editor', desc: 'Edit titles, synopsis, cover and genre from your dashboard.', href: '/dashboard', live: true },
+  { icon: BarChart3, title: 'Word Counter', desc: 'Check chapter length before publishing.', href: '#', live: false },
+  { icon: Globe, title: 'Translation Helper', desc: 'Draft chapters in multiple languages.', href: '#', live: false },
+  { icon: CalendarClock, title: 'Release Scheduler', desc: 'Queue chapters to publish automatically on a schedule.', href: '#', live: false },
 ];
 
 export default function ToolsPage() {
@@ -47,8 +48,8 @@ export default function ToolsPage() {
       <Navbar />
 
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          🧰 TOOLS
+        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Wrench size={12} strokeWidth={2.5} /> TOOLS
         </div>
         <h1 style={{ fontSize: '30px', fontWeight: 900, margin: '0 0 8px' }}>Creator Tools</h1>
         <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 32px' }}>
@@ -79,7 +80,7 @@ export default function ToolsPage() {
                     SOON
                   </div>
                 )}
-                <div style={{ fontSize: '24px', marginBottom: '10px' }}>{tool.icon}</div>
+                <div style={{ marginBottom: '10px', color: 'var(--accent)' }}><tool.icon size={22} strokeWidth={1.75} /></div>
                 <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '5px' }}>{tool.title}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{tool.desc}</div>
               </Link>

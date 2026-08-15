@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import { GraduationCap } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 interface Article {
@@ -43,8 +44,8 @@ export default function AcademyPage() {
       <Navbar />
 
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          🎓 ACADEMY
+        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <GraduationCap size={12} strokeWidth={2.5} /> ACADEMY
         </div>
         <h1 style={{ fontSize: '30px', fontWeight: 900, margin: '0 0 8px' }}>Creator Academy</h1>
         <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 32px' }}>

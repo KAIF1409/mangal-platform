@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import { Gift, Check } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 interface Tier {
@@ -43,8 +44,8 @@ export default function PerksPage() {
       <Navbar />
 
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          🎁 PERKS
+        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Gift size={12} strokeWidth={2.5} /> PERKS
         </div>
         <h1 style={{ fontSize: '30px', fontWeight: 900, margin: '0 0 8px' }}>Creator Perks</h1>
         <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 32px' }}>
@@ -74,7 +75,7 @@ export default function PerksPage() {
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: '8px' }}>
                   {tier.benefits.map((b) => (
                     <li key={b} style={{ fontSize: '13px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                      <span style={{ color: 'var(--accent)' }}>✓</span>
+                      <Check size={14} strokeWidth={2.5} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '1px' }} />
                       <span>{b}</span>
                     </li>
                   ))}

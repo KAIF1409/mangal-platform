@@ -5,19 +5,20 @@ import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import { Pin, Megaphone, Tag, Handshake, Rocket, type LucideIcon } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 interface BoostOption {
   title: string;
   desc: string;
-  icon: string;
+  icon: LucideIcon;
 }
 
 const OPTIONS: BoostOption[] = [
-  { title: 'Featured Slot', desc: 'Get your series placed in the homepage spotlight rail for 24 hours.', icon: '📌' },
-  { title: 'Reader Shoutout', desc: 'Send a push notification about your latest chapter to your followers.', icon: '📣' },
-  { title: 'Tag Boost', desc: 'Rank higher in search results for the genre tags on your series.', icon: '🏷️' },
-  { title: 'Cross-Promo', desc: 'Trade a mention with another creator in your genre.', icon: '🤝' },
+  { title: 'Featured Slot', desc: 'Get your series placed in the homepage spotlight rail for 24 hours.', icon: Pin },
+  { title: 'Reader Shoutout', desc: 'Send a push notification about your latest chapter to your followers.', icon: Megaphone },
+  { title: 'Tag Boost', desc: 'Rank higher in search results for the genre tags on your series.', icon: Tag },
+  { title: 'Cross-Promo', desc: 'Trade a mention with another creator in your genre.', icon: Handshake },
 ];
 
 export default function BoostPage() {
@@ -43,8 +44,8 @@ export default function BoostPage() {
       <Navbar />
 
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          🚀 BOOST
+        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Rocket size={12} strokeWidth={2.5} /> BOOST
         </div>
         <h1 style={{ fontSize: '30px', fontWeight: 900, margin: '0 0 8px' }}>Get more eyes on your story</h1>
         <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 32px' }}>
@@ -60,7 +61,7 @@ export default function BoostPage() {
                 background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                 borderRadius: '14px', padding: '20px',
               }}>
-                <div style={{ fontSize: '26px', marginBottom: '10px' }}>{opt.icon}</div>
+                <div style={{ marginBottom: '10px', color: 'var(--accent)' }}><opt.icon size={24} strokeWidth={1.75} /></div>
                 <div style={{ fontWeight: 700, marginBottom: '6px', fontSize: '15px' }}>{opt.title}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', lineHeight: 1.5, marginBottom: '14px' }}>
                   {opt.desc}

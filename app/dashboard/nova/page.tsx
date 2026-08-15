@@ -5,19 +5,20 @@ import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import { PenLine, Palette, TrendingUp, Tag, Sparkles, type LucideIcon } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 interface Suggestion {
-  icon: string;
+  icon: LucideIcon;
   title: string;
   desc: string;
 }
 
 const SUGGESTIONS: Suggestion[] = [
-  { icon: '✍️', title: 'Draft a chapter outline', desc: 'Give Nova your plot idea and get a structured outline back.' },
-  { icon: '🎨', title: 'Cover art ideas', desc: 'Describe your story and get cover concept suggestions.' },
-  { icon: '📈', title: 'Explain my analytics', desc: 'Ask Nova to summarize what your reader stats mean.' },
-  { icon: '🏷️', title: 'Suggest tags', desc: 'Get genre and tag recommendations for better discovery.' },
+  { icon: PenLine, title: 'Draft a chapter outline', desc: 'Give Nova your plot idea and get a structured outline back.' },
+  { icon: Palette, title: 'Cover art ideas', desc: 'Describe your story and get cover concept suggestions.' },
+  { icon: TrendingUp, title: 'Explain my analytics', desc: 'Ask Nova to summarize what your reader stats mean.' },
+  { icon: Tag, title: 'Suggest tags', desc: 'Get genre and tag recommendations for better discovery.' },
 ];
 
 export default function NovaPage() {
@@ -47,9 +48,9 @@ export default function NovaPage() {
           <div style={{
             width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 14px',
             background: 'linear-gradient(135deg, var(--accent), #f59e0b)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1a1006',
           }}>
-            ✨
+            <Sparkles size={26} strokeWidth={2} />
           </div>
           <h1 style={{ fontSize: '26px', fontWeight: 900, margin: '0 0 6px' }}>Nova</h1>
           <p style={{ color: 'var(--text-tertiary)', fontSize: '13px', margin: 0 }}>
@@ -67,7 +68,7 @@ export default function NovaPage() {
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                   borderRadius: '12px', padding: '16px', cursor: 'default',
                 }}>
-                  <div style={{ fontSize: '20px', marginBottom: '8px' }}>{s.icon}</div>
+                  <div style={{ marginBottom: '8px', color: 'var(--accent)' }}><s.icon size={18} strokeWidth={1.75} /></div>
                   <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '4px' }}>{s.title}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{s.desc}</div>
                 </div>

@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
+import { BookOpen, PlaySquare, Users2, BarChart3, type LucideIcon } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 
@@ -54,7 +55,7 @@ function formatCount(n: number): string {
 
 interface ProductPerf {
   label: string;
-  emoji: string;
+  icon: LucideIcon;
   boxes: { label: string; value: string; sub?: string }[];
 }
 
@@ -126,7 +127,7 @@ export default function EarningsPage() {
 
   const perfByProduct: Record<Exclude<ProductScope, 'all'>, ProductPerf> = useMemo(() => ({
     webmangal: {
-      label: 'WebMangal', emoji: '📖',
+      label: 'WebMangal', icon: BookOpen,
       boxes: [
         { label: 'Total Reads', value: formatCount(webmangal.totalViews) },
         { label: 'Followers', value: formatCount(webmangal.totalFollowers), sub: `+${webmangal.newFollowers7d} this week` },
@@ -134,7 +135,7 @@ export default function EarningsPage() {
       ],
     },
     katube: {
-      label: 'KaTube', emoji: '▶️',
+      label: 'KaTube', icon: PlaySquare,
       boxes: [
         { label: 'Total Views', value: formatCount(katube.totalViews) },
         { label: 'Total Likes', value: formatCount(katube.totalLikes) },
@@ -142,7 +143,7 @@ export default function EarningsPage() {
       ],
     },
     kcircle: {
-      label: 'Kalpana Circle', emoji: '🌀',
+      label: 'Kalpana Circle', icon: Users2,
       boxes: [
         { label: 'Posts', value: formatCount(kcircle.totalPosts), sub: `+${kcircle.postsLast7d} this week` },
         { label: 'Total Likes', value: formatCount(kcircle.totalLikes) },
@@ -158,8 +159,8 @@ export default function EarningsPage() {
       <Navbar />
 
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          📊 EARNINGS & PERFORMANCE
+        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <BarChart3 size={12} strokeWidth={2.5} /> EARNINGS & PERFORMANCE
         </div>
         <h1 style={{ fontSize: '30px', fontWeight: 900, margin: '0 0 8px' }}>How your work is doing</h1>
         <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 24px' }}>
@@ -183,8 +184,8 @@ export default function EarningsPage() {
               return (
                 <div key={p} style={{ marginBottom: '22px' }}>
                   {scope === 'all' && (
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                      {perf.emoji} {perf.label}
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <perf.icon size={13} strokeWidth={2} /> {perf.label}
                     </div>
                   )}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
