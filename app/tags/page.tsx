@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { ArrowLeft } from 'lucide-react';
 
 interface TagWithCount {
   id: string;
@@ -49,7 +50,7 @@ export default function TagsIndexPage() {
         }
       `}</style>
       <div className="mangal-tags-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px' }}>
-        <a href="/WebMangal/home" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none' }}>← Back to WebMangal</a>
+        <a href="/WebMangal/home" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> Back to WebMangal</a>
         <h1 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 900, margin: '12px 0 8px', letterSpacing: '-0.02em' }}>
           Browse by Tag
         </h1>
