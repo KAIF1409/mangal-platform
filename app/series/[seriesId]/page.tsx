@@ -737,16 +737,16 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
-            <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🔥</div>
-            <span className="mangal-series-nav-brand-text" style={{ fontWeight: 900, fontSize: '17px', color: 'var(--text-primary)' }}>MANGAL</span>
+          <Link href="/WebMangal" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
+            <Image src="/webmangal-logo.png" alt="WebMangal" width={120} height={120} style={{ display: 'block', height: '30px', width: '30px', objectFit: 'contain' }} />
+            <span className="mangal-series-nav-brand-text" style={{ fontWeight: 900, fontSize: '17px', color: 'var(--text-primary)' }}>WebMangal</span>
           </Link>
           <span className="mangal-series-nav-crumb" style={{ color: 'var(--text-faint)' }}>›</span>
           <span className="mangal-series-nav-title" style={{ fontSize: '13px', color: 'var(--text-tertiary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{series.title}</span>
         </div>
         <div className="mangal-series-nav-right" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
           <ThemeToggle size={30} />
-          <Link href="/" className="mangal-series-nav-browse" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>Browse</Link>
+          <Link href="/WebMangal" className="mangal-series-nav-browse" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>Browse</Link>
           {isCreator && (
             <a href={`/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>
               + Add Chapter
