@@ -5,8 +5,20 @@ import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
+
+// Earnings has no real ledger wired up yet for any product (see CONTEXT.md
+// §43) — the switcher and copy below establish the per-product shape now
+// so whoever wires real numbers later only has to replace the ₹0 stat
+// values, not re-plumb the scope switcher.
+const SCOPE_SUB: Record<ProductScope, string> = {
+  all: 'Track everything your stories, videos, and posts have earned across MANGAL.',
+  webmangal: 'Track what your stories have earned and request a payout once you cross the minimum threshold.',
+  katube: 'KaTube revenue flows through YouTube itself, not through the platform — this will surface a read-only summary once that\'s wired up.',
+  kcircle: 'Kalpana Circle earnings (tips, boosted posts) will show up here once that revenue path ships.',
+};
 function StatBox({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div style={{
@@ -25,6 +37,7 @@ function StatBox({ label, value, sub }: { label: string; value: string; sub?: st
 export default function EarningsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scope, setScope] = useState<ProductScope>('all');
 
   useEffect(() => {
     const init = async () => {
@@ -49,9 +62,11 @@ export default function EarningsPage() {
           💰 EARNINGS
         </div>
         <h1 style={{ fontSize: '30px', fontWeight: 900, margin: '0 0 8px' }}>Your Earnings</h1>
-        <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 32px' }}>
-          Track what your stories have earned and request a payout once you cross the minimum threshold.
+        <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 24px' }}>
+          {SCOPE_SUB[scope]}
         </p>
+
+        <ProductScopeSwitcher value={scope} onChange={setScope} />
 
         {loading ? (
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-tertiary)' }}>Loading earnings…</div>

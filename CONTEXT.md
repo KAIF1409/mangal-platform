@@ -3390,3 +3390,58 @@ plan for whoever picks this up next:
 4. No route changes needed for this part — these tabs stay under
    `/dashboard/*` as-is; this section is purely about what renders inside
    them, not where they live.
+
+## §44 — §43 implementation started: ProductScope switcher + Workspace + Earnings retrofit
+
+**Status: in progress.** Picks up §43's plan items 2 and 3 (switcher
+component, then Workspace/Earnings first since they're "most
+product-dependent"). Boost/Perks/Academy/Nova/Tools are still untouched —
+next up per §43's stated order.
+
+**Built:**
+- `app/components/ProductScope.tsx` — the shared switcher from §43 item 2.
+  Exports `ProductScope` type (`'all' | 'webmangal' | 'katube' |
+  'kcircle'`) and a pill-style switcher component. Takes `value`/`onChange`
+  (tab owns the state) and an optional `options` array so cross-product
+  tabs like Academy/Nova can trim which pills show. Styled with the same
+  `var(--bg-card)`/`var(--border-color)`/`var(--accent)` tokens as the
+  rest of the dashboard — no new design system introduced.
+- **Workspace tab retrofitted for real** (not just cosmetic — this tab
+  already had a real query, so this is the actual pattern other tabs
+  should copy): now fetches all three products in parallel
+  (`series` for WebMangal, `videos` for KaTube, `kcircle_posts` for
+  Kalpana Circle, each filtered by the signed-in user's id) and flattens
+  them into one `WorkItem[]` shape, sorted by `created_at` across
+  products. The switcher filters that flattened list client-side rather
+  than re-querying per scope change — three small per-user queries on
+  load is cheap enough that a fourth round-trip on every switcher click
+  isn't worth the complexity. Each product's empty state has its own
+  copy + CTA (`emptyCopy` record keyed by scope) since "start a series"
+  isn't the right CTA when you're scoped to KaTube or Circle and have
+  zero videos/posts.
+- **Earnings tab retrofitted cosmetically only** — the tab has no real
+  ledger for any product yet (all four stat boxes are still hardcoded
+  `₹0`, unchanged from before this session), so there was nothing
+  per-product to actually query. Added the switcher and a `SCOPE_SUB`
+  copy record so the sub-headline explains *why* each product's earnings
+  look the way they will (KaTube routes through YouTube itself per §41,
+  not the platform — so it'll eventually be a read-only summary, not a
+  payout-eligible balance like WebMangal). Whoever wires a real earnings
+  ledger later replaces the stat values per scope; the switcher/copy
+  shape is already there.
+
+**Not done yet (next up, per §43's order):**
+- Boost, Perks, Academy, Nova, Tools — Perks especially has a fully
+  decided spec (§43, per-product ladder + Ecosystem Bonus) that hasn't
+  been touched yet.
+- No new migrations were needed for this session — Workspace's queries
+  use existing tables (`series`, `videos`, `kcircle_posts`) with existing
+  RLS policies (each already scoped to the query pattern used: `.eq(...,
+  data.user.id)` on a column those policies already allow the owner to
+  read).
+- `next build` not verified in this sandbox (same `fonts.googleapis.com`
+  network restriction noted in §42/earlier sections) — `tsc --noEmit` and
+  `eslint` were run clean instead (two pre-existing `'user' is assigned a
+  value but never used` warnings on both retrofitted files, present
+  before this change too — `user` is set from the auth check but only
+  used for the redirect gate, not rendered).
