@@ -4,6 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../lib/supabase';
+import {
+  Check, ArrowLeft, MessageCircle, MessagesSquare, Paperclip,
+  Zap, Lock, Globe, Plus, Link2, VolumeX, Volume2, X,
+} from 'lucide-react';
 
 // ── Kalpana Circle — Fast tap (Shorts) Watch Together ──
 //
@@ -99,7 +103,7 @@ function FriendRow({ user, invited, busy, onInvite }: {
           color: invited ? 'rgba(255,255,255,0.6)' : '#fff',
           cursor: invited ? 'default' : 'pointer',
         }}
-      >{invited ? 'Invited ✓' : busy ? '…' : 'Invite'}</button>
+      >{invited ? <><Check size={11} style={{ verticalAlign: 'middle' }} /> Invited</> : busy ? '…' : 'Invite'}</button>
     </div>
   );
 }
@@ -606,7 +610,7 @@ export default function FastTapWatchTogetherRoomPage() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', background: '#000', color: '#fff' }}>
         <p style={{ fontSize: '15px' }}>{loadError}</p>
-        <Link href="/kalpana-circle/watch-together" style={{ color: '#f97316' }}>← Back to Watch Together</Link>
+        <Link href="/kalpana-circle/watch-together" style={{ color: '#f97316', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={13} /> Back to Watch Together</Link>
       </div>
     );
   }
@@ -620,13 +624,13 @@ export default function FastTapWatchTogetherRoomPage() {
           background: tab === 'chat' ? 'rgba(124,58,237,0.18)' : 'transparent',
           color: tab === 'chat' ? '#c4b5fd' : 'rgba(255,255,255,0.6)',
           borderBottom: tab === 'chat' ? '2px solid #7c3aed' : '2px solid transparent',
-        }}>💬 Chat</button>
+        }}><MessageCircle size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Chat</button>
         <button onClick={() => setTab('comment')} style={{
           flex: 1, padding: '11px 0', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', border: 'none',
           background: tab === 'comment' ? 'rgba(124,58,237,0.18)' : 'transparent',
           color: tab === 'comment' ? '#c4b5fd' : 'rgba(255,255,255,0.6)',
           borderBottom: tab === 'comment' ? '2px solid #7c3aed' : '2px solid transparent',
-        }}>🗨️ Comments</button>
+        }}><MessagesSquare size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Comments</button>
       </div>
 
       {tab === 'chat' ? (
@@ -648,7 +652,7 @@ export default function FastTapWatchTogetherRoomPage() {
                   <div key={m.id} style={{ fontSize: '12.5px' }}>
                     {refTitle && (
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginBottom: '2px' }}>
-                        📎 About this Short: {refTitle}
+                        <Paperclip size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />About this Short: {refTitle}
                       </div>
                     )}
                     <span style={{ fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>{m.senderName}: </span>
@@ -721,17 +725,17 @@ export default function FastTapWatchTogetherRoomPage() {
             position: 'absolute', top: '16px', left: '16px', zIndex: 20,
             width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px', textDecoration: 'none',
-          }}>←</Link>
+          }}><ArrowLeft size={18} /></Link>
 
           <div style={{
             position: 'absolute', top: '16px', left: '64px', right: '16px', zIndex: 20,
             display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
           }}>
             <span style={{ fontSize: '12.5px', fontWeight: 800, background: 'rgba(0,0,0,0.5)', padding: '6px 10px', borderRadius: '14px' }}>
-              ⚡ {room.title}
+              <Zap size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />{room.title}
             </span>
             <span style={{ fontSize: '10.5px', fontWeight: 700, background: 'rgba(0,0,0,0.5)', padding: '5px 9px', borderRadius: '12px', color: 'rgba(255,255,255,0.7)' }}>
-              {room.visibility === 'private' ? '🔒 Private' : '🌐 Public'} · {members.length} watching
+              {room.visibility === 'private' ? <><Lock size={11} style={{ verticalAlign: 'middle' }} /> Private</> : <><Globe size={11} style={{ verticalAlign: 'middle' }} /> Public</>} · {members.length} watching
             </span>
           </div>
 
@@ -739,11 +743,11 @@ export default function FastTapWatchTogetherRoomPage() {
             <button onClick={() => setAddFriendOpen(true)} style={{
               fontSize: '11px', fontWeight: 700, padding: '7px 10px', borderRadius: '14px', border: 'none',
               background: 'rgba(0,0,0,0.5)', color: '#fff', cursor: 'pointer',
-            }}>➕ Add friend</button>
+            }}><Plus size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Add friend</button>
             <button onClick={copyInvite} style={{
               fontSize: '11px', fontWeight: 700, padding: '7px 10px', borderRadius: '14px', border: 'none',
               background: 'rgba(0,0,0,0.5)', color: '#fff', cursor: 'pointer',
-            }}>{copied ? '✓' : '🔗'}</button>
+            }}>{copied ? <Check size={16} /> : <Link2 size={16} />}</button>
             <button onClick={leaveRoom} style={{
               fontSize: '11px', fontWeight: 700, padding: '7px 10px', borderRadius: '14px', border: 'none',
               background: 'rgba(0,0,0,0.5)', color: '#fff', cursor: 'pointer',
@@ -797,16 +801,16 @@ export default function FastTapWatchTogetherRoomPage() {
                       {/* Right-edge icons — mute + mobile-only Chat/Comment toggle that opens the bottom sheet */}
                       <div style={{ position: 'absolute', bottom: '20px', right: '10px', zIndex: 5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
                         <button onClick={() => { setTab('comment'); setSheetOpen(true); }} className="ktroom-mobile-toggle" style={{ background: 'none', border: 0, cursor: 'pointer', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                          <span style={{ fontSize: '24px' }}>🗨️</span>
+                          <MessagesSquare size={24} />
                           <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Comment</span>
                         </button>
                         <button onClick={() => { setTab('chat'); setSheetOpen(true); }} className="ktroom-mobile-toggle" style={{ background: 'none', border: 0, cursor: 'pointer', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                          <span style={{ fontSize: '24px' }}>💬</span>
+                          <MessageCircle size={24} />
                           <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Chat</span>
                         </button>
                         {isActive && (
                           <button onClick={toggleMuted} style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                            <span style={{ fontSize: '24px' }}>{muted ? '🔇' : '🔊'}</span>
+                            {muted ? <VolumeX size={24} /> : <Volume2 size={24} />}
                             <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>{muted ? 'Muted' : 'Sound'}</span>
                           </button>
                         )}
@@ -836,7 +840,7 @@ export default function FastTapWatchTogetherRoomPage() {
             <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.25)' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 10px 0' }}>
-            <button onClick={() => setSheetOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            <button onClick={() => setSheetOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex' }}><X size={18} /></button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: '340px' }}>{PanelInner}</div>
         </div>
@@ -856,8 +860,8 @@ export default function FastTapWatchTogetherRoomPage() {
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
           }}>
             <div style={{ padding: '14px', borderBottom: '1px solid rgba(255,255,255,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', fontWeight: 800 }}>➕ Add a friend</span>
-              <button onClick={() => { setAddFriendOpen(false); setFriendQuery(''); setFriendResults([]); }} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+              <span style={{ fontSize: '13px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Plus size={14} /> Add a friend</span>
+              <button onClick={() => { setAddFriendOpen(false); setFriendQuery(''); setFriendResults([]); }} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex' }}><X size={18} /></button>
             </div>
             <div style={{ padding: '12px 14px 0' }}>
               <input
