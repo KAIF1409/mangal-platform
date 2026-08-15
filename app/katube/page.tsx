@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
 import { supabase } from '../lib/supabase';
-import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen } from 'lucide-react';
+import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // ── KaTube — Step 3 (video grid + watch page) + Step 4 (upload flow,
@@ -101,16 +101,16 @@ interface DemoShort {
   title: string;
   views: string;
   gradient: string;
-  emoji: string;
+  icon: LucideIcon;
 }
 
 const DEMO_SHORTS: DemoShort[] = [
-  { id: 's1', title: 'Aryavarta in 30 seconds', views: '12K', gradient: 'linear-gradient(160deg, #f97316, #fb923c)', emoji: '⚡' },
-  { id: 's2', title: 'That plot twist though 😱', views: '8.7K', gradient: 'linear-gradient(160deg, #7c2d12, #c2410c)', emoji: '😱' },
-  { id: 's3', title: 'Banyan Spirit — best frame', views: '15K', gradient: 'linear-gradient(160deg, #ea580c, #f97316)', emoji: '🌳' },
-  { id: 's4', title: 'Street Life Mumbai vibes', views: '6.1K', gradient: 'linear-gradient(160deg, #9a3412, #fdba74)', emoji: '🌆' },
-  { id: 's5', title: 'POV: exam week hits different', views: '21K', gradient: 'linear-gradient(160deg, #f97316, #fde68a)', emoji: '🎒' },
-  { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #7c2d12, #fb923c)', emoji: '👻' },
+  { id: 's1', title: 'Aryavarta in 30 seconds', views: '12K', gradient: 'linear-gradient(160deg, #f97316, #fb923c)', icon: Zap },
+  { id: 's2', title: 'That plot twist though', views: '8.7K', gradient: 'linear-gradient(160deg, #7c2d12, #c2410c)', icon: Ghost },
+  { id: 's3', title: 'Banyan Spirit — best frame', views: '15K', gradient: 'linear-gradient(160deg, #ea580c, #f97316)', icon: TreePine },
+  { id: 's4', title: 'Street Life Mumbai vibes', views: '6.1K', gradient: 'linear-gradient(160deg, #9a3412, #fdba74)', icon: Building2 },
+  { id: 's5', title: 'POV: exam week hits different', views: '21K', gradient: 'linear-gradient(160deg, #f97316, #fde68a)', icon: Backpack },
+  { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #7c2d12, #fb923c)', icon: Ghost },
 ];
 
 // ── KaTube redesign Step 2 (11 Aug 2026) — sidebar now actually filters ──
@@ -224,7 +224,7 @@ function SidebarNav({
           <Link href="/" style={{
             display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none',
             fontSize: '12.5px', fontWeight: 700, color: 'var(--text-tertiary)', whiteSpace: 'nowrap',
-          }}>← Back to MANGAL</Link>
+          }}><ArrowLeft size={13} strokeWidth={2} /> Back to MANGAL</Link>
         </div>
 
       </aside>
@@ -255,7 +255,7 @@ function DemoShortCard({ short }: { short: DemoShort }) {
         transition: 'transform 0.15s, box-shadow 0.2s',
       }}
     >
-      <span style={{ position: 'absolute', top: '44%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '44px', opacity: 0.9 }}>{short.emoji}</span>
+      <span style={{ position: 'absolute', top: '44%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.9 }}><short.icon size={40} strokeWidth={1.5} color="#fff" /></span>
       <span style={{
         position: 'absolute', top: '10px', left: '10px', fontSize: '11px', fontWeight: 800, color: '#fff',
         background: 'rgba(0,0,0,0.5)', padding: '3px 9px', borderRadius: '20px', letterSpacing: '0.02em',
