@@ -2269,3 +2269,120 @@ to build first yet.
 9, and 7 don't need a payment provider or paid AI API and reuse existing
 data/infra; items 1–3 (money) and 10 (AI tools) are gated behind a
 budget/provider decision the founder hasn't made yet.
+
+## 28. Not built yet — KaTube-only viewer/creator features, YouTube-policy notes, platform monetization (backlog, discussed this session)
+
+Follow-up conversation to §27. Founder pointed out §27's items mostly
+assumed someone using MANGAL/K Circle too — this covers the case of a
+visitor or creator who *only* touches KaTube and never crosses into the
+novel/K Circle side, plus a separate discussion on YouTube API policy
+compliance and how the platform itself (not just creators) could earn
+revenue. Nothing below is started — pure backlog.
+
+### 28a. KaTube-only viewer features (no MANGAL/K Circle dependency)
+
+- **Playlists** — viewer builds their own playlist across creators/videos
+  (YouTube-style), stored as MANGAL data (video ID references only).
+- **Subscriptions feed** — a dedicated tab showing only new uploads from
+  channels the viewer already follows, separate from the general/trending
+  grid. `creator_follows` + `videos` already exist — this is a filtered
+  view, no new table needed.
+- **Notification bell for new uploads** — notify a follower when a
+  followed creator posts. K Circle already has a notifications system
+  (§14) — reusable pattern, but this needs to surface inside KaTube's own
+  chrome, not just K Circle.
+- **Continue Watching row** — resume from where a viewer left off,
+  surfaced near the top of the KaTube home grid. Needs playback-position
+  tracking via the YouTube IFrame Player API (`getCurrentTime()`), not
+  just a "watched/not watched" flag.
+- **Autoplay Next / Up Next queue** — next related video plays
+  automatically when one ends, via the IFrame Player API's `onStateChange`
+  event. See §28b — autoplay has a disclosure requirement.
+- **Pure KaTube trending page** — trending across all genres/creators,
+  independent of any novel/series tie-in; distinct from the existing
+  tag-based "Up next" recommendations (§8) which are series-anchored.
+- **Better search + filters** — genre, AI tool used, duration, upload
+  date. Search bar on `/katube` is currently visual-only (§22 follow-up,
+  never wired to real results).
+
+### 28b. KaTube-only creator features (channel owner who doesn't write novels)
+
+- **Public channel page** — About tab, banner image, channel trailer
+  video, all-uploads grid. Distinct from `/dashboard/katube` (§10), which
+  is the creator's own private management view, not a polished
+  public-facing page.
+- **Channel-level analytics** — views/likes/watch-through trend for a
+  creator's own uploads, without needing a linked novel/series (overlaps
+  with §27 item 4, but scoped to work even for a creator with zero
+  MANGAL series).
+- **Creator-made playlists** — a creator groups their own uploads (e.g.
+  "Chapter 1–5 compilation") without needing a `series_id` link.
+- **Native KaTube community-update posts** — a lightweight text/image
+  update a creator can post to their own subscribers directly inside
+  KaTube, instead of needing to cross-post to K Circle to reach fans.
+- **Custom channel URL** — e.g. `/katube/@username`, for clean external
+  sharing (currently only `/katube/watch/[videoId]` and
+  `/dashboard/katube` exist, no public `/katube/@handle` route).
+
+### 28c. YouTube API Services policy — constraints to respect when building the above
+
+Researched during this session (YouTube API Services Terms of Service /
+Developer Policies, current as of this check). Applies to all of §28a/§28b
+and anything else touching embedded video:
+
+- **Never download, cache, or re-host video files.** Store only
+  `youtube_id` + metadata (already the pattern in `videos` table) and
+  always play back via the official embed/IFrame Player — no exceptions,
+  regardless of feature.
+- **No ads or paid overlays on/around the embedded YouTube player itself**
+  — sponsorship placements (§4 item 6, on hold pending traffic) must sit
+  around the grid/page, never on top of or inside the player.
+- **Autoplay disclosure requirement:** if Autoplay Next (§28a) ships,
+  playback data is shared with YouTube on page load rather than on user
+  interaction — this needs a line added to the privacy policy (`/privacy`)
+  disclosing that. Not yet added — flagged as a prerequisite before
+  shipping Autoplay Next, not a blocker for anything else in this list.
+- **No artificial engagement inflation** — a curated placement like "New
+  Voices" spotlight (§27 item 6) is fine as long as it shows real
+  view/like numbers; never fake or pad counts.
+- **YouTube branding/attribution guidelines** must be respected wherever
+  an embed or thumbnail is shown — the standard iframe embed already
+  satisfies this by default, just don't strip/cover the YouTube chrome on
+  the embedded player.
+
+### 28d. Platform-level monetization (separate from creator monetization in §27)
+
+§27 covered creators earning money *through* the platform (tips,
+memberships, bounty payouts). This is about MANGAL/Kalpanaverse itself
+earning revenue, discussed as a distinct question this session:
+
+- **On-site sponsorship/ads** — already documented as §4 item 6 (banners
+  around the grid, sponsored category rows, "Powered by [AI tool]"
+  badges; target sponsors: Kling, Runway, Pika, Hailuo, Suno). Explicitly
+  gated behind real traffic — not premature to *plan*, premature to
+  *pitch or build* right now.
+- **Premium reading subscription (MANGAL/novel side)** — ad-free reading,
+  early chapter access, exclusive content. Fully platform-controlled, no
+  YouTube-policy overlap since it's on the novel side, not KaTube.
+- **Platform fee on tips/bounty payouts** — once §27's tipping/membership
+  and bounty-payout features exist, take a small percentage (~5–10%,
+  Patreon/Ko-fi-style) as the platform's own cut of creator-to-viewer
+  money flows. No YouTube conflict since the money never touches YouTube
+  ad revenue — it's a separate creator-to-viewer transaction the platform
+  facilitates.
+- **Pro Creator tier (SaaS-style)** — paid tier unlocking advanced
+  analytics, AI creator tools (§27 item 10), custom channel URL (§28b) —
+  creators pay the platform directly for growth tooling.
+- **Affiliate/referral links** — if AI video-tool companies (Suno, Kling,
+  etc.) run a referral program, link out for a commission.
+- **Marketplace commission (longer-term)** — a cut on any future
+  merch/digital-goods sales (e.g. art prints of a Visual Quest §26
+  winning entry), if that ever gets built.
+
+**Sequencing note from this session:** tipping-platform-fee and Pro
+Creator tier are the most realistic near-term revenue paths — both are
+platform-owned infra with no payment-provider blocker beyond the one
+already noted in §27 (need to pick Razorpay/similar), and don't need
+real traffic the way sponsorship/ads does. Sponsorship stays parked
+until there's an audience worth showing sponsors, same as §4 already
+said.
