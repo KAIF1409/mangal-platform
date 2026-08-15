@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
-import { Heart, MessageCircle, Share2, VolumeX, Volume2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft } from 'lucide-react';
 
 // ── KaTube §7 — Fast Tap full-screen Shorts/Reels feed ──
 // Full-screen vertical snap-scroll feed for is_short=true videos, replacing
@@ -150,8 +150,8 @@ export default function KaTubeShortsFeedPage() {
         position: 'absolute', top: '16px', left: '16px', zIndex: 20,
         width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#fff', fontSize: '16px', textDecoration: 'none',
-      }}>←</Link>
+        color: '#fff', textDecoration: 'none',
+      }}><ArrowLeft size={16} strokeWidth={2} /></Link>
 
       {loading ? (
         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>
@@ -160,7 +160,7 @@ export default function KaTubeShortsFeedPage() {
       ) : shorts.length === 0 ? (
         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '20px', textAlign: 'center' }}>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>No Fast Tap shorts yet.</p>
-          <Link href="/katube" style={{ color: '#f97316', fontSize: '13px', fontWeight: 700 }}>← Back to KaTube</Link>
+          <Link href="/katube" style={{ color: '#f97316', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={13} strokeWidth={2} /> Back to KaTube</Link>
         </div>
       ) : (
         <div
