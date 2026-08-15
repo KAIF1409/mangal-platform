@@ -4,6 +4,12 @@ import { useState, useEffect, useRef, use } from 'react';
 import { supabase } from '../../lib/supabase';
 import { parseChapterContent, estimateReadTime } from '../../lib/novelEditor';
 import ThemeToggle from '../../components/ThemeToggle';
+import {
+  CalendarClock, FileText, ArrowLeft, BookOpen, Sparkles, Wrench,
+  Menu, Expand, Shrink, Lock, Unlock, Settings, X, ScrollText,
+  MoveHorizontal, ChevronRight, ListOrdered, CornerDownRight,
+  Minus, Plus,
+} from 'lucide-react';
 
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
@@ -796,7 +802,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       <div style={{ width: '100vw', minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', }}>
         <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(217,119,6,0.05)', filter: 'blur(100px)' }} />
         <div style={{ maxWidth: '480px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-          <div style={{ fontSize: '64px', marginBottom: '24px' }}>{chapterUnavailable === 'scheduled' ? '🗓️' : '📝'}</div>
+          <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'center' }}>{chapterUnavailable === 'scheduled' ? <CalendarClock size={64} /> : <FileText size={64} />}</div>
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
             {chapterUnavailable === 'scheduled' ? 'Not Out Yet' : 'Still a Draft'}
           </h1>
@@ -813,7 +819,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               cursor: 'pointer', width: '100%',
             }}
           >
-            ← Go Back
+            <ArrowLeft size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Go Back
           </button>
         </div>
       </div>
@@ -829,7 +835,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         
         <div style={{ maxWidth: '480px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
           {/* Icon */}
-          <div style={{ fontSize: '64px', marginBottom: '24px' }}>📖</div>
+          <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'center' }}><BookOpen size={64} /></div>
           
           {/* Title */}
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
@@ -876,7 +882,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               onMouseEnter={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #991b1b, #b91c1c)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #7f1d1d, #991b1b)')}
             >
-              ✨ Unlimited Unlock Karo
+              <Sparkles size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Unlimited Unlock Karo
             </button>
             
             <button
@@ -887,13 +893,13 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 cursor: 'pointer', width: '100%',
               }}
             >
-              ← Wapas Jao
+              <ArrowLeft size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Wapas Jao
             </button>
           </div>
           
           {/* Footer text */}
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '24px', lineHeight: 1.5 }}>
-            Unlimited reading, unlimited creativity. Sabhi creators ko support karo! 💛
+            Unlimited reading, unlimited creativity. Sabhi creators ko support karo!
           </p>
         </div>
       </div>
@@ -980,7 +986,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
             background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px',
             padding: '6px 12px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px',
-          }}>←<span className="mangal-reader-back-text"> Back</span></a>
+          }}><ArrowLeft size={14} /><span className="mangal-reader-back-text"> Back</span></a>
           <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', flexShrink: 0 }} />
           <div style={{ overflow: 'hidden', minWidth: 0 }}>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1015,7 +1021,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
               background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)',
               color: '#d97706', textDecoration: 'none', whiteSpace: 'nowrap',
-            }}>🛠<span className="mangal-reader-studio-text"> Studio</span></a>
+            }}><Wrench size={14} /><span className="mangal-reader-studio-text"> Studio</span></a>
           )}
 
           {/* Chapter list toggle */}
@@ -1023,7 +1029,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             onClick={e => { e.stopPropagation(); setShowSidebar(s => !s); setShowSettings(false); }}
             style={{ ...topBtn, background: showSidebar ? 'var(--border-color)' : 'var(--bg-card)', color: showSidebar ? '#d97706' : 'var(--text-secondary)' }}
             title="Chapters"
-          >≡</button>
+          ><Menu size={16} /></button>
 
           {/* Zoom controls removed in Sprint 4 — replaced by Fit mode in Settings panel */}
 
@@ -1032,7 +1038,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             onClick={toggleFullscreen}
             style={{ ...topBtn, background: isFullscreen ? 'var(--border-color)' : 'var(--bg-card)', color: isFullscreen ? '#d97706' : 'var(--text-secondary)' }}
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-          >{isFullscreen ? '⤡' : '⛶'}</button>
+          >{isFullscreen ? <Shrink size={16} /> : <Expand size={16} />}</button>
 
           {/* Lock Screen toggle — only offered once in fullscreen */}
           {isFullscreen && (
@@ -1040,7 +1046,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               onClick={toggleLockScreen}
               style={{ ...topBtn, background: 'var(--bg-card)', color: 'var(--text-secondary)' }}
               title="Lock Screen"
-            >🔒</button>
+            ><Lock size={16} /></button>
           )}
 
           {/* Settings */}
@@ -1048,7 +1054,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             onClick={e => { e.stopPropagation(); setShowSettings(s => !s); setShowSidebar(false); }}
             style={{ ...topBtn, background: showSettings ? 'var(--border-color)' : 'var(--bg-card)', color: showSettings ? '#d97706' : 'var(--text-secondary)' }}
             title="Settings"
-          >⚙</button>
+          ><Settings size={16} /></button>
         </div>
       </div>
       )}
@@ -1079,7 +1085,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             transition: 'opacity 0.3s', opacity: showUI ? 1 : 0,
             pointerEvents: showUI ? 'auto' : 'none',
           }}
-        >🔓</button>
+        ><Unlock size={16} /></button>
       )}
 
       {/* ── CHAPTER SIDEBAR ── */}
@@ -1100,7 +1106,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Chapters</div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{series?.title}</div>
           </div>
-          <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>✕</button>
+          <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '18px', cursor: 'pointer', padding: '0 4px', lineHeight: 1, display: 'inline-flex' }}><X size={16} /></button>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
@@ -1122,12 +1128,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         <div style={{ padding: '12px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
           {prevChapter ? (
             <a href={`/read/${prevChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>
-              ← Ch.{prevChapter.chapter_number}
+              <ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}
             </a>
           ) : <div style={{ flex: 1 }} />}
           {nextChapter ? (
             <a href={`/read/${nextChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '12px', fontWeight: 700, textAlign: 'center', border: 'none' }}>
-              Ch.{nextChapter.chapter_number} →
+              Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
             </a>
           ) : <div style={{ flex: 1 }} />}
         </div>
@@ -1153,8 +1159,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         {!isNovel && (<>
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Reading Mode</div>
         <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
-          <button onClick={() => setModeOverride('scroll')} style={settingsBtn(effectiveMode === 'scroll')}>📜 Scroll</button>
-          <button onClick={() => setModeOverride('page')} style={settingsBtn(effectiveMode === 'page')}>📖 Page</button>
+          <button onClick={() => setModeOverride('scroll')} style={settingsBtn(effectiveMode === 'scroll')}><ScrollText size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Scroll</button>
+          <button onClick={() => setModeOverride('page')} style={settingsBtn(effectiveMode === 'page')}><BookOpen size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Page</button>
         </div>
         {modeOverride && modeOverride !== series?.reading_mode && (
           <button onClick={() => setModeOverride(null)} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '10px', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginBottom: '14px', display: 'block' }}>
@@ -1199,9 +1205,9 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         {isNovel && (<>
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Font Size</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-          <button onClick={() => setFontSize(v => Math.max(14, v - 1))} style={{ ...settingsBtn(false), flex: 'none', width: '28px', textAlign: 'center', padding: '6px 0' }}>A−</button>
+          <button onClick={() => setFontSize(v => Math.max(14, v - 1))} style={{ ...settingsBtn(false), flex: 'none', width: '28px', textAlign: 'center', padding: '6px 0' }}>A<Minus size={10} style={{ verticalAlign: 'middle' }} /></button>
           <div style={{ flex: 1, textAlign: 'center', fontSize: '13px', color: '#d97706', fontWeight: 700 }}>{fontSize}px</div>
-          <button onClick={() => setFontSize(v => Math.min(24, v + 1))} style={{ ...settingsBtn(false), flex: 'none', width: '28px', textAlign: 'center', padding: '6px 0' }}>A+</button>
+          <button onClick={() => setFontSize(v => Math.min(24, v + 1))} style={{ ...settingsBtn(false), flex: 'none', width: '28px', textAlign: 'center', padding: '6px 0' }}>A<Plus size={10} style={{ verticalAlign: 'middle' }} /></button>
         </div>
 
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Font</div>
@@ -1239,8 +1245,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         {!isNovel && (<>
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Fit</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
-          <button onClick={() => setFitMode('width')} style={settingsBtn(fitMode === 'width')}>↔ Fit Width</button>
-          <button onClick={() => setFitMode('screen')} style={settingsBtn(fitMode === 'screen')}>⛶ Fit Screen</button>
+          <button onClick={() => setFitMode('width')} style={settingsBtn(fitMode === 'width')}><MoveHorizontal size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Fit Width</button>
+          <button onClick={() => setFitMode('screen')} style={settingsBtn(fitMode === 'screen')}><Expand size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Fit Screen</button>
           <button onClick={() => setFitMode('actual')} style={settingsBtn(fitMode === 'actual')}>1:1 Actual Size</button>
         </div>
         {fitMode === 'screen' && effectiveMode === 'scroll' && (
@@ -1279,8 +1285,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       {previewingOwnUnpublished && (
         <div style={{ position: 'fixed', top: '52px', left: 0, right: 0, zIndex: 90, textAlign: 'center', fontSize: '11px', fontWeight: 700, color: '#fff', background: previewingOwnUnpublished === 'draft' ? '#92400e' : '#1d4ed8', padding: '6px 12px' }}>
           {previewingOwnUnpublished === 'draft'
-            ? '📝 PREVIEW — this chapter is still a draft. Readers can\'t see this.'
-            : `🗓️ PREVIEW — scheduled${unavailableUntil ? ` for ${new Date(unavailableUntil).toLocaleString()}` : ''}. Readers can't see this yet.`}
+            ? <><FileText size={12} style={{ verticalAlign: 'middle' }} /> PREVIEW — this chapter is still a draft. Readers can't see this.</>
+            : <><CalendarClock size={12} style={{ verticalAlign: 'middle' }} /> PREVIEW — scheduled{unavailableUntil ? ` for ${new Date(unavailableUntil).toLocaleString()}` : ''}. Readers can't see this yet.</>}
         </div>
       )}
       <div style={{ paddingTop: lockScreen ? 0 : '56px' }}>
@@ -1379,15 +1385,15 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                   <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                     {prevChapter ? (
                       <a href={`/read/${prevChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, }}>
-                        ← Ch.{prevChapter.chapter_number}
+                        <ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}
                       </a>
                     ) : <div />}
                     <a href={series ? `/series/${series.id}` : '/'} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, }}>
-                      📋 All Chapters
+                      <ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters
                     </a>
                     {nextChapter ? (
                       <a href={`/read/${nextChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, }}>
-                        Ch.{nextChapter.chapter_number} →
+                        Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
                       </a>
                     ) : <div />}
                   </div>
@@ -1428,11 +1434,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             {/* Chapter nav bottom */}
             {!lockScreen && (
             <div style={{ padding: '48px 24px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {prevChapter && <a href={`/read/${prevChapter.id}`} style={navBtnStyle}>← Ch.{prevChapter.chapter_number}</a>}
-              <a href={series ? `/series/${series.id}` : '/'} style={navBtnStyle}>📋 All Chapters</a>
+              {prevChapter && <a href={`/read/${prevChapter.id}`} style={navBtnStyle}><ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}</a>}
+              <a href={series ? `/series/${series.id}` : '/'} style={navBtnStyle}><ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters</a>
               {nextChapter && (
                 <a href={`/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff' }}>
-                  Ch.{nextChapter.chapter_number} →
+                  Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
                 </a>
               )}
             </div>
@@ -1469,16 +1475,16 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 currentPage === pages.length - 1 ? (
                   nextChapter ? (
                     <a href={`/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
-                      ← Next Chapter
+                      <ArrowLeft size={13} style={{ verticalAlign: 'middle' }} /> Next Chapter
                     </a>
                   ) : (
                     <a href={series ? `/series/${series.id}` : '/'} style={{ ...navBtnStyle, textDecoration: 'none' }}>All Chapters</a>
                   )
                 ) : (
-                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, pages.length - 1))} style={pageBtn(false)}>← Next</button>
+                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, pages.length - 1))} style={pageBtn(false)}><ArrowLeft size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Next</button>
                 )
               ) : (
-                <button onClick={() => setCurrentPage(p => Math.max(p - 1, 0))} disabled={currentPage === 0} style={pageBtn(currentPage === 0)}>← Prev</button>
+                <button onClick={() => setCurrentPage(p => Math.max(p - 1, 0))} disabled={currentPage === 0} style={pageBtn(currentPage === 0)}><ArrowLeft size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Prev</button>
               )}
 
               {/* Dots */}
@@ -1495,18 +1501,18 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
               {/* Right button: Next (LTR) / Prev (RTL) */}
               {isRTL ? (
-                <button onClick={() => setCurrentPage(p => Math.max(p - 1, 0))} disabled={currentPage === 0} style={pageBtn(currentPage === 0)}>Prev →</button>
+                <button onClick={() => setCurrentPage(p => Math.max(p - 1, 0))} disabled={currentPage === 0} style={pageBtn(currentPage === 0)}>Prev <ChevronRight size={13} style={{ verticalAlign: 'middle' }} /></button>
               ) : (
                 currentPage === pages.length - 1 ? (
                   nextChapter ? (
                     <a href={`/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
-                      Next Chapter →
+                      Next Chapter <ChevronRight size={13} style={{ verticalAlign: 'middle' }} />
                     </a>
                   ) : (
                     <a href={series ? `/series/${series.id}` : '/'} style={{ ...navBtnStyle, textDecoration: 'none' }}>All Chapters</a>
                   )
                 ) : (
-                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, pages.length - 1))} style={pageBtn(false)}>Next →</button>
+                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, pages.length - 1))} style={pageBtn(false)}>Next <ChevronRight size={13} style={{ verticalAlign: 'middle' }} /></button>
                 )
               )}
 
@@ -1635,13 +1641,13 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                             <button
                               onClick={() => { setReplyingTo(isReplyingHere ? null : c.id); setReplyBody(''); }}
                               style={{ background: 'none', border: 'none', color: isReplyingHere ? '#d97706' : 'var(--text-muted)', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
-                            >↳ Reply</button>
+                            ><CornerDownRight size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Reply</button>
                             {isOwn && (
                               <button
                                 onClick={() => handleDeleteComment(c.id, null)}
                                 style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
                                 title="Delete comment"
-                              >✕</button>
+                              ><X size={12} /></button>
                             )}
                           </div>
                         </div>
@@ -1703,7 +1709,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                                       onClick={() => handleDeleteComment(reply.id, c.id)}
                                       style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
                                       title="Delete reply"
-                                    >✕</button>
+                                    ><X size={12} /></button>
                                   )}
                                 </div>
                                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, wordBreak: 'break-word' }}>{reply.body}</div>
