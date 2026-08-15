@@ -2087,3 +2087,48 @@ wants that recolored too.
 **Verified:** `tsc --noEmit` clean across the whole project; `eslint` on
 all three touched files clean (0 errors; one pre-existing `no-img-element`
 warning on the shorts page, unrelated to this change).
+
+## 25. KaTube — Review Hub, accuracy-to-source star ratings (DONE, this session)
+
+Founder pitched three retention-strategy ideas (Sync-Play Watch Rooms,
+Review Hub, Creator Bounties) and asked which to build first. Picked
+Review Hub — smallest surface area (one table, no new realtime/voting
+machinery) vs. Sync-Play (needs live playback-state sync) or Bounties
+(needs 3 tables: quests/submissions/votes).
+
+- **New table `video_accuracy_reviews`** (migration
+  `20260814_katube_video_accuracy_reviews` via `Supabase:apply_migration`,
+  project `rfxlavwzhpnbhwoumaha`) — `video_id`, `reviewer_id`, `stars`
+  (1-5, checked), optional `review_text`, `unique(video_id, reviewer_id)`
+  so a viewer's second submission overwrites their first via `upsert`
+  (`onConflict: 'video_id,reviewer_id'`) rather than creating a duplicate
+  row. RLS: public read, own insert/update/delete — same shape as the
+  existing `ratings`/`video_comments` policies.
+- **UI on `app/katube/watch/[videoId]/page.tsx`** — new "Review Hub"
+  card between the existing like/follow/"based on" row and the Comments
+  section. Only renders when `video.seriesId` is set (accuracy-to-source
+  is meaningless without a source novel). Clickable 1-5 star picker
+  (hover preview + selected state), optional one-line text with the
+  star submission, running average + review count shown top-right of the
+  card, written reviews listed below (star-only submissions don't clutter
+  the list, only ones with text show). Pre-fills the picker with the
+  viewer's own existing rating if they've already reviewed this video.
+  Same optimistic-ish patterns as the existing comment/like code
+  (`accuracyLockRef` sync lock, batched `creator_profiles` username join
+  instead of N+1 lookups).
+
+**Verified:** `tsc --noEmit` clean project-wide; `eslint` on the touched
+file clean (0 errors, 0 warnings) after fixing one
+`react-hooks/set-state-in-effect` error (deferred the pre-fill setState
+via `Promise.resolve().then(...)`, same pattern already used for the
+`following` effect on this page).
+
+**Not done (flagged as follow-ups, not started this session):**
+- Sync-Play Watch Rooms and Creator Bounties — the other two pitched
+  ideas, not built.
+- No "helpful vote" or sort-by-rating on accuracy reviews (unlike the
+  novel-review `review_helpful_votes` table from §written_reviews) —
+  kept minimal for a first pass.
+- Average/count is computed client-side from the fetched rows, not a DB
+  view/RPC — fine at current scale, would need a proper aggregate query
+  once a video has hundreds of reviews.

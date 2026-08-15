@@ -34,6 +34,20 @@ interface VideoComment {
   commenterName: string;
 }
 
+// ── Review Hub — Step 27 ──
+// Structured accuracy rating (1-5 stars) for how well the video adapts its
+// source novel, separate from the free-for-all comments section above.
+// Only shown when the video is tied to a series (video.seriesId), since
+// "accuracy to source" is meaningless without a source to compare to.
+interface AccuracyReview {
+  id: string;
+  stars: number;
+  review_text: string | null;
+  created_at: string;
+  reviewer_id: string;
+  reviewerName: string;
+}
+
 // ── §4 item 5, step 1: Like ──
 // video_likes join table + RLS already existed (20260810_katube_videos.sql).
 // This wires it up: toggles a row in video_likes and keeps videos.likes in
@@ -114,6 +128,15 @@ export default function KaTubeWatchPage() {
   const [commentText, setCommentText] = useState('');
   const [commentBusy, setCommentBusy] = useState(false);
   const commentLockRef = useRef(false);
+
+  // ── Review Hub — Step 27 ──
+  const [accuracyReviews, setAccuracyReviews] = useState<AccuracyReview[]>([]);
+  const [accuracyLoading, setAccuracyLoading] = useState(true);
+  const [myStars, setMyStars] = useState(0);
+  const [hoverStars, setHoverStars] = useState(0);
+  const [myReviewText, setMyReviewText] = useState('');
+  const [accuracyBusy, setAccuracyBusy] = useState(false);
+  const accuracyLockRef = useRef(false);
 
   useEffect(() => {
     if (!videoId) return;
@@ -226,6 +249,54 @@ export default function KaTubeWatchPage() {
     })();
   }, [videoId]);
 
+  // Accuracy reviews — public read, same batched-username-join pattern as
+  // comments. Only fetched once we know the video is tied to a series
+  // (video?.seriesId), since the section doesn't render otherwise.
+  useEffect(() => {
+    if (!videoId || !video?.seriesId) return;
+    (async () => {
+      setAccuracyLoading(true);
+      const { data: rows } = await supabase
+        .from('video_accuracy_reviews')
+        .select('id, stars, review_text, created_at, reviewer_id')
+        .eq('video_id', videoId)
+        .order('created_at', { ascending: false });
+
+      if (!rows || rows.length === 0) {
+        setAccuracyReviews([]);
+        setAccuracyLoading(false);
+        return;
+      }
+
+      const reviewerIds = [...new Set(rows.map(r => r.reviewer_id))];
+      const { data: profiles } = await supabase
+        .from('creator_profiles')
+        .select('user_id, username')
+        .in('user_id', reviewerIds);
+      const nameMap = new Map((profiles || []).map(p => [p.user_id, p.username]));
+
+      setAccuracyReviews(rows.map(r => ({
+        ...r,
+        reviewerName: nameMap.get(r.reviewer_id) || 'MANGAL Viewer',
+      })));
+      setAccuracyLoading(false);
+    })();
+  }, [videoId, video?.seriesId]);
+
+  // Pre-fill the star picker with the viewer's own existing review, if any.
+  // Deferred via Promise.resolve().then(...) — same pattern as the
+  // `following` effect above — to avoid a synchronous setState-in-effect.
+  useEffect(() => {
+    if (!userId || accuracyReviews.length === 0) return;
+    const mine = accuracyReviews.find(r => r.reviewer_id === userId);
+    if (mine) {
+      Promise.resolve().then(() => {
+        setMyStars(mine.stars);
+        setMyReviewText(mine.review_text || '');
+      });
+    }
+  }, [userId, accuracyReviews]);
+
   // Follower count — public read, doesn't need userId.
   useEffect(() => {
     if (!video?.creatorId) return;
@@ -307,6 +378,39 @@ export default function KaTubeWatchPage() {
     }
     commentLockRef.current = false;
     setCommentBusy(false);
+  }
+
+  async function handleAccuracySubmit() {
+    if (!video) return;
+    if (!userId) {
+      window.location.href = '/login';
+      return;
+    }
+    if (myStars < 1) return;
+    if (accuracyLockRef.current) return;
+    accuracyLockRef.current = true;
+    setAccuracyBusy(true);
+
+    const text = myReviewText.trim();
+    const { data: row, error } = await supabase
+      .from('video_accuracy_reviews')
+      .upsert(
+        { video_id: video.id, reviewer_id: userId, stars: myStars, review_text: text || null, updated_at: new Date().toISOString() },
+        { onConflict: 'video_id,reviewer_id' },
+      )
+      .select('id, stars, review_text, created_at, reviewer_id')
+      .single();
+
+    if (!error && row) {
+      const { data: profile } = await supabase
+        .from('creator_profiles').select('username').eq('user_id', userId).single();
+      setAccuracyReviews(rs => {
+        const withoutMine = rs.filter(r => r.reviewer_id !== userId);
+        return [{ ...row, reviewerName: profile?.username || 'You' }, ...withoutMine];
+      });
+    }
+    accuracyLockRef.current = false;
+    setAccuracyBusy(false);
   }
 
   async function handleLike() {
@@ -476,6 +580,91 @@ export default function KaTubeWatchPage() {
                   </Link>
                 )}
               </div>
+
+              {/* Review Hub — Step 27, accuracy-to-source rating */}
+              {video.seriesId && (
+                <div style={{
+                  marginTop: '8px', marginBottom: '20px', padding: '16px',
+                  borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-card)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                    <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                      📖 Review Hub — accuracy to source
+                    </h2>
+                    {accuracyReviews.length > 0 && (
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700 }}>
+                        {(accuracyReviews.reduce((s, r) => s + r.stars, 0) / accuracyReviews.length).toFixed(1)} ★ avg
+                        {' · '}{accuracyReviews.length.toLocaleString()} {accuracyReviews.length === 1 ? 'review' : 'reviews'}
+                      </span>
+                    )}
+                  </div>
+
+                  <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 12px' }}>
+                    How well does this adaptation match {video.basedOn ? `“${video.basedOn}”` : 'the source novel'}?
+                  </p>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => userId ? setMyStars(n) : (window.location.href = '/login')}
+                        onMouseEnter={() => setHoverStars(n)}
+                        onMouseLeave={() => setHoverStars(0)}
+                        aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                          fontSize: '22px', lineHeight: 1,
+                          color: (hoverStars || myStars) >= n ? '#f97316' : 'var(--border-color)',
+                        }}
+                      >★</button>
+                    ))}
+                  </div>
+
+                  {myStars > 0 && (
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '4px' }}>
+                      <input
+                        value={myReviewText}
+                        onChange={e => setMyReviewText(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !accuracyBusy) handleAccuracySubmit(); }}
+                        placeholder="Optional: what did the adaptation get right or wrong?"
+                        disabled={accuracyBusy}
+                        style={{
+                          flex: 1, minWidth: 0, padding: '9px 14px', borderRadius: '20px',
+                          border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
+                          color: 'var(--text-primary)', fontSize: '12.5px', outline: 'none',
+                        }}
+                      />
+                      <button
+                        onClick={handleAccuracySubmit}
+                        disabled={accuracyBusy}
+                        style={{
+                          fontSize: '12px', fontWeight: 700, color: '#fff', background: '#f97316',
+                          border: 'none', borderRadius: '20px', padding: '0 16px', cursor: 'pointer',
+                          opacity: accuracyBusy ? 0.5 : 1, flexShrink: 0,
+                        }}
+                      >
+                        {accuracyReviews.some(r => r.reviewer_id === userId) ? 'Update' : 'Submit'}
+                      </button>
+                    </div>
+                  )}
+
+                  {!accuracyLoading && accuracyReviews.filter(r => r.review_text).length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                      {accuracyReviews.filter(r => r.review_text).map(r => (
+                        <div key={r.id}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.reviewerName}</span>
+                            <span style={{ fontSize: '11px', color: '#f97316' }}>{'★'.repeat(r.stars)}{'☆'.repeat(5 - r.stars)}</span>
+                          </div>
+                          <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, wordBreak: 'break-word' }}>
+                            {r.review_text}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Comments */}
               <div style={{ marginTop: '8px' }}>
