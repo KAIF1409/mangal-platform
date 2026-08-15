@@ -11,6 +11,7 @@ import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
 import Link from 'next/link';
 
 import { setPostLoginRedirect } from '../lib/authRedirect';
+import { Trophy, Search, Bookmark, Wrench, Bell, BookOpenText, Inbox, ScrollText, BellOff, type LucideIcon } from 'lucide-react';
 interface FollowedSeries {
   id: string;
   title: string;
@@ -190,19 +191,20 @@ export default function LibraryPage() {
         centerSlot={
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
-              { label: 'Browse', href: '/WebMangal' },
-              { label: '🏆 Rankings', href: '/rankings' },
-              { label: '🔍 Search', href: '/WebMangal/search' },
-              { label: '🔖 Bookmarks', href: '/bookmarks' },
+              { label: 'Browse', href: '/WebMangal', icon: null as LucideIcon | null },
+              { label: 'Rankings', href: '/rankings', icon: Trophy },
+              { label: 'Search', href: '/WebMangal/search', icon: Search },
+              { label: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
                 color: 'var(--text-secondary)', textDecoration: 'none',
                 transition: 'color 0.15s, background 0.15s',
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
               }}
                 onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
                 onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
-              >{link.label}</a>
+              >{link.icon && <link.icon size={13} strokeWidth={2} />}{link.label}</a>
             ))}
           </div>
         }
@@ -212,8 +214,8 @@ export default function LibraryPage() {
               <a href="/dashboard" style={{
                 padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
                 background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.3)',
-                color: '#d97706', textDecoration: 'none',
-              }}>🛠 Studio</a>
+                color: '#d97706', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px',
+              }}><Wrench size={12} strokeWidth={2} /> Studio</a>
             )}
             {user && <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />}
           </div>
@@ -224,7 +226,7 @@ export default function LibraryPage() {
       <div className="mangal-lib-header" style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px 20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px' }}>🔔 My Library</h1>
+            <h1 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '10px' }}><Bell size={24} strokeWidth={2} /> My Library</h1>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
               {loading ? '' : series.length === 0 ? 'No series followed yet.' : `${series.length} series followed`}
             </p>
@@ -252,12 +254,12 @@ export default function LibraryPage() {
       <div className="mangal-lib-content" style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px 60px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📚</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><BookOpenText size={32} strokeWidth={1.5} color="var(--text-muted)" /></div>
             <div>Loading your library...</div>
           </div>
         ) : series.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}><Inbox size={48} strokeWidth={1.5} color="var(--text-tertiary)" /></div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Your library is empty</p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 24px' }}>Follow a series to get notified when new chapters drop</p>
             <Link href="/" style={{ padding: '10px 24px', borderRadius: '10px', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
@@ -294,7 +296,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="64px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>📜</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ScrollText size={24} strokeWidth={1.5} color="var(--text-tertiary)" /></div>
           )}
         </div>
       </a>
@@ -350,9 +352,9 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
         ) : (
           <button
             onClick={() => setConfirmUnfollow(true)}
-            style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer' }}
+            style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
           >
-            🔕 Unfollow
+            <BellOff size={12} strokeWidth={2} /> Unfollow
           </button>
         )}
       </div>
