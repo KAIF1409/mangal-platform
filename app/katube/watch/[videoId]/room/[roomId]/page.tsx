@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ThemeToggle from '../../../../../components/ThemeToggle';
 import { supabase } from '../../../../../lib/supabase';
+import { setPostLoginRedirect } from '../../../../../lib/authRedirect';
 
 // ── Sync-Play Watch Rooms ──
 // Third of the three retention-strategy ideas from CONTEXT.md §25 (Review
@@ -119,7 +120,7 @@ export default function WatchRoomPage() {
     let cancelled = false;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      if (!user) { setPostLoginRedirect(window.location.pathname); router.push('/login'); return; }
       if (cancelled) return;
       setUserId(user.id);
 

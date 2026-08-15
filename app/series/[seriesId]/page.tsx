@@ -10,6 +10,7 @@ import ReportButton from '../../components/ReportButton';
 import ShareButton from '../../components/ShareButton';
 import { canManageSeries, isDeveloperRole } from '../../lib/roles';
 import { estimateReadTime } from '../../lib/novelEditor';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 import Link from 'next/link';
 import ThemeToggle from '../../components/ThemeToggle';
 
@@ -364,7 +365,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   }, [seriesId]);
 
   const toggleFollow = async () => {
-    if (!user) { window.location.assign('/login'); return; }
+    if (!user) { setPostLoginRedirect(window.location.pathname); window.location.assign('/login'); return; }
     if (followLoading) return;
     setFollowLoading(true);
     if (isFollowing) {
@@ -380,7 +381,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   const handleRate = async (stars: number) => {
-    if (!user) { window.location.assign('/login'); return; }
+    if (!user) { setPostLoginRedirect(window.location.pathname); window.location.assign('/login'); return; }
     if (ratingLoading) return;
     setRatingLoading(true);
     const prev = myRating;
@@ -402,7 +403,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
 
   // Step 26 — Written Reviews
   const submitReview = async () => {
-    if (!user) { window.location.assign('/login'); return; }
+    if (!user) { setPostLoginRedirect(window.location.pathname); window.location.assign('/login'); return; }
     if (!myRating) return; // must rate before/along with reviewing
     if (reviewSubmitting) return;
     setReviewSubmitting(true);
@@ -442,7 +443,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   const toggleHelpful = async (reviewId: string) => {
-    if (!user) { window.location.assign('/login'); return; }
+    if (!user) { setPostLoginRedirect(window.location.pathname); window.location.assign('/login'); return; }
     const alreadyVoted = myVotedHelpful.has(reviewId);
     setMyVotedHelpful(prev => {
       const next = new Set(prev);
@@ -538,7 +539,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   const submitEntry = async (questId: string) => {
-    if (!user) { window.location.assign('/login'); return; }
+    if (!user) { setPostLoginRedirect(window.location.pathname); window.location.assign('/login'); return; }
     const draft = submissionDrafts.get(questId);
     const url = draft?.url.trim();
     if (!url || submissionBusy) return;
@@ -554,7 +555,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   const castVote = async (questId: string, submissionId: string) => {
-    if (!user) { window.location.assign('/login'); return; }
+    if (!user) { setPostLoginRedirect(window.location.pathname); window.location.assign('/login'); return; }
     if (voteBusy) return;
     setVoteBusy(questId);
     const { error } = await supabase

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../../../components/ThemeToggle';
 import { supabase } from '../../../lib/supabase';
+import { setPostLoginRedirect } from '../../../lib/authRedirect';
 
 // ── KaTube — Step 3: watch page ──
 // Clicking a video card on /katube now opens this page, which loads the
@@ -328,6 +329,7 @@ export default function KaTubeWatchPage() {
   async function handleFollow() {
     if (!video) return;
     if (!userId) {
+      setPostLoginRedirect(window.location.pathname);
       window.location.href = '/login';
       return;
     }
@@ -358,6 +360,7 @@ export default function KaTubeWatchPage() {
   async function handleCommentSubmit() {
     if (!video) return;
     if (!userId) {
+      setPostLoginRedirect(window.location.pathname);
       window.location.href = '/login';
       return;
     }
@@ -386,6 +389,7 @@ export default function KaTubeWatchPage() {
   async function handleAccuracySubmit() {
     if (!video) return;
     if (!userId) {
+      setPostLoginRedirect(window.location.pathname);
       window.location.href = '/login';
       return;
     }
@@ -419,6 +423,7 @@ export default function KaTubeWatchPage() {
   async function handleWatchWithFriends() {
     if (!video) return;
     if (!userId) {
+      setPostLoginRedirect(window.location.pathname);
       window.location.href = '/login';
       return;
     }
@@ -442,6 +447,7 @@ export default function KaTubeWatchPage() {
   async function handleLike() {
     if (!video) return;
     if (!userId) {
+      setPostLoginRedirect(window.location.pathname);
       window.location.href = '/login';
       return;
     }
@@ -655,7 +661,7 @@ export default function KaTubeWatchPage() {
                     {[1, 2, 3, 4, 5].map(n => (
                       <button
                         key={n}
-                        onClick={() => userId ? setMyStars(n) : (window.location.href = '/login')}
+                        onClick={() => userId ? setMyStars(n) : (setPostLoginRedirect(window.location.pathname), window.location.href = '/login')}
                         onMouseEnter={() => setHoverStars(n)}
                         onMouseLeave={() => setHoverStars(0)}
                         aria-label={`${n} star${n > 1 ? 's' : ''}`}
