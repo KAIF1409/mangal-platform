@@ -2202,3 +2202,70 @@ pre-existing ones were already left as-is.
   button on a submitted YouTube link (unlike comments, which have
   `ReportButton` elsewhere on this page) — worth adding before this is
   fan-facing at scale.
+
+## 27. Not built yet — Creator-side retention features (backlog, discussed this session)
+
+Founder's framing: audiences follow creators, not the other way around —
+creators are the actual supply side, so retention features that make
+*creators* stick (not just audiences) are the higher-leverage bet.
+Discussed as a set; nothing in this list is started. §25 (Review Hub,
+DONE) and §26 (Visual Quests / Creator Bounties, DONE) were the first two
+audience-retention ideas from that same conversation — this list is the
+next round, creator-focused, not yet built. Founder hasn't picked which
+to build first yet.
+
+1. **Direct tipping / "Super Thanks"-style tipping** — viewers send a
+   creator money directly on a video/chapter. Flagged as the strongest
+   pull since it's real money, not just engagement — UPI integration
+   would be a genuine India-specific differentiator vs. YouTube. Needs a
+   payment provider decision (Razorpay/similar) — not startable at zero
+   budget without picking one and handling payout/KYC questions.
+2. **Fan memberships / paid subscriptions** — monthly recurring payment
+   for early access to chapters/videos or member-only perks. Same
+   payment-provider dependency as tipping above; likely built together.
+3. **Cash/reward attached to Visual Quest bounties** (extends §26) — right
+   now a Visual Quest is recognition-only ("official visual" badge); this
+   would let an author optionally attach a payout to the winning
+   submission. Same payment dependency as items 1–2.
+4. **Real creator analytics dashboard** — retention/drop-off graphs per
+   chapter (where readers stop), traffic-source breakdown, view/like/
+   follow trends over time. Called out as a genuine differentiator since
+   this kind of chapter-level drop-off data doesn't really exist anywhere
+   else for web novels/manga — YouTube gives video analytics but nothing
+   like this for prose. Feasible at zero cost (all data already being
+   collected — views, likes, follows, ratings — this is a
+   read/aggregate/chart job, not new infra), so a realistic candidate for
+   "build before payments."
+5. **A/B thumbnail/title testing** — let a creator run two thumbnails/
+   titles and see which performs better. Lower priority, flagged mainly
+   for completeness.
+6. **"New Voices" discovery spotlight** — founder/platform-curated
+   placement that gives brand-new creators a guaranteed visibility boost
+   (vs. pure view-count ranking, which always favors already-big
+   creators) — addresses cold-start problem for anyone joining early.
+   Zero-cost, just a curated/pinned section — realistic near-term build.
+7. **Deeper cross-promotion push** — extend the existing KaTube↔K Circle
+   auto-post (already built, see earlier K Circle sessions) so a single
+   upload automatically surfaces across series page, K Circle, and the
+   discovery feed with less manual creator effort than today.
+8. **Creator-only K Circle space** — a private lounge/channel visible
+   only to verified creators, for creator-to-creator discussion. Pitched
+   as a network-effect/stickiness play (creators who build relationships
+   with each other on-platform are less likely to leave) rather than a
+   discovery feature. Could reuse the existing K Circle channels/roles
+   system (§17) with a role-gated private channel rather than needing new
+   infra.
+9. **Verified badge + creator leaderboard** — status/competitive layer,
+   lower cost than the payment-dependent items, mostly UI + an aggregate
+   ranking query.
+10. **In-platform creator tools** (AI thumbnail generation, auto-written
+    descriptions, auto SRT/subtitle generation) — reduces a creator's
+    need for external tools (Suno/CapCut/VEED, per founder's earlier
+    YouTube-growth sessions), lowering switching cost to platform-native
+    tooling. Needs an AI API budget decision — not zero-cost like most of
+    the others in this list.
+
+**Rough zero-cost-first ordering, if picking where to start:** items 4, 6,
+9, and 7 don't need a payment provider or paid AI API and reuse existing
+data/infra; items 1–3 (money) and 10 (AI tools) are gated behind a
+budget/provider decision the founder hasn't made yet.
