@@ -10,6 +10,7 @@ import ThemeToggle from '../../components/ThemeToggle';
 import SeriesCard from '../../components/SeriesCard';
 import { formatViews } from '../../lib/format';
 import { hasCreatorAccess, isDeveloperRole } from '../../lib/roles';
+import { Trophy, Search, BookOpen, Sparkles, Eye, ScrollText, BookText } from 'lucide-react';
 import { useUiLanguage, LANGUAGES } from '../../lib/i18n';
 import Link from 'next/link';
 
@@ -268,7 +269,7 @@ export default function HomePage() {
         <div className="mangal-home-nav-center">
           {[
             { label: t('browse'), href: '/' },
-            { label: '🏆 Rankings', href: '/rankings' },
+            { label: 'Rankings', href: '/rankings' },
             { label: t('genres'), href: '/#genres' },
             { label: 'Tags', href: '/tags' },
             { label: t('newReleases'), href: '/#new' },
@@ -411,7 +412,7 @@ export default function HomePage() {
             onSubmit={e => { e.preventDefault(); if (search.trim()) router.push(`/WebMangal/search?keyword=${encodeURIComponent(search.trim())}`); }}
             style={{ maxWidth: '480px', margin: '0 auto', position: 'relative' }}
           >
-            <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', pointerEvents: 'none' }}>🔍</span>
+            <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', color: 'rgba(255,255,255,0.7)' }}><Search size={16} strokeWidth={2} /></span>
             <input
               type="text"
               placeholder={t('searchPlaceholder')}
@@ -505,12 +506,12 @@ export default function HomePage() {
 
         {loading ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><BookOpen size={32} strokeWidth={1.5} /></div>
             <div style={{ fontSize: '14px' }}>{t('loadingStories')}</div>
           </div>
         ) : filtered.length === 0 && (activeGenre !== 'All' || showDesiComics) ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔍</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><Search size={32} strokeWidth={1.5} /></div>
             <div style={{ fontSize: '14px' }}>{t('noSeriesInFilter')}</div>
           </div>
         ) : (
@@ -518,8 +519,8 @@ export default function HomePage() {
             {/* Step 27 — For You (personalized, logged-in readers only) */}
             {forYou.filter(s => activeContentType === 'all' || s.content_type === activeContentType).length > 0 && activeGenre === 'All' && !showDesiComics && (
               <section style={{ padding: '32px 0 0' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
-                  ✨ For You
+                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '7px' }}>
+                  <Sparkles size={17} strokeWidth={2} /> For You
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px', marginBottom: '40px' }}>
                   {forYou.filter(s => activeContentType === 'all' || s.content_type === activeContentType).map(s => (
@@ -645,7 +646,7 @@ export default function HomePage() {
           <Image src="/webmangal-logo.png" alt="WebMangal" width={100} height={100} style={{ display: 'block', height: '28px', width: '28px', objectFit: 'contain' }} />
           <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>WebMangal</span>
         </div>
-        <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: 0 }}>Made with ❤️ in India · Free to read, forever.</p>
+        <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: 0 }}>Made with love in India · Free to read, forever.</p>
       </footer>
     </div>
   );
@@ -669,7 +670,7 @@ function ContinueCard({ item }: { item: ContinueItem }) {
           {item.coverUrl ? (
             <Image src={item.coverUrl} alt={item.seriesTitle} fill sizes="(max-width: 768px) 45vw, 200px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>📜</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}><ScrollText size={32} strokeWidth={1.5} /></div>
           )}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -713,7 +714,7 @@ function FeaturedCard({ series }: { series: Series }) {
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="100px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' }}>📜</div>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}><ScrollText size={28} strokeWidth={1.5} /></div>
           )}
           <div style={{
             position: 'absolute', top: '6px', left: '6px',
@@ -725,7 +726,7 @@ function FeaturedCard({ series }: { series: Series }) {
               fontSize: '9px', fontWeight: 700,
               color: '#fff',
             }}>
-              {series.content_type === 'novel' ? '📕 NOVEL' : '📖 MANGAL'}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>{series.content_type === 'novel' ? <BookText size={10} strokeWidth={2} /> : <BookOpen size={10} strokeWidth={2} />} {series.content_type === 'novel' ? 'NOVEL' : 'MANGAL'}</span>
             </span>
             {series.content_type !== 'novel' && (
               <span style={{
@@ -752,7 +753,7 @@ function FeaturedCard({ series }: { series: Series }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {series.language && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg-input)', padding: '2px 7px', borderRadius: '4px' }}>{series.language}</span>}
-            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>👁 {formatViews(series.views ?? 0)}</span>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}><Eye size={10} strokeWidth={2} /> {formatViews(series.views ?? 0)}</span>
             <span style={{ fontSize: '11px', color: '#d97706', fontWeight: 700, marginLeft: 'auto' }}>Read →</span>
           </div>
         </div>
