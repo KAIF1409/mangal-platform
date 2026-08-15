@@ -7,6 +7,7 @@ import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Link from 'next/link';
 import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
+import { FolderOpen, BookOpen, ScrollText, Smartphone, PlaySquare, Users2, type LucideIcon } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 
@@ -40,6 +41,7 @@ type WorkItem = {
   product: Exclude<ProductScope, 'all'>;
   title: string;
   meta: string;
+  icon: LucideIcon;
   created_at: string;
   href: string;
 };
@@ -93,7 +95,8 @@ export default function WorkspacePage() {
       id: `series-${d.id}`,
       product: 'webmangal',
       title: d.title,
-      meta: `${d.content_type === 'novel' ? '📖 Novel' : '🖼️ Mangal'} · ${d.status === 'draft' ? 'Draft' : 'Published'}`,
+      meta: `${d.content_type === 'novel' ? 'Novel' : 'Mangal'} · ${d.status === 'draft' ? 'Draft' : 'Published'}`,
+      icon: d.content_type === 'novel' ? BookOpen : ScrollText,
       created_at: d.created_at,
       href: '/dashboard',
     }));
@@ -101,7 +104,8 @@ export default function WorkspacePage() {
       id: `video-${v.id}`,
       product: 'katube',
       title: v.title,
-      meta: `${v.is_short ? '📱 Short' : '▶️ Video'} · ${v.views} views`,
+      meta: `${v.is_short ? 'Short' : 'Video'} · ${v.views} views`,
+      icon: v.is_short ? Smartphone : PlaySquare,
       created_at: v.created_at,
       href: '/katube/dashboard',
     }));
@@ -109,7 +113,8 @@ export default function WorkspacePage() {
       id: `post-${p.id}`,
       product: 'kcircle',
       title: p.caption?.trim() ? p.caption.slice(0, 60) : 'Untitled post',
-      meta: `🌀 Post${p.tag ? ` · #${p.tag}` : ''}`,
+      meta: `Post${p.tag ? ` · #${p.tag}` : ''}`,
+      icon: Users2,
       created_at: p.created_at,
       href: '/kalpana-circle',
     }));
@@ -153,8 +158,8 @@ export default function WorkspacePage() {
       <Navbar />
 
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px' }}>
-          🗂️ MY WORKSPACE
+        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <FolderOpen size={12} strokeWidth={2.5} /> MY WORKSPACE
         </div>
         <h1 style={{ fontSize: '30px', fontWeight: 900, margin: '0 0 8px' }}>Where your work lives</h1>
         <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', margin: '0 0 24px' }}>
@@ -170,7 +175,7 @@ export default function WorkspacePage() {
             border: '1px dashed var(--border-color)', borderRadius: '14px', padding: '50px 20px',
             textAlign: 'center', background: 'var(--bg-card)',
           }}>
-            <div style={{ fontSize: '34px', marginBottom: '10px' }}>🗂️</div>
+            <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--text-tertiary)', marginBottom: '10px' }}><FolderOpen size={34} strokeWidth={1.5} /></div>
             <div style={{ fontWeight: 700, marginBottom: '6px' }}>{emptyCopy[scope].title}</div>
             <div style={{ color: 'var(--text-tertiary)', fontSize: '13px', marginBottom: '18px' }}>
               {emptyCopy[scope].sub}
@@ -190,10 +195,13 @@ export default function WorkspacePage() {
                 padding: '16px 18px', borderRadius: '12px', background: 'var(--bg-card)',
                 border: '1px solid var(--border-color)',
               }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '15px' }}>{item.title}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '3px' }}>
-                    {item.meta}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <item.icon size={18} strokeWidth={1.75} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '15px' }}>{item.title}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '3px' }}>
+                      {item.meta}
+                    </div>
                   </div>
                 </div>
                 <Link href={item.href} style={{
