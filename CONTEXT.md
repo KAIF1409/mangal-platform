@@ -2630,3 +2630,94 @@ leads (Product Hunt vs. Reddit vs. press) if only one can be done well
 with founder's solo bandwidth, and what "launch-ready" actually means in
 concrete terms (this depends on where §31's revenue test and creator
 targets land at the 90-day checkpoint).
+
+## 33. Sync-Play Watch Rooms (DONE, this session)
+
+Third and last of the three retention-strategy ideas from §25 — Review Hub
+and Visual Quests/Creator Bounties were built earlier, this was the one
+flagged both times as "not built, needs live playback-state sync." Built
+this session, entry points on both KaTube and Kalpana Circle sharing one
+room system underneath (not two separate builds — the sync/chat/member
+machinery is identical either way, so splitting it would just duplicate
+code for no behavioral gain).
+
+- **Three new tables** (migration `20260815_sync_watch_rooms`, applied via
+  `Supabase:apply_migration`, project `rfxlavwzhpnbhwoumaha`):
+  `watch_rooms` (video_id, host_id, visibility 'private'/'public', title,
+  is_active), `watch_room_members` (room_id, user_id — composite PK, no
+  separate invite-token concept: the shareable room URL *is* the invite,
+  same as how broadcast-channel links already work elsewhere in the app),
+  `watch_room_messages` (room_id, sender_id, message_text). RLS: a private
+  room's rows (room itself, members, messages) are only readable by the
+  host or an existing member; a public room's rows are readable by anyone.
+  Realtime (postgres_changes) enabled on members + messages, mirroring
+  `20260812130000_kcircle_realtime_chat.sql`.
+- **Playback sync deliberately does NOT go through Postgres** — an
+  ephemeral Realtime Broadcast channel (`watch-room-sync-<roomId>`) carries
+  play/pause/seek events instead, matching Supabase's own documented
+  pattern for high-frequency "authoritative clock" state. Writing every
+  play/pause/seek to the DB would add write load/latency for zero benefit
+  (nothing needs that history after the fact).
+- **Host-authoritative sync model**: the room's `host_id` is the only
+  client whose play/pause/seek actually drives the shared state. Everyone
+  else's YouTube IFrame player is remote-controlled to match (seekTo when
+  drift exceeds 1.5s, play/pause to match host state). Viewers keep their
+  own native YouTube controls (volume, fullscreen, captions still work
+  locally) but any playback action they trigger silently self-corrects
+  back on the next 4s heartbeat tick — deliberate simplification to avoid
+  control-fight bugs from letting every viewer drive playback. The IFrame
+  API has no native "user seeked" event (confirmed against Google's docs),
+  so a host-side seek is detected by comparing expected vs. actual time on
+  each heartbeat tick.
+- **New route `app/katube/watch/[videoId]/room/[roomId]/page.tsx`** — the
+  room itself: synced player, member chips (host gets a 👑), live chat,
+  copy-invite-link button, leave button.
+- **KaTube entry point** — `app/katube/watch/[videoId]/page.tsx` gets a new
+  "👥 Watch with Friends" button under the player (hidden on Shorts).
+  Always creates a **private** room — KaTube's own watch page is already
+  the "public" watching surface per the founder's spec (anyone can open
+  that URL any time), so a public room there would be redundant. Creating
+  inserts a `watch_rooms` row + a `watch_room_members` row for the host,
+  then routes to the room.
+- **Kalpana Circle entry point** — new tab `app/kalpana-circle/watch-
+  together/page.tsx` (🎬 nav icon added to both the desktop top bar and
+  mobile bottom bar, `navHref`-gated like the existing chat/broadcasts/
+  saved icons). Lists open public rooms (host name + live member count),
+  a "your rooms" section for rejoining without needing the original link,
+  and a "+ Create Room" modal that searches `videos` by title (ilike,
+  same pattern KaTube's own search uses) and lets the founder pick
+  public or private when creating.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on all four
+touched/new files: 0 errors, 0 warnings (one pre-existing unrelated
+warning at `app/kalpana-circle/page.tsx:152` untouched by this change).
+Full-project `eslint .` shows 13 pre-existing errors, all in files this
+session never touched (`app/read/[chapterId]/page.tsx` and others) — not
+introduced here. Hit and fixed three of React's newer purity-rule
+violations during development: an `any`-typed YouTube Player API surface
+(replaced with a narrow `YTPlayerLike`/`YTNamespace` interface), a ref
+read during render for host-status display (replaced with a derived
+`const isHost = room?.host_id === userId` alongside the ref, which is
+still used inside event-handler closures where reading a ref is fine),
+and a `Date.now()` call inside a `useRef` initializer (replaced with a
+`ts: 0` sentinel, since a ref initializer runs during the initial render
+and React's purity rules disallow impure calls there).
+
+**Not done (flagged as follow-ups, not started this session):**
+- No formal "invite a specific friend" picker — invite is link-sharing
+  only (copy-link button on the room page). A K Circle-integrated friend
+  picker (reusing the DM contact list from `kcircle_conversations`) would
+  be the natural next step if link-sharing turns out to be too much
+  friction in practice.
+- No host-transfer or "promote to co-host" — if the host leaves, playback
+  sync simply stops updating for everyone else (the room doesn't
+  auto-reassign a new host). Fine for a first pass at small friend-group
+  scale, worth revisiting before this is pushed as a public-room feature
+  at any real scale.
+- No room capacity limit, no report/moderation hook on room chat (unlike
+  video comments elsewhere, which have `ReportButton`) — worth adding
+  before public rooms are discoverable at scale.
+- Public room browse list (`watch-together` tab) has no pagination past
+  its `limit(30)` and no filtering/search of rooms themselves (only the
+  create-room video search) — fine at current scale.
+

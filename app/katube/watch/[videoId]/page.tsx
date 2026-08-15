@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../../../components/ThemeToggle';
@@ -93,7 +93,10 @@ function RecommendedCard({ video }: { video: RecommendedVideo }) {
 
 export default function KaTubeWatchPage() {
   const params = useParams();
+  const router = useRouter();
   const videoId = params?.videoId as string;
+
+  const [creatingRoom, setCreatingRoom] = useState(false);
 
   const [video, setVideo] = useState<WatchVideo | null>(null);
   const [recommended, setRecommended] = useState<RecommendedVideo[]>([]);
@@ -413,6 +416,29 @@ export default function KaTubeWatchPage() {
     setAccuracyBusy(false);
   }
 
+  async function handleWatchWithFriends() {
+    if (!video) return;
+    if (!userId) {
+      window.location.href = '/login';
+      return;
+    }
+    setCreatingRoom(true);
+    const { data: newRoom, error } = await supabase
+      .from('watch_rooms')
+      .insert({ video_id: video.id, host_id: userId, visibility: 'private', title: video.title })
+      .select('id')
+      .single();
+    if (error || !newRoom) {
+      setCreatingRoom(false);
+      return;
+    }
+    // Host also gets a membership row, so the room's member list (which
+    // reads from watch_room_members, not host_id, for a single unified
+    // list) shows them immediately without a separate "host" special case.
+    await supabase.from('watch_room_members').insert({ room_id: newRoom.id, user_id: userId });
+    router.push(`/katube/watch/${videoId}/room/${newRoom.id}`);
+  }
+
   async function handleLike() {
     if (!video) return;
     if (!userId) {
@@ -519,6 +545,27 @@ export default function KaTubeWatchPage() {
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
                 />
               </div>
+
+              {/* Watch with Friends — Sync-Play Watch Rooms, KaTube entry
+                  point. Always creates a *private* room: KaTube's normal
+                  watch page is already the "public" surface (anyone can
+                  open this URL any time), so a public room here would just
+                  duplicate that with extra steps. Public rooms live on the
+                  Kalpana Circle "Watch Together" tab instead. */}
+              {!video.isShort && (
+                <button
+                  onClick={handleWatchWithFriends}
+                  disabled={creatingRoom}
+                  style={{
+                    marginTop: '12px', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px',
+                    padding: '9px 16px', cursor: creatingRoom ? 'default' : 'pointer', opacity: creatingRoom ? 0.6 : 1,
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                  }}
+                >
+                  👥 {creatingRoom ? 'Setting up room...' : 'Watch with Friends'}
+                </button>
+              )}
 
               {/* Info */}
               <h1 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 900, margin: '18px 0 8px', letterSpacing: '-0.02em' }}>

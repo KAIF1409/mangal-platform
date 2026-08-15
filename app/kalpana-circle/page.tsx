@@ -619,6 +619,7 @@ function KalpanaCircleInner() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexShrink: 0 }}>
           <Link href="/kalpana-circle" title="Home" style={{ fontSize: '19px', textDecoration: 'none', color: RADIANT_SOLID }}>🏠</Link>
           <Link href={navHref('/kalpana-circle/chat')} title="Chat" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
+          <Link href={navHref('/kalpana-circle/watch-together')} title="Watch Together" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🎬</Link>
           <Link href={navHref('/kalpana-circle/broadcasts')} title="Broadcasts" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>📣</Link>
           <Link href={navHref('/kalpana-circle/saved')} title="Saved" style={{ fontSize: '19px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🔖</Link>
           <button onClick={() => fileInputRef.current?.click()} title="Create post" style={{
@@ -1056,6 +1057,7 @@ function KalpanaCircleInner() {
           fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>+</button>
         <Link href={navHref('/kalpana-circle/chat')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>💬</Link>
+        <Link href={navHref('/kalpana-circle/watch-together')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🎬</Link>
         <Link href={navHref('/kalpana-circle/broadcasts')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>📣</Link>
         <Link href={navHref('/kalpana-circle/saved')} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>🔖</Link>
         <Link href={userId ? (myUsername ? `/creator/${myUsername}` : '/home') : '/login?next=/kalpana-circle'} style={{ fontSize: '20px', textDecoration: 'none', color: 'var(--text-tertiary)' }}>👤</Link>
