@@ -582,7 +582,7 @@ function UploadFlow() {
       // Hard navigation (not Next.js client-side routing) so the series page
       // re-fetches fresh data on load instead of potentially serving a
       // cached RSC/client snapshot from before this edit.
-      setTimeout(() => { window.location.href = `/series/${seriesId}`; }, 1200);
+      setTimeout(() => { window.location.href = `/WebMangal/series/${seriesId}`; }, 1200);
       return;
     }
 
@@ -741,7 +741,7 @@ function UploadFlow() {
         ? `Chapter ${chapterNumber} scheduled for ${new Date(scheduledAt).toLocaleString()}. Taking you back...`
         : `Chapter ${chapterNumber} updated! ${wordCount} words. Taking you back...`);
       setLoading(false);
-      setTimeout(() => { window.location.href = `/series/${seriesId}`; }, 1200);
+      setTimeout(() => { window.location.href = `/WebMangal/series/${seriesId}`; }, 1200);
       return;
     }
 
@@ -915,7 +915,7 @@ function UploadFlow() {
         }
       `}</style>
       <div className="mangal-upload-shell" style={{ maxWidth: '720px', margin: '0 auto' }}>
-        <a href={seriesId ? `/series/${seriesId}` : '/dashboard'} style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} /> Back to {seriesId ? 'Series' : 'Dashboard'}</a>
+        <a href={seriesId ? `/WebMangal/series/${seriesId}` : '/dashboard'} style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} /> Back to {seriesId ? 'Series' : 'Dashboard'}</a>
         <div style={{ marginTop: '16px' }} />
         <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.18em', color: '#d97706', background: 'rgba(120,53,15,0.25)', border: '1px solid rgba(180,83,9,0.3)', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' as const }}>
           Mangal Engine V1.0
@@ -1116,7 +1116,7 @@ function UploadFlow() {
                 Chapter {chapterNumber} is published! What would you like to do next?
               </p>
 
-              <a href={`/read/${justPublishedChapterId}`} target="_blank" rel="noopener noreferrer" style={{
+              <a href={`/WebMangal/read/${justPublishedChapterId}`} target="_blank" rel="noopener noreferrer" style={{
                 fontSize: '12px', color: '#d97706', textDecoration: 'none', fontWeight: 600,
               }}>
                 <Eye size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Preview this chapter as a reader
@@ -1127,7 +1127,7 @@ function UploadFlow() {
               </button>
 
               {seriesId && (
-                <a href={`/series/${seriesId}`} style={{
+                <a href={`/WebMangal/series/${seriesId}`} style={{
                   display: 'block', width: '100%', padding: '14px', background: 'transparent',
                   border: '1px solid var(--border-light)', borderRadius: '12px', color: 'var(--text-secondary)',
                   fontSize: '13px', fontWeight: 600, textDecoration: 'none', boxSizing: 'border-box' as const,

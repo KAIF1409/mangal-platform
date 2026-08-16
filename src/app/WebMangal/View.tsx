@@ -345,7 +345,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
     return (
       <Link
         key={s.id}
-        href={`/series/${s.id}`}
+        href={`/WebMangal/series/${s.id}`}
         onClick={onNavigate}
         style={{
           display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px',
@@ -778,7 +778,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               {featuredList.map(s => (
                 <Link
                   key={s.id}
-                  href={`/series/${s.id}`}
+                  href={`/WebMangal/series/${s.id}`}
                   style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '9px 0', textDecoration: 'none' }}
                 >
                   <div style={{ width: '46px', height: '62px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: '#1f1f2a', position: 'relative' }}>

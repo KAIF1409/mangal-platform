@@ -51,7 +51,7 @@ export default function SeriesCard({
 
   return (
     <a
-      href={`/series/${series.id}`}
+      href={`/WebMangal/series/${series.id}`}
       style={{ textDecoration: 'none', display: 'block' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

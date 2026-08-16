@@ -202,7 +202,7 @@ function RankRow({ series, rank, statLabel, tab }: { series: Series; rank: numbe
 
   return (
     <a
-      href={`/series/${series.id}`}
+      href={`/WebMangal/series/${series.id}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

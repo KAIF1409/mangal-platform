@@ -776,7 +776,7 @@ export default function LandingPage() {
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
               {showcaseItems.slice(0, 4).map(s => (
                 <a
-                  key={s.id} href={`/series/${s.id}`} data-cursor-hover="true"
+                  key={s.id} href={`/WebMangal/series/${s.id}`} data-cursor-hover="true"
                   className="mangal-elem"
                   style={{
                     position: 'relative', width: '220px', height: '300px', borderRadius: '18px', overflow: 'hidden',
@@ -895,7 +895,7 @@ export default function LandingPage() {
 function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <a href={`/series/${series.id}`} data-cursor-hover="true" style={{ textDecoration: 'none' }}
+    <a href={`/WebMangal/series/${series.id}`} data-cursor-hover="true" style={{ textDecoration: 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}>
       <div style={{

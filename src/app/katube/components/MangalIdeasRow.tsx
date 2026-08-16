@@ -90,7 +90,7 @@ export default function MangalIdeasRow({ userId }: { userId: string | null }) {
           const s = seriesMap.get(idea.series_id);
           return {
             ...idea,
-            connectionHref: `/series/${idea.series_id}`,
+            connectionHref: `/WebMangal/series/${idea.series_id}`,
             connectionLabel: 'View on WebMangal',
             coverUrl: s?.cover_url ?? null,
             writerId: s?.creator_id ?? null,

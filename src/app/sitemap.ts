@@ -33,7 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .limit(5000);
 
     const seriesRoutes: MetadataRoute.Sitemap = (series ?? []).map((s) => ({
-      url: `${siteUrl}/series/${s.id}`,
+      url: `${siteUrl}/WebMangal/series/${s.id}`,
       changeFrequency: "weekly",
       priority: 0.7,
     }));

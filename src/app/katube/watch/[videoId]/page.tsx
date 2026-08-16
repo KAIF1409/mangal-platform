@@ -716,7 +716,7 @@ export default function KaTubeWatchPage() {
                 </div>
 
                 {video.basedOn && (
-                  <Link href={video.seriesId ? `/series/${video.seriesId}` : '#'} style={{
+                  <Link href={video.seriesId ? `/WebMangal/series/${video.seriesId}` : '#'} style={{
                     fontSize: '11.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
                     background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
                     padding: '4px 11px', borderRadius: '20px', whiteSpace: 'nowrap',

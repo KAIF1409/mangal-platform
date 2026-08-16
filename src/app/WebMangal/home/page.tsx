@@ -702,7 +702,7 @@ export default function HomePage() {
 function ContinueCard({ item }: { item: ContinueItem }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <a href={`/read/${item.chapterId}`} style={{ textDecoration: 'none', flexShrink: 0, width: '150px' }}
+    <a href={`/WebMangal/read/${item.chapterId}`} style={{ textDecoration: 'none', flexShrink: 0, width: '150px' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}>
       <div style={{
@@ -744,7 +744,7 @@ function ContinueCard({ item }: { item: ContinueItem }) {
 function FeaturedCard({ series }: { series: Series }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}
+    <a href={`/WebMangal/series/${series.id}`} style={{ textDecoration: 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}>
       <div style={{

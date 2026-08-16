@@ -416,7 +416,7 @@ function HistoryRow({
       borderRadius: '12px', padding: '14px 16px',
     }}>
       {/* Cover thumbnail */}
-      <a href={`/series/${entry.series_id}`} style={{ flexShrink: 0, textDecoration: 'none', position: 'relative' }}>
+      <a href={`/WebMangal/series/${entry.series_id}`} style={{ flexShrink: 0, textDecoration: 'none', position: 'relative' }}>
         <div className="mangal-hist-cover" style={{ width: '52px', height: '70px', borderRadius: '7px', overflow: 'hidden', background: coverBg, border: '1px solid var(--border-color)', position: 'relative' }}>
           {entry.series_cover ? (
             <Image src={entry.series_cover} alt={entry.series_title} fill sizes="52px" style={{ objectFit: 'cover' }} />
@@ -437,7 +437,7 @@ function HistoryRow({
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <a href={`/series/${entry.series_id}`} style={{ textDecoration: 'none' }}>
+        <a href={`/WebMangal/series/${entry.series_id}`} style={{ textDecoration: 'none' }}>
           <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {entry.series_title}
           </div>
@@ -464,7 +464,7 @@ function HistoryRow({
       {/* Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', flexShrink: 0, alignItems: 'flex-end' }}>
         <a
-          href={`/read/${entry.chapter_id}`}
+          href={`/WebMangal/read/${entry.chapter_id}`}
           style={{
             padding: '7px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
             background: accentGradient,

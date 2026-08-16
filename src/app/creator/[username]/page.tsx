@@ -393,7 +393,7 @@ export default function CreatorProfilePage() {
 function SeriesCard({ series }: { series: Series }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}
+    <a href={`/WebMangal/series/${series.id}`} style={{ textDecoration: 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}>
       <div style={{

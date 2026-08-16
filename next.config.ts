@@ -109,6 +109,20 @@ const nextConfig: NextConfig = {
         destination: "/WebMangal",
         permanent: true,
       },
+      // /series and /read moved under the WebMangal namespace alongside
+      // /home and /search (they're WebMangal-only pages, same reasoning
+      // as the /home redirect above) — keep old bookmarks/shared
+      // links/search-engine-indexed URLs working.
+      {
+        source: "/series/:seriesId",
+        destination: "/WebMangal/series/:seriesId",
+        permanent: true,
+      },
+      {
+        source: "/read/:chapterId",
+        destination: "/WebMangal/read/:chapterId",
+        permanent: true,
+      },
     ];
   },
 };

@@ -738,7 +738,7 @@ export default function Dashboard() {
                       background: 'linear-gradient(to bottom, #7f1d1d, #d97706)',
                     }} />
 
-                    <a href={`/series/${story.id}`} className="mangal-story-cover" style={{ flexShrink: 0, textDecoration: 'none' }}>
+                    <a href={`/WebMangal/series/${story.id}`} className="mangal-story-cover" style={{ flexShrink: 0, textDecoration: 'none' }}>
                       <div style={{
                         width: '100%', height: '100%', minHeight: '120px',
                         background: story.cover_url ? 'none' : 'linear-gradient(135deg, #1a0a0a, var(--bg-card))',
@@ -755,7 +755,7 @@ export default function Dashboard() {
 
                     <div style={{ padding: '16px', flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' as const, alignItems: 'flex-start' as const, gap: '8px' }}>
-                        <a href={`/series/${story.id}`} style={{ textDecoration: 'none' }}>
+                        <a href={`/WebMangal/series/${story.id}`} style={{ textDecoration: 'none' }}>
                           <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
                             {story.title}
                           </h3>
@@ -941,7 +941,7 @@ export default function Dashboard() {
                       )}
 
                       <div className="mangal-story-actions">
-                        <a href={`/series/${story.id}`} style={{
+                        <a href={`/WebMangal/series/${story.id}`} style={{
                           flex: 1, textAlign: 'center' as const, borderRadius: '7px',
                           background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)',
                           fontWeight: 600, textDecoration: 'none',

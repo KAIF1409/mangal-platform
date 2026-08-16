@@ -5194,3 +5194,41 @@ This closes out the repo-structure migration from `docs/REPO_STRUCTURE.md`
 (Phases A-D all done). `src/app/` now contains only routes plus the two
 domain-organized shared folders (`lib/`, `components/`) — matches the
 target structure documented there.
+
+## §73 — read/ and series/ moved under WebMangal/, with redirects
+
+Founder wanted read/ and series/ (both WebMangal-only pages) physically
+inside the WebMangal/ folder, matching home/ and search/. Flagged first
+that this is a different kind of change than the lib/components moves —
+in App Router the folder path *is* the URL, so this changes
+`/series/:id` → `/WebMangal/series/:id` and `/read/:id` →
+`/WebMangal/read/:id`, breaking any existing bookmark/shared
+link/search-engine-indexed URL unless redirected. Founder chose: move for
+real, add redirects.
+
+- `git mv` both `[seriesId]`/`[chapterId]` route folders under
+  `WebMangal/`. Fixed the resulting +1 relative-import depth in both
+  moved `page.tsx` files (`../../lib/...` → `../../../lib/...`, same for
+  `components/`).
+- Found and rewrote every internal link to the old URLs across the whole
+  codebase (grep, not guessed) — `SeriesCard`, `history`, `rankings`,
+  `library`, `katube`'s `MangalIdeasRow` and video-watch page, the
+  landing page, `bookmarks`, `upload`, `WebMangal/home`, `WebMangal/View`,
+  `creator/[username]`, `dashboard`, `tags/[slug]`, and the two moved
+  pages' own internal chapter-nav/back-to-series links. Also
+  `sitemap.ts`'s series URL.
+- Added two redirects in `next.config.ts` (`/series/:seriesId` →
+  `/WebMangal/series/:seriesId`, `/read/:chapterId` →
+  `/WebMangal/read/:chapterId`, both `permanent: true`) — same pattern
+  and reasoning as the existing `/home` → `/WebMangal/home` redirect
+  already in this file.
+
+**Verified:** `tsc --noEmit` clean, `eslint` unchanged (62 problems, same
+baseline). Booted `next dev` and curl-tested live: old `/series/test123`
+and `/read/test123` both correctly 308-redirect to the new
+`/WebMangal/...` paths. New route itself hit a 500 in this sandbox only
+because there's no real Supabase env configured here — confirmed from
+the stack trace it's a missing-credentials error inside
+`lib/supabase.ts`, not a broken import or routing issue; the import
+chain (`WebMangal/series/[seriesId]/page.tsx` → `lib/supabase.ts`)
+resolved correctly.

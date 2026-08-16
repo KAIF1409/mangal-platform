@@ -386,7 +386,7 @@ function BookmarkCard({
       transition: 'border-color 0.15s',
     }}>
       {/* Cover */}
-      <a href={`/series/${series.id}`} style={{ textDecoration: 'none', display: 'block', position: 'relative' }}>
+      <a href={`/WebMangal/series/${series.id}`} style={{ textDecoration: 'none', display: 'block', position: 'relative' }}>
         <div style={{ width: '100%', aspectRatio: '3/4', background: '#1a0a0a', overflow: 'hidden', maxHeight: '220px', position: 'relative' }}>
           {series.cover_url ? (
             <Image
@@ -428,7 +428,7 @@ function BookmarkCard({
 
       {/* Info */}
       <div style={{ padding: '14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}>
+        <a href={`/WebMangal/series/${series.id}`} style={{ textDecoration: 'none' }}>
           <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {series.title}
           </div>
@@ -452,7 +452,7 @@ function BookmarkCard({
         {/* Actions */}
         <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', gap: '8px', flexDirection: 'column' }}>
           {series.latest_chapter_id && (
-            <a href={`/read/${series.latest_chapter_id}`} style={{
+            <a href={`/WebMangal/read/${series.latest_chapter_id}`} style={{
               padding: '9px', borderRadius: '9px', fontSize: '12px', fontWeight: 700,
               background: series.content_type === 'novel'
                 ? 'linear-gradient(135deg, #4c1d95, #6d28d9)'

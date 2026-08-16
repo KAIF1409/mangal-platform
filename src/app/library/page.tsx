@@ -291,7 +291,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
       borderRadius: '12px', padding: '16px', transition: 'border-color 0.15s',
     }}>
       {/* Cover */}
-      <a href={`/series/${series.id}`} className="mangal-lib-card-cover" style={{ flexShrink: 0, textDecoration: 'none' }}>
+      <a href={`/WebMangal/series/${series.id}`} className="mangal-lib-card-cover" style={{ flexShrink: 0, textDecoration: 'none' }}>
         <div style={{ width: '64px', height: '86px', borderRadius: '8px', overflow: 'hidden', background: '#1a0a0a', border: '1px solid var(--border-color)', position: 'relative' }}>
           {series.cover_url ? (
             <Image src={series.cover_url} alt={series.title} fill sizes="64px" style={{ objectFit: 'cover' }} />
@@ -303,7 +303,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
 
       {/* Info */}
       <div className="mangal-lib-card-info" style={{ flex: 1, minWidth: 0 }}>
-        <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}>
+        <a href={`/WebMangal/series/${series.id}`} style={{ textDecoration: 'none' }}>
           <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {series.title}
           </div>
@@ -326,7 +326,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
       {/* Actions */}
       <div className="mangal-lib-card-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0, alignItems: 'flex-end' }}>
         {series.latest_chapter_id && (
-          <a href={`/read/${series.latest_chapter_id}`} style={{
+          <a href={`/WebMangal/read/${series.latest_chapter_id}`} style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
             background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
             color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',

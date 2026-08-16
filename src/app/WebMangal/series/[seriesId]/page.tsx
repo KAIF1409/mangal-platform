@@ -3,16 +3,16 @@
 import { useState, useEffect, use } from 'react';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import ProfileMenu from '../../components/shared/ProfileMenu';
-import ReportButton from '../../components/webmangal/ReportButton';
-import ShareButton from '../../components/webmangal/ShareButton';
-import { canManageSeries, isDeveloperRole } from '../../lib/auth/roles';
-import { estimateReadTime } from '../../lib/novelEditor';
-import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
+import ProfileMenu from '../../../components/shared/ProfileMenu';
+import ReportButton from '../../../components/webmangal/ReportButton';
+import ShareButton from '../../../components/webmangal/ShareButton';
+import { canManageSeries, isDeveloperRole } from '../../../lib/auth/roles';
+import { estimateReadTime } from '../../../lib/novelEditor';
+import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import Link from 'next/link';
-import ThemeToggle from '../../components/shared/ThemeToggle';
+import ThemeToggle from '../../../components/shared/ThemeToggle';
 import {
   BookOpen, BookText, ScrollText, AlertCircle, ArrowLeft, CheckCircle2,
   Star, Play, RotateCcw, Zap, Bell, AlertTriangle, Trash2, MessageCircle,
@@ -937,7 +937,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             {/* CTA buttons */}
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               {progressChapter ? (
-                <a href={`/read/${progressChapter.id}`} style={{
+                <a href={`/WebMangal/read/${progressChapter.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 800, fontSize: '14px',
                   background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
@@ -947,7 +947,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   <Play size={13} /> Continue Reading <ChevronRight size={13} /> Ch.{progressChapter.chapter_number}
                 </a>
               ) : firstChapter && (
-                <a href={`/read/${firstChapter.id}`} style={{
+                <a href={`/WebMangal/read/${firstChapter.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 800, fontSize: '14px',
                   background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
@@ -958,7 +958,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 </a>
               )}
               {progressChapter && firstChapter && (
-                <a href={`/read/${firstChapter.id}`} style={{
+                <a href={`/WebMangal/read/${firstChapter.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
                   background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
@@ -968,7 +968,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 </a>
               )}
               {latestChapter && latestChapter.id !== firstChapter?.id && latestChapter.id !== progressChapter?.id && (
-                <a href={`/read/${latestChapter.id}`} style={{
+                <a href={`/WebMangal/read/${latestChapter.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
                   background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
@@ -1512,7 +1512,7 @@ function ChapterRow({
       }}
     >
       <a
-        href={`/read/${chapter.id}`}
+        href={`/WebMangal/read/${chapter.id}`}
         style={{
           display: 'flex', alignItems: 'center', gap: '14px',
           textDecoration: 'none', color: 'inherit', flex: 1, minWidth: 0,
@@ -1662,7 +1662,7 @@ function CirclePostCard({ post, seriesTitle }: { post: { id: string; caption: st
 function RelatedCard({ series }: { series: Series }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <a href={`/series/${series.id}`} style={{ textDecoration: 'none' }}
+    <a href={`/WebMangal/series/${series.id}`} style={{ textDecoration: 'none' }}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div style={{
         borderRadius: '12px', overflow: 'hidden',
