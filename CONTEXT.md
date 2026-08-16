@@ -173,8 +173,46 @@ any of the tables/columns/policies below):
 - `videos.is_collab` (boolean) + `videos.collab_writer_id` (uuid, nullable FK to
   `auth.users`) — the Tier 1/Tier 2 distinction.
 
-Not built yet: Phase 1 UI (Mangal Ideas feed), Phase 2 UI (voting + scoring
-job), Phase 3 (writer-of-the-month job). Foundations only.
+Not built yet: Phase 2 UI (voting + scoring job), Phase 3
+(writer-of-the-month job).
+
+### 0d-ii. Phase 1 — DONE
+
+Build steps 1/3/4/5 (schema extension + both SQL functions) were applied
+live via Supabase MCP in an earlier session but never committed as migration
+files or logged here — found and reconciled this session. Now committed as
+`supabase/migrations/20260816240000_unique_for_mangal_phase1_schema.sql` and
+`20260816240100_unique_for_mangal_phase1_functions.sql` (content verified
+against the live DB before writing, so these are no-ops on re-apply, not
+duplicate changes).
+
+Build steps 2/6/7 (the actual missing pieces) shipped this session:
+- **Admin insert UI** — `app/admin/mangal-ideas/page.tsx` (+ layout), same
+  developer-role-gated pattern as `app/admin/reports/page.tsx`. Add/delete
+  company cards (title, description, optional link). Also surfaces a manual
+  "Refresh now" button that calls `refresh_mangal_ideas()` — there's no
+  scheduled job yet, so story-demand/audience candidates only recompute when
+  an admin triggers it here.
+- **Card component** — `app/katube/components/MangalIdeasRow.tsx`. Reads
+  `get_mangal_ideas_feed(4)`, batch-fetches `series`/`kcircle_posts`/
+  `creator_profiles` for the connection-link + writer/author display, same
+  "returns null when empty" pattern as `ContinueWatchingRow`. Rendered at
+  the top of KaTube home, above Continue Watching.
+- **Collaborate button** — story_demand cards only. Reuses Kalpana Circle's
+  DM tables (`kcircle_conversations`/`_participants`/`_messages`, same
+  lookup/insert pattern as `startDirectMessage` in
+  `app/kalpana-circle/chat/page.tsx`) to open-or-reuse a 1:1 thread with the
+  series' writer and drop in a starter message, then routes to
+  `/kalpana-circle/chat?open=<conversationId>`.
+- Added `?open=<conversationId>` deep-link support to the chat page itself
+  (wasn't there before) so the Collaborate button lands the user in the
+  right thread instead of the bare conversation list. `useSearchParams`
+  needed a `Suspense` wrapper — same pattern already used in
+  `app/upload/page.tsx` and `app/kalpana-circle/page.tsx`.
+
+Not built yet: connection link for `audience` cards falls back to the post
+author's Kalpana Circle profile — there's no single-post permalink route in
+this codebase yet, so it can't deep-link to the exact post itself.
 
 ### 0e. Not decided yet / outside this section's scope
 - Exact scoring weights (W1/W2/W3) — tune once real vote/view data exists

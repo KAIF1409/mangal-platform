@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 import NotificationBell from '../../components/NotificationBell';
@@ -91,9 +91,22 @@ interface MessageRow {
 // uploads elsewhere in this file).
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
+// Wrapper: useSearchParams requires a Suspense boundary (same pattern as
+// app/upload/page.tsx and app/kalpana-circle/page.tsx) since it's used to
+// read the ?open=<conversationId> deep-link param from MangalIdeasRow's
+// "Collaborate karna chahta hoon" button.
 export default function KCircleChatPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>Loading...</div>}>
+      <KCircleChatPageInner />
+    </Suspense>
+  );
+}
+
+function KCircleChatPageInner() {
   const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
   // Own username/avatar — chat never needed these before, but the shared
@@ -225,6 +238,23 @@ export default function KCircleChatPage() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/userId change
   useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  // Deep-link support — ?open=<conversationId>, used by MangalIdeasRow's
+  // "Collaborate karna chahta hoon" button (app/katube/components/
+  // MangalIdeasRow.tsx) to land the user straight in the thread it just
+  // created/reused instead of the default conversation list view. Only
+  // acts once the list has finished loading and the id is actually present
+  // (a brand-new conversation for a userId that has no other threads yet
+  // still lands here on the first loadConversations() pass since insert
+  // happens before the redirect).
+  useEffect(() => {
+    if (loadingList) return;
+    const openId = searchParams.get('open');
+    if (!openId) return;
+    const match = conversations.find(c => c.id === openId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot deep-link selection from a URL param, not a state sync loop
+    if (match) setActive(match);
+  }, [loadingList, conversations, searchParams]);
 
   const loadMessages = useCallback(async (conversationId: string) => {
     const { data } = await supabase.from('kcircle_messages').select('id, conversation_id, sender_id, text, attachment_url, attachment_type, short_ref_id, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: true });

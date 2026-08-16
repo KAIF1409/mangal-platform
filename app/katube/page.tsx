@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from './components/NotificationBell';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
+import MangalIdeasRow from './components/MangalIdeasRow';
 import { supabase } from '../lib/supabase';
 import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -975,6 +976,12 @@ export default function KaTubePage() {
           </div>
         </div>
       )}
+
+      {/* Mangal Ideas — §0/Phase 1 "Unique for Mangal" (CONTEXT.md §0c).
+          Top section per the spec, public (no userId gate) since company/
+          story-demand/audience cards are all public-read; the component
+          itself returns null when the feed is empty. */}
+      {activeSidebar === 'home' && <MangalIdeasRow userId={userId} />}
 
       {/* Continue Watching — §28a, only rendered on Home for a signed-in
           viewer with in-progress videos (component itself returns null
