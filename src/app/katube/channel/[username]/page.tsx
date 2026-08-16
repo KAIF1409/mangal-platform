@@ -8,7 +8,7 @@ import { supabase } from '../../../lib/supabase';
 import VideoGridCard, { type GridVideo, MangalWeekBadge } from '../../components/VideoGridCard';
 import { KaTubeShell } from '../../components/VideoGridCard';
 import { Users, Video as VideoIcon, Eye, Trophy } from 'lucide-react';
-import VerifiedBadge from '../../../components/VerifiedBadge';
+import VerifiedBadge from '../../../components/shared/VerifiedBadge';
 
 // §28b — Public channel page + custom channel URL
 // (`/katube/channel/[username]`), distinct from `/dashboard/katube` which

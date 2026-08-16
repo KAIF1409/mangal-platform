@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { verifyWebhookSignature } from '../../../lib/razorpay';
+import { verifyWebhookSignature } from '../../../lib/payments/razorpay';
 
 // Infra-only per §27/§28d (see CONTEXT.md) — nothing is configured to
 // call this yet (no webhook URL has been registered in a Razorpay

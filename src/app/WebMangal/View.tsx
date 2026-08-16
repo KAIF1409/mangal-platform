@@ -6,11 +6,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import ProfileMenu from '../components/ProfileMenu';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import SharedSeriesCard from '../components/SeriesCard';
-import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
+import ProfileMenu from '../components/shared/ProfileMenu';
+import Navbar from '../components/shared/Navbar';
+import Footer from '../components/shared/Footer';
+import SharedSeriesCard from '../components/webmangal/SeriesCard';
+import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
 import {
   Trophy, Bell, Bookmark, Wrench, X, Menu, Search, Sparkles, BookOpen,
   BookText, Circle, ArrowLeft,

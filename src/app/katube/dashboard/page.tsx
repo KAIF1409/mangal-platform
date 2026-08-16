@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { Clapperboard, CheckCircle2, ArrowRight } from 'lucide-react';
 
 // ── KaTube profile — lives inside the main MANGAL dashboard (one profile,

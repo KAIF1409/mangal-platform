@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { KaTubeShell } from '../components/VideoGridCard';
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { ListVideo, Plus } from 'lucide-react';
 
 // §28a — Playlists: viewer builds their own playlist across creators/

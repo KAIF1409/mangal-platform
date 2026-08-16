@@ -5,10 +5,10 @@ import { useParams } from 'next/navigation';
 import { getBackNav } from '../../lib/backNav';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
-import { isDeveloperRole } from '../../lib/roles';
+import { isDeveloperRole } from '../../lib/auth/roles';
 import Link from 'next/link';
 import { Search, ArrowLeft, Flame, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText, PenLine } from 'lucide-react';
-import VerifiedBadge from '../../components/VerifiedBadge';
+import VerifiedBadge from '../../components/shared/VerifiedBadge';
 
 interface Series {
   id: string;

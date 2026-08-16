@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '../../../../lib/authedServerClient';
-import { fetchChannelDescription } from '../../../../lib/youtubeVerify';
+import { requireUser } from '../../../../lib/auth/authedServerClient';
+import { fetchChannelDescription } from '../../../../lib/media/youtubeVerify';
 
 // KaTube §6 step 3 — creator clicks "Verify" after pasting the code into
 // their channel's About/description. Only the real channel owner can edit

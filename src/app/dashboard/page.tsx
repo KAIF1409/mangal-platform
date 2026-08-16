@@ -4,16 +4,16 @@ import { useState, useEffect, type ReactNode } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import ProfileMenu from '../components/ProfileMenu';
-import EditSeriesModal from '../components/EditSeriesModal';
-import ManagePagesModal from '../components/ManagePagesModal';
-import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
+import ProfileMenu from '../components/shared/ProfileMenu';
+import EditSeriesModal from '../components/webmangal/EditSeriesModal';
+import ManagePagesModal from '../components/webmangal/ManagePagesModal';
+import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import Navbar from '../components/shared/Navbar';
+import Footer from '../components/shared/Footer';
 import Link from 'next/link';
 
-import { setPostLoginRedirect } from '../lib/authRedirect';
+import { setPostLoginRedirect } from '../lib/auth/authRedirect';
 import {
   BookOpen, Eye, Star, TrendingUp, MessageCircle, Bookmark, PenLine,
   ScrollText, ChevronDown, ChevronRight as ChevronRightIcon, BookText,

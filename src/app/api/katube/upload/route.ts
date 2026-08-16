@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '../../../lib/authedServerClient';
-import { fetchVideoModerationInfo } from '../../../lib/youtubeVerify';
-import { checkThumbnailNsfw } from '../../../lib/nsfwCheck';
+import { requireUser } from '../../../lib/auth/authedServerClient';
+import { fetchVideoModerationInfo } from '../../../lib/media/youtubeVerify';
+import { checkThumbnailNsfw } from '../../../lib/media/nsfwCheck';
 
 // KaTube §6 step 4 — the actual fraud check. Verifying a channel once only
 // proves "this channel belongs to me"; it does NOT mean every future

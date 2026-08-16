@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../lib/supabase';
-import { setPostLoginRedirect } from '../../../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../../../lib/auth/authRedirect';
 import {
   Check, ArrowLeft, MessageCircle, MessagesSquare, Paperclip,
   Zap, Lock, Globe, Plus, Link2, VolumeX, Volume2, X,

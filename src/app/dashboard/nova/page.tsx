@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
-import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
+import ProductScopeSwitcher, { ProductScope } from '../../components/shared/ProductScope';
 import { PenLine, Palette, TrendingUp, Tag, Sparkles, Clapperboard, MessageCircle, type LucideIcon } from 'lucide-react';
 
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 
 // Nova retrofit per CONTEXT.md §43 — flagged as "naturally cross-product,
 // barely needs the switcher" since AI help isn't WebMangal-only in spirit.

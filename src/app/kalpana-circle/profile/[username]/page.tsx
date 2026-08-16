@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
-import ThemeToggle from '../../../components/ThemeToggle';
+import ThemeToggle from '../../../components/shared/ThemeToggle';
 import { useKCircleTheme } from '../../theme';
 import { KCircleShellStyle, KCircleRail } from '../../components/Shell';
 import {

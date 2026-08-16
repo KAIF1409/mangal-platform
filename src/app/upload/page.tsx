@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
-import { checkImageBatchQuality } from '../lib/imageQuality';
+import { checkImageBatchQuality } from '../lib/media/imageQuality';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../lib/novelEditor';
 import { suggestTags } from '../lib/tagSuggest';
 import {

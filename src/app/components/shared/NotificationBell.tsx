@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, Radio } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 // ── K Circle notification bell — dropdown panel + unread badge ──
 // Backend: supabase/migrations/20260813120000_kcircle_notifications.sql

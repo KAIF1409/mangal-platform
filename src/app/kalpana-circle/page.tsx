@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback, useMemo, useRef, Suspense, CSSPropert
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import ThemeToggle from '../components/ThemeToggle';
+import ThemeToggle from '../components/shared/ThemeToggle';
 import { useKCircleTheme, KC_DARK_VARS } from './theme';
-import NotificationBell from '../components/NotificationBell';
+import NotificationBell from '../components/shared/NotificationBell';
 import { KCircleShellStyle, KCircleRail } from './components/Shell';
 import { supabase } from '../lib/supabase';
-import { setPostLoginRedirect } from '../lib/authRedirect';
+import { setPostLoginRedirect } from '../lib/auth/authRedirect';
 import {
   Search, Home, MessageCircle, Clapperboard, Megaphone, Bookmark,
   X, Circle, Globe, Tag, Camera, BarChart3, Sparkles, Pin, Check,

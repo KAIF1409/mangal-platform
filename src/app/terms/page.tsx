@@ -1,7 +1,7 @@
 'use client';
 
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import Navbar from '../components/shared/Navbar';
+import Footer from '../components/shared/Footer';
 
 // Step 18 — Terms of Service Page
 //

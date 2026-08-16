@@ -25,7 +25,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { POST_LOGIN_REDIRECT_COOKIE } from '../../lib/authRedirect';
+import { POST_LOGIN_REDIRECT_COOKIE } from '../../lib/auth/authRedirect';
 
 function safeNextPath(raw: string | null | undefined): string {
   if (!raw) return '/WebMangal/home';

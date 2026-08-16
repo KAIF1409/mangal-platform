@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import ThemeToggle from '../../components/ThemeToggle';
+import ThemeToggle from '../../components/shared/ThemeToggle';
 import { supabase } from '../../lib/supabase';
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { CheckCircle2, Zap, Megaphone, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const CATEGORY_OPTIONS = ['Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Dark Fantasy', 'Supernatural', 'Science Fiction', 'Trailers'];

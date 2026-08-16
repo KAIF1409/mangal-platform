@@ -4,8 +4,8 @@ import { useState, useEffect, useRef, CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
-import { setPostLoginRedirect } from '../../lib/authRedirect';
-import ThemeToggle from '../../components/ThemeToggle';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
+import ThemeToggle from '../../components/shared/ThemeToggle';
 import { useKCircleTheme } from '../theme';
 import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import {

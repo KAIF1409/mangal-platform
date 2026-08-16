@@ -7,9 +7,9 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import ThemeToggle from './components/ThemeToggle';
-import ParticleField from './components/ParticleField';
-import CustomCursor from './components/CustomCursor';
+import ThemeToggle from './components/shared/ThemeToggle';
+import ParticleField from './components/shared/ParticleField';
+import CustomCursor from './components/shared/CustomCursor';
 import { supabase } from './lib/supabase';
 import { ScrollText, Flame, Smartphone, PenLine, X, Menu, Tag, Eye, BookOpen, Book, ArrowDown, ArrowRight } from 'lucide-react';
 

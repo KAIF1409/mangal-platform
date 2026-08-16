@@ -17,9 +17,9 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import VerifiedBadge from '../components/VerifiedBadge';
+import Navbar from '../components/shared/Navbar';
+import Footer from '../components/shared/Footer';
+import VerifiedBadge from '../components/shared/VerifiedBadge';
 import { Trophy, Eye, Users, Search } from 'lucide-react';
 
 interface LeaderboardRow {

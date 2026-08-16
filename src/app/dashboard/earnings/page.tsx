@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
-import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
+import ProductScopeSwitcher, { ProductScope } from '../../components/shared/ProductScope';
 import { BookOpen, PlaySquare, Users2, BarChart3, type LucideIcon } from 'lucide-react';
 
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 
 // Earnings has no real ledger wired up yet for any product (see CONTEXT.md
 // §43/§44) — the switcher and copy below establish the per-product shape

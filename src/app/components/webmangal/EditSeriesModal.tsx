@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { supabase } from '../lib/supabase';
-import { checkImageBatchQuality } from '../lib/imageQuality';
+import { supabase } from '../../lib/supabase';
+import { checkImageBatchQuality } from '../../lib/media/imageQuality';
 import { Pencil, X, Camera, Lock, ScrollText, BookOpen, ArrowLeft, ArrowRight, Save } from 'lucide-react';
 
 // Step 23 — Genre Expansion (Desi Categories): added Folk Tale, Desi Horror,

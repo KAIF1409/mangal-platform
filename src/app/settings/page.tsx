@@ -12,7 +12,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { CONSENT_VERSION } from '../lib/dpdp';
+import { CONSENT_VERSION } from '../lib/compliance/dpdp';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
 import Link from 'next/link';
 import { Flame, User } from 'lucide-react';

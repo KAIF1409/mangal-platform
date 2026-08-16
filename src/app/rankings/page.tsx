@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import Navbar from '../components/shared/Navbar';
+import Footer from '../components/shared/Footer';
 import { Flame, Eye, Star, Trophy, Users, Search, ScrollText, type LucideIcon } from 'lucide-react';
 
 interface Series {

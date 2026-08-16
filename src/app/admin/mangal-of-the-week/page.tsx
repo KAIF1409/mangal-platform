@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
-import { isDeveloperRole } from '../../lib/roles';
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { isDeveloperRole } from '../../lib/auth/roles';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { Lock, Trophy, Camera, CheckCircle2, Crown, IndianRupee, Save, PenLine } from 'lucide-react';
 
 // Admin controls for Mangal of the Week (Phase 2, build steps 1/3/5 — see

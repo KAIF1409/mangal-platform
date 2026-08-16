@@ -21,7 +21,7 @@
 // wherever those writes happen (see the `hasConsent()` export below).
 
 import { useEffect, useState } from 'react';
-import { CONSENT_VERSION } from '../lib/dpdp';
+import { CONSENT_VERSION } from '../../lib/compliance/dpdp';
 
 const STORAGE_KEY = 'mangal_consent_v1';
 

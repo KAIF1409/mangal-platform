@@ -4,13 +4,13 @@ import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import ProfileMenu from '../components/ProfileMenu';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { hasCreatorAccess, isDeveloperRole } from '../lib/roles';
+import ProfileMenu from '../components/shared/ProfileMenu';
+import Navbar from '../components/shared/Navbar';
+import Footer from '../components/shared/Footer';
+import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
 import Link from 'next/link';
 
-import { setPostLoginRedirect } from '../lib/authRedirect';
+import { setPostLoginRedirect } from '../lib/auth/authRedirect';
 import {
   BookOpen, BookText, Trophy, Search, Bell, Wrench, Bookmark, Inbox,
   ScrollText, Play, BellOff,

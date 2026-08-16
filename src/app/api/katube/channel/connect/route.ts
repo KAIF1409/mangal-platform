@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '../../../../lib/authedServerClient';
-import { resolveChannel, generateVerificationCode } from '../../../../lib/youtubeVerify';
+import { requireUser } from '../../../../lib/auth/authedServerClient';
+import { resolveChannel, generateVerificationCode } from '../../../../lib/media/youtubeVerify';
 
 // KaTube §6 step 1+2 — one-time channel connect. Creator submits their
 // YouTube channel URL/handle; we resolve the real channelId via the public

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import VideoGridCard, { type GridVideo } from '../components/VideoGridCard';
 import { KaTubeShell } from '../components/VideoGridCard';
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 
 // §28a — Subscriptions feed: only new uploads from creators the viewer
 // already follows, separate from the general/trending grid. `creator_follows`

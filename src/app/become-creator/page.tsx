@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import { setPostLoginRedirect } from '../lib/authRedirect';
+import { setPostLoginRedirect } from '../lib/auth/authRedirect';
 import { Check, Rocket, PartyPopper } from 'lucide-react';
 
 type Step = 'loading' | 'confirm-account' | 'details' | 'submitting' | 'done';

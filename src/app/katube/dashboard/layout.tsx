@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import StudioSidebar from "../../components/StudioSidebar";
+import StudioSidebar from "../../components/shared/StudioSidebar";
 
 export const metadata: Metadata = {
   title: "KaTube — Creator Dashboard",

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, use } from 'react';
 import { supabase } from '../../lib/supabase';
 import { parseChapterContent, estimateReadTime } from '../../lib/novelEditor';
-import ThemeToggle from '../../components/ThemeToggle';
+import ThemeToggle from '../../components/shared/ThemeToggle';
 import {
   CalendarClock, FileText, ArrowLeft, BookOpen, Sparkles, Wrench,
   Menu, Expand, Shrink, Lock, Unlock, Settings, X, ScrollText,
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 type PageItem = { id: string; page_number: number; image_url: string };
 type SeriesInfo = { id: string; title: string; reading_mode: 'scroll' | 'page'; content_type: 'mangal' | 'novel'; reading_direction: 'ltr' | 'rtl' | null };
 type ChapterNav = { id: string; chapter_number: number; title: string };

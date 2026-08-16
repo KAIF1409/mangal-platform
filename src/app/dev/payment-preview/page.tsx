@@ -1,6 +1,6 @@
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
-import PaymentMethodPicker from '../../components/PaymentMethodPicker';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
+import PaymentMethodPicker from '../../components/shared/PaymentMethodPicker';
 
 // Not linked from any nav — visit directly at /dev/payment-preview to
 // review the payment-method UI (§48 follow-up: UI-only, no backend

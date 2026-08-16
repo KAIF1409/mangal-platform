@@ -4,15 +4,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
-import { setPostLoginRedirect } from '../../../lib/authRedirect';
-import ThemeToggle from '../../../components/ThemeToggle';
+import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
+import ThemeToggle from '../../../components/shared/ThemeToggle';
 import { useKCircleTheme } from '../../theme';
 import { KCircleShellStyle, KCircleRail } from '../../components/Shell';
 import { Lock, Menu, X, Settings, Camera, ArrowLeft } from 'lucide-react';
 import {
   PERM, PERMISSION_LABELS, resolveBasePermissions, resolveChannelPermissions, can, highestRolePosition, canManageRoleAt,
   type RoleRow, type OverwriteRow,
-} from '../../../lib/kcirclePermissions';
+} from '../../../lib/auth/kcirclePermissions';
 
 // ── K Circle — Discord-style channels + roles for a group ──
 // Every group gets an auto-created @everyone role, an Owner role, and a

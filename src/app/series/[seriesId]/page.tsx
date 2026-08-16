@@ -5,14 +5,14 @@ import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import ProfileMenu from '../../components/ProfileMenu';
-import ReportButton from '../../components/ReportButton';
-import ShareButton from '../../components/ShareButton';
-import { canManageSeries, isDeveloperRole } from '../../lib/roles';
+import ProfileMenu from '../../components/shared/ProfileMenu';
+import ReportButton from '../../components/webmangal/ReportButton';
+import ShareButton from '../../components/webmangal/ShareButton';
+import { canManageSeries, isDeveloperRole } from '../../lib/auth/roles';
 import { estimateReadTime } from '../../lib/novelEditor';
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import Link from 'next/link';
-import ThemeToggle from '../../components/ThemeToggle';
+import ThemeToggle from '../../components/shared/ThemeToggle';
 import {
   BookOpen, BookText, ScrollText, AlertCircle, ArrowLeft, CheckCircle2,
   Star, Play, RotateCcw, Zap, Bell, AlertTriangle, Trash2, MessageCircle,

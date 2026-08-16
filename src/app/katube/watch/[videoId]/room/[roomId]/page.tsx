@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import ThemeToggle from '../../../../../components/ThemeToggle';
+import ThemeToggle from '../../../../../components/shared/ThemeToggle';
 import { supabase } from '../../../../../lib/supabase';
-import { setPostLoginRedirect } from '../../../../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../../../../lib/auth/authRedirect';
 import { Users, Lock, Globe, Check, Link2, Crown, MessageCircle, ArrowLeft } from 'lucide-react';
 
 // ── Sync-Play Watch Rooms ──

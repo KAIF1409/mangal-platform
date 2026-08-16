@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { requireUser } from '../../../lib/authedServerClient';
-import { createOrder, isRazorpayConfigured } from '../../../lib/razorpay';
+import { requireUser } from '../../../lib/auth/authedServerClient';
+import { createOrder, isRazorpayConfigured } from '../../../lib/payments/razorpay';
 
 // Infra-only per §27/§28d (see CONTEXT.md) — nothing calls this route yet
 // (no checkout UI/paywall built). Generic on purpose: `purpose` +

@@ -20,8 +20,8 @@
 // production and call DPDP compliance "done" until those items ship.
 
 import { useState } from 'react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import Navbar from '../components/shared/Navbar';
+import Footer from '../components/shared/Footer';
 import {
   X, Zap, BarChart3, Trash2, Baby, CheckCircle2, Link2, Lock, Cookie, FileEdit, Mail, ArrowRight,
 } from 'lucide-react';

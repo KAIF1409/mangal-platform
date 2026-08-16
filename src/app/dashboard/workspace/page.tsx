@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
 import Link from 'next/link';
-import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
+import ProductScopeSwitcher, { ProductScope } from '../../components/shared/ProductScope';
 import { FolderOpen, BookOpen, ScrollText, Smartphone, PlaySquare, Users2, ArrowRight, type LucideIcon } from 'lucide-react';
 
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 
 interface DraftSeries {
   id: string;

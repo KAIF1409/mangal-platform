@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { isDeveloperRole } from '../../lib/roles';
+import { isDeveloperRole } from '../../lib/auth/roles';
 import Link from 'next/link';
 import { Lock, Flag, Inbox, Bot, CheckCircle2, Check, AlertTriangle, Trash2, Ban } from 'lucide-react';
 
 
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 interface Report {
   id: string;
   target_type: 'series' | 'chapter' | 'comment' | 'video';

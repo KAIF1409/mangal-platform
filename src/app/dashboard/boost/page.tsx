@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
-import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
+import ProductScopeSwitcher, { ProductScope } from '../../components/shared/ProductScope';
 import { Pin, Megaphone, Tag, Handshake, Rocket, BookOpen, PlaySquare, Users2, type LucideIcon } from 'lucide-react';
 
-import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 
 // Boost retrofit per CONTEXT.md §43 — no real promotion backend exists
 // for any product yet (every option below is still "Coming Soon", same

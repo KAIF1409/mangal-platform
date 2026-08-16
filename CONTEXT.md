@@ -5144,3 +5144,53 @@ under 2s, no errors.
 `lib/` and `components/` (now `src/app/lib`, `src/app/components`) are
 untouched — that's Phase C/D, done separately since those touch specific
 import paths file-by-file rather than a single wholesale move.
+
+## §72 — Repo structure: Phase C & D — lib/ and components/ split by domain
+
+Both done in this pass, per `docs/REPO_STRUCTURE.md`.
+
+**Phase C (`lib/`):** confirmed first that none of the 16 `lib/` files
+import each other (all their local imports were external packages only —
+`grep`'d every file), so this was a pure mechanical move: `git mv` each
+file into its domain folder, then `sed` every consumer's import path to
+insert the new subfolder. Split:
+- `lib/auth/` — authRedirect, authedServerClient, roles, kcirclePermissions
+- `lib/payments/` — razorpay
+- `lib/media/` — nsfwCheck, imageQuality, youtubeVerify
+- `lib/compliance/` — dpdp
+- left flat (genuinely cross-cutting, not a specific domain): supabase,
+  format, i18n, backNav, tagSuggest, novelEditor, email
+
+**Phase D (`components/`):** checked actual importers per component
+(`grep`'d exact consumer file paths, not guessed) before deciding
+grouping. 13 of 18 are used across ≥2 products or from site-wide chrome
+(root layout, landing page, creator dashboard) — moved to
+`components/shared/`. The other 5 (SeriesCard, ReportButton, ShareButton,
+EditSeriesModal, ManagePagesModal) are WebMangal-only — moved to
+`components/webmangal/`. Neither KaTube nor Kalpana Circle got a
+top-level `components/<product>/` folder since every genuinely
+product-specific component for those two already lives in their own
+route-local `components/` folders (`app/katube/components/`,
+`app/kalpana-circle/components/`) — this pass didn't touch those.
+
+**One real mistake caught and fixed during this pass:** the consumer-path
+`sed` initially rewrote `katube/page.tsx`'s import of its *own local*
+`./components/NotificationBell` (a different, katube-specific component
+that happens to share a name with the one moved to `shared/`) into
+`./components/shared/NotificationBell` — a false match on the substring
+`components/NotificationBell` regardless of path depth. Caught by
+`tsc --noEmit` (`Cannot find module`), not by inspection — a good
+reminder that the verify-after-every-phase discipline is doing real
+work, not just ceremony. Fixed by reverting that one line; then manually
+reviewed every other `components/` diff line inside `katube/` and
+`kalpana-circle/` to confirm no sibling false-matches, since tsc only
+catches broken paths, not paths that resolve to the wrong-but-existing
+file.
+
+**Verified:** `tsc --noEmit` clean, `eslint` unchanged (62 problems, same
+baseline), `next dev` boots clean (622ms) and serves routes correctly.
+
+This closes out the repo-structure migration from `docs/REPO_STRUCTURE.md`
+(Phases A-D all done). `src/app/` now contains only routes plus the two
+domain-organized shared folders (`lib/`, `components/`) — matches the
+target structure documented there.

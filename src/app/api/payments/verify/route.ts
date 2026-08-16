@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '../../../lib/authedServerClient';
-import { verifyPaymentSignature } from '../../../lib/razorpay';
+import { requireUser } from '../../../lib/auth/authedServerClient';
+import { verifyPaymentSignature } from '../../../lib/payments/razorpay';
 
 // Infra-only per §27/§28d (see CONTEXT.md) — no checkout UI calls this
 // yet. This is the route Razorpay Checkout.js's success callback should

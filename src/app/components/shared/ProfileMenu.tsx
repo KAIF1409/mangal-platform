@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import { useUiLanguage } from '../lib/i18n';
+import { supabase } from '../../lib/supabase';
+import { useUiLanguage } from '../../lib/i18n';
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 

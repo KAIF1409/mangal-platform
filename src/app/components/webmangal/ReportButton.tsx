@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { Flag, CheckCircle2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
-import { setPostLoginRedirect } from '../lib/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 type TargetType = 'series' | 'chapter' | 'comment';
 
 const REASONS = ['Inappropriate', 'Spam', 'Copyright', 'Other'] as const;

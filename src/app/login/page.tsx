@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
-import { isMinor, isPlausibleDateOfBirth, PARENT_CONSENT_PENDING_COPY } from '../lib/dpdp';
-import { setPostLoginRedirect, consumePostLoginRedirect } from '../lib/authRedirect';
+import { isMinor, isPlausibleDateOfBirth, PARENT_CONSENT_PENDING_COPY } from '../lib/compliance/dpdp';
+import { setPostLoginRedirect, consumePostLoginRedirect } from '../lib/auth/authRedirect';
 import { ArrowLeft } from 'lucide-react';
 
 // 'dob'     = Google OAuth new users — skipped register form so no DOB yet

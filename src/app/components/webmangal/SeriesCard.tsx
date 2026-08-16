@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { formatViews } from '../lib/format';
+import { formatViews } from '../../lib/format';
 import { BookText, ScrollText, Star, Eye } from 'lucide-react';
 
 export interface SeriesCardData {

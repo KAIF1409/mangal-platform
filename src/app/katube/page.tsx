@@ -4,7 +4,7 @@ import { useState, useEffect, type CSSProperties } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import ThemeToggle from '../components/ThemeToggle';
+import ThemeToggle from '../components/shared/ThemeToggle';
 import NotificationBell from './components/NotificationBell';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
 import MangalIdeasRow from './components/MangalIdeasRow';

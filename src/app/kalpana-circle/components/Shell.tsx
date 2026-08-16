@@ -3,8 +3,8 @@
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import ThemeToggle from '../../components/ThemeToggle';
-import NotificationBell from '../../components/NotificationBell';
+import ThemeToggle from '../../components/shared/ThemeToggle';
+import NotificationBell from '../../components/shared/NotificationBell';
 import { Search, MessageCircle, Clapperboard, Megaphone, Bookmark, Trophy } from 'lucide-react';
 
 // ── K Circle desktop shell — shared across every K Circle page ──
