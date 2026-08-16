@@ -3970,3 +3970,44 @@ broadcasts pages not touched yet.
 settings pages still use their original layouts — same rail/right-panel
 treatment can be extended to them on request, one page at a time per
 the "one change at a time" convention (§5).
+
+## §55 — §28b started: public KaTube channel page + custom channel URL
+
+**Status: this one item done, rest of §28b untouched.** Went through the
+priority list, picked the fastest real win left: §28a (all of it) was
+already complete as of §54, so this is the first item of §28b — KaTube-
+only *creator* features (channel owner who doesn't write novels).
+
+**Built:** `/katube/channel/[username]` — public channel page: avatar,
+username, bio (all already-existing `creator_profiles` columns, no
+migration needed), follower/video/view-count stats, Follow button
+(exact optimistic-toggle-with-rollback pattern copied from the watch
+page's existing follow button, not reinvented), Fast tap row, and the
+full long-video grid. Combines two separate §28b bullets — "Public
+channel page" and "Custom channel URL" — since a page and its URL are
+the same deliverable.
+
+**Deliberately not touched — flagged, not decided:** the existing watch
+page links a creator's name to `/creator/[username]`, which is
+WebMangal-only (series grid, nothing else) despite being the intentional
+shared cross-product profile page (see `app/lib/backNav.ts` /
+`getBackNav()`, built specifically so KaTube/Circle links back out to the
+right product). A KaTube-only creator with zero novel series currently
+shows an empty "no published series yet" page there. I tried rewiring
+that link to the new `/katube/channel/[username]` page and reverted it —
+that's an architecture call (fragment the "one profile" pattern the
+backNav mechanism was built around vs. extend `/creator/[username]`
+itself to show KaTube content when present) that shouldn't get decided
+silently mid-task. Founder call needed: either (a) extend
+`/creator/[username]` to render a KaTube tab/section when the creator has
+videos and no series, or (b) formally split "profile" into two link
+targets depending on what the creator actually has. New page works
+standalone either way (direct link, notification/search surfaces) so
+nothing here is wasted regardless of which way that goes.
+
+**Not started (rest of §28b):** channel-level analytics (without a linked
+series), creator-made playlists without a `series_id` link (arguably
+already covered — a creator can already use the §28a playlist feature on
+their own uploads, just wasn't scoped as a distinct "creator" flow),
+native KaTube community-update posts, banner image + channel-trailer
+video (no `creator_profiles` columns exist for either yet).
