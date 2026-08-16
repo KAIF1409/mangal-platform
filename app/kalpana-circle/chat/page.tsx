@@ -8,6 +8,7 @@ import { setPostLoginRedirect } from '../../lib/authRedirect';
 import NotificationBell from '../../components/NotificationBell';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
+import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import { Camera, X, Paperclip, ArrowLeft, ArrowRight } from 'lucide-react';
 
 // ── K Circle chat — DMs + group chats. ──
@@ -95,6 +96,10 @@ export default function KCircleChatPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
+  // Own username/avatar — chat never needed these before, but the shared
+  // K Circle rail's profile icon does (see components/Shell.tsx, §57).
+  const [myUsername, setMyUsername] = useState<string | null>(null);
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
 
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -134,6 +139,14 @@ export default function KCircleChatPage() {
   useEffect(() => {
     if (checkedAuth && !userId) { setPostLoginRedirect('/kalpana-circle'); router.replace('/login?next=/kalpana-circle'); }
   }, [checkedAuth, userId, router]);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as ../page.tsx */
+  useEffect(() => {
+    if (!userId) { setMyUsername(null); setMyAvatarUrl(null); return; }
+    supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', userId).maybeSingle()
+      .then(({ data }) => { setMyUsername(data?.username ?? null); setMyAvatarUrl(data?.avatar_url ?? null); });
+  }, [userId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const loadConversations = useCallback(async () => {
     if (!userId) return;
@@ -479,13 +492,27 @@ export default function KCircleChatPage() {
   if (!checkedAuth) return null;
 
   return (
-    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <style>{`
         @media (max-width: 480px) {
           .kc-chat-nav-title { font-size: 14px !important; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           .kc-chat-new-btn { font-size: 11px !important; padding: 6px 10px !important; }
         }
       `}</style>
+      <KCircleShellStyle />
+
+      <div className="kc-shell">
+        <KCircleRail
+          active="chat"
+          userId={userId}
+          myUsername={myUsername}
+          myAvatarUrl={myAvatarUrl}
+          profileHref={userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/kalpana-circle/settings') : '/login?next=/kalpana-circle'}
+          navHref={(path) => (userId ? path : `/login?next=${encodeURIComponent(path)}`)}
+          setIsLight={setIsLight}
+        />
+
+        <div className="kc-main" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100, background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)', padding: '0 14px', height: '56px',
@@ -799,6 +826,8 @@ export default function KCircleChatPage() {
           </div>
         </>
       )}
+        </div>{/* /.kc-main */}
+      </div>{/* /.kc-shell */}
     </div>
   );
 }
