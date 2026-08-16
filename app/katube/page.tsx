@@ -5,8 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
+import NotificationBell from './components/NotificationBell';
 import { supabase } from '../lib/supabase';
-import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft } from 'lucide-react';
+import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo, Bell } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // ── KaTube — Step 3 (video grid + watch page) + Step 4 (upload flow,
@@ -141,6 +142,18 @@ const SIDEBAR_GROUPS: { label: string; items: { id: SidebarItem; label: string; 
   },
 ];
 
+// §28a — Trending/Subscriptions/Playlists are full separate routes (their
+// own pages under app/katube/), not filters on this page's own grid state,
+// so they're plain links rather than SidebarItem values. Kept in their own
+// array/section instead of folding into SIDEBAR_GROUPS above, since that
+// type is keyed to the in-page `active`/`onSelect` filtering model these
+// don't participate in.
+const SIDEBAR_LINKS: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/katube/trending', label: 'Trending', icon: Flame },
+  { href: '/katube/subscriptions', label: 'Subscriptions', icon: Users },
+  { href: '/katube/playlists', label: 'Playlists', icon: ListVideo },
+];
+
 function SidebarNav({
   desktopOpen,
   mobileOpen,
@@ -181,7 +194,7 @@ function SidebarNav({
         className={`katube-sidebar${!desktopOpen ? ' katube-sidebar--desktop-closed' : ''}${mobileOpen ? ' katube-sidebar--mobile-open' : ''}`}
       >
         <nav style={{ width: '240px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '18px', flex: 1, overflowY: 'auto' }}>
-          {SIDEBAR_GROUPS.map(group => (
+          {SIDEBAR_GROUPS.map((group, gi) => (
             <div key={group.label}>
               <div style={{
                 padding: '0 20px 6px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
@@ -207,6 +220,28 @@ function SidebarNav({
                   </button>
                 ))}
               </div>
+              {/* §28a links live right under Menu, above Library — matches
+                  where YouTube itself places Trending/Subscriptions. */}
+              {gi === 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '10px' }}>
+                  {SIDEBAR_LINKS.map(link => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={onClose}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '20px',
+                        padding: '12px 20px', borderRadius: '10px',
+                        color: 'var(--text-secondary)', textDecoration: 'none',
+                        fontSize: '15px', fontWeight: 600, whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <span style={{ display: 'flex', width: '24px', justifyContent: 'center' }}><link.icon size={20} /></span>
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </nav>
@@ -413,12 +448,14 @@ export default function KaTubePage() {
   // KaTube is a public discovery page, so a logged-out visitor just sees the
   // avatar with no name, same as before this change.
   const [userName, setUserName] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
       const name = data.user?.user_metadata?.full_name || data.user?.email?.split('@')[0] || null;
       setUserName(name);
+      setUserId(data.user?.id || null);
     })();
   }, []);
 
@@ -681,6 +718,7 @@ export default function KaTubePage() {
           <span className="katube-theme-toggle">
             <ThemeToggle size={30} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
           </span>
+          {userId && <NotificationBell userId={userId} />}
           {/* KaTube profile — channel verification + metrics live at
               /katube/dashboard (part of the main MANGAL dashboard, see
               CONTEXT.md §6). Swap for the founder's real logo image whenever

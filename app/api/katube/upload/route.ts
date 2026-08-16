@@ -82,6 +82,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: insertError?.message || 'Something went wrong saving the video.' }, { status: 500 });
   }
 
+  // §28a — notify followers of the new upload. Fan-out mirrors K Circle's
+  // notifications pattern (kcircle_notifications): the actor (uploader)
+  // inserts one row per recipient right after the insert that triggered it
+  // succeeds, no DB trigger involved. Best-effort only, same as the K
+  // Circle auto-post below — a notification failure must never fail the
+  // upload itself. Skipped for Shorts-only feeds isn't needed here since
+  // followers should hear about all new uploads, Shorts included.
+  try {
+    const { data: followers } = await auth.supabase
+      .from('creator_follows')
+      .select('follower_id')
+      .eq('creator_id', auth.userId);
+
+    if (followers && followers.length > 0) {
+      await auth.supabase.from('katube_notifications').insert(
+        followers.map(f => ({
+          recipient_id: f.follower_id,
+          actor_id: auth.userId,
+          video_id: inserted.id,
+          type: 'new_upload',
+        }))
+      );
+    }
+  } catch {
+    // swallow — notification fan-out is best-effort, never blocks the upload
+  }
+
   // §6b part 2 — AI-disclosure check. Soft enforcement, not a hard block:
   // YouTube's own containsSyntheticMedia field is self-declared by the
   // uploader on YouTube itself (not verified by YouTube), so a false
