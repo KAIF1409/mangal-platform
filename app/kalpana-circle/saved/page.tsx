@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { useKCircleTheme } from '../theme';
+import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import { Bookmark } from 'lucide-react';
 
 // ── K Circle — Saved posts (bookmarks) ──
@@ -39,9 +41,14 @@ function timeAgo(iso: string) {
 }
 
 export default function SavedPostsPage() {
+  const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
+  // Own username/avatar — this page never needed these before, but the
+  // shared K Circle rail's profile icon does (see components/Shell.tsx, §66).
+  const [myUsername, setMyUsername] = useState<string | null>(null);
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
   const [posts, setPosts] = useState<SavedPost[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,6 +61,14 @@ export default function SavedPostsPage() {
       if (!uid) { setPostLoginRedirect('/kalpana-circle'); router.replace('/login?next=/kalpana-circle'); }
     });
   }, [router]);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as ../broadcasts/page.tsx */
+  useEffect(() => {
+    if (!userId) { setMyUsername(null); setMyAvatarUrl(null); return; }
+    supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', userId).maybeSingle()
+      .then(({ data }) => { setMyUsername(data?.username ?? null); setMyAvatarUrl(data?.avatar_url ?? null); });
+  }, [userId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const loadSaved = useCallback(async () => {
     if (!userId) return;
@@ -98,12 +113,25 @@ export default function SavedPostsPage() {
   if (!checkedAuth) return null;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <style>{`
         .kcs-header { padding: 20px 16px; }
         @media (min-width: 768px) { .kcs-header { padding: 28px 24px 16px; } }
       `}</style>
+      <KCircleShellStyle />
 
+      <div className="kc-shell">
+        <KCircleRail
+          active="saved"
+          userId={userId}
+          myUsername={myUsername}
+          myAvatarUrl={myAvatarUrl}
+          profileHref={userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/kalpana-circle/settings') : '/login?next=/kalpana-circle'}
+          navHref={(path) => (userId ? path : `/login?next=${encodeURIComponent(path)}`)}
+          setIsLight={setIsLight}
+        />
+
+        <div className="kc-main">
       <div className="kcs-header" style={{ maxWidth: '640px', margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
           <Link href="/kalpana-circle" style={{ fontSize: '18px', textDecoration: 'none', color: 'var(--text-primary)' }}>←</Link>
@@ -167,6 +195,8 @@ export default function SavedPostsPage() {
           </div>
         ))}
       </div>
+        </div>{/* /.kc-main */}
+      </div>{/* /.kc-shell */}
     </div>
   );
 }
