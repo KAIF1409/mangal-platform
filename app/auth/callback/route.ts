@@ -41,7 +41,24 @@ export async function GET(request: Request) {
   const oauthError = requestUrl.searchParams.get('error_description') || requestUrl.searchParams.get('error');
 
   const cookieStore = await cookies();
-  const cookieNext = cookieStore.get(POST_LOGIN_REDIRECT_COOKIE)?.value;
+  // authRedirect.ts writes this cookie's value through encodeURIComponent
+  // (it has to — cookie values can't safely contain a raw '/'), so it has
+  // to be decoded on the way back out. This was missing: a stored path like
+  // '/kalpana-circle' comes back as the literal string '%2Fkalpana-circle',
+  // which starts with '%' not '/', so safeNextPath()'s leading-slash check
+  // rejected it and silently fell back to the '/WebMangal/home' default —
+  // every Google-login redirect that relied on this cookie landed on
+  // WebMangal regardless of which product (KaTube, Kalpana Circle, or a
+  // deep WebMangal link) the user actually logged in from.
+  const rawCookieNext = cookieStore.get(POST_LOGIN_REDIRECT_COOKIE)?.value;
+  let cookieNext: string | undefined;
+  if (rawCookieNext) {
+    try {
+      cookieNext = decodeURIComponent(rawCookieNext);
+    } catch {
+      cookieNext = undefined; // malformed cookie value — fall through to default
+    }
+  }
   const next = safeNextPath(cookieNext ?? requestUrl.searchParams.get('next'));
 
   // FIX: the provider can redirect back with an error instead of a code
