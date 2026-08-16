@@ -46,6 +46,7 @@ interface KPost {
   author_id: string;
   caption: string | null;
   image_url: string | null;
+  image_urls: string[] | null;
   tag: string | null;
   created_at: string;
   author?: AuthorInfo;
@@ -135,11 +136,15 @@ function KalpanaCircleInner() {
 
   const [draft, setDraft] = useState('');
   const [composerTag, setComposerTag] = useState('');
-  const [composerImage, setComposerImage] = useState<File | null>(null);
-  const [composerPreview, setComposerPreview] = useState<string | null>(null);
+  // YouTube Community-post-style composer: up to 4 photos (was single image).
+  const [composerImages, setComposerImages] = useState<File[]>([]);
+  const [composerPreviews, setComposerPreviews] = useState<string[]>([]);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
-  const [pollMode, setPollMode] = useState(false);
+  // Post type tabs (Text / Photo / Poll), same three types YouTube's
+  // Community post composer offers (GIF omitted — needs a GIF provider
+  // API key that isn't set up yet).
+  const [postType, setPostType] = useState<'text' | 'photo' | 'poll'>('text');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
 
   const [openComments, setOpenComments] = useState<string | null>(null);
@@ -147,6 +152,11 @@ function KalpanaCircleInner() {
   const [commentDraft, setCommentDraft] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+  const openPhotoComposer = () => {
+    setPostType('photo');
+    composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
   const storyFileInputRef = useRef<HTMLInputElement>(null);
 
   // ── search (was a disabled "coming soon" placeholder) ──
@@ -192,7 +202,7 @@ function KalpanaCircleInner() {
   const loadPosts = useCallback(async () => {
     setLoadingPosts(true);
     let query = supabase
-      .from('kcircle_posts').select('id, author_id, caption, image_url, tag, created_at, pinned_at')
+      .from('kcircle_posts').select('id, author_id, caption, image_url, image_urls, tag, created_at, pinned_at')
       .order('created_at', { ascending: false }).limit(30);
     if (tagFilter) query = query.ilike('tag', tagFilter); // case-insensitive exact match on series title
     const { data: rows } = await query;
@@ -303,31 +313,40 @@ function KalpanaCircleInner() {
   useEffect(() => { loadStories(); }, [loadStories]);
 
   // ── composer ──
+  const MAX_COMPOSER_IMAGES = 4;
   const handleComposerFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setComposerImage(file);
-    setComposerPreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const room = MAX_COMPOSER_IMAGES - composerImages.length;
+    const accepted = files.slice(0, room);
+    setComposerImages(prev => [...prev, ...accepted]);
+    setComposerPreviews(prev => [...prev, ...accepted.map(f => URL.createObjectURL(f))]);
+    e.target.value = '';
+  };
+  const removeComposerImage = (index: number) => {
+    setComposerImages(prev => prev.filter((_, i) => i !== index));
+    setComposerPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const submitPost = async () => {
     if (!userId) { setPostError('Log in to post.'); return; }
-    if (!draft.trim() && !composerImage) { setPostError('Write something or add a photo first.'); return; }
-    const cleanOptions = pollMode ? pollOptions.map(o => o.trim()).filter(Boolean) : [];
-    if (pollMode && cleanOptions.length < 2) { setPostError('A poll needs at least 2 options.'); return; }
+    if (!draft.trim() && !composerImages.length) { setPostError('Write something or add a photo first.'); return; }
+    const cleanOptions = postType === 'poll' ? pollOptions.map(o => o.trim()).filter(Boolean) : [];
+    if (postType === 'poll' && cleanOptions.length < 2) { setPostError('A poll needs at least 2 options.'); return; }
     setPosting(true); setPostError('');
 
-    let imageUrl: string | null = null;
-    if (composerImage) {
-      const ext = composerImage.name.split('.').pop();
-      const path = `posts/${userId}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, composerImage, { upsert: true });
+    const imageUrls: string[] = [];
+    for (const file of composerImages) {
+      const ext = file.name.split('.').pop();
+      const path = `posts/${userId}-${Date.now()}-${imageUrls.length}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
       if (upErr) { setPostError(`Upload failed: ${upErr.message}`); setPosting(false); return; }
-      imageUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
+      imageUrls.push(supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl);
     }
 
     const { error, data: newPost } = await supabase.from('kcircle_posts').insert({
-      author_id: userId, caption: draft.trim() || null, image_url: imageUrl,
+      author_id: userId, caption: draft.trim() || null,
+      image_url: imageUrls[0] ?? null, image_urls: imageUrls.length ? imageUrls : null,
       tag: composerTag.trim() || null,
     }).select('id').single();
     if (error) { setPostError(error.message); setPosting(false); return; }
@@ -338,20 +357,20 @@ function KalpanaCircleInner() {
       if (pollErr) { setPostError(`Post published, but the poll failed to save: ${pollErr.message}`); }
     }
 
-    setDraft(''); setComposerImage(null); setComposerPreview(null); setComposerTag('');
-    setPollMode(false); setPollOptions(['', '']);
+    setDraft(''); setComposerImages([]); setComposerPreviews([]); setComposerTag('');
+    setPostType('text'); setPollOptions(['', '']);
     setPosting(false);
     loadPosts();
   };
 
-  // Bug fix: the composer had a way to remove just the attached photo (the
-  // X on the image preview) but nothing to discard the whole in-progress
-  // post — caption, tag, and poll all stayed stuck once started. This
-  // resets everything back to the empty state in one action.
-  const composerHasContent = !!(draft.trim() || composerTag.trim() || composerImage || pollMode);
+  // Bug fix: the composer had a way to remove a single attached photo but
+  // nothing to discard the whole in-progress post — caption, tag, and
+  // poll all stayed stuck once started. This resets everything back to
+  // the empty state in one action.
+  const composerHasContent = !!(draft.trim() || composerTag.trim() || composerImages.length || postType === 'poll');
   const cancelComposer = () => {
-    setDraft(''); setComposerImage(null); setComposerPreview(null); setComposerTag('');
-    setPollMode(false); setPollOptions(['', '']); setPostError('');
+    setDraft(''); setComposerImages([]); setComposerPreviews([]); setComposerTag('');
+    setPostType('text'); setPollOptions(['', '']); setPostError('');
   };
 
   // ── notifications ── fire-and-forget insert, actor-scoped per RLS
@@ -648,7 +667,7 @@ function KalpanaCircleInner() {
           <Link href={navHref('/kalpana-circle/watch-together')} title="Watch Together" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Clapperboard size={19} /></Link>
           <Link href={navHref('/kalpana-circle/broadcasts')} title="Broadcasts" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Megaphone size={19} /></Link>
           <Link href={navHref('/kalpana-circle/saved')} title="Saved" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Bookmark size={19} /></Link>
-          <button onClick={() => fileInputRef.current?.click()} title="Create post" style={{
+          <button onClick={openPhotoComposer} title="Create post" style={{
             background: RADIANT, border: 'none', width: '32px', height: '32px', borderRadius: '9px',
             fontSize: '16px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>+</button>
@@ -847,22 +866,51 @@ function KalpanaCircleInner() {
 
       {/* ── COMPOSER ── */}
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 14px' }}>
-        <div style={{
+        <div ref={composerRef} style={{
           padding: '14px 16px', borderRadius: '14px', background: 'var(--bg-card)',
           border: '1px solid var(--border-color)', marginBottom: '16px',
         }}>
+          {/* ── POST TYPE TABS — same three types YouTube's Community
+              composer offers (Text / Image / Poll). Switching tabs swaps
+              which editing UI shows below, and clears whatever belonged
+              only to the tab being left (e.g. leaving Poll drops the
+              options back to two blanks). ── */}
+          {userId && (
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+              {([
+                { key: 'text', label: 'Text', icon: null },
+                { key: 'photo', label: 'Photo', icon: <Camera size={13} /> },
+                { key: 'poll', label: 'Poll', icon: <BarChart3 size={13} /> },
+              ] as const).map(t => (
+                <button key={t.key} onClick={() => setPostType(t.key)} style={{
+                  fontSize: '12px', fontWeight: 700,
+                  color: postType === t.key ? RADIANT_SOLID : 'var(--text-secondary)',
+                  background: postType === t.key ? 'rgba(124,58,237,0.12)' : 'transparent',
+                  border: `1px solid ${postType === t.key ? RADIANT_SOLID : 'var(--border-color)'}`,
+                  borderRadius: '20px', padding: '5px 14px', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                }}>{t.icon}{t.label}</button>
+              ))}
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '10px' }}>
             <Avatar name={myUsername ?? 'you'} size={36} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              {(composerImage || userId) && (
+              {(composerImages.length > 0 || userId) && (
                 <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                  DESCRIPTION
+                  {postType === 'poll' ? 'QUESTION' : 'DESCRIPTION'}
                 </label>
               )}
               <textarea
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
-                placeholder={userId ? (composerImage ? 'Write a caption for your photo...' : 'Share a theory, fan art, or request...') : 'Log in to post...'}
+                placeholder={
+                  !userId ? 'Log in to post...' :
+                  postType === 'poll' ? 'Ask a question...' :
+                  postType === 'photo' ? 'Write a caption for your photo...' :
+                  'Share a theory, fan art, or request...'
+                }
                 rows={2}
                 disabled={!userId}
                 style={{
@@ -891,17 +939,36 @@ function KalpanaCircleInner() {
               />
             </div>
           )}
-          {composerPreview && (
-            <div style={{ position: 'relative', marginTop: '10px', borderRadius: '10px', overflow: 'hidden', maxHeight: '260px' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={composerPreview} alt="preview" style={{ width: '100%', maxHeight: '260px', objectFit: 'cover', display: 'block' }} />
-              <button onClick={() => { setComposerImage(null); setComposerPreview(null); }} style={{
-                position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.55)', border: 'none',
-                color: '#fff', width: '26px', height: '26px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-              }}><X size={14} /></button>
+          {postType === 'photo' && (
+            <div style={{ marginTop: '10px' }}>
+              {composerPreviews.length > 0 && (
+                <div style={{
+                  display: 'grid', gridTemplateColumns: composerPreviews.length === 1 ? '1fr' : '1fr 1fr',
+                  gap: '6px', marginBottom: '8px',
+                }}>
+                  {composerPreviews.map((src, i) => (
+                    <div key={i} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', aspectRatio: '1 / 1' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <button onClick={() => removeComposerImage(i)} style={{
+                        position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.55)', border: 'none',
+                        color: '#fff', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                      }}><X size={13} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {composerImages.length < MAX_COMPOSER_IMAGES && (
+                <button onClick={() => fileInputRef.current?.click()} style={{
+                  width: '100%', padding: '14px', borderRadius: '10px', border: '1.5px dashed var(--border-color)',
+                  background: 'transparent', color: 'var(--text-secondary)', fontSize: '12.5px', fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                }}><Camera size={15} /> {composerImages.length ? 'Add more photos' : 'Add photos'} ({composerImages.length}/{MAX_COMPOSER_IMAGES})</button>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleComposerFile} style={{ display: 'none' }} />
             </div>
           )}
-          {pollMode && (
+          {postType === 'poll' && (
             <div style={{ marginTop: '10px', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
               <label style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>POLL OPTIONS</label>
               {pollOptions.map((opt, i) => (
@@ -932,21 +999,7 @@ function KalpanaCircleInner() {
             </div>
           )}
           {postError && <p style={{ fontSize: '12px', color: '#ef4444', margin: '8px 0 0' }}>{postError}</p>}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => fileInputRef.current?.click()} disabled={!userId} style={{
-                fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', background: 'transparent',
-                border: '1px solid var(--border-color)', borderRadius: '8px', padding: '7px 12px', cursor: userId ? 'pointer' : 'not-allowed',
-                display: 'inline-flex', alignItems: 'center', gap: '5px',
-              }}><Camera size={14} /> Photo</button>
-              <button onClick={() => setPollMode(v => !v)} disabled={!userId} style={{
-                fontSize: '12px', fontWeight: 700, color: pollMode ? RADIANT_SOLID : 'var(--text-secondary)',
-                background: 'transparent', border: `1px solid ${pollMode ? RADIANT_SOLID : 'var(--border-color)'}`,
-                borderRadius: '8px', padding: '7px 12px', cursor: userId ? 'pointer' : 'not-allowed',
-                display: 'inline-flex', alignItems: 'center', gap: '5px',
-              }}><BarChart3 size={14} /> Poll</button>
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleComposerFile} style={{ display: 'none' }} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {composerHasContent && (
                 <button onClick={cancelComposer} disabled={posting} style={{
@@ -1010,10 +1063,24 @@ function KalpanaCircleInner() {
               </p>
             )}
 
-            {post.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }} />
-            )}
+            {(() => {
+              const imgs = post.image_urls?.length ? post.image_urls : (post.image_url ? [post.image_url] : []);
+              if (!imgs.length) return null;
+              if (imgs.length === 1) {
+                return (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imgs[0]} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }} />
+                );
+              }
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
+                  {imgs.map((src, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={i} src={src} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }} />
+                  ))}
+                </div>
+              );
+            })()}
 
             {post.poll && post.poll.length > 0 && (() => {
               const total = post.poll.reduce((sum, o) => sum + o.votes, 0);
@@ -1105,7 +1172,7 @@ function KalpanaCircleInner() {
       }}>
         <Link href="/kalpana-circle" style={{ display: 'flex', textDecoration: 'none', color: RADIANT_SOLID }}><Home size={20} /></Link>
         <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', display: 'flex', color: 'var(--text-tertiary)', cursor: 'pointer' }}><Search size={20} /></button>
-        <button onClick={() => fileInputRef.current?.click()} style={{
+        <button onClick={openPhotoComposer} style={{
           background: RADIANT, border: 'none', width: '34px', height: '34px', borderRadius: '9px',
           fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>+</button>

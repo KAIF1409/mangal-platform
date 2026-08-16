@@ -18,6 +18,7 @@ interface SavedPost {
   author_id: string;
   caption: string | null;
   image_url: string | null;
+  image_urls: string[] | null;
   created_at: string;
   username: string;
 }
@@ -64,7 +65,7 @@ export default function SavedPostsPage() {
 
     const postIds = saves.map(s => s.post_id);
     const { data: rows } = await supabase
-      .from('kcircle_posts').select('id, author_id, caption, image_url, created_at')
+      .from('kcircle_posts').select('id, author_id, caption, image_url, image_urls, created_at')
       .in('id', postIds);
     if (!rows || rows.length === 0) { setPosts([]); setLoading(false); return; }
 
@@ -144,10 +145,24 @@ export default function SavedPostsPage() {
               </p>
             )}
 
-            {post.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }} />
-            )}
+            {(() => {
+              const imgs = post.image_urls?.length ? post.image_urls : (post.image_url ? [post.image_url] : []);
+              if (!imgs.length) return null;
+              if (imgs.length === 1) {
+                return (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imgs[0]} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }} />
+                );
+              }
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
+                  {imgs.map((src, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={i} src={src} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }} />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         ))}
       </div>
