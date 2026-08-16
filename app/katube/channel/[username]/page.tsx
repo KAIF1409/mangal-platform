@@ -5,9 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
-import VideoGridCard, { type GridVideo } from '../../components/VideoGridCard';
+import VideoGridCard, { type GridVideo, MangalWeekBadge } from '../../components/VideoGridCard';
 import { KaTubeShell } from '../../components/VideoGridCard';
-import { Users, Video as VideoIcon, Eye } from 'lucide-react';
+import { Users, Video as VideoIcon, Eye, Trophy } from 'lucide-react';
 import VerifiedBadge from '../../../components/VerifiedBadge';
 
 // §28b — Public channel page + custom channel URL
@@ -43,6 +43,26 @@ export default function KaTubeChannelPage() {
   const followLockRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  // Phase 2 "Unique for Mangal" (CONTEXT.md §0c) — video_id -> rank map
+  // for the most recently finalized week's Top 5 (same RPC/pattern as the
+  // KaTube home page), so any of this creator's videos in the grid below
+  // can show the trophy badge. bestOwnRank is this creator's best rank
+  // among those Top 5 credits (as either solo creator or Tier 1 collab
+  // writer) — drives the profile-level "Mangal of the Week" flair next to
+  // the verified badge.
+  const [weeklyWinnerRanks, setWeeklyWinnerRanks] = useState<Map<string, number>>(new Map());
+  const [bestOwnRank, setBestOwnRank] = useState<number | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.rpc('get_mangal_of_the_week');
+      if (!data) return;
+      const rows = data as { video_id: string; rank: number; creator_username: string | null; collab_writer_username: string | null }[];
+      setWeeklyWinnerRanks(new Map(rows.map(w => [w.video_id, w.rank])));
+      const mine = rows.filter(w => w.creator_username === username || w.collab_writer_username === username);
+      if (mine.length > 0) setBestOwnRank(Math.min(...mine.map(w => w.rank)));
+    })();
+  }, [username]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id || null));
@@ -149,6 +169,16 @@ export default function KaTubeChannelPage() {
           <h2 style={{ fontSize: '20px', fontWeight: 900, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             {channel.username}
             {channel.verifiedYoutubeChannelId && <VerifiedBadge size={17} />}
+            {bestOwnRank && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', fontWeight: 800,
+                color: bestOwnRank === 1 ? '#27272a' : '#f59e0b', background: bestOwnRank === 1 ? '#f59e0b' : 'rgba(245,158,11,0.14)',
+                border: bestOwnRank === 1 ? 'none' : '1px solid rgba(245,158,11,0.4)',
+                padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
+              }}>
+                <Trophy size={11} strokeWidth={2.5} />Mangal of the Week{bestOwnRank > 1 ? ` #${bestOwnRank}` : ''}
+              </span>
+            )}
           </h2>
           <div style={{ display: 'flex', gap: '16px', fontSize: '12.5px', color: '#9ca3af', flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Users size={13} /> {followerCount} followers</span>
@@ -203,7 +233,13 @@ export default function KaTubeChannelPage() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-          {videos.map(v => <VideoGridCard key={v.id} video={v} />)}
+          {videos.map(v => (
+            <VideoGridCard
+              key={v.id}
+              video={v}
+              badge={weeklyWinnerRanks.has(v.id) ? <MangalWeekBadge rank={weeklyWinnerRanks.get(v.id)!} /> : undefined}
+            />
+          ))}
         </div>
       )}
     </KaTubeShell>
