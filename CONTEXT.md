@@ -4011,3 +4011,32 @@ already covered — a creator can already use the §28a playlist feature on
 their own uploads, just wasn't scoped as a distinct "creator" flow),
 native KaTube community-update posts, banner image + channel-trailer
 video (no `creator_profiles` columns exist for either yet).
+
+## §56 — §28b continued: channel-level analytics (per-video breakdown)
+
+**Status: done.** Second §28b item — "Channel-level analytics ... without
+needing a linked novel/series." `/katube/dashboard` previously showed
+only 3 aggregate totals (videos/views/likes). Added:
+- A 4th metric card: **Followers** (`creator_follows` count, wasn't
+  surfaced anywhere on this page before).
+- **Video performance** section — every one of the creator's own videos
+  (long + Shorts), sorted by views descending, with a views bar, raw view
+  count, and like count per video. Capped display at 15 with a "+N more"
+  note rather than paginating, since this is a quick-scan list, not a
+  full table UI.
+
+**Explicitly not a time-series/trend chart** — that needs a per-event log
+table (`view_events`-style, which WebMangal's root dashboard Analytics
+tab already has per §45) and `videos.views` is just a denormalized
+counter with no history. Building real day-by-day trend tracking for
+KaTube would mean a new table + wiring a write on every video view,
+which is a slower, separate piece of work — flagged here rather than
+faked with a chart that has no real underlying data.
+
+**No new migrations** — reuses `videos` and `creator_follows` exactly as
+they already exist, same RLS-safe per-owner query pattern used elsewhere
+(Earnings' Performance section, Perks, etc.).
+
+**Not started (rest of §28b):** native KaTube community-update posts,
+banner image + channel-trailer video (still no `creator_profiles`
+columns for either).
