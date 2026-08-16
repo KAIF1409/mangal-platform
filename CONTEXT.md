@@ -4243,3 +4243,58 @@ like any other feature.
   small-model API pricing tiers, not a quote — re-check actual pricing at
   build time before committing to a budget, since provider pricing changes
   fairly often.
+
+## §59 — §27 item 9: Verified badge + creator leaderboard (DONE, `2a341fd`)
+
+**Status: done.** Picked as the fastest of the three §27/§41 candidates
+discussed — mostly UI + one aggregate ranking query, no payment provider,
+no AI budget, no spec-trimming needed first (unlike §41).
+
+**Verified badge** — `app/components/VerifiedBadge.tsx`, a small reusable
+checkmark component. Deliberately reuses the *existing*
+`creator_profiles.verified_youtube_channel_id` signal from channel-ownership
+verification (§6/§10) rather than inventing a new verification flow or
+column — "verified" here means "verified their YouTube channel," which is
+the only verification concept that already exists on this platform. Wired
+into the two creator-identity surfaces that were fastest to reach:
+`/creator/[username]` (next to the `@username` h1) and
+`/katube/channel/[username]` (next to the channel name). **Not yet swept
+across every other surface that shows a creator name** (video/series cards,
+comments, watch-page byline, etc.) — flagged as a follow-up sweep, not
+silently skipped, same pattern as other partial-rollout notes in this file.
+
+**Creator leaderboard** — new `creator_leaderboard(result_limit int)` SQL
+RPC (`supabase/migrations/20260816200000_creator_leaderboard.sql`,
+aggregate-only, `SECURITY DEFINER`, same shape as `related_videos`/
+`related_series`), applied live to the Supabase project. Ranks creators by
+**combined WebMangal + KaTube views** — the same cross-product framing
+already used for Earnings' Performance section (§45) — rather than a
+per-product ranking. Follower count (`creator_follows`, KaTube-specific
+today) surfaced as a secondary stat, not used for ordering, since it isn't
+a cross-product number yet. Zero new tables — reuses `series.views`,
+`videos.views`, `creator_follows`, `creator_profiles` exactly as they
+already exist.
+
+New `/leaderboard` page (`app/leaderboard/page.tsx`) renders it, reusing
+`/rankings`'s visual pattern (rank-number/avatar/stat row layout) for
+consistency rather than a new pattern. Kept as its **own route**, not a new
+tab bolted onto `/rankings` — that page ranks series (cover/genre row
+shape), this ranks creators (avatar/username/follower row shape); two
+incompatible row shapes behind one tab switcher would've been messier than
+two pages. Cross-linked both ways: `/rankings`'s top nav now has a
+"Creators" tab pointing at `/leaderboard`.
+
+**Verified:** `tsc --noEmit` clean project-wide; `eslint` clean on all
+touched/new files (one pre-existing unrelated warning on
+`/katube/channel/[username]/page.tsx` — an `<img>`-vs-`<Image>` LCP
+warning on a line this change didn't touch).
+
+**Not started (rest of §27):** items 1–3 (tipping/memberships/bounty
+payouts, payment-provider-gated), item 4 (real analytics dashboard —
+scoped separately, bigger: needs new event-logging infra for
+retention/drop-off charts, not just an aggregate query like this one),
+item 5 (A/B thumbnail/title testing), item 7 (deeper KaTube↔K Circle
+cross-promotion), item 8 (creator-only K Circle space), item 10 (AI creator
+tools — tracked separately now under §58e/§58d). §41 (Affiliate AI Toolkit
+page) still needs its K Circle tab trimmed out of spec before it's
+buildable as scoped — flagged, not started.
