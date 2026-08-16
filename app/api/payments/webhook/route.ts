@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   let event: {
     event?: string;
-    payload?: { payment?: { entity?: { id?: string; order_id?: string; status?: string } } };
+    payload?: { payment?: { entity?: { id?: string; order_id?: string; status?: string; method?: string; bank?: string; vpa?: string } } };
   };
   try {
     event = JSON.parse(rawBody);
@@ -61,6 +61,15 @@ export async function POST(req: NextRequest) {
     .update({
       status: nextStatus,
       razorpay_payment_id: payment.id ?? null,
+      // Authoritative method details — only ever written here, from
+      // Razorpay's own webhook payload, never from the client. bank/vpa
+      // are only present for netbanking/UPI payments respectively;
+      // Razorpay omits the field entirely for other methods, so these
+      // fall back to null rather than overwriting a previous value with
+      // undefined-turned-null on a later event for the same order.
+      ...(payment.method ? { method: payment.method } : {}),
+      ...(payment.bank ? { bank: payment.bank } : {}),
+      ...(payment.vpa ? { vpa: payment.vpa } : {}),
     })
     .eq('razorpay_order_id', payment.order_id);
 

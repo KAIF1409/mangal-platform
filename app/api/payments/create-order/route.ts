@@ -23,14 +23,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { amountPaise?: number; purpose?: string; purposeRefId?: string };
+  let body: { amountPaise?: number; purpose?: string; purposeRefId?: string; requestedMethod?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { amountPaise, purpose, purposeRefId } = body;
+  const { amountPaise, purpose, purposeRefId, requestedMethod } = body;
 
   if (!amountPaise || !Number.isInteger(amountPaise) || amountPaise <= 0) {
     return NextResponse.json({ error: 'amountPaise must be a positive integer.' }, { status: 400 });
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       amount_paise: amountPaise,
       purpose,
       purpose_ref_id: purposeRefId ?? null,
+      requested_method: requestedMethod ?? null,
     })
     .select('id')
     .single();
