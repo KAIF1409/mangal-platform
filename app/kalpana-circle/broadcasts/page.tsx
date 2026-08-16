@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
+import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import { Radio, ArrowLeft } from 'lucide-react';
 
 // ── K Circle — Broadcast channel discovery feed ──
@@ -46,6 +47,10 @@ export default function BroadcastDiscoveryPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
+  // Own username/avatar — this page never needed these before, but the
+  // shared K Circle rail's profile icon does (see components/Shell.tsx, §66).
+  const [myUsername, setMyUsername] = useState<string | null>(null);
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
   const [channels, setChannels] = useState<ChannelRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +67,14 @@ export default function BroadcastDiscoveryPage() {
       if (!uid) { setPostLoginRedirect('/kalpana-circle'); router.replace('/login?next=/kalpana-circle'); }
     });
   }, [router]);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as ../chat/page.tsx */
+  useEffect(() => {
+    if (!userId) { setMyUsername(null); setMyAvatarUrl(null); return; }
+    supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', userId).maybeSingle()
+      .then(({ data }) => { setMyUsername(data?.username ?? null); setMyAvatarUrl(data?.avatar_url ?? null); });
+  }, [userId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const loadChannels = useCallback(async () => {
     if (!userId) return;
@@ -129,7 +142,20 @@ export default function BroadcastDiscoveryPage() {
         .kcb-header { padding: 20px 16px; }
         @media (min-width: 768px) { .kcb-header { padding: 28px 24px 16px; } }
       `}</style>
+      <KCircleShellStyle />
 
+      <div className="kc-shell">
+        <KCircleRail
+          active="broadcasts"
+          userId={userId}
+          myUsername={myUsername}
+          myAvatarUrl={myAvatarUrl}
+          profileHref={userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/kalpana-circle/settings') : '/login?next=/kalpana-circle'}
+          navHref={(path) => (userId ? path : `/login?next=${encodeURIComponent(path)}`)}
+          setIsLight={setIsLight}
+        />
+
+        <div className="kc-main">
       <div className="kcb-header" style={{ maxWidth: '640px', margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
           <Link href="/kalpana-circle" style={{ textDecoration: 'none', color: 'var(--text-primary)', display: 'flex' }}><ArrowLeft size={18} strokeWidth={2} /></Link>
@@ -177,6 +203,8 @@ export default function BroadcastDiscoveryPage() {
           </Link>
         ))}
       </div>
+        </div>{/* /.kc-main */}
+      </div>{/* /.kc-shell */}
     </div>
   );
 }
