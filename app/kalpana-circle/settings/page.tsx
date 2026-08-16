@@ -127,7 +127,7 @@ export default function KCircleSettingsPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Link href={`/kalpana-circle/profile/${username}`} style={{ display: 'flex', color: 'var(--text-primary)' }} title="Back">
+          <Link href={`/kalpana-circle/profile/${username}`} className="kcs-icon-btn" title="Back">
             <ArrowLeft size={22} />
           </Link>
           <span style={{ fontWeight: 800, fontSize: '16px' }}>Settings</span>
@@ -135,14 +135,25 @@ export default function KCircleSettingsPage() {
         <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
       </nav>
 
-      <div style={{ maxWidth: '520px', margin: '0 auto', padding: '24px 20px 60px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <style>{`
+        .kcs-icon-btn {
+          display: flex; align-items: center; justify-content: center;
+          width: 38px; height: 38px; margin: -8px; margin-right: 0; border-radius: 50%;
+          color: var(--text-primary); text-decoration: none;
+        }
+        @media (max-width: 359px) {
+          .kcs-page-pad { padding-left: 14px !important; padding-right: 14px !important; }
+        }
+      `}</style>
+
+      <div className="kcs-page-pad" style={{ maxWidth: '520px', margin: '0 auto', padding: '24px 20px 60px', display: 'flex', flexDirection: 'column', gap: '28px', boxSizing: 'border-box' }}>
         {/* ── EDIT PROFILE ── */}
         <section>
           <h2 style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.04em', color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: '14px' }}>
             Edit Profile
           </h2>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative' }}>
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- user-uploaded Supabase Storage URL

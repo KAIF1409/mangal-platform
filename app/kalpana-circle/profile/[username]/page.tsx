@@ -171,11 +171,13 @@ export default function KCircleProfilePage() {
           color: #fff; font-weight: 700; font-size: 13px; transition: opacity 0.15s ease;
         }
         @media (hover: hover) { .kcp-tile:hover .kcp-overlay { opacity: 1; } }
-        .kcp-header-row { flex-direction: column; align-items: center; text-align: center; gap: 14px; }
-        .kcp-stats { justify-content: center; }
-        @media (min-width: 640px) {
-          .kcp-header-row { flex-direction: row; align-items: flex-start; text-align: left; gap: 28px; }
-          .kcp-stats { justify-content: flex-start; }
+        .kcp-icon-btn {
+          display: flex; align-items: center; justify-content: center;
+          width: 38px; height: 38px; margin: -8px; border-radius: 50%;
+          background: none; border: none; color: var(--text-primary); cursor: pointer;
+        }
+        @media (max-width: 359px) {
+          .kcp-page-pad { padding-left: 14px !important; padding-right: 14px !important; }
         }
       `}</style>
 
@@ -187,21 +189,21 @@ export default function KCircleProfilePage() {
         padding: '0 14px', height: '56px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-          <Link href="/kalpana-circle" style={{ display: 'flex', color: 'var(--text-primary)' }} title="Back">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+          <Link href="/kalpana-circle" className="kcp-icon-btn" title="Back">
             <ArrowLeft size={22} />
           </Link>
           <span style={{ fontWeight: 800, fontSize: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {profile?.username ?? username}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
           {isOwn && (
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setMenuOpen(v => !v)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex' }}
+                className="kcp-icon-btn"
                 title="Menu"
               >
                 <Menu size={22} />
@@ -210,10 +212,10 @@ export default function KCircleProfilePage() {
                 <>
                   <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 149 }} />
                   <div style={{
-                    position: 'absolute', top: '32px', right: 0, zIndex: 150,
+                    position: 'absolute', top: '36px', right: 0, zIndex: 150,
                     background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
                     borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
-                    minWidth: '210px', padding: '6px', display: 'flex', flexDirection: 'column', gap: '2px',
+                    width: 'min(230px, calc(100vw - 28px))', padding: '6px', display: 'flex', flexDirection: 'column', gap: '2px',
                   }}>
                     <MenuLink href="/kalpana-circle/settings" icon={<Settings size={16} />} label="Settings" onClick={() => setMenuOpen(false)} />
                     <MenuLink href="/kalpana-circle/saved" icon={<Bookmark size={16} />} label="Saved" onClick={() => setMenuOpen(false)} />
@@ -250,49 +252,51 @@ export default function KCircleProfilePage() {
       )}
 
       {loaded && profile && (
-        <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px 60px' }}>
-          {/* ── HEADER ── */}
-          <div className="kcp-header-row" style={{ display: 'flex' }}>
-            <Avatar name={profile.username} avatarUrl={profile.avatar_url} size={92} />
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div className="kcp-stats" style={{ display: 'flex', gap: '28px' }}>
-                <Stat value={posts.length} label="Posts" />
-                <Stat value={likeTotal} label="Likes" />
-              </div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: '15px' }}>{profile.username}</div>
-                {profile.bio && (
-                  <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', marginTop: '4px' }}>
-                    {profile.bio}
-                  </div>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }} className="kcp-actions">
-                {isOwn ? (
-                  <Link href="/kalpana-circle/settings" style={{
-                    flex: 1, textAlign: 'center', padding: '8px 16px', borderRadius: '8px',
-                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                    color: 'var(--text-primary)', fontWeight: 700, fontSize: '13px', textDecoration: 'none',
-                  }}>
-                    Edit Profile
-                  </Link>
-                ) : (
-                  <Link href="/kalpana-circle/chat" style={{
-                    flex: 1, textAlign: 'center', padding: '8px 16px', borderRadius: '8px',
-                    background: RADIANT, border: 'none',
-                    color: '#27272a', fontWeight: 800, fontSize: '13px', textDecoration: 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                  }}>
-                    <MessageCircle size={14} /> Message
-                  </Link>
-                )}
-              </div>
+        <div className="kcp-page-pad" style={{ maxWidth: '640px', margin: '0 auto', padding: '20px 20px 60px', boxSizing: 'border-box' }}>
+          {/* ── HEADER — avatar + stats row (same pattern Instagram uses on
+              its own mobile web), followed by a full-width text/button
+              block. Using one layout at every width (no stack↔row
+              breakpoint switch) keeps this predictable on phones instead
+              of needing a separate mobile variant. ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+            <Avatar name={profile.username} avatarUrl={profile.avatar_url} size={76} />
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: '20px' }}>
+              <Stat value={posts.length} label="Posts" />
+              <Stat value={likeTotal} label="Likes" />
             </div>
+          </div>
+          <div style={{ marginTop: '14px' }}>
+            <div style={{ fontWeight: 800, fontSize: '15px' }}>{profile.username}</div>
+            {profile.bio && (
+              <div style={{ fontSize: '13.5px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: '4px' }}>
+                {profile.bio}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+            {isOwn ? (
+              <Link href="/kalpana-circle/settings" style={{
+                flex: 1, textAlign: 'center', padding: '9px 16px', borderRadius: '8px',
+                background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)', fontWeight: 700, fontSize: '13px', textDecoration: 'none',
+              }}>
+                Edit Profile
+              </Link>
+            ) : (
+              <Link href="/kalpana-circle/chat" style={{
+                flex: 1, textAlign: 'center', padding: '9px 16px', borderRadius: '8px',
+                background: RADIANT, border: 'none',
+                color: '#27272a', fontWeight: 800, fontSize: '13px', textDecoration: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              }}>
+                <MessageCircle size={14} /> Message
+              </Link>
+            )}
           </div>
 
           {/* ── TABS ── */}
           <div style={{
-            display: 'flex', borderTop: '1px solid var(--border-color)', marginTop: '26px',
+            display: 'flex', borderTop: '1px solid var(--border-color)', marginTop: '22px',
           }}>
             <div style={{
               flex: 1, textAlign: 'center', padding: '12px 0', fontSize: '12px', fontWeight: 800,
