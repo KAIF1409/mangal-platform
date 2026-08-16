@@ -203,7 +203,7 @@ export default function KaTubeUploadPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         gap: '8px',
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
+        <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
           <Image src="/icon.png" alt="MANGAL" width={32} height={32} style={{ display: 'block', borderRadius: '8px' }} />
           <span className="mangal-upload-brand-text" style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
         </Link>
