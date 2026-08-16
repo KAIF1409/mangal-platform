@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from './components/NotificationBell';
+import ContinueWatchingRow from './components/ContinueWatchingRow';
 import { supabase } from '../lib/supabase';
 import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo, Bell } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -838,6 +839,11 @@ export default function KaTubePage() {
           ))}
         </div>
       )}
+
+      {/* Continue Watching — §28a, only rendered on Home for a signed-in
+          viewer with in-progress videos (component itself returns null
+          otherwise, so no empty-state flash). */}
+      {activeSidebar === 'home' && userId && <ContinueWatchingRow userId={userId} />}
 
       {/* Fast tap — renamed from "Shorts" per the wireframe. Grid instead of
           a horizontal scroll strip so it can collapse/expand via "Show more",

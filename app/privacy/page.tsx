@@ -287,6 +287,14 @@ export default function PrivacyPolicyPage() {
             <li><strong style={{ color: 'var(--text-primary)' }}>Formspree</strong> — processes grievance form submissions only</li>
           </ul>
           <p style={{ ...bodyText, marginTop: '10px' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>YouTube (Google LLC)</strong> — every KaTube video is played back
+            through YouTube&apos;s official embedded player, never a file we host ourselves. On the KaTube video watch page,
+            &quot;Autoplay&quot; is on by default: this means playback data (such as which video is playing and when it ends)
+            is shared with YouTube automatically as soon as the page loads, rather than only after you interact with the
+            player. You can turn Autoplay off from the toggle under any video. Use of the YouTube embed is subject to the
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color, #f97316)' }}> Google Privacy Policy</a>.
+          </p>
+          <p style={{ ...bodyText, marginTop: '10px' }}>
             We may disclose limited data if legally required to do so by an Indian
             court, government authority, or law enforcement agency acting under
             applicable law.

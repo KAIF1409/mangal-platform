@@ -9,6 +9,7 @@ import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/authRedirect';
 import { Users, ThumbsUp, BookOpen, Star, ArrowLeft } from 'lucide-react';
 import { AddToPlaylistButton } from '../../components/VideoGridCard';
+import KaTubePlayer from '../../components/KaTubePlayer';
 
 // ── KaTube — Step 3: watch page ──
 // Clicking a video card on /katube now opens this page, which loads the
@@ -100,6 +101,12 @@ export default function KaTubeWatchPage() {
   const videoId = params?.videoId as string;
 
   const [creatingRoom, setCreatingRoom] = useState(false);
+
+  // §28a — Continue Watching (resume position) + Autoplay Next.
+  const [resumeSeconds, setResumeSeconds] = useState<number | undefined>(undefined);
+  const [autoplayEnabled, setAutoplayEnabled] = useState(true);
+  const [showUpNextOverlay, setShowUpNextOverlay] = useState(false);
+  const upNextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [video, setVideo] = useState<WatchVideo | null>(null);
   const [recommended, setRecommended] = useState<RecommendedVideo[]>([]);
@@ -208,6 +215,35 @@ export default function KaTubeWatchPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id || null));
   }, []);
+
+  // §28a — load any saved Continue Watching position for this (viewer,
+  // video) pair once both are known, so KaTubePlayer can seek to it.
+  useEffect(() => {
+    if (!videoId || !userId) return;
+    supabase.from('katube_watch_progress').select('position_seconds').eq('viewer_id', userId).eq('video_id', videoId).maybeSingle()
+      .then(({ data }) => { if (data?.position_seconds) setResumeSeconds(data.position_seconds); });
+  }, [videoId, userId]);
+
+  // §28a — Autoplay Next / Up Next queue. Only fires when `recommended`
+  // has an entry (the existing tag-based §8 recommendations list) — no
+  // recommendations means nothing to autoplay into, so the player just
+  // stops normally.
+  function handleVideoEnded() {
+    if (recommended.length === 0) return;
+    setShowUpNextOverlay(true);
+    if (autoplayEnabled) {
+      upNextTimerRef.current = setTimeout(() => {
+        router.push(`/katube/watch/${recommended[0].id}`);
+      }, 5000);
+    }
+  }
+
+  function cancelAutoplayNext() {
+    if (upNextTimerRef.current) clearTimeout(upNextTimerRef.current);
+    setShowUpNextOverlay(false);
+  }
+
+  useEffect(() => () => { if (upNextTimerRef.current) clearTimeout(upNextTimerRef.current); }, []);
 
   useEffect(() => {
     if (!videoId || !userId) return;
@@ -544,17 +580,68 @@ export default function KaTubeWatchPage() {
               {/* Player */}
               <div style={{
                 position: 'relative', width: '100%', aspectRatio: video.isShort ? '9/16' : '16/9', maxWidth: video.isShort ? '420px' : 'none', margin: video.isShort ? '0 auto' : '0',
-                borderRadius: '14px', overflow: 'hidden', background: '#000',
-                boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
               }}>
-                <iframe
-                  src={`https://www.youtube.com/embed/${video.youtube_id}?rel=0`}
-                  title={video.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+                <KaTubePlayer
+                  videoId={video.id}
+                  youtubeId={video.youtube_id}
+                  isShort={video.isShort}
+                  userId={userId}
+                  resumeSeconds={resumeSeconds}
+                  onEnded={handleVideoEnded}
                 />
+                {showUpNextOverlay && recommended.length > 0 && (
+                  <div style={{
+                    position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', borderRadius: '14px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', padding: '20px',
+                  }}>
+                    <img
+                      src={`https://img.youtube.com/vi/${recommended[0].youtube_id}/hqdefault.jpg`}
+                      alt=""
+                      style={{ width: '160px', borderRadius: '10px', opacity: 0.9 }}
+                    />
+                    <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700, textAlign: 'center', maxWidth: '320px' }}>
+                      {autoplayEnabled ? 'Up next' : 'Up next (autoplay off)'}: {recommended[0].title}
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => router.push(`/katube/watch/${recommended[0].id}`)}
+                        style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: '20px', padding: '8px 18px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}
+                      >Play now</button>
+                      {autoplayEnabled && (
+                        <button
+                          onClick={cancelAutoplayNext}
+                          style={{ background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '20px', padding: '8px 18px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                        >Cancel</button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Autoplay toggle — YouTube-style, sits just under the
+                  player. §28c flags this needs a privacy-policy disclosure
+                  line since playback data is now shared with YouTube on
+                  page load rather than only on interaction — added to
+                  /privacy in this same commit. */}
+              {!video.isShort && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', margin: '10px 0 0' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>Autoplay</span>
+                  <button
+                    onClick={() => setAutoplayEnabled(v => !v)}
+                    aria-label="Toggle autoplay"
+                    style={{
+                      width: '36px', height: '20px', borderRadius: '999px', border: 'none', cursor: 'pointer',
+                      background: autoplayEnabled ? '#f97316' : 'var(--bg-card)', position: 'relative', transition: 'background 0.15s',
+                    }}
+                  >
+                    <span style={{
+                      position: 'absolute', top: '2px', left: autoplayEnabled ? '18px' : '2px', width: '16px', height: '16px',
+                      borderRadius: '50%', background: '#fff', transition: 'left 0.15s',
+                    }} />
+                  </button>
+                </div>
+              )}
+
 
               {/* Watch with Friends — Sync-Play Watch Rooms, KaTube entry
                   point. Always creates a *private* room: KaTube's normal
