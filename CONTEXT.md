@@ -4929,3 +4929,48 @@ header no longer blocks picking from §4/other backlog sections in future
 sessions, though §0e's still-open decisions (scoring weights, prize
 amounts, cron scheduling) remain open follow-ups within "Unique for
 Mangal" itself.
+
+## §67 — K Circle: Discord-rail rollout complete across every browsing page
+
+Continuing §66's page-by-page rollout, one commit per page as requested,
+through the rest of K Circle:
+
+- **Broadcasts discovery** (`broadcasts/page.tsx`, `64ff713`) — rail
+  active on "Broadcasts".
+- **Saved posts** (`saved/page.tsx`, `bda3195`) — rail active on "Saved".
+  Didn't use `useKCircleTheme` before; added it.
+- **Close Friends** (`close-friends/page.tsx`, `7a90882`) — rail shown,
+  nothing highlighted (not a top-level rail destination). Made
+  `KCircleRail`'s `active` prop optional in `components/Shell.tsx` to
+  support this — every page below reuses the same pattern.
+- **Settings** (`settings/page.tsx`, `5150c7d`) — rail shown, nothing
+  highlighted. Already tracked its own `username`/`avatarUrl`, just
+  wired them into the rail.
+- **Profile** (`profile/[username]/page.tsx`, `58ea2c4`) — rail shown,
+  nothing highlighted. This page shows *anyone's* profile, so it needed
+  a separate `viewerUsername`/`viewerAvatarUrl` fetch distinct from the
+  `profile` state (which is whoever's page is being viewed).
+- **Group chat/channels** (`group/[conversationId]/page.tsx`, `615ae5e`)
+  — rail active on "Chat" (reached from the Chat page). This one nests
+  three levels deep now — server rail → the group's own channel
+  sidebar → channel content — which is genuinely Discord's own layout
+  pattern, not just a visual reference to it.
+- **Individual broadcast channel** (`broadcast/[username]/page.tsx`,
+  `e658b05`) — rail active on "Broadcasts". Same viewer-vs-subject
+  profile split as the Profile page above.
+
+**Deliberately skipped:** `watch-together/shorts/[roomId]/page.tsx` —
+this is a full-screen immersive video-room player (`height: 100vh`,
+black background, `overflow: hidden`), not a browsing/listing page.
+Neither Discord (voice/video calls) nor Instagram (Reels player) keeps
+persistent nav chrome over an immersive video surface, and adding the
+rail here would just clutter the watch-party experience. Every other
+page under `app/kalpana-circle/` now has the rail.
+
+**Verification, every page:** `tsc --noEmit` clean, `eslint` produced 0
+new errors/warnings (only pre-existing, unrelated warnings on a few
+files — noted per-commit). `next build` continues to fail only on
+Google Fonts fetch in this sandbox, unrelated to any of this work.
+
+KaTube and every other MANGAL surface were untouched throughout this
+entire rollout, per the founder's explicit "K Circle only" instruction.
