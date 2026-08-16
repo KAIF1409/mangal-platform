@@ -3526,3 +3526,56 @@ needed, just implementation.
   established.
 - Boost, Academy, Nova, Tools are still untouched — next up per §43's
   stated order (Boost next).
+
+## §47 — §43 complete: Boost, Academy, Nova, Tools retrofitted — all 7 tabs done
+
+**Status: §43 fully implemented.** All seven `/dashboard` tabs now use the
+shared `ProductScopeSwitcher` and render per-product content/data as
+decided in §43. Order followed: Perks and Boost (§46, this session) →
+Academy → Nova → Tools (this section). Workspace and Earnings were done
+in §44/§45 in an earlier session.
+
+**Boost** (`app/dashboard/boost/page.tsx`): still no real promotion
+backend for any product (all buttons remain disabled "Coming Soon", same
+as before) — this pass adds real per-product option sets/copy instead of
+one WebMangal-only list: KaTube gets Shorts Spotlight / Subscriber Push /
+Tag Boost / Cross-Promo; Kalpana Circle gets Pinned Post / Broadcast
+Shoutout / Tag Boost / Cross-Promo. Same shape as the WebMangal originals,
+reworded per product's actual surfaces.
+
+**Academy** (`app/dashboard/academy/page.tsx`): was 100% WebMangal
+articles despite being flagged "naturally cross-product" in §43. Added
+real KaTube articles (channel verification, Shorts hooks) and Kalpana
+Circle articles (posting a first theory, starting a discussion), plus two
+`universal` articles that show regardless of scope. "All" shows
+everything; a specific scope shows that product's articles + universal.
+
+**Nova** (`app/dashboard/nova/page.tsx`): same gap as Academy — the
+suggestion chips and input placeholder were entirely WebMangal-worded.
+Added KaTube suggestions (video description drafts, thumbnail ideas) and
+Kalpana Circle suggestions (post drafts, reply ideas), kept 2 universal
+ones (analytics explainer, tag suggestions). Still fully stubbed — no AI
+backend wired up for any product, per-scope placeholder text only.
+
+**Tools** (`app/dashboard/tools/page.tsx`): the one tab where getting hrefs
+right actually matters, since two of WebMangal's tools are live links, not
+stubs. Added real live tools for the other two products pointing at
+already-shipped routes — KaTube: Video Uploader → `/katube/upload`,
+Channel Dashboard → `/katube/dashboard`. Kalpana Circle: Compose a Post →
+`/kalpana-circle` (compose is inline on the feed, no separate route),
+Saved Posts → `/kalpana-circle/saved`. No new routes created — this only
+surfaces existing pages as "tools." Non-live utility tools (word counter,
+auto-captions, translation helper, release scheduler) kept as SOON per
+product.
+
+**Verification:** every file above passed `tsc --noEmit` and `eslint`
+clean (only the same pre-existing `user` unused-var warning every
+`/dashboard/*` tab already had, from the auth-gate `useEffect` pattern —
+not a regression).
+
+**Not done / left open:**
+- The real 10% Ecosystem Bonus math from §46 is still copy-only.
+- No tab has real backend wiring beyond what already existed (Workspace,
+  Earnings' Performance half). Boost, Nova's AI, and most Tools remain
+  intentionally stubbed pending their own separate build-out — §43 was
+  scoped to the *shell/switcher* retrofit, not to building those features.
