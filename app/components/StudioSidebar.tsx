@@ -16,6 +16,7 @@ import {
   Inbox,
   MessageCircle,
   ShoppingBag,
+  Bot,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
 const BOTTOM_ITEMS: NavItem[] = [
   { href: '/dashboard/nova', label: 'Nova', icon: Sparkles, hasArrow: true },
   { href: '/dashboard/tools', label: 'Tools', icon: Wrench, hasArrow: true },
+  { href: '/dashboard/ai-tools', label: 'AI Toolkit', icon: Bot },
 ];
 
 function useClock() {
