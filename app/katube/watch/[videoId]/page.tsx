@@ -8,6 +8,7 @@ import ThemeToggle from '../../../components/ThemeToggle';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/authRedirect';
 import { Users, ThumbsUp, BookOpen, Star, ArrowLeft } from 'lucide-react';
+import { AddToPlaylistButton } from '../../components/VideoGridCard';
 
 // ── KaTube — Step 3: watch page ──
 // Clicking a video card on /katube now opens this page, which loads the
@@ -624,6 +625,7 @@ export default function KaTubeWatchPage() {
                   >
                     <ThumbsUp size={14} fill={liked ? '#f97316' : 'none'} /> {video.likes.toLocaleString()}
                   </button>
+                  {userId && <AddToPlaylistButton videoId={video.id} userId={userId} />}
                 </div>
 
                 {video.basedOn && (
