@@ -173,8 +173,9 @@ any of the tables/columns/policies below):
 - `videos.is_collab` (boolean) + `videos.collab_writer_id` (uuid, nullable FK to
   `auth.users`) — the Tier 1/Tier 2 distinction.
 
-Not built yet: Phase 2 UI (voting + scoring job), Phase 3
-(writer-of-the-month job).
+Phase 2 (build steps 1-5, minus the anti-abuse trigger which was already
+part of the phase2_functions reconciliation) is DONE — see §0d-iii below.
+Not built yet: Phase 3 (writer-of-the-month job).
 
 ### 0d-ii. Phase 1 — DONE
 
@@ -214,12 +215,70 @@ Not built yet: connection link for `audience` cards falls back to the post
 author's Kalpana Circle profile — there's no single-post permalink route in
 this codebase yet, so it can't deep-link to the exact post itself.
 
+### 0d-iii. Phase 2 — DONE
+
+Schema/functions (build steps 1/3/4/5's SQL) were applied live via
+Supabase MCP in an earlier session but never committed as migration files
+or logged here — found and reconciled in commit `3b75173` as
+`supabase/migrations/20260816154647_unique_for_mangal_phase2_schema.sql`
+(`weekly_rankings.prize_note`, `video_votes.reason_tags` vocab check) and
+`20260816154710_unique_for_mangal_phase2_functions.sql`
+(`video_votes_enforce_min_account_age()` trigger, `snapshot_weekly_top20()`,
+`finalize_weekly_rankings()`, `get_mangal_of_the_week()`) — content
+verified against the live DB before writing, so these are no-ops on
+re-apply, not duplicate changes.
+
+Build steps 2/4 (the actual missing pieces) shipped this session:
+- **Voting UI** — `app/kalpana-circle/mangal-of-the-week/page.tsx`. Shows
+  the current week's top-20 pool (`weekly_rankings` for the current week,
+  joined to `videos`/`creator_profiles`), lets a signed-in reader pick one
+  video, tag reasons (Editing/Sound/Story/Voice/Animation via the
+  `REASON_TAGS` picker) with an optional comment, and cast one vote —
+  mirrors the DB's one-vote-per-week unique constraint and 24h
+  min-account-age trigger client-side so the UI never lets someone try a
+  blocked action, rather than relying on the DB error alone. Also shows
+  last week's Top 5 (`get_mangal_of_the_week()`) with prize-note display.
+  Same simple back-arrow header pattern as `broadcasts`/`saved`, not the
+  full desktop-rail `Shell.tsx` shell.
+- **Nav wiring** — `Shell.tsx` (desktop rail) and
+  `app/kalpana-circle/page.tsx` (mobile bottom tab bar) both got a Trophy
+  icon linking to the voting page.
+- **Admin controls** — `app/admin/mangal-of-the-week/page.tsx` (+ layout),
+  same developer-role-gated pattern as `/admin/mangal-ideas`. Snapshot
+  button (`snapshot_weekly_top20()`, current week) shows the resulting
+  pool; Finalize button (`finalize_weekly_rankings()`, previous week)
+  scores + ranks it; a grouped-by-week list of past Top 5s with an inline
+  prize-note editor per row (direct `weekly_rankings` update, covered by
+  the existing `weekly_rankings_admin_write` RLS policy — no new RPC
+  needed for this one).
+- **KaTube home banner** — `app/katube/components/MangalOfTheWeekBanner.tsx`.
+  Self-contained, "returns null when empty" component (same pattern as
+  `MangalIdeasRow`/`ContinueWatchingRow`) spotlighting the current #1
+  video with its prize note, linking out to the full Top 5 on the K
+  Circle page. Rendered on KaTube home, above Mangal Ideas.
+- **Winner badges** — `VideoGridCard.tsx` exports a new `MangalWeekBadge`
+  (gold "#1 this week" pill for rank 1, plainer pill for #2-5), rendered
+  via the card's existing `badge` prop wherever a video_id→rank map says
+  a video is in the current Top 5: KaTube home's grid + New Voices row
+  (`app/katube/page.tsx`, fetches the map once per page load from
+  `get_mangal_of_the_week()`) and each creator's channel page
+  (`app/katube/channel/[username]/page.tsx`, same fetch pattern).
+- **Creator-profile badge** — same channel page also shows a "Mangal of
+  the Week" flair next to the verified badge in the profile header when
+  that creator is credited (as solo creator or Tier 1 collab writer) on
+  any current Top 5 video.
+
+Not built yet: no scheduled job for snapshot/finalize (same "admin
+triggers it manually" pattern as Phase 1's Mangal Ideas refresh — a real
+weekly cron is a follow-up, not blocking).
+
 ### 0e. Not decided yet / outside this section's scope
 - Exact scoring weights (W1/W2/W3) — tune once real vote/view data exists
 - Prize money amounts/currency and cadence of manual payout — founder decision,
   not a code concern
-- Whether Tier 1's "priority boost" is a flat bonus or a multiplier — pick during
-  Phase 2 implementation
+- Whether Tier 1's "priority boost" is a flat bonus or a multiplier — **decided**
+  during Phase 2 implementation: flat +15% multiplier (`tier1_bonus` in
+  `finalize_weekly_rankings()`), not a flat additive bonus.
 
 ---
 
