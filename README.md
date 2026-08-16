@@ -109,6 +109,18 @@ audience growth first — grow readers and viewers, then turn on ways to earn.
 - **Anime fans** who want to discover original AI-made anime content and talk
   about it with a community, instead of just watching pirated clips.
 
+## Development
+
+```bash
+npm install
+cp .env.example .env.local   # fill in real values
+npm run dev
+```
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the pre-commit checks, and
+[`docs/REPO_STRUCTURE.md`](docs/REPO_STRUCTURE.md) for how the codebase is
+organized.
+
 ## Who built it
 
 Built solo — design, backend, and frontend all handled by one person —

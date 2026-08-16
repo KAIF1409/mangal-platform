@@ -5090,3 +5090,34 @@ initial-scale=1` applies uniformly; no page anywhere in this repo
 overrides it, so this isn't a K-Circle-specific gap).
 
 **Verified:** `tsc --noEmit` clean; `eslint` clean on the touched file.
+
+## §70 — Repo structure: Phase A (additive scaffolding)
+
+Founder asked to bring the repo up to "standard/top-company" structure.
+Researched current (2026) Next.js App Router structure conventions: routes
+stay in `app/`, everything else (`components/`, `lib/`) moves under a
+sibling `src/` tree grouped by domain, not left flat.
+
+`app/lib` (16 files) and `app/components` (18 files) are both flat with
+mixed concerns, and are imported from ~100+ route files across all three
+products — moving them in one blind commit with no way to run a full
+`next build` in this sandbox (Google Fonts fetch fails here, noted
+earlier) is exactly how you break the live Vercel deploy silently. Split
+the work into phases instead; this commit is Phase A only, **nothing
+moved, nothing renamed** — purely additive:
+
+- `.env.example` — every `process.env.*` actually referenced in the
+  codebase, enumerated via grep, not guessed.
+- `.github/workflows/ci.yml` — runs `tsc --noEmit` + `eslint` on every
+  push/PR to `main`.
+- `CONTRIBUTING.md` — local setup, pre-commit checks, migration-file
+  convention.
+- `docs/REPO_STRUCTURE.md` — current-state audit, target structure, and
+  the phased plan (B: move `app/`→`src/app/` as a pure directory move;
+  C: split `lib/` into `auth/`/`payments/`/`media/`/`compliance/`,
+  one domain at a time; D: same for `components/`, grouped by product
+  plus a `shared/` folder) — each phase its own verified commit.
+- README: added a "Development" section pointing to both.
+
+**Verified:** `tsc --noEmit` clean, `eslint` clean (no files touched that
+affect either check — this pass added new files only).
