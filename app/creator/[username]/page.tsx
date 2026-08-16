@@ -279,6 +279,16 @@ export default function CreatorProfilePage() {
               <h1 className="mangal-creator-name" style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 @{creator.username}
                 {creator.verified_youtube_channel_id && <VerifiedBadge size={18} />}
+                {isWriterOfMonth && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', fontWeight: 800,
+                    color: '#a78bfa', background: 'rgba(167,139,250,0.14)',
+                    border: '1px solid rgba(167,139,250,0.4)',
+                    padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
+                  }}>
+                    <PenLine size={11} strokeWidth={2.5} />Writer of the Month
+                  </span>
+                )}
               </h1>
               {!accountActive && (
                 <span style={{
