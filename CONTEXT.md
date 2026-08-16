@@ -117,6 +117,31 @@ Phase 2's scoring logic, so it's fast once Phase 2 exists).
 - Reason-tag/comment field should be moderated the same way other Kalpana
   Circle comments are (existing moderation pattern, no new system needed)
 
+### 0d-i. Phase 0 — DONE (applied live)
+
+Shipped as `supabase/migrations/20260816230000_unique_for_mangal_phase0_foundations.sql`
+(applied live via Supabase MCP, `get_advisors` checked clean — no new warnings on
+any of the tables/columns/policies below):
+
+- `mangal_ideas` — `type` (`company`/`story_demand`), `series_id`, `title`,
+  `description`, `created_by`. Public read; admin-only write via the same
+  `EXISTS (profiles me ... role = 'developer')` pattern already used for
+  `"Admin can update profiles"`.
+- `weekly_rankings` — `week_start_date`, `video_id`, `tier`, `votes_count`,
+  `views_snapshot`, `final_score`, `rank`. Unique on `(week_start_date, video_id)`.
+  Public read; admin-only write.
+- `video_votes` — `user_id`, `video_id`, `week_start_date`, `reason_tags[]`,
+  `comment`. **Unique on `(user_id, week_start_date)`** — the anti-abuse
+  one-vote-per-week constraint. Own-row read/insert only, no update/delete
+  policy (a cast vote is locked in).
+- `monthly_writer_awards` — `month`, `series_id`, `writer_id`, `score`, `rank`.
+  Unique on `(month, series_id)`. Public read; admin-only write.
+- `videos.is_collab` (boolean) + `videos.collab_writer_id` (uuid, nullable FK to
+  `auth.users`) — the Tier 1/Tier 2 distinction.
+
+Not built yet: Phase 1 UI (Mangal Ideas feed), Phase 2 UI (voting + scoring
+job), Phase 3 (writer-of-the-month job). Foundations only.
+
 ### 0e. Not decided yet / outside this section's scope
 - Exact scoring weights (W1/W2/W3) — tune once real vote/view data exists
 - Prize money amounts/currency and cadence of manual payout — founder decision,
