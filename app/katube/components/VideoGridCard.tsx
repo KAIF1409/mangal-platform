@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ListPlus, Plus, Check } from 'lucide-react';
+import { BookOpen, ListPlus, Plus, Check, Trophy } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 // Shared card used by the new §28a pages (Subscriptions, Trending,
@@ -35,6 +35,26 @@ export function timeAgo(dateStr: string): string {
   const weeks = Math.floor(days / 7);
   if (weeks < 5) return `${weeks}w ago`;
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+// Phase 2 "Unique for Mangal" (CONTEXT.md §0c) — small reusable trophy
+// pill for a video that landed in the most recently finalized week's Top
+// 5 (get_mangal_of_the_week()). Rank 1 gets the gold treatment, 2-5 get a
+// plainer badge — same "rank 1 is special" convention already used on the
+// Mangal of the Week page itself. Pass this into VideoGridCard's `badge`
+// prop, or render it inline wherever a rank number is known.
+export function MangalWeekBadge({ rank }: { rank: number }) {
+  const gold = rank === 1;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 800,
+      color: gold ? '#27272a' : '#f59e0b', background: gold ? '#f59e0b' : 'rgba(245,158,11,0.14)',
+      border: gold ? 'none' : '1px solid rgba(245,158,11,0.4)',
+      padding: '3px 8px', borderRadius: '20px', whiteSpace: 'nowrap', backdropFilter: 'blur(4px)',
+    }}>
+      <Trophy size={10} strokeWidth={2.5} />#{rank} this week
+    </span>
+  );
 }
 
 export default function VideoGridCard({ video, badge }: { video: GridVideo; badge?: React.ReactNode }) {

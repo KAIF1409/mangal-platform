@@ -8,6 +8,8 @@ import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from './components/NotificationBell';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
 import MangalIdeasRow from './components/MangalIdeasRow';
+import MangalOfTheWeekBanner from './components/MangalOfTheWeekBanner';
+import { MangalWeekBadge } from './components/VideoGridCard';
 import { supabase } from '../lib/supabase';
 import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -378,7 +380,7 @@ function RealShortCard({ short }: { short: RealShort }) {
   );
 }
 
-function RealVideoCard({ video }: { video: RealVideo }) {
+function RealVideoCard({ video, winnerRank }: { video: RealVideo; winnerRank?: number }) {
   const [hover, setHover] = useState(false);
   const router = useRouter();
   return (
@@ -410,6 +412,11 @@ function RealVideoCard({ video }: { video: RealVideo }) {
               background: 'rgba(255,255,255,0.92)', display: 'flex',
               alignItems: 'center', justifyContent: 'center', fontSize: '18px',
             }}>▶️</div>
+          </div>
+        )}
+        {winnerRank && (
+          <div style={{ position: 'absolute', bottom: '8px', right: '8px' }}>
+            <MangalWeekBadge rank={winnerRank} />
           </div>
         )}
       </div>
@@ -487,6 +494,20 @@ export default function KaTubePage() {
   // avatar with no name, same as before this change.
   const [userName, setUserName] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  // Phase 2 "Unique for Mangal" (CONTEXT.md §0c) — video_id -> rank map
+  // for the most recently finalized week's Top 5, so RealVideoCard can
+  // show a trophy badge on winning videos wherever they appear in the
+  // grid (Home, New Voices row, etc). Same RPC the K Circle voting page
+  // and the KaTube home banner both read, so all three stay in sync.
+  const [weeklyWinnerRanks, setWeeklyWinnerRanks] = useState<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.rpc('get_mangal_of_the_week');
+      if (!data) return;
+      setWeeklyWinnerRanks(new Map((data as { video_id: string; rank: number }[]).map(w => [w.video_id, w.rank])));
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -981,6 +1002,12 @@ export default function KaTubePage() {
           Top section per the spec, public (no userId gate) since company/
           story-demand/audience cards are all public-read; the component
           itself returns null when the feed is empty. */}
+      {/* Mangal of the Week — §0/Phase 2 "Unique for Mangal" (CONTEXT.md
+          §0c). Spotlight banner for the most recently finalized week's #1
+          video. Home-only, public (no userId gate), self-contained
+          "returns null when empty" component like MangalIdeasRow. */}
+      {activeSidebar === 'home' && <MangalOfTheWeekBanner />}
+
       {activeSidebar === 'home' && <MangalIdeasRow userId={userId} />}
 
       {/* Continue Watching — §28a, only rendered on Home for a signed-in
@@ -1002,7 +1029,7 @@ export default function KaTubePage() {
         <div style={{ maxWidth: '1200px', margin: '0 auto 28px', padding: '0 20px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 14px', letterSpacing: '-0.02em' }}>New Voices</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-            {newVoices.map(v => <RealVideoCard key={v.id} video={v} />)}
+            {newVoices.map(v => <RealVideoCard key={v.id} video={v} winnerRank={weeklyWinnerRanks.get(v.id)} />)}
           </div>
         </div>
       )}
@@ -1067,7 +1094,7 @@ export default function KaTubePage() {
               padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
               display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px',
             }}>
-              {sortedVideos.map(v => <RealVideoCard key={v.id} video={v} />)}
+              {sortedVideos.map(v => <RealVideoCard key={v.id} video={v} winnerRank={weeklyWinnerRanks.get(v.id)} />)}
             </div>
           )}
         </>
