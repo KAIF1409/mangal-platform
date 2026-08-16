@@ -175,7 +175,7 @@ any of the tables/columns/policies below):
 
 Phase 2 (build steps 1-5, minus the anti-abuse trigger which was already
 part of the phase2_functions reconciliation) is DONE — see §0d-iii below.
-Not built yet: Phase 3 (writer-of-the-month job).
+Phase 3 (writer-of-the-month job) is now also DONE — see §0d-iv below.
 
 ### 0d-ii. Phase 1 — DONE
 
@@ -271,6 +271,70 @@ Build steps 2/4 (the actual missing pieces) shipped this session:
 Not built yet: no scheduled job for snapshot/finalize (same "admin
 triggers it manually" pattern as Phase 1's Mangal Ideas refresh — a real
 weekly cron is a follow-up, not blocking).
+
+### 0d-iv. Phase 3 — DONE
+
+Schema addition (`monthly_writer_awards.prize_note`, mirroring
+`weekly_rankings.prize_note`) plus the finalize + read functions were
+applied live via Supabase MCP and committed as
+`supabase/migrations/20260816250000_unique_for_mangal_phase3.sql`.
+
+- **`finalize_monthly_writer_awards(p_month date default null)`** —
+  developer-only, defaults to finalizing the previous calendar month (same
+  "finalize the period that just ended" default as
+  `finalize_weekly_rankings()`). Reuses Phase 2's scoring rather than
+  recomputing votes/views/likes from scratch: sums each writer's Tier 1
+  (collab) videos' already-finalized `weekly_rankings.final_score` for
+  weeks falling in the target month, grouped by `videos.collab_writer_id`.
+  Since `monthly_writer_awards` still needs one `series_id` per writer
+  (not-null FK, unique with `month`), the writer's single
+  highest-scoring series that month is stored as the representative
+  credit — the rank itself is by the writer's *summed* score across all
+  their collab series, not any one series' score alone. Upserts on
+  `(month, series_id)`, then ranks by score within the month.
+- **`get_writer_of_the_month()`** — read helper, same
+  aggregate-output-only pattern as `get_mangal_of_the_week()`. Only ever
+  returns the single `rank = 1` row for the most recently finalized
+  month (unlike the weekly version's top 5 — the spec here is "top
+  writer gets a badge," singular).
+- **Admin controls** — new "Writer of the Month" section appended to
+  `/admin/mangal-of-the-week` (same page, same developer-role gate,
+  rather than a separate admin route — it's one page-load, two related
+  admin controls). Finalize button; past-months list grouped by month
+  with an inline prize-note editor per row, same direct-table-update
+  pattern as the weekly section's prize notes (no new RPC needed, covered
+  by the existing `monthly_writer_awards_admin_write` RLS policy).
+- **KaTube home banner** — `app/katube/components/WriterOfTheMonthBanner.tsx`,
+  same "returns null when empty" self-contained pattern as
+  `MangalOfTheWeekBanner`/`MangalIdeasRow`. Rendered on KaTube home,
+  between the weekly banner and Mangal Ideas. Links to the writer's
+  `/creator/[username]` profile (falls back to the K Circle page if no
+  username).
+- **Kalpana Circle announcement** — added to the existing
+  `/kalpana-circle/mangal-of-the-week` page (not a separate route) as a
+  block between "Last week's Top 5" and the weekly voting section.
+- **Writer-profile badge** — `/creator/[username]/page.tsx` fetches
+  `get_writer_of_the_month()` once on load and compares `writer_id` to
+  the profile being viewed (same "read the RPC once, compare to this
+  profile's id" pattern as the KaTube channel page's `bestOwnRank`
+  check), rendering a purple "Writer of the Month" pill next to the
+  verified badge when it matches.
+
+**Verified:** all five touched/new files parse cleanly (babel parser
+check — `tsc`/`eslint` skipped per this repo's containerized-environment
+convention). `get_advisors` (security) run after applying the migration —
+`finalize_monthly_writer_awards`/`get_writer_of_the_month` show the same
+`anon`/`authenticated`-can-execute `SECURITY DEFINER` WARNs every other
+RPC in this codebase already has (each guards itself internally —
+`finalize_*` checks the caller's role and raises if not `developer`,
+`get_*` is a read-only aggregate) — not a new class of issue.
+
+**Not done:** no scheduled job for the monthly finalize either (same
+manual-trigger pattern as Phases 1/2 — a real cron is a follow-up across
+all three, not blocking); no UI surfacing a writer's *history* of past
+monthly wins beyond the admin page's list (a "past winners" reader-facing
+view like the weekly Top 5 history would be a natural follow-up if this
+gets used).
 
 ### 0e. Not decided yet / outside this section's scope
 - Exact scoring weights (W1/W2/W3) — tune once real vote/view data exists
@@ -4801,3 +4865,29 @@ leaving it in that pre-existing backlog.
 changes back to reader (participants table isn't pruned automatically) —
 low-risk edge case (nothing sensitive lives in the room), flagged rather
 than silently ignored.
+
+## §64 — §0 Phase 3: WebMangal Writer of the Month (DONE)
+
+**Picked as the top-priority item per §0's standing rule** ("do not pick
+up other backlog items until the phases in §0 are done") — Phases 0-2
+were already DONE, Phase 3 was the only piece left in that highest-priority
+category.
+
+Full detail is in §0d-iv above rather than duplicated here, since §0 is
+the canonical spec/status section for "Unique for Mangal." Short version:
+`finalize_monthly_writer_awards()` sums each writer's Tier 1 collab
+videos' finalized weekly scores for the month (reusing Phase 2's scoring,
+not recomputing it) and ranks; `get_writer_of_the_month()` reads back the
+current #1; the admin page, KaTube home banner, K Circle announcement,
+and writer-profile badge all shipped this session.
+
+**Not done:** scheduled cron for the monthly finalize (same manual-trigger
+gap as Phases 1/2); a reader-facing "past winners" history view for
+writers (only the admin page shows past months right now).
+
+With Phase 3 done, **all of §0's phases (0-3) are now complete** — the
+"do not pick up other backlog items until §0 is done" rule from §0's
+header no longer blocks picking from §4/other backlog sections in future
+sessions, though §0e's still-open decisions (scoring weights, prize
+amounts, cron scheduling) remain open follow-ups within "Unique for
+Mangal" itself.
