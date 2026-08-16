@@ -587,7 +587,12 @@ function KalpanaCircleInner() {
   const closeSearch = () => { setShowSearch(false); setSearchQuery(''); setUserResults([]); setPostResults([]); };
 
   const navHref = (path: string) => (userId ? path : `/login?next=${encodeURIComponent(path)}`);
-  const profileHref = userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle';
+  // Logged-in users with no creator_profiles row yet (no username set) used
+  // to fall back to '/WebMangal/home' here — that's the "I logged into
+  // K Circle and got dropped on WebMangal" bug. Send them to K Circle's own
+  // settings page instead (it already handles a missing profile row
+  // gracefully), so they never leave the product they logged in from.
+  const profileHref = userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/kalpana-circle/settings') : '/login?next=/kalpana-circle';
 
   return (
     <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' } as CSSProperties} className="kc-page">
@@ -1193,7 +1198,7 @@ function KalpanaCircleInner() {
         <Link href={navHref('/kalpana-circle/watch-together')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Clapperboard size={20} /></Link>
         <Link href={navHref('/kalpana-circle/broadcasts')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Megaphone size={20} /></Link>
         <Link href={navHref('/kalpana-circle/saved')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Bookmark size={20} /></Link>
-        <Link href={userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle'} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><User size={20} /></Link>
+        <Link href={profileHref} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><User size={20} /></Link>
       </div>
     </div>
   );

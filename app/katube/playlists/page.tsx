@@ -56,7 +56,7 @@ export default function PlaylistsPage() {
       {signedIn === false ? (
         <div style={{ maxWidth: '600px', margin: '40px auto', padding: '18px 22px', borderRadius: '12px', background: '#0d0d14', border: '1px dashed rgba(255,255,255,0.18)', textAlign: 'center' }}>
           <p style={{ fontSize: '12.5px', color: '#9ca3af', margin: 0 }}>
-            Sign in to build playlists. <Link href="/login" style={{ color: '#f97316', fontWeight: 700 }}>Sign in</Link>
+            Sign in to build playlists. <Link href="/login?next=/katube/playlists" style={{ color: '#f97316', fontWeight: 700 }}>Sign in</Link>
           </p>
         </div>
       ) : (

@@ -56,7 +56,7 @@ export default function SubscriptionsFeedPage() {
     <KaTubeShell title="Subscriptions">
       {signedIn === false ? (
         <EmptyNote>
-          Sign in to see new uploads from the creators you follow. <Link href="/login" style={{ color: '#f97316', fontWeight: 700 }}>Sign in</Link>
+          Sign in to see new uploads from the creators you follow. <Link href="/login?next=/katube/subscriptions" style={{ color: '#f97316', fontWeight: 700 }}>Sign in</Link>
         </EmptyNote>
       ) : loading ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280', fontSize: '13px' }}>Loading…</div>

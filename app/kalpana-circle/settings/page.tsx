@@ -127,7 +127,11 @@ export default function KCircleSettingsPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Link href={`/kalpana-circle/profile/${username}`} className="kcs-icon-btn" title="Back">
+          {/* username can be '' for a logged-in user who has no
+              creator_profiles row yet — /kalpana-circle/profile/ (empty)
+              is a broken link, so fall back to the K Circle feed instead
+              of assuming a profile page exists to go back to. */}
+          <Link href={username ? `/kalpana-circle/profile/${username}` : '/kalpana-circle'} className="kcs-icon-btn" title="Back">
             <ArrowLeft size={22} />
           </Link>
           <span style={{ fontWeight: 800, fontSize: '16px' }}>Settings</span>
