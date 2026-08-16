@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ThemeToggle from '../components/ThemeToggle';
 import { useKCircleTheme, KC_DARK_VARS } from './theme';
 import NotificationBell from '../components/NotificationBell';
+import { KCircleShellStyle, KCircleRail } from './components/Shell';
 import { supabase } from '../lib/supabase';
 import { setPostLoginRedirect } from '../lib/authRedirect';
 import {
@@ -647,100 +648,23 @@ function KalpanaCircleInner() {
           .kc-katube-badge-text { display: none; }
           .kc-katube-badge { padding: 7px 8px !important; }
         }
-
-        /* ── Desktop shell: Discord-style icon rail (left) + Instagram-style
-           feed (center) + Discord-style "active members" panel (right).
-           Mobile stays exactly the top-header + bottom-tab-bar layout above
-           (kc-shell just falls back to display:block, rail/right-panel/
-           channel-header all hidden) — nothing here touches mobile. */
-        .kc-shell { display: block; }
-        .kc-rail { display: none; }
-        .kc-right-panel { display: none; }
-        .kc-channel-header { display: none; }
-        @media (min-width: 768px) {
-          .kc-shell { display: grid; grid-template-columns: 78px 1fr; align-items: start; }
-          .kc-rail {
-            display: flex; flex-direction: column; align-items: center;
-            position: sticky; top: 0; height: 100vh; padding: 16px 0 20px;
-            background: var(--bg-card); border-right: 1px solid var(--border-color);
-            overflow-y: auto; scrollbar-width: none;
-          }
-          .kc-rail::-webkit-scrollbar { display: none; }
-          .kc-channel-header { display: flex; }
-        }
-        @media (min-width: 1180px) {
-          .kc-shell { grid-template-columns: 78px 1fr 300px; }
-          .kc-right-panel {
-            display: block; position: sticky; top: 0; height: 100vh;
-            overflow-y: auto; padding: 22px 20px 40px; border-left: 1px solid var(--border-color);
-          }
-        }
-        /* Discord's signature interaction: nav pills sit as circles and
-           morph into rounded squares (with an accent tint) on hover. */
-        .kc-rail-btn { transition: border-radius 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
-        .kc-rail-btn:hover { border-radius: 16px !important; background: rgba(124,58,237,0.14) !important; color: #a78bfa !important; }
       `}</style>
+      <KCircleShellStyle />
 
       <div className="kc-shell">
 
-      {/* ── DESKTOP ICON RAIL (Discord server-list pattern): app switcher up
-          top, K Circle's own nav icons in the middle, actions pinned to the
-          bottom. Icons circle→rounded-square morph on hover via .kc-rail-btn.
-          Hidden below 768px — mobile keeps its existing header + bottom tab
-          bar, untouched. ── */}
-      <aside className="kc-rail">
-        <Link href="/home" title="Back to MANGAL" className="kc-rail-btn" style={{
-          width: '46px', height: '46px', borderRadius: '14px', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', marginBottom: '10px', flexShrink: 0,
-        }}>
-          <Image src="/icon.png" alt="MANGAL" width={30} height={30} style={{ borderRadius: '9px', display: 'block' }} />
-        </Link>
-        <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '10px', flexShrink: 0 }} />
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '9px', flex: 1, minHeight: 0 }}>
-          <Link href="/kalpana-circle" title="Home feed" className="kc-rail-btn" style={{
-            width: '46px', height: '46px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(124,58,237,0.16)', border: '1px solid rgba(124,58,237,0.4)', flexShrink: 0,
-          }}>
-            <Image src="/kcircle-logo.png" alt="" width={100} height={100} style={{ width: '25px', height: '25px', objectFit: 'contain' }} />
-          </Link>
-          <Link href={navHref('/kalpana-circle/chat')} title="Chat" className="kc-rail-btn" style={{
-            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-tertiary)', flexShrink: 0,
-          }}><MessageCircle size={20} /></Link>
-          <Link href={navHref('/kalpana-circle/watch-together')} title="Watch Together" className="kc-rail-btn" style={{
-            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-tertiary)', flexShrink: 0,
-          }}><Clapperboard size={20} /></Link>
-          <Link href={navHref('/kalpana-circle/broadcasts')} title="Broadcasts" className="kc-rail-btn" style={{
-            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-tertiary)', flexShrink: 0,
-          }}><Megaphone size={20} /></Link>
-          <Link href={navHref('/kalpana-circle/saved')} title="Saved" className="kc-rail-btn" style={{
-            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-tertiary)', flexShrink: 0,
-          }}><Bookmark size={20} /></Link>
-          <button onClick={() => setShowSearch(true)} title="Search" className="kc-rail-btn" style={{
-            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0,
-          }}><Search size={19} /></button>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0, paddingTop: '10px' }}>
-          <button onClick={openPhotoComposer} title="Create post" style={{
-            width: '44px', height: '44px', borderRadius: '14px', background: RADIANT, border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#27272a',
-            fontSize: '20px', fontWeight: 900, cursor: 'pointer', flexShrink: 0,
-          }}>+</button>
-          <NotificationBell userId={userId} iconSize={20} />
-          <Link href={profileHref} title="Profile"><Avatar name={myUsername ?? 'you'} avatarUrl={myAvatarUrl} size={34} /></Link>
-          <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
-          <Link href="/katube" title="KaTube" style={{
-            width: '38px', height: '38px', borderRadius: '11px', border: '1px solid rgba(37,99,235,0.35)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '19px', width: '19px', objectFit: 'contain' }} /></Link>
-        </div>
-      </aside>
+      {/* ── DESKTOP ICON RAIL — shared component, see app/kalpana-circle/components/Shell.tsx (§56 in CONTEXT.md) ── */}
+      <KCircleRail
+        active="home"
+        userId={userId}
+        myUsername={myUsername}
+        myAvatarUrl={myAvatarUrl}
+        profileHref={profileHref}
+        navHref={navHref}
+        setIsLight={setIsLight}
+        onCreatePost={openPhotoComposer}
+        onSearch={() => setShowSearch(true)}
+      />
 
       <div className="kc-main">
 
