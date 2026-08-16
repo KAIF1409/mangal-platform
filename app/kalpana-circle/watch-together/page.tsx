@@ -7,6 +7,7 @@ import Image from 'next/image';
 import ThemeToggle from '../../components/ThemeToggle';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 import { useKCircleTheme } from '../theme';
+import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import { supabase } from '../../lib/supabase';
 import {
   Clapperboard, Crown, Zap, ChevronRight, MessageCircle, Lock, Globe, X, Paperclip,
@@ -70,6 +71,10 @@ export default function WatchTogetherPage() {
   const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
+  // Own username/avatar — this page never needed these before, but the
+  // shared K Circle rail's profile icon does (see components/Shell.tsx, §57).
+  const [myUsername, setMyUsername] = useState<string | null>(null);
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
   const [publicRooms, setPublicRooms] = useState<PublicRoom[]>([]);
   const [myRooms, setMyRooms] = useState<MyRoom[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,6 +180,9 @@ export default function WatchTogetherPage() {
       loadWatchThreads(user.id);
       const { data: pref } = await supabase.from('kcircle_watch_history_prefs').select('save_history').eq('user_id', user.id).maybeSingle();
       setSaveHistory(pref?.save_history ?? true);
+      const { data: profile } = await supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', user.id).maybeSingle();
+      setMyUsername(profile?.username ?? null);
+      setMyAvatarUrl(profile?.avatar_url ?? null);
     })();
   }, [router, loadRooms, loadWatchThreads]);
 
@@ -247,6 +255,18 @@ export default function WatchTogetherPage() {
 
   return (
     <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      <KCircleShellStyle />
+      <div className="kc-shell">
+        <KCircleRail
+          active="watch-together"
+          userId={userId}
+          myUsername={myUsername}
+          myAvatarUrl={myAvatarUrl}
+          profileHref={userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/kalpana-circle/settings') : '/login?next=/kalpana-circle'}
+          navHref={(path) => (userId ? path : `/login?next=${encodeURIComponent(path)}`)}
+          setIsLight={setIsLight}
+        />
+        <div className="kc-main">
       <div style={{
         position: 'sticky', top: 0, zIndex: 10, background: 'var(--nav-bg)', borderBottom: '1px solid var(--border-color)',
         padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -481,6 +501,8 @@ export default function WatchTogetherPage() {
       {openThreadId && userId && (
         <WatchThreadModal threadId={openThreadId} userId={userId} onClose={() => { setOpenThreadId(null); loadWatchThreads(userId); }} />
       )}
+        </div>{/* /.kc-main */}
+      </div>{/* /.kc-shell */}
     </div>
   );
 }
