@@ -3870,3 +3870,64 @@ that are linked to from all three products) was already correct and
 untouched — that mechanism is for pages that don't inherently belong to
 one product, which is a different problem from a product page's own
 internal nav hardcoding `/`.
+
+## §54 — §28a: KaTube-only viewer features shipped (playlists, subscriptions feed, notifications, continue watching, autoplay, trending, search+filters)
+
+Implemented the full §28a backlog item — viewer features that only need
+`videos`/`creator_follows` and no K Circle dependency. Founder gave the
+explicit go-ahead for this despite the §31 feature-freeze entry (discovery-
+layer work paused pending a 50-creator target); noting that here so the
+freeze note isn't misread as still fully in effect.
+
+**Schema** (`20260816140000_katube_viewer_features.sql`,
+`20260816180000_katube_video_duration.sql`):
+- `katube_playlists` / `katube_playlist_videos` — viewer-built playlists,
+  video-ID references only (zero-hosting rule, §2), owner-scoped RLS.
+- `katube_watch_progress` — one row per (viewer, video), viewer-only read,
+  upserted from the IFrame Player API's `getCurrentTime()`.
+- `katube_notifications` — new-upload alerts, same actor-inserts-for-
+  recipient trust model as `kcircle_notifications` (§14), no DB trigger.
+- `videos.duration_seconds` — real length pulled from YouTube's
+  `contentDetails.duration` at upload time (zero extra API quota, same
+  call as the existing §6b moderation check), backing the duration filter.
+
+**Shipped:**
+- **Playlists** — `/katube/playlists` (create/list) and
+  `/katube/playlists/[id]` (view/remove), plus a "Save to playlist"
+  popover wired into the watch page next to Like.
+- **Subscriptions feed** — `/katube/subscriptions`, filtered view over
+  `creator_follows` + `videos`, no new table.
+- **Notification bell** — top nav, unread badge, mark-all-read, follower
+  fan-out inserted server-side right after a successful upload
+  (`app/api/katube/upload/route.ts`), best-effort/non-blocking.
+- **Continue Watching** — row on KaTube home (signed-in only, hidden
+  entirely if nothing in progress), resume seek wired into the watch page
+  player.
+- **Autoplay Next / Up Next** — toggle under the player (default on), 5s
+  countdown-to-next overlay using the existing tag-based `recommended`
+  list, "Cancel"/"Play now" controls. Added the required autoplay
+  disclosure line to `/privacy` per §28c's YouTube API Services policy
+  note (playback data now shares with YouTube on page load, not just on
+  interaction).
+- **Pure Trending page** — `/katube/trending`, global (not series-
+  anchored, distinct from §8's tag-based Up Next), ranked by a Reddit-
+  "hot"-style recency-decayed score rather than a raw views sort.
+- **Better search + filters** — search bar (was visual-only, §22
+  follow-up) now filters by title/creator; added duration buckets (Under
+  4 min / 4–20 min / Over 20 min) and upload-date buckets (Today/This
+  week/This month/This year), collapsed behind a "Filters" toggle chip so
+  they don't add two permanent rows to every tab.
+
+**Watch-page player swap:** replaced the plain `<iframe>` embed with a new
+`KaTubePlayer` component wrapping the real YouTube IFrame Player API
+(`app/katube/components/KaTubePlayer.tsx`) — this is what both Continue
+Watching (position polling) and Autoplay Next (`onStateChange` → `ENDED`)
+are built on. Typed via local casts rather than a `declare global`
+augmentation, since the Watch Together room page
+(`watch/[videoId]/room/[roomId]/page.tsx`) already declares a
+differently-shaped global `Window.YT` — redeclaring it would have
+conflicted (caught this via `tsc`, not by eye).
+
+**Not done in this pass, flagged but out of scope:** all of §28a's items
+are covered; nothing from that list deferred. §29/§30 (further backlog
+items) untouched.
