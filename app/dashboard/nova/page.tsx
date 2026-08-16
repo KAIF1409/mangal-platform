@@ -1,29 +1,61 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { PenLine, Palette, TrendingUp, Tag, Sparkles, type LucideIcon } from 'lucide-react';
+import ProductScopeSwitcher, { ProductScope } from '../../components/ProductScope';
+import { PenLine, Palette, TrendingUp, Tag, Sparkles, Clapperboard, MessageCircle, type LucideIcon } from 'lucide-react';
 
 import { setPostLoginRedirect } from '../../lib/authRedirect';
+
+// Nova retrofit per CONTEXT.md §43 — flagged as "naturally cross-product,
+// barely needs the switcher" since AI help isn't WebMangal-only in spirit.
+// Same gap as Academy: the suggestion set and placeholder copy were 100%
+// WebMangal-worded before this change. Adds real KaTube/Kalpana Circle
+// suggestions and a light product filter, still fully "coming soon"
+// (no AI backend wired up yet for any product).
+
 interface Suggestion {
   icon: LucideIcon;
   title: string;
   desc: string;
+  product: 'webmangal' | 'katube' | 'kcircle' | 'universal';
 }
 
 const SUGGESTIONS: Suggestion[] = [
-  { icon: PenLine, title: 'Draft a chapter outline', desc: 'Give Nova your plot idea and get a structured outline back.' },
-  { icon: Palette, title: 'Cover art ideas', desc: 'Describe your story and get cover concept suggestions.' },
-  { icon: TrendingUp, title: 'Explain my analytics', desc: 'Ask Nova to summarize what your reader stats mean.' },
-  { icon: Tag, title: 'Suggest tags', desc: 'Get genre and tag recommendations for better discovery.' },
+  { icon: TrendingUp, title: 'Explain my analytics', desc: 'Ask Nova to summarize what your stats mean, whatever product they\u2019re from.', product: 'universal' },
+  { icon: Tag, title: 'Suggest tags', desc: 'Get tag recommendations for better discovery.', product: 'universal' },
+
+  { icon: PenLine, title: 'Draft a chapter outline', desc: 'Give Nova your plot idea and get a structured outline back.', product: 'webmangal' },
+  { icon: Palette, title: 'Cover art ideas', desc: 'Describe your story and get cover concept suggestions.', product: 'webmangal' },
+
+  { icon: Clapperboard, title: 'Draft a video description', desc: 'Give Nova your video\u2019s plot and get a description + tags back.', product: 'katube' },
+  { icon: Palette, title: 'Thumbnail ideas', desc: 'Describe your video and get thumbnail concept suggestions.', product: 'katube' },
+
+  { icon: PenLine, title: 'Draft a discussion post', desc: 'Give Nova your theory or idea and get a post draft back.', product: 'kcircle' },
+  { icon: MessageCircle, title: 'Reply ideas for comments', desc: 'Get suggested replies to keep a discussion going.', product: 'kcircle' },
 ];
+
+const PLACEHOLDER: Record<ProductScope, string> = {
+  all: 'Ask Nova anything about your work… (coming soon)',
+  webmangal: 'Ask Nova anything about your stories… (coming soon)',
+  katube: 'Ask Nova anything about your videos… (coming soon)',
+  kcircle: 'Ask Nova anything about your posts… (coming soon)',
+};
+
+const SUB: Record<ProductScope, string> = {
+  all: 'Your creative assistant — here to help you plan, polish and promote your work.',
+  webmangal: 'Your writing assistant — here to help you plan, polish and promote your stories.',
+  katube: 'Your video assistant — here to help you plan, polish and promote your uploads.',
+  kcircle: 'Your community assistant — here to help you plan, polish and promote your posts.',
+};
 
 export default function NovaPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scope, setScope] = useState<ProductScope>('all');
 
   useEffect(() => {
     const init = async () => {
@@ -39,12 +71,17 @@ export default function NovaPage() {
     init();
   }, []);
 
+  const visibleSuggestions = useMemo(() => {
+    if (scope === 'all') return SUGGESTIONS;
+    return SUGGESTIONS.filter((s) => s.product === scope || s.product === 'universal');
+  }, [scope]);
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <Navbar />
 
       <div style={{ maxWidth: '760px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <div style={{
             width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 14px',
             background: 'linear-gradient(135deg, var(--accent), #f59e0b)',
@@ -54,8 +91,12 @@ export default function NovaPage() {
           </div>
           <h1 style={{ fontSize: '26px', fontWeight: 900, margin: '0 0 6px' }}>Nova</h1>
           <p style={{ color: 'var(--text-tertiary)', fontSize: '13px', margin: 0 }}>
-            Your writing assistant — here to help you plan, polish and promote your stories.
+            {SUB[scope]}
           </p>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <ProductScopeSwitcher value={scope} onChange={setScope} />
         </div>
 
         {loading ? (
@@ -63,7 +104,7 @@ export default function NovaPage() {
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '20px' }}>
-              {SUGGESTIONS.map((s) => (
+              {visibleSuggestions.map((s) => (
                 <div key={s.title} style={{
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                   borderRadius: '12px', padding: '16px', cursor: 'default',
@@ -81,7 +122,7 @@ export default function NovaPage() {
             }}>
               <input
                 disabled
-                placeholder="Ask Nova anything about your stories… (coming soon)"
+                placeholder={PLACEHOLDER[scope]}
                 style={{
                   flex: 1, background: 'transparent', border: 'none', outline: 'none',
                   color: 'var(--text-faint)', fontSize: '13px',
