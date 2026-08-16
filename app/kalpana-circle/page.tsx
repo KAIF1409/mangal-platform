@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense, CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense, CSSProperties } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -12,7 +12,7 @@ import { setPostLoginRedirect } from '../lib/authRedirect';
 import {
   Search, Home, MessageCircle, Clapperboard, Megaphone, Bookmark,
   X, Circle, Globe, Tag, Camera, BarChart3, Sparkles, Pin, Check,
-  Heart, User,
+  Heart, User, Users, TrendingUp,
 } from 'lucide-react';
 
 // ── K Circle — Instagram-style social layer for MANGAL ──
@@ -601,6 +601,18 @@ function KalpanaCircleInner() {
   // gracefully), so they never leave the product they logged in from.
   const profileHref = userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/kalpana-circle/settings') : '/login?next=/kalpana-circle';
 
+  // ── right-panel data — derived from state already fetched above, no
+  // extra queries. "Recently Active" uses story authors (posting a story
+  // is a real, honest recency signal, unlike a fabricated online-status
+  // list) capped at 6. "Trending Tags" counts series tags across the
+  // currently-loaded feed page, most-tagged first, also capped at 6.
+  const recentlyActive = useMemo(() => stories.slice(0, 6), [stories]);
+  const trendingTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    posts.forEach(p => { if (p.tag) counts.set(p.tag, (counts.get(p.tag) ?? 0) + 1); });
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [posts]);
+
   return (
     <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' } as CSSProperties} className="kc-page">
 
@@ -635,7 +647,102 @@ function KalpanaCircleInner() {
           .kc-katube-badge-text { display: none; }
           .kc-katube-badge { padding: 7px 8px !important; }
         }
+
+        /* ── Desktop shell: Discord-style icon rail (left) + Instagram-style
+           feed (center) + Discord-style "active members" panel (right).
+           Mobile stays exactly the top-header + bottom-tab-bar layout above
+           (kc-shell just falls back to display:block, rail/right-panel/
+           channel-header all hidden) — nothing here touches mobile. */
+        .kc-shell { display: block; }
+        .kc-rail { display: none; }
+        .kc-right-panel { display: none; }
+        .kc-channel-header { display: none; }
+        @media (min-width: 768px) {
+          .kc-shell { display: grid; grid-template-columns: 78px 1fr; align-items: start; }
+          .kc-rail {
+            display: flex; flex-direction: column; align-items: center;
+            position: sticky; top: 0; height: 100vh; padding: 16px 0 20px;
+            background: var(--bg-card); border-right: 1px solid var(--border-color);
+            overflow-y: auto; scrollbar-width: none;
+          }
+          .kc-rail::-webkit-scrollbar { display: none; }
+          .kc-channel-header { display: flex; }
+        }
+        @media (min-width: 1180px) {
+          .kc-shell { grid-template-columns: 78px 1fr 300px; }
+          .kc-right-panel {
+            display: block; position: sticky; top: 0; height: 100vh;
+            overflow-y: auto; padding: 22px 20px 40px; border-left: 1px solid var(--border-color);
+          }
+        }
+        /* Discord's signature interaction: nav pills sit as circles and
+           morph into rounded squares (with an accent tint) on hover. */
+        .kc-rail-btn { transition: border-radius 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
+        .kc-rail-btn:hover { border-radius: 16px !important; background: rgba(124,58,237,0.14) !important; color: #a78bfa !important; }
       `}</style>
+
+      <div className="kc-shell">
+
+      {/* ── DESKTOP ICON RAIL (Discord server-list pattern): app switcher up
+          top, K Circle's own nav icons in the middle, actions pinned to the
+          bottom. Icons circle→rounded-square morph on hover via .kc-rail-btn.
+          Hidden below 768px — mobile keeps its existing header + bottom tab
+          bar, untouched. ── */}
+      <aside className="kc-rail">
+        <Link href="/home" title="Back to MANGAL" className="kc-rail-btn" style={{
+          width: '46px', height: '46px', borderRadius: '14px', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', marginBottom: '10px', flexShrink: 0,
+        }}>
+          <Image src="/icon.png" alt="MANGAL" width={30} height={30} style={{ borderRadius: '9px', display: 'block' }} />
+        </Link>
+        <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '10px', flexShrink: 0 }} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '9px', flex: 1, minHeight: 0 }}>
+          <Link href="/kalpana-circle" title="Home feed" className="kc-rail-btn" style={{
+            width: '46px', height: '46px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(124,58,237,0.16)', border: '1px solid rgba(124,58,237,0.4)', flexShrink: 0,
+          }}>
+            <Image src="/kcircle-logo.png" alt="" width={100} height={100} style={{ width: '25px', height: '25px', objectFit: 'contain' }} />
+          </Link>
+          <Link href={navHref('/kalpana-circle/chat')} title="Chat" className="kc-rail-btn" style={{
+            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-tertiary)', flexShrink: 0,
+          }}><MessageCircle size={20} /></Link>
+          <Link href={navHref('/kalpana-circle/watch-together')} title="Watch Together" className="kc-rail-btn" style={{
+            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-tertiary)', flexShrink: 0,
+          }}><Clapperboard size={20} /></Link>
+          <Link href={navHref('/kalpana-circle/broadcasts')} title="Broadcasts" className="kc-rail-btn" style={{
+            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-tertiary)', flexShrink: 0,
+          }}><Megaphone size={20} /></Link>
+          <Link href={navHref('/kalpana-circle/saved')} title="Saved" className="kc-rail-btn" style={{
+            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-tertiary)', flexShrink: 0,
+          }}><Bookmark size={20} /></Link>
+          <button onClick={() => setShowSearch(true)} title="Search" className="kc-rail-btn" style={{
+            width: '46px', height: '46px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0,
+          }}><Search size={19} /></button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0, paddingTop: '10px' }}>
+          <button onClick={openPhotoComposer} title="Create post" style={{
+            width: '44px', height: '44px', borderRadius: '14px', background: RADIANT, border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#27272a',
+            fontSize: '20px', fontWeight: 900, cursor: 'pointer', flexShrink: 0,
+          }}>+</button>
+          <NotificationBell userId={userId} iconSize={20} />
+          <Link href={profileHref} title="Profile"><Avatar name={myUsername ?? 'you'} avatarUrl={myAvatarUrl} size={34} /></Link>
+          <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
+          <Link href="/katube" title="KaTube" style={{
+            width: '38px', height: '38px', borderRadius: '11px', border: '1px solid rgba(37,99,235,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '19px', width: '19px', objectFit: 'contain' }} /></Link>
+        </div>
+      </aside>
+
+      <div className="kc-main">
 
       {/* ── MOBILE NAV (Instagram mobile-web style: compact header, icons live in the bottom tab bar) ── */}
       <nav className="kc-nav-mobile" style={{
@@ -666,51 +773,30 @@ function KalpanaCircleInner() {
         </div>
       </nav>
 
-      {/* ── DESKTOP/LAPTOP NAV (Instagram-web style: full top bar with home/chat/create/profile icons, no bottom tab bar) ── */}
-      <nav className="kc-nav-desktop" style={{
+      {/* ── DESKTOP CHANNEL HEADER (Discord's "# channel-name" top strip) —
+          nav icons moved to the rail on the left, this just orients the
+          user in the current section and surfaces search. ── */}
+      <div className="kc-channel-header" style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
-        padding: '0 24px', height: '64px',
+        padding: '0 24px', height: '60px',
         alignItems: 'center', justifyContent: 'space-between', gap: '16px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: 1 }}>
-          <Link href="/kalpana-circle" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
-            <Image src="/icon.png" alt="MANGAL" width={30} height={30} style={{ display: 'block', borderRadius: '8px' }} />
-          </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            <Image src="/kcircle-logo.png" alt="K Circle" width={150} height={150} style={{ display: 'block', height: '42px', width: '42px', objectFit: 'contain' }} priority />
-            <span style={{ fontWeight: 900, fontSize: '16px', color: '#7c3aed', letterSpacing: '-0.02em' }}>Circle</span>
-          </div>
-          <button onClick={() => setShowSearch(true)} style={{
-            flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '280px',
-            fontSize: '12.5px', color: 'var(--text-tertiary)', background: 'var(--bg-card)',
-            border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 14px', cursor: 'pointer',
-          }}><Search size={14} strokeWidth={2.5} /> Search</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+          <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-faint)', flexShrink: 0 }}>#</span>
+          <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', flexShrink: 0 }}>home</span>
+          <span style={{ width: '1px', height: '18px', background: 'var(--border-color)', flexShrink: 0 }} />
+          <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            Posts, theories &amp; fan art from the Circle
+          </span>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexShrink: 0 }}>
-          <Link href="/kalpana-circle" title="Home" style={{ display: 'flex', textDecoration: 'none', color: RADIANT_SOLID }}><Home size={19} /></Link>
-          <Link href={navHref('/kalpana-circle/chat')} title="Chat" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><MessageCircle size={19} /></Link>
-          <Link href={navHref('/kalpana-circle/watch-together')} title="Watch Together" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Clapperboard size={19} /></Link>
-          <Link href={navHref('/kalpana-circle/broadcasts')} title="Broadcasts" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Megaphone size={19} /></Link>
-          <Link href={navHref('/kalpana-circle/saved')} title="Saved" style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Bookmark size={19} /></Link>
-          <button onClick={openPhotoComposer} title="Create post" style={{
-            background: RADIANT, border: 'none', width: '32px', height: '32px', borderRadius: '9px',
-            fontSize: '16px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>+</button>
-          <NotificationBell userId={userId} iconSize={19} />
-          <Link href={profileHref} title="Profile" style={{ textDecoration: 'none' }}>
-            <Avatar name={myUsername ?? 'you'} avatarUrl={myAvatarUrl} size={28} />
-          </Link>
-          <Link href="/katube" style={{
-            padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-            color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)', whiteSpace: 'nowrap',
-            display: 'flex', alignItems: 'center', gap: '5px',
-          }}><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '20px', width: '20px', objectFit: 'contain' }} />Tube</Link>
-          <ThemeToggle size={28} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
-        </div>
-      </nav>
+        <button onClick={() => setShowSearch(true)} style={{
+          flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px',
+          fontSize: '12.5px', color: 'var(--text-tertiary)', background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 14px', cursor: 'pointer',
+        }}><Search size={14} strokeWidth={2.5} /> Search</button>
+      </div>
 
       {/* ── SEARCH OVERLAY ── */}
       {showSearch && (
@@ -1191,6 +1277,77 @@ function KalpanaCircleInner() {
           </div>
         ))}
       </div>
+
+      </div>{/* /.kc-main */}
+
+      {/* ── DESKTOP RIGHT PANEL (Discord's "Active Now"/member-list pattern,
+          crossed with Instagram's account-switcher card) — only appears on
+          wide desktop (>=1180px). Built entirely from data already fetched
+          for the feed/stories above, so no extra queries. ── */}
+      <aside className="kc-right-panel">
+        {userId && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px', padding: '13px',
+            borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', marginBottom: '20px',
+          }}>
+            <Avatar name={myUsername ?? 'you'} avatarUrl={myAvatarUrl} size={40} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{myUsername ?? 'Dreamer'}</div>
+              <div style={{ fontSize: '10.5px', color: 'var(--text-tertiary)' }}>Your account</div>
+            </div>
+            <Link href={profileHref} style={{ fontSize: '11px', fontWeight: 800, color: RADIANT_SOLID, textDecoration: 'none', flexShrink: 0 }}>View</Link>
+          </div>
+        )}
+
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{
+            display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 800,
+            color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px',
+          }}><Users size={13} /> Recently Active</h3>
+          {recentlyActive.length === 0 ? (
+            <p style={{ fontSize: '11.5px', color: 'var(--text-faint)', margin: 0, lineHeight: 1.5 }}>No one has posted a story yet — be the first.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+              {recentlyActive.map(g => (
+                <div key={g.authorId} style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <Avatar name={g.username} size={30} />
+                    <span style={{
+                      position: 'absolute', bottom: '-1px', right: '-1px', width: '9px', height: '9px',
+                      borderRadius: '50%', background: GREEN, border: '2px solid var(--bg-primary)',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.username}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h3 style={{
+            display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 800,
+            color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px',
+          }}><TrendingUp size={13} /> Trending Tags</h3>
+          {trendingTags.length === 0 ? (
+            <p style={{ fontSize: '11.5px', color: 'var(--text-faint)', margin: 0, lineHeight: 1.5 }}>Tag a series in your post to start a trend.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {trendingTags.map(([tagName, count]) => (
+                <Link key={tagName} href={`/kalpana-circle?tag=${encodeURIComponent(tagName)}`} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none',
+                  padding: '8px 10px', borderRadius: '9px', background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{tagName}</span>
+                  <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-tertiary)', flexShrink: 0, marginLeft: '8px' }}>{count}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
+
+      </div>{/* /.kc-shell */}
 
       {/* ── BOTTOM TAB BAR — mobile only (Instagram mobile-web pattern); hidden on desktop via .kc-bottom-nav in the <style> block above, where the top nav's icons take over ── */}
       <div className="kc-bottom-nav" style={{
