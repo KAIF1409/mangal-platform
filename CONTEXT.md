@@ -3777,3 +3777,63 @@ existing path to get a username is the site-wide `/become-creator` flow,
 which isn't `next`-aware (always lands on `/dashboard`). This fix stops
 the wrong-product redirect; a real "create your K Circle profile" flow is
 a separate, larger piece of work.
+
+## §52 — §51 follow-up: found the REAL root cause (query param alone isn't reliable)
+
+**Founder confirmed:** §51's fix wasn't enough — WebMangal/home still came
+up "everywhere," except `/katube/dashboard`, where logging in correctly
+returns you to `/katube/dashboard`. That one working example was the key
+clue.
+
+**Root cause:** `/login`'s `nextPath` only ever read `window.location`'s
+`?next=` query string. `/katube/dashboard` (and `/katube/watch/[videoId]`)
+happened to work because they *already* did two things together: called
+`setPostLoginRedirect()` to stash the path in the
+`mangal_post_login_redirect` cookie, AND used a hard
+`window.location.href` navigation to `/login` (not `router.push`/
+`router.replace`/`<Link>`). That combination sidesteps a Next.js
+`<Link>`/client-router prefetch quirk — already noted in a comment on
+`app/katube/upload/page.tsx` from 11 Aug, confirmed via debug logging back
+then — where the `?next=` query string sometimes never survives a
+client-side soft navigation to `/login`. Nothing else in the app used
+that same combination, so almost every other gated redirect (all of
+Kalpana Circle's `router.push`/`router.replace` calls, plus a couple of
+plain `<Link href="/login?next=...">`) was silently vulnerable to landing
+on the `/WebMangal/home` default.
+
+**Real fix (closes the gap systemically, not per-page):**
+- `app/lib/authRedirect.ts`: added `consumePostLoginRedirect()` — reads
+  and clears the cookie client-side, same one-shot semantics as the
+  existing server-side read in `/auth/callback/route.ts` (which only ever
+  helped the Google OAuth path, not email/password login).
+- `app/login/page.tsx`: `nextPath`'s lazy initializer now falls back to
+  `consumePostLoginRedirect()` whenever the `?next=` query param is
+  missing or invalid — so even if a `<Link>`/soft-nav drops the query
+  string, the cookie (when set) still gets the user home.
+- Every Kalpana Circle page that auto-redirects to `/login` on missing
+  auth — `close-friends`, `chat`, `settings`, `watch-together`,
+  `watch-together/shorts/[roomId]`, `broadcasts`, `saved`,
+  `group/[conversationId]` — now calls `setPostLoginRedirect()` right
+  before the `router.push`/`router.replace`, matching the proven pattern
+  instead of relying on the query string alone.
+- `kalpana-circle/page.tsx` and `broadcast/[username]/page.tsx`: instead
+  of patching every individual "Log in" / "Log in to post" / "Log in to
+  comment" `<Link>`, the cookie is now set once, eagerly, the moment the
+  auth check resolves to logged-out — covers every login link on those
+  pages from one place.
+- `katube/playlists` and `katube/subscriptions`: same eager-cookie fix
+  (§51 only added `?next=` to their "Sign in" links, which — per the root
+  cause above — was never going to be fully reliable on its own).
+
+**Verification:** `eslint` clean on every touched file (only pre-existing
+warnings — `<img>` LCP warnings, one already-noted `set-state-in-effect`
+false positive on `katube/playlists`'s existing code, unrelated to this
+change). `tsc --noEmit` errors are all the pre-existing sandbox-only
+`lucide-react` module-resolution issue (see earlier §s); no new type
+errors from any of these edits.
+
+**Not touched:** `katube/dashboard` and `katube/watch/[videoId]` were
+already correct (this section's "why it worked" reference case) — nothing
+to change there. `/auth/callback/route.ts` (server-side, Google OAuth)
+was also already correct — this section closes the matching gap on the
+client-side/email-password path.
