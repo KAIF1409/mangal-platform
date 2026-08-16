@@ -261,13 +261,27 @@ export default function LandingPage() {
         scrollTrigger: { trigger: '#mangal-quote', start: 'top 70%', end: 'top 40%', scrub: 2 },
       });
 
+    }, mainRef);
+    return () => ctx.revert();
+  }, [splashDone]);
+
+  // Separate effect: the outline heading only mounts once showcaseItems has
+  // loaded (async fetch) and has >= 3 items. The main gsap.context above only
+  // depends on [splashDone], which fires before that fetch resolves, so
+  // '#mangal-outline-heading' wasn't in the DOM yet and GSAP/ScrollTrigger
+  // silently failed to find the target — meaning this section's entrance
+  // animation never attached at all. Re-run this once the element is
+  // actually present.
+  useEffect(() => {
+    if (!splashDone || showcaseItems.length < 3) return;
+    const ctx = gsap.context(() => {
       gsap.from('#mangal-outline-heading', {
         y: 50, opacity: 0,
         scrollTrigger: { trigger: '#mangal-outline-heading', start: 'top 85%', end: 'top 60%', scrub: 1.5 },
       });
     }, mainRef);
     return () => ctx.revert();
-  }, [splashDone]);
+  }, [splashDone, showcaseItems.length]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
