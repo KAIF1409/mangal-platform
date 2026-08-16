@@ -13,7 +13,7 @@ import { setPostLoginRedirect } from '../lib/authRedirect';
 import {
   Search, Home, MessageCircle, Clapperboard, Megaphone, Bookmark,
   X, Circle, Globe, Tag, Camera, BarChart3, Sparkles, Pin, Check,
-  Heart, User, Users, TrendingUp,
+  Heart, User, Users, TrendingUp, Trophy,
 } from 'lucide-react';
 
 // ── K Circle — Instagram-style social layer for MANGAL ──
@@ -1287,6 +1287,7 @@ function KalpanaCircleInner() {
         }}>+</button>
         <Link href={navHref('/kalpana-circle/chat')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><MessageCircle size={20} /></Link>
         <Link href={navHref('/kalpana-circle/watch-together')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Clapperboard size={20} /></Link>
+        <Link href={navHref('/kalpana-circle/mangal-of-the-week')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Trophy size={20} /></Link>
         <Link href={navHref('/kalpana-circle/broadcasts')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Megaphone size={20} /></Link>
         <Link href={navHref('/kalpana-circle/saved')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Bookmark size={20} /></Link>
         <Link href={profileHref} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><User size={20} /></Link>

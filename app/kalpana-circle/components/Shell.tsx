@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../../components/ThemeToggle';
 import NotificationBell from '../../components/NotificationBell';
-import { Search, MessageCircle, Clapperboard, Megaphone, Bookmark } from 'lucide-react';
+import { Search, MessageCircle, Clapperboard, Megaphone, Bookmark, Trophy } from 'lucide-react';
 
 // ── K Circle desktop shell — shared across every K Circle page ──
 // Extracted from the home feed page (app/kalpana-circle/page.tsx, §55 in
@@ -46,7 +46,7 @@ export function KCircleShellStyle() {
   return <style>{KC_SHELL_CSS}</style>;
 }
 
-export type KCircleRailActive = 'home' | 'chat' | 'watch-together' | 'broadcasts' | 'saved';
+export type KCircleRailActive = 'home' | 'chat' | 'watch-together' | 'broadcasts' | 'saved' | 'mangal-of-the-week';
 
 const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
 
@@ -108,6 +108,7 @@ export function KCircleRail({
   const items: { key: KCircleRailActive; title: string; href: string; icon: ReactNode }[] = [
     { key: 'chat', title: 'Chat', href: navHref('/kalpana-circle/chat'), icon: <MessageCircle size={20} /> },
     { key: 'watch-together', title: 'Watch Together', href: navHref('/kalpana-circle/watch-together'), icon: <Clapperboard size={20} /> },
+    { key: 'mangal-of-the-week', title: 'Mangal of the Week', href: navHref('/kalpana-circle/mangal-of-the-week'), icon: <Trophy size={20} /> },
     { key: 'broadcasts', title: 'Broadcasts', href: navHref('/kalpana-circle/broadcasts'), icon: <Megaphone size={20} /> },
     { key: 'saved', title: 'Saved', href: navHref('/kalpana-circle/saved'), icon: <Bookmark size={20} /> },
   ];
