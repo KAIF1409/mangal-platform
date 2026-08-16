@@ -3837,3 +3837,36 @@ already correct (this section's "why it worked" reference case) — nothing
 to change there. `/auth/callback/route.ts` (server-side, Google OAuth)
 was also already correct — this section closes the matching gap on the
 client-side/email-password path.
+
+## §53 — Fix: "back to home" links exiting the product to the marketing homepage
+
+**Founder-reported bug:** many pages in KaTube and Kalpana Circle have a
+"back to home" style control that, instead of returning to that product's
+own home tab, takes the user to `mangal-platform.vercel.app`'s official
+public/marketing page — a different thing from any product's home.
+
+**Root cause:** `app/page.tsx` (route `/`) is MANGAL's public landing
+page (GSAP/Framer marketing site, sign-up CTAs, etc.) — it is not
+"platform home" for a logged-in user browsing a specific product. A
+handful of nav elements were hardcoded to `href="/"` instead of the
+product-scoped home:
+- `katube/page.tsx`'s sidebar "Back to MANGAL" link
+- `kalpana-circle/page.tsx`'s small MANGAL icon in the top nav (both the
+  mobile header and the desktop header — 2 separate occurrences)
+- `kalpana-circle/profile/[username]/page.tsx` and
+  `kalpana-circle/settings/page.tsx`'s sign-out handlers, which sent the
+  user to `/` right after `supabase.auth.signOut()`
+
+**Fixed:** all of the above now point at `/katube` or `/kalpana-circle`
+respectively, so signing out or clicking "home" from inside a product
+keeps the user in that product (both already render a valid, if
+feature-gated, logged-out view — no auth wall to worry about).
+
+**Already correct, no change needed:** `katube/watch/[videoId]/page.tsx`
+and `katube/upload/page.tsx` already linked their MANGAL icon to
+`/katube`, not `/`. The `getBackNav()`/`recordProductVisit()` pair in
+`app/lib/backNav.ts` (used by shared pages like `/creator/[username]`
+that are linked to from all three products) was already correct and
+untouched — that mechanism is for pages that don't inherently belong to
+one product, which is a different problem from a product page's own
+internal nav hardcoding `/`.
