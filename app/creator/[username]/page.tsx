@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { getBackNav } from '../../lib/backNav';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
@@ -74,6 +75,13 @@ export default function CreatorProfilePage() {
   const [accountActive, setAccountActive] = useState(true);
   const [banConfirm, setBanConfirm] = useState(false);
   const [banning, setBanning] = useState(false);
+
+  // Bug fix: "Back to Browse" was hardcoded to "/" (platform home), so
+  // visitors who arrived here from KaTube or Kalpana Circle (both link to
+  // creator profiles) got bounced to WebMangal instead of back where they
+  // came from. getBackNav() reads document.referrer to send them back to
+  // the right product, falling back to "/" for direct visits.
+  const [backNav] = useState(getBackNav());
 
   useEffect(() => {
     const load = async () => {
@@ -174,12 +182,12 @@ export default function CreatorProfilePage() {
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 28px' }}>
               No creator with the username &ldquo;@{username}&rdquo; exists.
             </p>
-            <Link href="/" style={{
+            <Link href={backNav.href} style={{
               display: 'inline-block', padding: '12px 28px', borderRadius: '10px',
               background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
               color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: '13px',
             }}>
-              <ArrowLeft size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle' }} /> Back to Browse
+              <ArrowLeft size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle' }} /> {backNav.label}
             </Link>
           </div>
         </div>
@@ -225,7 +233,7 @@ export default function CreatorProfilePage() {
           }}><Flame size={18} strokeWidth={2} color="#fff" /></div>
           <span style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
         </Link>
-        <Link href="/" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> Back to Browse</Link>
+        <Link href={backNav.href} style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> {backNav.label}</Link>
       </nav>
 
       <div className="mangal-creator-grid" style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px 60px' }}>
