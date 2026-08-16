@@ -645,7 +645,10 @@ function KalpanaCircleInner() {
         padding: '0 14px', height: '58px',
         alignItems: 'center', justifyContent: 'space-between', gap: '8px',
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
+        {/* Small MANGAL icon was href="/" (site-wide marketing page) —
+            clicking it dropped users out of K Circle entirely. Same fix
+            as KaTube's "Back to MANGAL" link: keep it in-product. */}
+        <Link href="/kalpana-circle" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
           <Image src="/icon.png" alt="MANGAL" width={28} height={28} style={{ display: 'block', borderRadius: '7px', flexShrink: 0 }} />
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -672,7 +675,7 @@ function KalpanaCircleInner() {
         alignItems: 'center', justifyContent: 'space-between', gap: '16px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: 1 }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
+          <Link href="/kalpana-circle" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
             <Image src="/icon.png" alt="MANGAL" width={30} height={30} style={{ display: 'block', borderRadius: '8px' }} />
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>

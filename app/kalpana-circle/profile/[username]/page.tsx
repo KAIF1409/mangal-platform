@@ -153,7 +153,11 @@ export default function KCircleProfilePage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    // Was router.push('/') — that's the site-wide marketing landing page,
+    // not K Circle. A logged-out user visiting /kalpana-circle still gets
+    // a valid (logged-out) view of the product, so stay there instead of
+    // bouncing them out to the official homepage.
+    router.push('/kalpana-circle');
   };
 
   const gridImage = (p: GridPost) => p.image_urls?.[0] ?? p.image_url ?? null;

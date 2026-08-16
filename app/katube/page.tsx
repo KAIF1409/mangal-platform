@@ -257,10 +257,14 @@ function SidebarNav({
             background: '#f97316', color: '#fff', fontSize: '13px', fontWeight: 800,
             letterSpacing: '0.01em', marginBottom: '12px',
           }}><ArrowUp size={15} strokeWidth={2.5} /> Upload video</Link>
-          <Link href="/" style={{
+          {/* Was href="/" (site-wide marketing landing page) — "Back to
+              MANGAL" reads like it should stay inside the product family,
+              but sent people to the public homepage instead of KaTube's
+              own home tab. Point it at /katube. */}
+          <Link href="/katube" style={{
             display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none',
             fontSize: '12.5px', fontWeight: 700, color: 'var(--text-tertiary)', whiteSpace: 'nowrap',
-          }}><ArrowLeft size={13} strokeWidth={2} /> Back to MANGAL</Link>
+          }}><ArrowLeft size={13} strokeWidth={2} /> Back to KaTube</Link>
         </div>
 
       </aside>

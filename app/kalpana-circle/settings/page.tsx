@@ -107,7 +107,10 @@ export default function KCircleSettingsPage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    // Was router.push('/') — same fix as profile/[username]'s sign-out:
+    // keep the user in K Circle instead of dropping them on the
+    // site-wide marketing homepage.
+    router.push('/kalpana-circle');
   };
 
   if (!checkedAuth) {
