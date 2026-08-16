@@ -6,6 +6,126 @@
 
 ---
 
+## 0. 🔴 HIGHEST PRIORITY — "Unique for Mangal" (build this before anything else)
+
+> **Rule for every future session: do not pick up other backlog items (§4 or any
+> session-log section below) until the phases in this section are done.** This is
+> the founder's top priority feature category — read this section first, before
+> anything else in the file.
+
+This is a new category of features, grouped under the name **"Unique for Mangal"**
+— three connected pieces that turn the ecosystem into a self-reinforcing loop:
+discovery → collaboration → recognition/reward → repeat.
+
+### 0a. Brief explanation
+
+Right now WebMangal (stories), KaTube (AI-anime videos), and Kalpana Circle
+(community) are connected but nothing actively *drives* writers and video creators
+to collaborate, and nothing rewards the best work on a recurring cadence. "Unique
+for Mangal" fixes that with three pieces:
+
+1. **Mangal Ideas** — a feed on the KaTube homepage that surfaces (a) ideas the
+   founder/company posts directly, and (b) trending WebMangal stories that don't
+   have a KaTube adaptation yet, inviting AI-video creators to collaborate with
+   that story's writer.
+2. **Mangal of the Week** — a weekly, audience-voted leaderboard on Kalpana
+   Circle. Top 5 videos of the week get ranked and awarded "Mangal of the Week"
+   with prize money (announced in-app only, no payment integration for now).
+3. **WebMangal Writer of the Month** — a monthly award for the writer whose
+   story generated the most/best collaboration activity that month.
+
+### 0b. Example / story walkthrough (how it should feel end-to-end)
+
+> Riya writes a WebMangal story called *"Chandra's Last Flight"*. It starts
+> trending on WebMangal (lots of reads, no KaTube video yet). A **story-demand
+> card** for it automatically appears in the Mangal Ideas feed on KaTube's
+> homepage: *"Chandra's Last Flight is in demand — bring it to life on KaTube."*
+> Aman, an AI-anime creator, sees the card, taps "Collaborate," and it sends
+> Riya a request. They team up; Aman posts the video, tagged as a **collab**
+> (Tier 1) with Riya credited as the writer.
+>
+> That video gets picked up in the week's top-20-by-views pool. It shows up in
+> Kalpana Circle's weekly survey. Users watch, vote for it, and when they vote
+> they're asked *why* — a scroll-down picker where they tap reasons like
+> "Editing," "Sound," "Story," and can add a comment like *"story mast hai aur
+> editing bhi zabardast"*. Because it's a Tier 1 collab video, its score gets a
+> priority boost over solo (Tier 2) videos in the ranking.
+>
+> At week's end, it lands in the Top 5 — Aman and Riya are announced as part of
+> **"Mangal of the Week"** in Kalpana Circle, with a prize-money amount shown
+> (paid out manually, outside the app for now). At month's end, because Riya's
+> story drove the most/best collab activity that month, she's announced as
+> **"WebMangal Writer of the Month."**
+
+### 0c. Structure — phased build plan
+
+**Phase 0 — Shared foundations** (build first, everything else depends on it)
+- `mangal_ideas` table: `type` (`company` | `story_demand`), `series_id`
+  (nullable), `title`, `description`, `created_by`, `created_at`
+- `weekly_rankings` table: `week_start_date`, `video_id`, `tier`, `votes_count`,
+  `views_snapshot`, `final_score`, `rank`
+- `video_votes` table: `user_id`, `video_id`, `week_id`, `reason_tags[]`,
+  `comment`, `created_at` — **unique constraint on `(user_id, week_id)`** so one
+  vote per user per week
+- `monthly_writer_awards` table: `month`, `series_id`, `writer_id`, `score`, `rank`
+- Add `is_collab` + `collab_writer_id` columns to the KaTube videos table (if not
+  already present) — needed to distinguish Tier 1 (collab) vs Tier 2 (solo)
+
+**Phase 1 — Mangal Ideas feed (KaTube home)**
+1. Admin-only insert UI for company idea cards (reuse existing admin/dashboard
+   pattern)
+2. Scheduled/on-load query to auto-surface story-demand cards: WebMangal series
+   with high trending signal but low/zero KaTube adaptation count
+3. Card component on KaTube home, top section, horizontal scroll, mixing both
+   card types
+4. "Collaborate karna chahta hoon" button → notification/DM to the writer
+   (reuse Kalpana Circle DM infra)
+
+**Phase 2 — Mangal of the Week**
+1. Weekly scheduled job: pull top 20 videos by views for the week, snapshot into
+   `weekly_rankings`
+2. Voting UI in Kalpana Circle: shows the 20, user picks one, then a reason-tag
+   scroll picker (Editing / Sound / Story / Voice / Animation + optional free-text
+   comment)
+3. Scoring job (runs at week end):
+   `score = votes×W1 + views×W2 + likes×W3`, with a Tier 1 (writer+creator collab)
+   bonus multiplier
+4. Top 5 announcement UI — Kalpana Circle post + banner/spotlight on KaTube,
+   "Mangal of the Week" badge on winning videos/creator profiles
+5. Prize money: text/display field only (e.g. "₹X awarded") — no payout logic,
+   manual process outside the app
+
+**Phase 3 — Writer of the Month**
+1. Monthly job: aggregate all Tier 1 collab videos per writer for the month, sum
+   their vote/view scores
+2. Top writer gets "WebMangal Writer of the Month" badge on profile +
+   Kalpana Circle/KaTube announcement
+3. Same manual-announce pattern for prize money as Phase 2
+
+Suggested order: **Phase 0 → Phase 1 → Phase 2 → Phase 3** (Phase 3 reuses
+Phase 2's scoring logic, so it's fast once Phase 2 exists).
+
+### 0d. Anti-abuse (decide/build alongside Phase 2, not after)
+
+- **One vote per user per week** — enforce via DB unique constraint on
+  `(user_id, week_id)`, not just a UI check
+- Consider a minimum account-age or activity threshold before a user can vote,
+  so freshly-created bot accounts can't stuff votes
+- Views used in scoring should be **capped or log-scaled**, not raw — an
+  unbounded raw view count can let view-farming dominate the score and drown
+  out genuine quality votes
+- Reason-tag/comment field should be moderated the same way other Kalpana
+  Circle comments are (existing moderation pattern, no new system needed)
+
+### 0e. Not decided yet / outside this section's scope
+- Exact scoring weights (W1/W2/W3) — tune once real vote/view data exists
+- Prize money amounts/currency and cadence of manual payout — founder decision,
+  not a code concern
+- Whether Tier 1's "priority boost" is a flat bonus or a multiplier — pick during
+  Phase 2 implementation
+
+---
+
 ## 1. What this project is
 
 MANGAL started as a single platform (manga/webcomic/novel reading — see `README.md`
