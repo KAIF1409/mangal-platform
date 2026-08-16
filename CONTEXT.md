@@ -4040,3 +4040,43 @@ they already exist, same RLS-safe per-owner query pattern used elsewhere
 **Not started (rest of §28b):** native KaTube community-update posts,
 banner image + channel-trailer video (still no `creator_profiles`
 columns for either).
+
+## §57 — §27 item 6: "New Voices" discovery spotlight — WebMangal + KaTube (K Circle intentionally skipped)
+
+**Status: done for both non-Circle products.** Picked this from §27's
+zero-cost-first ordering ("items 4, 6, 9, and 7 don't need a payment
+provider... realistic near-term build") per founder's request to do
+whatever's fast and scoped to KaTube/WebMangal only, not K Circle.
+
+**What it is:** a discovery row ordered by `creator_profiles.joined_at`
+descending — most recently-joined creators first — instead of by views/
+popularity like every other section on both home pages. Addresses the
+cold-start problem §27 flagged: a brand-new creator otherwise never beats
+an already-big creator in a views-sorted grid, so without a dedicated
+recency-ordered slot they're invisible no matter how good their first
+upload is.
+
+**WebMangal** (`/WebMangal/home`): new "New Voices" section, positioned
+right after Staff Picks. One (most recent) published series per creator,
+first 6 creators (from a top-20-most-recent candidate pool) that actually
+have a published series. Added `newVoices` translation key (`en`/`hi`,
+`app/lib/i18n.ts`) alongside the existing `trendingThisWeek`/`newArrivals`/
+`staffPicks` keys.
+
+**KaTube** (`/katube`, home tab only): same pattern, "New Voices" row
+right after the Continue Watching row (§28a). One (most recent) video per
+recently-joined creator, same 20-candidate → first-6-with-content trim.
+Reuses the page's existing local `RealVideoCard` component rather than
+the separate `VideoGridCard` used by the standalone Subscriptions/
+Trending pages, since this lives inside `/katube`'s own grid, not a
+separate route.
+
+**Zero new tables/migrations** — both reuse `creator_profiles.joined_at`,
+which already existed, plus each product's existing `series`/`videos`
+state that was already being fetched on page load. No RLS changes needed
+(public-read creator_profiles lookup, same pattern used everywhere else
+a creator's display info is read).
+
+**Deliberately not done:** §27 item 7 ("deeper cross-promotion" — extends
+the KaTube↔K Circle auto-post) and item 8 (creator-only K Circle space)
+were skipped on request since both are explicitly K Circle-scoped.
