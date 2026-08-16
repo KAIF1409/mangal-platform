@@ -4478,3 +4478,50 @@ waiting matters more than the exact order above.
   (a Supabase data update — no code change, see above).
 - Confirming/correcting the exact commission numbers on each official page
   before treating them as a revenue projection.
+
+## §63 — §27 item 8: Creator-only K Circle space (DONE)
+
+**Picked as fastest of the still-open non-AI backlog** (surveyed the whole
+file — small items: this one and §28b's banner/trailer video; medium:
+§28a's real search/filters, §27 item 7 cross-promotion; big/blocked: §27
+items 1–3 and §28d monetization on the payment-provider decision, §29's
+novel-to-video collab pipeline, §4 item 6 sponsorship explicitly
+traffic-gated). This one was explicitly flagged in §27 as reusable —
+"could reuse the existing K Circle channels/roles system (§17) with a
+role-gated private channel rather than needing new infra" — and that held
+up: the Discord-style permission-overwrite system (`app/lib/kcirclePermissions.ts`,
+`20260813170000_kcircle_channels_roles.sql`) already does everything
+needed, it's scoped per group conversation though, not site-wide — so this
+is one well-known singleton group conversation, not a new permission
+system.
+
+**What shipped:** `supabase/migrations/20260816220000_kcircle_creator_lounge.sql`
+(applied live) — `kcircle_conversations.is_creator_lounge` (unique partial
+index, guarantees a singleton) + `kcircle_join_creator_lounge()`, a
+SECURITY DEFINER RPC that finds-or-creates the singleton lounge
+conversation and adds the caller as a participant, but only after checking
+`profiles.role in ('creator','developer')` itself — the client-side
+`isCreator` check in the UI is just for hiding/showing the entry point, the
+actual gate is server-side in the RPC (a non-creator calling the RPC
+directly still gets rejected). Creating the conversation automatically
+fires the existing `kcircle_group_bootstrap_channels_roles` trigger, so
+`#general` + `@everyone`/`Owner` roles get created for free — zero new
+channel/role tables.
+
+**UI:** `/kalpana-circle/chat` — pinned "Creator Lounge" entry (purple lock
+icon) above the normal DM/group list, shown only when `profiles.role` is
+creator/developer, calls the RPC then routes to
+`/kalpana-circle/group/[conversationId]` (the existing channels/roles UI
+from §17 — no new group-management screen needed).
+
+**Verified:** `tsc --noEmit` clean; `eslint` clean on the touched file (two
+pre-existing unrelated `<img>` LCP warnings). Ran `get_advisors` after
+applying the migration — flagged the same `function_search_path_mutable`
+WARN every other `kcircle_*` function in this repo already has; fixed it
+on this function specifically (`set search_path = public`) rather than
+leaving it in that pre-existing backlog.
+
+**Not done:** no admin UI to revoke lounge access if someone's role
+changes back to reader (participants table isn't pruned automatically) —
+low-risk edge case (nothing sensitive lives in the room), flagged rather
+than silently ignored.

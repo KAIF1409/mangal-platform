@@ -9,7 +9,7 @@ import NotificationBell from '../../components/NotificationBell';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
 import { KCircleShellStyle, KCircleRail } from '../components/Shell';
-import { Camera, X, Paperclip, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Camera, X, Paperclip, ArrowLeft, ArrowRight, Lock } from 'lucide-react';
 
 // ── K Circle chat — DMs + group chats. ──
 // Backend: kcircle_conversations (is_group/title/created_by),
@@ -100,6 +100,9 @@ export default function KCircleChatPage() {
   // K Circle rail's profile icon does (see components/Shell.tsx, §57).
   const [myUsername, setMyUsername] = useState<string | null>(null);
   const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
+  // §27 item 8 — Creator Lounge entry point is only shown to creators/devs.
+  const [isCreator, setIsCreator] = useState(false);
+  const [joiningLounge, setJoiningLounge] = useState(false);
 
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -146,7 +149,26 @@ export default function KCircleChatPage() {
     supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', userId).maybeSingle()
       .then(({ data }) => { setMyUsername(data?.username ?? null); setMyAvatarUrl(data?.avatar_url ?? null); });
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) { setIsCreator(false); return; }
+    supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
+      .then(({ data }) => setIsCreator(data?.role === 'creator' || data?.role === 'developer'));
+  }, [userId]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // §27 item 8 — server-side gated join: kcircle_join_creator_lounge() finds
+  // or creates the singleton lounge conversation and adds the caller as a
+  // participant, but only after re-checking profiles.role itself (the
+  // isCreator state above is just the UI gate, not the real enforcement).
+  const openCreatorLounge = async () => {
+    if (joiningLounge) return;
+    setJoiningLounge(true);
+    const { data, error } = await supabase.rpc('kcircle_join_creator_lounge');
+    setJoiningLounge(false);
+    if (error || !data) { alert(error?.message || 'Could not open Creator Lounge.'); return; }
+    router.push(`/kalpana-circle/group/${data}`);
+  };
 
   const loadConversations = useCallback(async () => {
     if (!userId) return;
@@ -707,6 +729,34 @@ export default function KCircleChatPage() {
 
       {!active ? (
         <div style={{ flex: 1, overflowY: 'auto', maxWidth: '640px', width: '100%', margin: '0 auto' }}>
+          {/* §27 item 8 — Creator Lounge: pinned entry point above the normal
+              DM/group list, shown only to creators/developers. Reuses the
+              existing group/channels/roles system via a single singleton
+              conversation — see kcircle_join_creator_lounge() in
+              20260816220000_kcircle_creator_lounge.sql. */}
+          {isCreator && (
+            <button
+              onClick={openCreatorLounge}
+              disabled={joiningLounge}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '12px', width: '100%', textAlign: 'left',
+                padding: '12px 16px', cursor: joiningLounge ? 'default' : 'pointer', border: 'none',
+                borderBottom: '1px solid var(--border-color)', background: 'rgba(168,85,247,0.08)',
+              }}
+            >
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, #a855f7 0%, #d8b4fe 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#27272a',
+              }}><Lock size={17} strokeWidth={2.5} /></div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: '13.5px', color: 'var(--text-primary)' }}>Creator Lounge</div>
+                <div style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>
+                  {joiningLounge ? 'Opening…' : 'Private space for verified creators'}
+                </div>
+              </div>
+            </button>
+          )}
           {loadingList ? (
             <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px', padding: '30px 0' }}>Loading chats…</p>
           ) : conversations.length === 0 ? (
