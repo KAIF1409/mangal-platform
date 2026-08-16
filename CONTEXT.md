@@ -4272,7 +4272,7 @@ conflicted (caught this via `tsc`, not by eye).
 are covered; nothing from that list deferred. §29/§30 (further backlog
 items) untouched.
 
-## §57 — K Circle: Discord+Instagram hybrid desktop shell
+## §65 — K Circle: Discord+Instagram hybrid desktop shell
 
 Founder wanted K Circle's desktop UI redesigned as a deliberate mix of
 Instagram (feed/stories) and Discord (nav structure), referencing actual
@@ -4306,10 +4306,48 @@ broadcasts pages not touched yet.
   because Google Fonts (`fonts.googleapis.com`) isn't reachable — a
   network-allowlist limitation, not a code issue.
 
-**Not done yet:** chat, watch-together, broadcasts, saved, profile, and
-settings pages still use their original layouts — same rail/right-panel
-treatment can be extended to them on request, one page at a time per
+**Status at time of writing:** chat, watch-together, broadcasts, saved,
+profile, and settings pages still used their original layouts. Rolled out
+to chat and watch-together next (see §66/§67 below) — the rest remain,
+same treatment can be extended to them on request, one page at a time per
 the "one change at a time" convention (§5).
+
+## §66 — K Circle: shared rail extracted + rolled out to chat & Watch Together
+
+Continuing §65's rail rollout across the rest of K Circle, one page per
+commit as requested.
+
+- **Extracted the rail** out of the home feed page into
+  `app/kalpana-circle/components/Shell.tsx` — exports `KCircleRail` (the
+  icon rail itself, takes `active` to highlight the current section) and
+  `KCircleShellStyle` (the `.kc-shell`/`.kc-rail`/`.kc-right-panel` grid
+  CSS). Home feed page refactored to use it — pure refactor, no visual
+  change, verified with `tsc`/`eslint`. `KCircleRail`'s "+" create button
+  takes either an `onCreatePost` click handler (home feed uses this to
+  scroll to its inline composer) or a `createHref` link (every other page
+  just falls back to linking `/kalpana-circle`, since only the home feed
+  has an inline composer).
+- **Chat page** (`chat/page.tsx`): wrapped in the shared shell, rail shows
+  with "Chat" active. Chat never tracked its own username/avatar before
+  (never needed to) — added the same `creator_profiles` lookup pattern
+  the home feed uses, since the rail's profile icon needs it. Mobile
+  untouched (`.kc-shell` falls back to `display:block` below 768px, so
+  the existing full-screen conversation-list/thread layout is unaffected).
+- **Watch Together page** (`watch-together/page.tsx`): same treatment,
+  rail shows with "Watch Together" active. This page already tracked
+  `myUsername`/`myAvatarUrl` (needed for other things), so no new fetch
+  was needed. Its own sticky header (wordmark, "+ Create Room", theme
+  toggle) is left in place — it's still the primary nav on mobile, where
+  the rail is hidden.
+- Verified with `tsc --noEmit` (clean) and `eslint` (0 new warnings/
+  errors on every touched file) after each page. `next build` itself
+  still fails in this sandbox only because Google Fonts isn't reachable
+  on the network allowlist — unrelated to these changes.
+
+**Not done yet:** broadcasts, saved, profile, settings, close-friends,
+group/[conversationId], broadcast/[username], watch-together/shorts.
+KaTube and every other MANGAL surface untouched throughout — this is
+K-Circle-only per the founder's explicit instruction.
 
 ## §55 — §28b started: public KaTube channel page + custom channel URL
 
