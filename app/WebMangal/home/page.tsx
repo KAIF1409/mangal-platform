@@ -27,6 +27,7 @@ interface Series {
   created_at: string;
   views: number;
   chapter_count?: number;
+  creator_id?: string;
 }
 
 interface SeriesQueryRow extends Omit<Series, 'chapter_count'> {
@@ -86,6 +87,8 @@ export default function HomePage() {
 
   // Step 9 — Homepage Discovery Sections
   const [trending, setTrending] = useState<Series[]>([]);
+  // §27 item 6 — New Voices: ordered list of recently-joined creator user_ids
+  const [newVoiceOrder, setNewVoiceOrder] = useState<string[]>([]);
   const STAFF_PICK_TITLES: string[] = []; // developer-curated list — add exact series titles here
 
   // Step 27 — For You: personalized feed for logged-in readers based on
@@ -175,6 +178,14 @@ export default function HomePage() {
         setTrending(sorted);
       }
     });
+
+    // §27 item 6 — New Voices: most recently-joined creators, by
+    // creator_profiles.joined_at desc. Public-read (no RLS issue, same as
+    // any other creator_profiles lookup used for display elsewhere).
+    // Capped at 20 candidates — `newVoices` above trims to the first 6 that
+    // actually have a published series.
+    supabase.from('creator_profiles').select('user_id, joined_at').order('joined_at', { ascending: false }).limit(20)
+      .then(({ data }) => { if (data) setNewVoiceOrder(data.map(c => c.user_id)); });
   }, []);
 
   const filtered = useMemo(() => {
@@ -202,6 +213,24 @@ export default function HomePage() {
 
   // Step 9 — Staff Picks: developer-curated, matched by exact title. Empty list = section hidden.
   const staffPicks = series.filter(s => STAFF_PICK_TITLES.includes(s.title) && (activeContentType === 'all' || s.content_type === activeContentType)).slice(0, 6);
+
+  // §27 item 6 — "New Voices": recently-joined creators, ordered by
+  // join date rather than views/popularity, so a brand-new creator gets
+  // guaranteed visibility instead of always losing to whoever's already
+  // biggest. One (their most recent published) series per creator, up to
+  // 6 creators. Zero new tables — `newVoiceOrder` (populated below from
+  // `creator_profiles.joined_at`) is the only extra fetch, everything
+  // else reuses the `series` state already loaded above.
+  const newVoices = useMemo(() => {
+    if (newVoiceOrder.length === 0) return [];
+    const byCreator = new Map<string, Series>();
+    for (const s of series) {
+      if (activeContentType !== 'all' && s.content_type !== activeContentType) continue;
+      if (!s.creator_id || byCreator.has(s.creator_id)) continue; // series is created_at desc, so first hit per creator = their latest
+      byCreator.set(s.creator_id, s);
+    }
+    return newVoiceOrder.map(id => byCreator.get(id)).filter((s): s is Series => !!s).slice(0, 6);
+  }, [series, newVoiceOrder, activeContentType]);
 
   const setContentType = (ct: 'all' | 'mangal' | 'novel') => {
     setActiveContentType(ct);
@@ -566,6 +595,23 @@ export default function HomePage() {
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px', marginBottom: '40px' }}>
                   {staffPicks.map(s => (
+                    <SeriesCard key={s.id} series={s} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* §27 item 6 — New Voices: recently-joined creators, ordered
+                by join date not popularity, so a brand-new creator gets a
+                guaranteed discovery slot instead of always losing to
+                whoever already has the most views. */}
+            {newVoices.length > 0 && activeGenre === 'All' && !showDesiComics && (
+              <section style={{ padding: '8px 0 0' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
+                  {t('newVoices')}
+                </h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px', marginBottom: '40px' }}>
+                  {newVoices.map(s => (
                     <SeriesCard key={s.id} series={s} />
                   ))}
                 </div>

@@ -41,6 +41,7 @@ const TRANSLATIONS: Record<UiLanguage, Record<string, string>> = {
     trendingThisWeek: 'Trending This Week',
     newArrivals: 'New Arrivals',
     staffPicks: 'Staff Picks',
+    newVoices: 'New Voices',
     // Content-type & genre pills, remaining section headers (Step 22 cont'd)
     ctAll: 'All',
     ctMangal: 'Mangal',
@@ -172,6 +173,7 @@ const TRANSLATIONS: Record<UiLanguage, Record<string, string>> = {
     trendingThisWeek: 'इस हफ़्ते ट्रेंडिंग',
     newArrivals: 'नई कहानियाँ',
     staffPicks: 'टीम की पसंद',
+    newVoices: 'नई आवाज़ें',
     // Content-type & genre pills, remaining section headers (Step 22 cont'd)
     ctAll: 'सभी',
     ctMangal: 'मंगल',
