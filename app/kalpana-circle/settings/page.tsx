@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
+import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import {
   ArrowLeft, Camera, Bookmark, Star, Megaphone, ShieldCheck,
   LogOut, Check, ChevronRight,
@@ -124,6 +125,17 @@ export default function KCircleSettingsPage() {
 
   return (
     <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' } as CSSProperties}>
+      <KCircleShellStyle />
+      <div className="kc-shell">
+        <KCircleRail
+          userId={userId}
+          myUsername={username}
+          myAvatarUrl={avatarUrl}
+          profileHref={username ? `/kalpana-circle/profile/${username}` : '/kalpana-circle/settings'}
+          navHref={(path) => (userId ? path : `/login?next=${encodeURIComponent(path)}`)}
+          setIsLight={setIsLight}
+        />
+        <div className="kc-main">
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
@@ -265,6 +277,8 @@ export default function KCircleSettingsPage() {
           <LogOut size={16} /> Log Out
         </button>
       </div>
+        </div>{/* /.kc-main */}
+      </div>{/* /.kc-shell */}
     </div>
   );
 }
