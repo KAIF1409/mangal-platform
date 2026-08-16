@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
 import Link from 'next/link';
 import { Search, ArrowLeft, Flame, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText } from 'lucide-react';
+import VerifiedBadge from '../../components/VerifiedBadge';
 
 interface Series {
   id: string;
@@ -24,6 +25,7 @@ interface Series {
 interface CreatorInfo {
   user_id: string;
   username: string;
+  verified_youtube_channel_id: string | null;
 }
 
 function formatViews(n: number): string {
@@ -88,12 +90,15 @@ export default function CreatorProfilePage() {
       setLoading(true);
       setNotFound(false);
 
-      // creator_profiles only stores user_id + username today — no bio or
-      // avatar_url column yet. If those get added later (quick migration),
-      // this query just needs .select('user_id, username, bio, avatar_url').
+      // Note: the "no bio/avatar_url column yet" comment that used to sit
+      // here is stale — both were added since (avatar_url per
+      // 20260816150000_creator_profiles_avatar_url.sql; bio predates that).
+      // Not pulling them into this query yet since this page doesn't render
+      // them — flagged rather than silently left wrong, see §13b-style drift
+      // note. verified_youtube_channel_id added now for the §27 item 9 badge.
       const { data: creatorRow } = await supabase
         .from('creator_profiles')
-        .select('user_id, username')
+        .select('user_id, username, verified_youtube_channel_id')
         .ilike('username', username)
         .single();
 
@@ -255,8 +260,9 @@ export default function CreatorProfilePage() {
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' as const, marginBottom: '4px' }}>
-              <h1 className="mangal-creator-name" style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+              <h1 className="mangal-creator-name" style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 @{creator.username}
+                {creator.verified_youtube_channel_id && <VerifiedBadge size={18} />}
               </h1>
               {!accountActive && (
                 <span style={{

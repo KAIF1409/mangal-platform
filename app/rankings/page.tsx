@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Flame, Eye, Star, Trophy, Search, ScrollText, type LucideIcon } from 'lucide-react';
+import { Flame, Eye, Star, Trophy, Users, Search, ScrollText, type LucideIcon } from 'lucide-react';
 
 interface Series {
   id: string;
@@ -112,6 +112,7 @@ export default function RankingsPage() {
             {[
               { label: 'Browse', href: '/WebMangal', icon: null as LucideIcon | null },
               { label: 'Rankings', href: '/rankings', icon: Trophy },
+              { label: 'Creators', href: '/leaderboard', icon: Users },
               { label: 'Search', href: '/WebMangal/search', icon: Search },
               { label: 'Tags', href: '/tags', icon: null as LucideIcon | null },
             ].map(link => (

@@ -8,6 +8,7 @@ import { supabase } from '../../../lib/supabase';
 import VideoGridCard, { type GridVideo } from '../../components/VideoGridCard';
 import { KaTubeShell } from '../../components/VideoGridCard';
 import { Users, Video as VideoIcon, Eye } from 'lucide-react';
+import VerifiedBadge from '../../../components/VerifiedBadge';
 
 // §28b — Public channel page + custom channel URL
 // (`/katube/channel/[username]`), distinct from `/dashboard/katube` which
@@ -25,6 +26,7 @@ interface ChannelInfo {
   username: string;
   bio: string | null;
   avatarUrl: string | null;
+  verifiedYoutubeChannelId: string | null;
 }
 
 export default function KaTubeChannelPage() {
@@ -50,13 +52,13 @@ export default function KaTubeChannelPage() {
     if (!username) return;
     (async () => {
       const { data: profile } = await supabase.from('creator_profiles')
-        .select('user_id, username, bio, avatar_url')
+        .select('user_id, username, bio, avatar_url, verified_youtube_channel_id')
         .eq('username', username)
         .maybeSingle();
 
       if (!profile) { setNotFound(true); setLoading(false); return; }
 
-      setChannel({ userId: profile.user_id, username: profile.username, bio: profile.bio, avatarUrl: profile.avatar_url });
+      setChannel({ userId: profile.user_id, username: profile.username, bio: profile.bio, avatarUrl: profile.avatar_url, verifiedYoutubeChannelId: profile.verified_youtube_channel_id });
 
       const [videosRes, shortsRes, followerRes] = await Promise.all([
         supabase.from('videos').select('id, title, youtube_id, views, created_at, series_id')
@@ -144,7 +146,10 @@ export default function KaTubeChannelPage() {
           )}
         </div>
         <div style={{ flex: 1, minWidth: '200px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 900, margin: '0 0 4px' }}>{channel.username}</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 900, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {channel.username}
+            {channel.verifiedYoutubeChannelId && <VerifiedBadge size={17} />}
+          </h2>
           <div style={{ display: 'flex', gap: '16px', fontSize: '12.5px', color: '#9ca3af', flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Users size={13} /> {followerCount} followers</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><VideoIcon size={13} /> {videos.length + shorts.length} videos</span>
