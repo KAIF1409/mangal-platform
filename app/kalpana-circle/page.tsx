@@ -89,7 +89,19 @@ function timeAgo(iso: string) {
   return `${Math.floor(hrs / 24)}d`;
 }
 
-function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+function Avatar({ name, size = 40, avatarUrl }: { name: string; size?: number; avatarUrl?: string | null }) {
+  if (avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- avatar_url is a user-uploaded Supabase Storage public URL
+      <img
+        src={avatarUrl}
+        alt={name}
+        width={size}
+        height={size}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }}
+      />
+    );
+  }
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -126,6 +138,7 @@ function KalpanaCircleInner() {
   const tagFilter = searchParams.get('tag'); // set when arriving via a series page's "Discuss on Kalpana Circle" link
   const [userId, setUserId] = useState<string | null>(null);
   const [myUsername, setMyUsername] = useState<string | null>(null);
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
 
   const [posts, setPosts] = useState<KPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
@@ -175,9 +188,9 @@ function KalpanaCircleInner() {
 
   /* eslint-disable react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as katube/upload */
   useEffect(() => {
-    if (!userId) { setMyUsername(null); return; }
-    supabase.from('creator_profiles').select('username').eq('user_id', userId).maybeSingle()
-      .then(({ data }) => setMyUsername(data?.username ?? null));
+    if (!userId) { setMyUsername(null); setMyAvatarUrl(null); return; }
+    supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', userId).maybeSingle()
+      .then(({ data }) => { setMyUsername(data?.username ?? null); setMyAvatarUrl(data?.avatar_url ?? null); });
   }, [userId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -574,7 +587,7 @@ function KalpanaCircleInner() {
   const closeSearch = () => { setShowSearch(false); setSearchQuery(''); setUserResults([]); setPostResults([]); };
 
   const navHref = (path: string) => (userId ? path : `/login?next=${encodeURIComponent(path)}`);
-  const profileHref = userId ? (myUsername ? `/creator/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle';
+  const profileHref = userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle';
 
   return (
     <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' } as CSSProperties} className="kc-page">
@@ -673,7 +686,7 @@ function KalpanaCircleInner() {
           }}>+</button>
           <NotificationBell userId={userId} iconSize={19} />
           <Link href={profileHref} title="Profile" style={{ textDecoration: 'none' }}>
-            <Avatar name={myUsername ?? 'you'} size={28} />
+            <Avatar name={myUsername ?? 'you'} avatarUrl={myAvatarUrl} size={28} />
           </Link>
           <Link href="/katube" style={{
             padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
@@ -1180,7 +1193,7 @@ function KalpanaCircleInner() {
         <Link href={navHref('/kalpana-circle/watch-together')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Clapperboard size={20} /></Link>
         <Link href={navHref('/kalpana-circle/broadcasts')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Megaphone size={20} /></Link>
         <Link href={navHref('/kalpana-circle/saved')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Bookmark size={20} /></Link>
-        <Link href={userId ? (myUsername ? `/creator/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle'} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><User size={20} /></Link>
+        <Link href={userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/WebMangal/home') : '/login?next=/kalpana-circle'} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><User size={20} /></Link>
       </div>
     </div>
   );
