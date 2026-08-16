@@ -4418,3 +4418,63 @@ directly, so a suggestion layer adds less there) weren't touched.
 **Verified:** `tsc --noEmit` clean; `eslint` clean on both touched files
 (two pre-existing unrelated warnings on `app/upload/page.tsx`, neither on a
 line this change touched).
+
+## §61 — §41 follow-up: UI already leaves the referral-link slot open — how to actually fill it, revenue-priority research (yet to be done: applying + real links)
+
+**The UI is already built for this — nothing to build here, this section is
+the "how to fill it in" instructions + the revenue research, not new code.**
+`/dashboard/ai-tools` (§60) already renders every affiliate-eligible tool
+card with `affiliate_url` left empty on purpose. A card with no
+`affiliate_url` shows a **"Referral link not added yet"** placeholder
+instead of a live "Visit" button (see `hasLiveLink` check in
+`app/dashboard/ai-tools/page.tsx`) — so the space is already there and
+waiting, nothing needs to be rebuilt once a real link exists.
+
+### How to actually fill a slot in (once you have a real referral link)
+
+1. **Sign up for the affiliate program using the company/MANGAL email**,
+   not a personal one — the referral link is tied to whichever account
+   creates it, so it has to be the account that should receive the payouts
+   long-term.
+2. Once approved, the program's dashboard (PartnerStack / Rewardful /
+   Impact.com, depending on the tool — see table below) gives a unique
+   tracking link.
+3. **Only step left is a data update, not a code change** — that link goes
+   into the `affiliate_url` column on the matching row in the `ai_tools`
+   table (Supabase). The card picks it up automatically and switches from
+   the placeholder to a live "Visit" button with the SPONSORED badge —
+   already wired, no deploy needed.
+
+### Revenue-priority research (for deciding which to apply to first)
+
+Recurring commissions compound over the subscription's lifetime and are
+worth more long-term than a bigger one-time payout — so this list is
+ordered recurring-and-long-duration first. **Verify exact rates on each
+program's own page before relying on a number for planning** — third-party
+affiliate-directory sites often disagree with each other and with the
+official page, and terms change.
+
+| # | Tool | Commission (as researched) | Duration | Network | Where to apply |
+|---|------|------|------|---------|-----------------|
+| 1 | Murf | 20% recurring | 24 months (longest researched) | PartnerStack | murf.ai/partner-with-us/affiliate |
+| 2 | ElevenLabs | 22% recurring, no earning cap | 12 months | PartnerStack | elevenlabs.io/affiliates |
+| 3 | Synthesia | ~25% recurring | ~12 months | Rewardful | synthesia.io → Affiliates |
+| 4 | HeyGen | 20–35% recurring (sources disagree, confirm on official page) | 3–12 months | Rewardful | heygen.com → Affiliate Program |
+| 5 | InVideo | up to 50% first month, or 25% recurring (both reported — confirm) | 60–120 day cookie | Impact.com | invideo.io/make/affiliate-program |
+| 6 | Veed | recurring (exact rate unconfirmed) | — | Impact.com | veed.io → Affiliates |
+| 7 | Descript | one-time payout only | — | own network | descript.com → Affiliates |
+| 8 | Runway | paid affiliate rate behind login | — | in-app referral (public) | inside the Runway app |
+
+**Approval isn't instant for every program** — some (HeyGen's higher tier
+was flagged specifically) do manual review, so applying early rather than
+waiting matters more than the exact order above.
+
+### Yet to be done
+
+- Actually creating the company-email accounts and applying to each
+  program above (§41 plan item 3) — this is a manual, outside-the-repo
+  step, not something a commit can do.
+- Filling the real `affiliate_url` values into `ai_tools` once links exist
+  (a Supabase data update — no code change, see above).
+- Confirming/correcting the exact commission numbers on each official page
+  before treating them as a revenue projection.
