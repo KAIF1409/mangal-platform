@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ConsentBanner from "./components/ConsentBanner";
+import ProductVisitTracker from "./components/ProductVisitTracker";
 import { Analytics } from "@vercel/analytics/react";
 
 const geistSans = Geist({
@@ -80,6 +81,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
+        <ProductVisitTracker />
         {children}
         <ConsentBanner />
         <Analytics />
