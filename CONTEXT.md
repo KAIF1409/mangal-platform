@@ -3738,3 +3738,42 @@ deep-linking straight into a DM thread with that user — chat's
 Username is shown read-only in Settings (no rename flow) since other
 parts of the app reference usernames directly and a rename needs its
 own pass to check nothing breaks.
+
+## §51 — Fix: K Circle login dropping users on WebMangal instead of staying in-product
+
+**Founder-reported bug:** logging in from/for K Circle sometimes landed on
+WebMangal instead of K Circle; asked for parity so KaTube/WebMangal each
+stay on their own product after login too.
+
+**Root cause found (not the OAuth `next`-cookie path — that was already
+fixed in §unnumbered/11 Aug):** K Circle's own profile nav link (desktop
+top nav *and* mobile bottom-tab, `app/kalpana-circle/page.tsx`) hardcoded
+a fallback to `/WebMangal/home` whenever a logged-in user had no
+`creator_profiles` row yet (i.e. no username set — happens for anyone who
+signed up but never went through `/become-creator`). Clicking the profile
+icon in that state silently teleported them out of K Circle.
+
+**Fixed:**
+- `profileHref` (used by both desktop + mobile profile links) now falls
+  back to `/kalpana-circle/settings` instead of `/WebMangal/home` when
+  `myUsername` is null — keeps the user inside K Circle. Mobile bottom-tab
+  link was duplicating this logic inline instead of reusing `profileHref`;
+  now it just uses the shared variable.
+- `kalpana-circle/settings/page.tsx`: its own back-button had the mirror
+  bug — `href={`/kalpana-circle/profile/${username}`}` with an empty
+  `username` produces a broken `/kalpana-circle/profile/` link. Now falls
+  back to `/kalpana-circle` when `username` is empty.
+- KaTube parity: `katube/playlists` and `katube/subscriptions`'s "Sign in"
+  links had no `?next=`, so logging in from either also dropped the user
+  on WebMangal instead of back on that KaTube page. Added
+  `?next=/katube/playlists` / `?next=/katube/subscriptions`.
+
+**Not touched / left open:** there's still no in-product flow for a
+logged-in K Circle user to actually *set* a username — Settings' username
+field is read-only (per §50) and `creator_profiles.update()` on a
+non-existent row silently no-ops, so a user with zero `creator_profiles`
+row can land on Settings but can't yet create one from there. The only
+existing path to get a username is the site-wide `/become-creator` flow,
+which isn't `next`-aware (always lands on `/dashboard`). This fix stops
+the wrong-product redirect; a real "create your K Circle profile" flow is
+a separate, larger piece of work.
