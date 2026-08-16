@@ -5049,3 +5049,44 @@ every touched file; `get_advisors` (security) re-run after both live
 migrations — no new warning class introduced, same pre-existing
 self-guarding `SECURITY DEFINER` pattern every other RPC in this codebase
 already has.
+
+## §69 — K Circle mobile-compatibility audit: 1 real bug found & fixed
+
+Founder asked to check whether all of K Circle is mobile-compatible, and
+fix anything that isn't. Went page by page across all 12 pages under
+`app/kalpana-circle/` (`page.tsx`, `chat`, `watch-together` + its `shorts`
+room, `broadcasts` + `broadcast/[username]`, `saved`, `close-friends`,
+`settings`, `profile/[username]`, `group/[conversationId]`,
+`mangal-of-the-week`) — checked each for the shared responsive shell
+(`KCircleShellStyle`/`.kc-shell`, collapses the desktop rail below 768px),
+fixed pixel widths/min-widths that could force horizontal overflow on a
+narrow phone, and existing `@media` blocks doing what they claim to.
+
+**Found and fixed:** `group/[conversationId]/page.tsx` — the three
+server-management side panels (New Channel `260px`, Roles `300px`,
+Per-Channel Permission Overwrites `300px`) were plain fixed-width
+`flexShrink: 0` flex siblings of the message area with **zero** mobile
+handling, unlike the channel-list sidebar right next to them (which
+already had a proper mobile overlay pattern, `kc-group-sidebar`/
+`kc-group-sidebar-open`). On a phone, opening any of these three panels
+would squeeze the chat area toward zero width instead of the panel taking
+over the screen — a real, reachable bug (anyone with `MANAGE_CHANNELS`/
+`MANAGE_ROLES` permission managing their K Circle server from a phone).
+Fixed by giving all three the same full-screen-overlay treatment as the
+sidebar (`.kc-group-panel` class, `position: fixed; inset: 56px 0 0 0;
+width: 100%` below 700px) plus an explicit close (✕) button in each panel's
+header — none of the three had any way to close except re-tapping the
+same nav toggle, which isn't an obvious affordance once the panel is a
+full-screen overlay.
+
+**Everything else checked clean:** every other page already either uses
+the shared shell's built-in breakpoint or has its own purposeful `@media`
+block (chat's 480px title-truncation fix, profile's 359px/600px grid
+tweaks, the Shorts watch-room's `DESKTOP_BREAKPOINT`-gated layout which is
+mobile-first by design). No other fixed-width/min-width values ≥200px
+found anywhere in K Circle outside the three panels above. No viewport
+meta issue (Next.js App Router's default `width=device-width,
+initial-scale=1` applies uniformly; no page anywhere in this repo
+overrides it, so this isn't a K-Circle-specific gap).
+
+**Verified:** `tsc --noEmit` clean; `eslint` clean on the touched file.

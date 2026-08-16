@@ -349,6 +349,14 @@ export default function GroupChannelsPage() {
           .kc-group-sidebar.kc-group-sidebar-open { display: flex !important; position: fixed !important; inset: 56px 0 0 0; z-index: 90; background: var(--bg-primary); width: 100% !important; }
           .kc-group-hamburger { display: inline-flex !important; }
           .kc-group-sidebar-close { display: inline-flex !important; }
+          /* §68 mobile-compatibility pass — the channels/roles/permission-
+             overwrite admin panels were fixed-width (260-300px) flex
+             siblings of the message area with no mobile handling at all,
+             so on a phone they'd squeeze the chat down to near-zero width
+             instead of being usable. Same full-screen-overlay treatment as
+             .kc-group-sidebar above, so managing a server from a phone
+             actually works instead of just not visibly breaking. */
+          .kc-group-panel { position: fixed !important; inset: 56px 0 0 0; z-index: 95; width: 100% !important; background: var(--bg-primary); }
         }
       `}</style>
       <KCircleShellStyle />
@@ -495,8 +503,11 @@ export default function GroupChannelsPage() {
         </div>
 
         {panel === 'channels' && canManageChannels && (
-          <div style={{ width: '260px', flexShrink: 0, borderLeft: '1px solid var(--border-color)', padding: '16px' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 800, margin: '0 0 10px' }}>New channel</h3>
+          <div className="kc-group-panel" style={{ width: '260px', flexShrink: 0, borderLeft: '1px solid var(--border-color)', padding: '16px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: 800, margin: 0 }}>New channel</h3>
+              <button onClick={() => setPanel(null)} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', display: 'flex' }} title="Close"><X size={16} strokeWidth={2} /></button>
+            </div>
             <input
               value={newChannelName} onChange={e => setNewChannelName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') createChannel(); }}
@@ -511,8 +522,11 @@ export default function GroupChannelsPage() {
         )}
 
         {panel === 'roles' && canManageRoles && (
-          <div style={{ width: '300px', flexShrink: 0, borderLeft: '1px solid var(--border-color)', padding: '16px', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 800, margin: '0 0 10px' }}>Roles</h3>
+          <div className="kc-group-panel" style={{ width: '300px', flexShrink: 0, borderLeft: '1px solid var(--border-color)', padding: '16px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: 800, margin: 0 }}>Roles</h3>
+              <button onClick={() => setPanel(null)} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', display: 'flex' }} title="Close"><X size={16} strokeWidth={2} /></button>
+            </div>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
               <input
                 value={newRoleName} onChange={e => setNewRoleName(e.target.value)}
@@ -583,8 +597,11 @@ export default function GroupChannelsPage() {
           const chan = channels.find(c => c.id === overwriteChannelId);
           const editableRoles = roles.filter(r => canManageRoleAt(myRoleRows, r.position));
           return (
-            <div style={{ width: '300px', flexShrink: 0, borderLeft: '1px solid var(--border-color)', padding: '16px', overflowY: 'auto' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: 800, margin: '0 0 4px' }}># {chan?.name ?? ''} permissions</h3>
+            <div className="kc-group-panel" style={{ width: '300px', flexShrink: 0, borderLeft: '1px solid var(--border-color)', padding: '16px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: 800, margin: 0 }}># {chan?.name ?? ''} permissions</h3>
+                <button onClick={() => { setPanel(null); setOverwriteChannelId(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', display: 'flex', flexShrink: 0 }} title="Close"><X size={16} strokeWidth={2} /></button>
+              </div>
               <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '0 0 14px' }}>Per-role overrides for this channel only. Tap a chip to cycle Inherit → Allow → Deny.</p>
 
               {editableRoles.length === 0 && (
