@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
 import ThemeToggle from '../../../components/ThemeToggle';
 import { useKCircleTheme } from '../../theme';
+import { KCircleShellStyle, KCircleRail } from '../../components/Shell';
 import {
   ArrowLeft, Menu, Grid3x3, Bookmark, Heart, MessageCircle,
   Settings, LogOut, X, Megaphone, Star,
@@ -82,6 +83,11 @@ export default function KCircleProfilePage() {
   const [loaded, setLoaded] = useState(false);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [notFound, setNotFound] = useState(false);
+  // Signed-in viewer's own username/avatar — for the rail's profile icon.
+  // Deliberately separate from `profile` above, which is whoever's page is
+  // being viewed and may be someone else entirely (see components/Shell.tsx, §66).
+  const [viewerUsername, setViewerUsername] = useState<string | null>(null);
+  const [viewerAvatarUrl, setViewerAvatarUrl] = useState<string | null>(null);
 
   const [posts, setPosts] = useState<GridPost[]>([]);
   const [likeTotal, setLikeTotal] = useState(0);
@@ -92,6 +98,14 @@ export default function KCircleProfilePage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setViewerId(data.user?.id ?? null));
   }, []);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- data fetch on viewerId change, same pattern as ../../chat/page.tsx */
+  useEffect(() => {
+    if (!viewerId) { setViewerUsername(null); setViewerAvatarUrl(null); return; }
+    supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', viewerId).maybeSingle()
+      .then(({ data }) => { setViewerUsername(data?.username ?? null); setViewerAvatarUrl(data?.avatar_url ?? null); });
+  }, [viewerId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const load = useCallback(async () => {
     if (!username) return;
@@ -184,6 +198,19 @@ export default function KCircleProfilePage() {
           .kcp-page-pad { padding-left: 14px !important; padding-right: 14px !important; }
         }
       `}</style>
+      <KCircleShellStyle />
+
+      <div className="kc-shell">
+        <KCircleRail
+          userId={viewerId}
+          myUsername={viewerUsername}
+          myAvatarUrl={viewerAvatarUrl}
+          profileHref={viewerUsername ? `/kalpana-circle/profile/${viewerUsername}` : '/kalpana-circle/settings'}
+          navHref={(path) => (viewerId ? path : `/login?next=${encodeURIComponent(path)}`)}
+          setIsLight={setIsLight}
+        />
+
+        <div className="kc-main">
 
       {/* ── TOP BAR ── */}
       <nav style={{
@@ -353,6 +380,8 @@ export default function KCircleProfilePage() {
           )}
         </div>
       )}
+        </div>{/* /.kc-main */}
+      </div>{/* /.kc-shell */}
 
       {/* ── LIGHTBOX ── */}
       {lightbox && (
