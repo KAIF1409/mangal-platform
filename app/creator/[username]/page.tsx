@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
 import Link from 'next/link';
-import { Search, ArrowLeft, Flame, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText } from 'lucide-react';
+import { Search, ArrowLeft, Flame, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText, PenLine } from 'lucide-react';
 import VerifiedBadge from '../../components/VerifiedBadge';
 
 interface Series {
@@ -78,6 +78,12 @@ export default function CreatorProfilePage() {
   const [banConfirm, setBanConfirm] = useState(false);
   const [banning, setBanning] = useState(false);
 
+  // Phase 3 "Unique for Mangal" (CONTEXT.md §0c) — profile-level "WebMangal
+  // Writer of the Month" flair, same "read get_*_of_the_*() once, compare
+  // to this profile's user_id" pattern as the KaTube channel page's
+  // "Mangal of the Week" flair.
+  const [isWriterOfMonth, setIsWriterOfMonth] = useState(false);
+
   // Bug fix: "Back to Browse" was hardcoded to "/" (platform home), so
   // visitors who arrived here from KaTube or Kalpana Circle (both link to
   // creator profiles) got bounced to WebMangal instead of back where they
@@ -139,6 +145,16 @@ export default function CreatorProfilePage() {
         .order('created_at', { ascending: false });
 
       setSeries(seriesData || []);
+
+      // Phase 3 "Unique for Mangal" (CONTEXT.md §0c) — is this creator the
+      // most recently finalized month's #1 writer? Same single-RPC-call,
+      // compare-to-this-profile pattern as the KaTube channel page's
+      // bestOwnRank check, just keyed on writer_id instead of a rank map
+      // since get_writer_of_the_month() only ever returns the #1 writer.
+      const { data: writerOfMonth } = await supabase.rpc('get_writer_of_the_month');
+      const wom = (writerOfMonth ?? [])[0] as { writer_id: string } | undefined;
+      setIsWriterOfMonth(!!wom && wom.writer_id === creatorRow.user_id);
+
       setLoading(false);
     };
     load();

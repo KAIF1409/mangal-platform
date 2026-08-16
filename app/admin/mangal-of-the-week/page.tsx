@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { isDeveloperRole } from '../../lib/roles';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
-import { Lock, Trophy, Camera, CheckCircle2, Crown, IndianRupee, Save } from 'lucide-react';
+import { Lock, Trophy, Camera, CheckCircle2, Crown, IndianRupee, Save, PenLine } from 'lucide-react';
 
 // Admin controls for Mangal of the Week (Phase 2, build steps 1/3/5 — see
 // CONTEXT.md §0c). There's no scheduled job yet, so both the weekly
@@ -36,6 +36,21 @@ interface RankingRow {
   prize_note: string | null;
 }
 
+// Phase 3 (CONTEXT.md §0c) — WebMangal Writer of the Month. writer_username
+// comes through creator_profiles (nullable — a writer with no creator
+// profile row still shows, just without a display name).
+interface WriterAwardRow {
+  id: string;
+  month: string;
+  writer_id: string;
+  writer_username: string | null;
+  series_id: string;
+  series_title: string;
+  score: number;
+  rank: number | null;
+  prize_note: string | null;
+}
+
 /** Same Monday-of-week helper as the voting page — display/lookup only. */
 function currentWeekStart(): string {
   const now = new Date();
@@ -59,6 +74,53 @@ export default function AdminMangalOfTheWeekPage() {
 
   const [prizeDrafts, setPrizeDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Phase 3 — Writer of the Month state, mirrors the weekly section above.
+  const [pastMonths, setPastMonths] = useState<WriterAwardRow[]>([]);
+  const [finalizingWriter, setFinalizingWriter] = useState(false);
+  const [finalizeWriterMsg, setFinalizeWriterMsg] = useState<string | null>(null);
+  const [writerPrizeDrafts, setWriterPrizeDrafts] = useState<Record<string, string>>({});
+  const [savingWriterId, setSavingWriterId] = useState<string | null>(null);
+
+  const loadWriterAwards = useCallback(async () => {
+    // series!inner(title) + creator_profiles left join for username — same
+    // embedded-relation pattern as loadRankings above. creator_profiles
+    // isn't a direct FK target of monthly_writer_awards.writer_id (it's
+    // auth.users), so the username is fetched in a second pass instead of
+    // an embedded join.
+    const { data: awards } = await supabase
+      .from('monthly_writer_awards')
+      .select('id, month, writer_id, series_id, score, rank, prize_note, series!inner(title)')
+      .not('rank', 'is', null)
+      .order('month', { ascending: false })
+      .order('rank', { ascending: true })
+      .limit(50);
+
+    const rows = awards ?? [];
+    const writerIds = [...new Set(rows.map(r => r.writer_id))];
+    const { data: profiles } = writerIds.length
+      ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', writerIds)
+      : { data: [] as { user_id: string; username: string }[] };
+    const usernameMap = new Map((profiles ?? []).map(p => [p.user_id, p.username]));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- same embedded-relation typing gap as loadRankings
+    const toRow = (r: any): WriterAwardRow => ({
+      id: r.id, month: r.month, writer_id: r.writer_id,
+      writer_username: usernameMap.get(r.writer_id) ?? null,
+      series_id: r.series_id, series_title: r.series.title,
+      score: r.score, rank: r.rank, prize_note: r.prize_note,
+    });
+
+    const mapped = rows.map(toRow);
+    setPastMonths(mapped);
+    setWriterPrizeDrafts(prev => {
+      const next = { ...prev };
+      for (const r of mapped) {
+        if (!(r.id in next)) next[r.id] = r.prize_note ?? '';
+      }
+      return next;
+    });
+  }, []);
 
   const loadRankings = useCallback(async () => {
     const week = currentWeekStart();
@@ -106,11 +168,11 @@ export default function AdminMangalOfTheWeekPage() {
       if (!isDeveloperRole(profile?.role)) { setAllowed(false); setLoading(false); return; }
 
       setAllowed(true);
-      await loadRankings();
+      await Promise.all([loadRankings(), loadWriterAwards()]);
       setLoading(false);
     };
     load();
-  }, [loadRankings]);
+  }, [loadRankings, loadWriterAwards]);
 
   const handleSnapshot = async () => {
     setSnapshotting(true);
@@ -139,6 +201,28 @@ export default function AdminMangalOfTheWeekPage() {
     if (error) { alert(`Failed to save: ${error.message}`); setSavingId(null); return; }
     setPastWeeks(prev => prev.map(r => r.id === row.id ? { ...r, prize_note: note } : r));
     setSavingId(null);
+  };
+
+  // Phase 3 — finalize the previous month's Writer of the Month (default
+  // arg, same "finalize the period that just ended" pattern as
+  // finalize_weekly_rankings above), and save its prize note.
+  const handleFinalizeWriter = async () => {
+    setFinalizingWriter(true);
+    setFinalizeWriterMsg(null);
+    const { error } = await supabase.rpc('finalize_monthly_writer_awards');
+    if (error) { setFinalizeWriterMsg(`Failed: ${error.message}`); setFinalizingWriter(false); return; }
+    await loadWriterAwards();
+    setFinalizeWriterMsg('Last month\u2019s Writer of the Month finalized.');
+    setFinalizingWriter(false);
+  };
+
+  const handleSaveWriterPrize = async (row: WriterAwardRow) => {
+    setSavingWriterId(row.id);
+    const note = (writerPrizeDrafts[row.id] ?? '').trim() || null;
+    const { error } = await supabase.from('monthly_writer_awards').update({ prize_note: note }).eq('id', row.id);
+    if (error) { alert(`Failed to save: ${error.message}`); setSavingWriterId(null); return; }
+    setPastMonths(prev => prev.map(r => r.id === row.id ? { ...r, prize_note: note } : r));
+    setSavingWriterId(null);
   };
 
   if (loading) {
@@ -288,6 +372,103 @@ export default function AdminMangalOfTheWeekPage() {
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', borderRadius: '7px',
                           cursor: savingId === r.id ? 'not-allowed' : 'pointer',
+                          background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e',
+                        }}
+                      ><Save size={13} strokeWidth={2.5} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+
+        {/* ── Writer of the Month (Phase 3) ── */}
+        <div style={{ height: '1px', background: 'var(--border-color)', margin: '32px 0 24px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+          <PenLine size={20} strokeWidth={2} color="#a78bfa" />
+          <h1 style={{ fontSize: '20px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>Writer of the Month</h1>
+        </div>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 20px' }}>
+          Sums each writer&apos;s Tier 1 (collab) videos&apos; finalized weekly scores for the month and ranks them. Reuses the weekly scoring above &mdash; finalize all of a month&apos;s weeks first.
+        </p>
+
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
+          padding: '16px 20px', marginBottom: '10px',
+        }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '2px' }}>Finalize last month&apos;s writer award</div>
+            <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+              Aggregates the previous calendar month&apos;s Tier 1 collab videos per writer, ranks by summed score. Run once all that month&apos;s weeks are finalized.
+            </div>
+          </div>
+          <button
+            onClick={handleFinalizeWriter}
+            disabled={finalizingWriter}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, padding: '9px 16px', borderRadius: '9px',
+              fontSize: '12px', fontWeight: 700, cursor: finalizingWriter ? 'not-allowed' : 'pointer',
+              background: 'rgba(167,139,250,0.10)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa',
+            }}
+          >
+            <PenLine size={13} strokeWidth={2.5} />{finalizingWriter ? 'Finalizing\u2026' : 'Finalize last month'}
+          </button>
+        </div>
+        {finalizeWriterMsg && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '24px', fontSize: '12px', color: finalizeWriterMsg.startsWith('Failed') ? '#ef4444' : '#10b981' }}>
+            {!finalizeWriterMsg.startsWith('Failed') && <CheckCircle2 size={13} strokeWidth={2} />}{finalizeWriterMsg}
+          </div>
+        )}
+
+        <h2 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px' }}>Past writer awards &amp; prize notes</h2>
+        {pastMonths.length === 0 ? (
+          <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>No month finalized yet.</p>
+        ) : (
+          Object.entries(
+            pastMonths.reduce<Record<string, WriterAwardRow[]>>((acc, r) => {
+              (acc[r.month] ??= []).push(r);
+              return acc;
+            }, {})
+          ).map(([month, rows]) => (
+            <div key={month} style={{ marginBottom: '22px' }}>
+              <div style={{ fontSize: '11.5px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '8px' }}>Month of {month}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {rows.map(r => (
+                  <div key={r.id} style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '11px',
+                    background: 'var(--bg-card)', border: r.rank === 1 ? '1px solid rgba(167,139,250,0.4)' : '1px solid var(--border-color)',
+                  }}>
+                    <div style={{
+                      width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '11px', fontWeight: 900, color: r.rank === 1 ? '#fff' : 'var(--text-primary)',
+                      background: r.rank === 1 ? '#a78bfa' : 'var(--bg-input)',
+                    }}>{r.rank}</div>
+                    <div style={{ minWidth: 0, flex: '1 1 160px' }}>
+                      <div style={{ fontSize: '12.5px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        @{r.writer_username ?? 'unknown'} &mdash; {r.series_title}
+                      </div>
+                      <div style={{ fontSize: '10.5px', color: 'var(--text-tertiary)' }}>score {r.score.toFixed(1)}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      <IndianRupee size={12} strokeWidth={2.5} color="var(--text-tertiary)" />
+                      <input
+                        value={writerPrizeDrafts[r.id] ?? ''}
+                        onChange={e => setWriterPrizeDrafts(prev => ({ ...prev, [r.id]: e.target.value }))}
+                        placeholder="e.g. 5,000 awarded"
+                        style={{
+                          width: '140px', padding: '6px 9px', borderRadius: '7px', fontSize: '11.5px',
+                          background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-primary)',
+                        }}
+                      />
+                      <button
+                        onClick={() => handleSaveWriterPrize(r)}
+                        disabled={savingWriterId === r.id}
+                        title="Save prize note"
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', borderRadius: '7px',
+                          cursor: savingWriterId === r.id ? 'not-allowed' : 'pointer',
                           background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e',
                         }}
                       ><Save size={13} strokeWidth={2.5} /></button>

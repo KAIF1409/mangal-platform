@@ -9,6 +9,7 @@ import NotificationBell from './components/NotificationBell';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
 import MangalIdeasRow from './components/MangalIdeasRow';
 import MangalOfTheWeekBanner from './components/MangalOfTheWeekBanner';
+import WriterOfTheMonthBanner from './components/WriterOfTheMonthBanner';
 import { MangalWeekBadge } from './components/VideoGridCard';
 import { supabase } from '../lib/supabase';
 import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo } from 'lucide-react';
@@ -1007,6 +1008,11 @@ export default function KaTubePage() {
           video. Home-only, public (no userId gate), self-contained
           "returns null when empty" component like MangalIdeasRow. */}
       {activeSidebar === 'home' && <MangalOfTheWeekBanner />}
+
+      {/* Writer of the Month — §0/Phase 3 "Unique for Mangal" (CONTEXT.md
+          §0c). Same spotlight-banner pattern, one level down, for the most
+          recently finalized month's top writer. */}
+      {activeSidebar === 'home' && <WriterOfTheMonthBanner />}
 
       {activeSidebar === 'home' && <MangalIdeasRow userId={userId} />}
 

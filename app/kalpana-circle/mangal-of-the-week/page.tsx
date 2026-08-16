@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
-import { Trophy, ArrowLeft, Crown, IndianRupee } from 'lucide-react';
+import { Trophy, ArrowLeft, Crown, IndianRupee, PenLine } from 'lucide-react';
 
 // ── K Circle — Mangal of the Week (CONTEXT.md §0, Phase 2) ──
 // Voting UI for the weekly, audience-voted leaderboard: the top-20-by-views
@@ -45,6 +45,15 @@ interface Winner {
   collab_writer_username: string | null;
 }
 
+// Phase 3 (CONTEXT.md §0c) — WebMangal Writer of the Month announcement.
+interface WriterOfMonth {
+  month: string;
+  writer_username: string | null;
+  series_title: string;
+  score: number;
+  prize_note: string | null;
+}
+
 /** Monday of the current week, in the same shape Postgres'
  * date_trunc('week', now())::date produces server-side — this is a
  * display/lookup convenience only, the real source of truth for "which
@@ -79,6 +88,9 @@ export default function MangalOfTheWeekPage() {
 
   const [winners, setWinners] = useState<Winner[]>([]);
   const [loadingWinners, setLoadingWinners] = useState(true);
+
+  const [writerOfMonth, setWriterOfMonth] = useState<WriterOfMonth | null>(null);
+  const [loadingWriter, setLoadingWriter] = useState(true);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time auth check on mount, same pattern as ../broadcasts/page.tsx
   useEffect(() => {
@@ -143,11 +155,19 @@ export default function MangalOfTheWeekPage() {
     setLoadingWinners(false);
   }, []);
 
+  const loadWriterOfMonth = useCallback(async () => {
+    setLoadingWriter(true);
+    const { data } = await supabase.rpc('get_writer_of_the_month');
+    setWriterOfMonth(((data ?? []) as WriterOfMonth[])[0] ?? null);
+    setLoadingWriter(false);
+  }, []);
+
   useEffect(() => {
     if (!userId) return;
     loadPool(userId);
     loadWinners();
-  }, [userId, loadPool, loadWinners]);
+    loadWriterOfMonth();
+  }, [userId, loadPool, loadWinners, loadWriterOfMonth]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
@@ -246,6 +266,43 @@ export default function MangalOfTheWeekPage() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Writer of the Month (Phase 3) ── */}
+        <h2 style={{ fontSize: '13px', fontWeight: 800, margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <PenLine size={13} strokeWidth={2.5} color="#a78bfa" /> WebMangal Writer of the Month
+        </h2>
+        {loadingWriter ? (
+          <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 26px' }}>Loading…</p>
+        ) : !writerOfMonth ? (
+          <div style={{ padding: '16px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', marginBottom: '26px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.5 }}>
+              No month has been finalized yet — the top writer appears here once an admin scores the month.
+            </p>
+          </div>
+        ) : (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+            background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.35)', marginBottom: '26px',
+          }}>
+            <div style={{
+              width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#a78bfa',
+            }}><PenLine size={14} strokeWidth={2.5} color="#27272a" /></div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                @{writerOfMonth.writer_username ?? 'dreamer'}
+              </div>
+              <div style={{ fontSize: '10.5px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                for &ldquo;{writerOfMonth.series_title}&rdquo; · score {writerOfMonth.score.toFixed(1)}
+              </div>
+            </div>
+            {writerOfMonth.prize_note && (
+              <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#22c55e', display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                <IndianRupee size={10} strokeWidth={2.5} />{writerOfMonth.prize_note}
+              </div>
+            )}
           </div>
         )}
 
