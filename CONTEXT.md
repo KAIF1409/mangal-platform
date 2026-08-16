@@ -3641,3 +3641,42 @@ Checkout.js client-side integration. §31 decision 3's ₹49/month tier
 stays deferred per the founder's explicit instruction this session — this
 section is the backend only, waiting on both a real Razorpay account and
 a decision on which payment feature to build first.
+
+## §49 — §48 follow-up: payment method/bank/vpa columns + UI polish pass
+
+**Gap caught by founder:** §48 shipped a generic `payments` table before
+the method-picker UI existed, so it had no column to actually record
+*which* method (card/UPI/Google Pay/netbanking) or bank/VPA a payment
+used. Fixed — still infra-only, nothing user-facing calls any of this.
+
+**Schema (migration `20260816130000_payments_method_columns.sql`,
+applied):** added `requested_method`, `method`, `bank`, `vpa` to
+`payments`. `requested_method` is informational-only — whatever the
+(still-disconnected) picker UI would send at order-creation time, never
+authoritative. `method`/`bank`/`vpa` are the real record — only ever
+written server-side by the webhook handler from Razorpay's own payload,
+never trusted from the client.
+
+**Routes updated:**
+- `create-order` now accepts an optional `requestedMethod` in the
+  request body and stores it.
+- `webhook` now reads `payment.entity.method` / `.bank` / `.vpa` from
+  Razorpay's payload and writes whichever are present (each field is
+  independently conditional — Razorpay omits `bank` for non-netbanking
+  payments and `vpa` for non-UPI payments, so a later event for the same
+  order won't accidentally null out a field a previous event set).
+
+**UI polish pass** (`PaymentMethodPicker.tsx`, still 100% disconnected):
+method-specific accent colors on each tile (Card blue, UPI green, Google
+Pay blue, Netbanking purple) that show regardless of selection state for
+scannability; selected-state glow using that method's own color instead
+of one flat accent; added a Net Banking bank grid (SBI/HDFC/ICICI/Axis/
+Kotak/PNB) using colored initials, not real bank logos, same
+no-trademark-reproduction approach as the payment-method icons
+themselves. Preview still lives at the unlinked `/dev/payment-preview`
+route.
+
+**Still true from §48:** no checkout button, paywall, or Checkout.js
+integration exists. Connecting this for real is still gated on a
+Razorpay account + env vars (§48) and a decision on which payment
+feature ships first (§31 decision 3 stays deferred).
