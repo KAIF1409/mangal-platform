@@ -8,7 +8,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import NotificationBell from './components/NotificationBell';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
 import { supabase } from '../lib/supabase';
-import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo, Bell } from 'lucide-react';
+import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // ── KaTube — Step 3 (video grid + watch page) + Step 4 (upload flow,
@@ -54,7 +54,28 @@ interface RealVideo {
   ai_tool: string;
   creator: string;
   basedOn: string | null;
+  durationSeconds: number | null;
 }
+
+// §28a — duration filter buckets. Short/Medium/Long roughly mirrors
+// YouTube's own filter (Under 4 min / 4-20 min / Over 20 min); a video
+// with no duration_seconds on file (uploaded before this column existed)
+// is excluded from every bucket except "All", never guessed at.
+const DURATION_BUCKETS = [
+  { label: 'Any length', test: () => true },
+  { label: 'Under 4 min', test: (s: number) => s < 240 },
+  { label: '4–20 min', test: (s: number) => s >= 240 && s <= 1200 },
+  { label: 'Over 20 min', test: (s: number) => s > 1200 },
+];
+
+// §28a — upload date filter buckets.
+const UPLOAD_DATE_BUCKETS = [
+  { label: 'Any time', days: null },
+  { label: 'Today', days: 1 },
+  { label: 'This week', days: 7 },
+  { label: 'This month', days: 30 },
+  { label: 'This year', days: 365 },
+];
 
 interface RealShort {
   id: string;
@@ -446,6 +467,14 @@ export default function KaTubePage() {
   const [activeFilter, setActiveFilter] = useState(0);
   const [activeGenre, setActiveGenre] = useState('All');
   const [activeTool, setActiveTool] = useState('All');
+  const [activeDurationBucket, setActiveDurationBucket] = useState(0);
+  const [activeUploadDateBucket, setActiveUploadDateBucket] = useState(0);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  // §28a — snapshot "now" once per mount rather than calling Date.now()
+  // inline in the filter chain below (that trips React's purity rule,
+  // since it'd produce a different value on every render). Good enough for
+  // a day-granularity upload-date filter; no need to keep it ticking live.
+  const [nowMs] = useState(() => Date.now());
   const [isLight, setIsLight] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   // Lightweight display-name lookup for the nav avatar (template shows the
@@ -467,7 +496,7 @@ export default function KaTubePage() {
   useEffect(() => {
     (async () => {
       const [videosRes, shortsRes] = await Promise.all([
-        supabase.from('videos').select('id, title, youtube_id, views, likes, created_at, category, ai_tool, creator_id, series_id')
+        supabase.from('videos').select('id, title, youtube_id, views, likes, created_at, category, ai_tool, creator_id, series_id, duration_seconds')
           .eq('is_short', false).order('created_at', { ascending: false }),
         supabase.from('videos').select('id, title, youtube_id, views')
           .eq('is_short', true).order('created_at', { ascending: false }).limit(12),
@@ -499,6 +528,7 @@ export default function KaTubePage() {
         ai_tool: r.ai_tool,
         creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
         basedOn: r.series_id ? (seriesMap.get(r.series_id) || null) : null,
+        durationSeconds: r.duration_seconds ?? null,
       })));
       setLoading(false);
     })();
@@ -514,7 +544,32 @@ export default function KaTubePage() {
   // sort chip is active.
   const filteredVideos = videos
     .filter(v => activeGenre === 'All' || v.category === activeGenre)
-    .filter(v => activeTool === 'All' || v.ai_tool === activeTool);
+    .filter(v => activeTool === 'All' || v.ai_tool === activeTool)
+    // §28a — duration filter: a video with no duration on file is excluded
+    // from any bucket except "Any length" rather than assumed to match.
+    .filter(v => {
+      const bucket = DURATION_BUCKETS[activeDurationBucket];
+      if (activeDurationBucket === 0) return true;
+      return v.durationSeconds != null && bucket.test(v.durationSeconds);
+    })
+    // §28a — upload date filter. `nowMs` is computed once via useMemo
+    // above render (see const nowMs), not Date.now() called inline here —
+    // calling Date.now() directly inside the render-time filter chain
+    // trips React's purity rule (unstable result across re-renders).
+    .filter(v => {
+      const bucket = UPLOAD_DATE_BUCKETS[activeUploadDateBucket];
+      if (bucket.days == null) return true;
+      const ageMs = nowMs - new Date(v.created_at).getTime();
+      return ageMs <= bucket.days * 86400000;
+    })
+    // §28a — search bar, now actually wired to real results: matches
+    // title or creator name, case-insensitive substring. Was visual-only
+    // before this change (§22 follow-up).
+    .filter(v => {
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
+      return v.title.toLowerCase().includes(q) || v.creator.toLowerCase().includes(q);
+    });
   const sortedVideos = (() => {
     if (activeFilter === 0) return [...filteredVideos].sort((a, b) => b.views - a.views); // Popular
     if (activeFilter === 1) return [...filteredVideos].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // New
@@ -674,10 +729,13 @@ export default function KaTubePage() {
           </Link>
         </div>
 
-        {/* Search — visual only for now, no search backend/results page yet.
+        {/* Search — wired to real results (§28a): filters the grid below by
+            title/creator as you type. No separate results page yet — same
+            page, filtered in place, consistent with how genre/tool filters
+            already work here.
             Hidden below 768px via CSS: with the nav's other elements
             shrink-0, there's no room for a search bar on a phone-width
-            screen, and it doesn't do anything yet anyway. */}
+            screen. */}
         <form
           className="katube-search-wrap"
           onSubmit={(e) => e.preventDefault()}
@@ -691,8 +749,7 @@ export default function KaTubePage() {
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search"
-              title="Search isn't wired to real results yet"
+              placeholder="Search KaTube"
               style={{
                 width: '100%', height: '40px', padding: '0 16px 0 40px', borderRadius: '20px',
                 border: '1px solid var(--border-color)',
@@ -841,6 +898,56 @@ export default function KaTubePage() {
                 cursor: 'pointer', whiteSpace: 'nowrap',
               }}>{t}</span>
           ))}
+        </div>
+      )}
+
+      {/* §28a — duration + upload date filters, "Better search + filters".
+          Kept as a collapsible panel behind a toggle chip rather than
+          always-visible pill rows (like Categories/Tools get), since these
+          two axes apply on top of whichever tab is active and would
+          otherwise add a permanent 2 extra rows to every view. */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
+        <span
+          onClick={() => setShowMoreFilters(v => !v)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 700,
+            padding: '6px 14px', borderRadius: '20px', cursor: 'pointer',
+            background: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? 'rgba(249,115,22,0.12)' : 'transparent',
+            color: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? '#f97316' : 'var(--text-tertiary)',
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          Filters {(activeDurationBucket > 0 || activeUploadDateBucket > 0) && `(${[activeDurationBucket > 0, activeUploadDateBucket > 0].filter(Boolean).length})`}
+        </span>
+      </div>
+      {showMoreFilters && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+            {DURATION_BUCKETS.map((b, i) => (
+              <span
+                key={b.label}
+                onClick={() => setActiveDurationBucket(i)}
+                style={{
+                  flexShrink: 0, fontSize: '11.5px', fontWeight: 600, padding: '6px 14px', borderRadius: '20px',
+                  background: i === activeDurationBucket ? 'var(--text-primary)' : 'transparent',
+                  color: i === activeDurationBucket ? 'var(--bg-primary)' : 'var(--text-tertiary)',
+                  border: '1px solid var(--border-color)', cursor: 'pointer', whiteSpace: 'nowrap',
+                }}>{b.label}</span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+            {UPLOAD_DATE_BUCKETS.map((b, i) => (
+              <span
+                key={b.label}
+                onClick={() => setActiveUploadDateBucket(i)}
+                style={{
+                  flexShrink: 0, fontSize: '11.5px', fontWeight: 600, padding: '6px 14px', borderRadius: '20px',
+                  background: i === activeUploadDateBucket ? 'var(--text-primary)' : 'transparent',
+                  color: i === activeUploadDateBucket ? 'var(--bg-primary)' : 'var(--text-tertiary)',
+                  border: '1px solid var(--border-color)', cursor: 'pointer', whiteSpace: 'nowrap',
+                }}>{b.label}</span>
+            ))}
+          </div>
         </div>
       )}
 

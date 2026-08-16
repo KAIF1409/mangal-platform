@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let moderationInfo: { channelId: string; containsSyntheticMedia: boolean; thumbnailUrl: string | null } | null;
+  let moderationInfo: { channelId: string; containsSyntheticMedia: boolean; thumbnailUrl: string | null; durationSeconds: number | null } | null;
   try {
     moderationInfo = await fetchVideoModerationInfo(youtubeId);
   } catch (err) {
@@ -74,6 +74,10 @@ export async function POST(req: NextRequest) {
       is_short: !!isShort,
       category: category || 'Trailers',
       ai_tool: aiTool || 'Other',
+      // §28a — real duration from YouTube's contentDetails, powering the
+      // duration search filter. null is fine (filter just excludes it)
+      // rather than blocking the upload if YouTube didn't return one.
+      duration_seconds: moderationInfo.durationSeconds,
     })
     .select('id')
     .single();

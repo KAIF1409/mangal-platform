@@ -106,17 +106,36 @@ interface VideoModerationInfo {
   // §6b part 3 — highest-res thumbnail URL available, for the NSFWJS
   // check. Comes free off the same snippet field already being fetched.
   thumbnailUrl: string | null;
+  // §28a — real video length in seconds, for the duration search filter.
+  // Parsed from contentDetails.duration (ISO 8601, e.g. "PT4M13S")
+  // requested alongside snippet/status at zero extra API quota cost.
+  durationSeconds: number | null;
+}
+
+// Parses an ISO 8601 duration string ("PT1H2M10S", "PT45S", etc, as
+// returned by contentDetails.duration) into whole seconds. Returns null on
+// anything unparseable rather than throwing, since a duration filter that
+// silently excludes a video is much better than a broken upload.
+function parseIso8601Duration(iso: string | undefined): number | null {
+  if (!iso) return null;
+  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso);
+  if (!match) return null;
+  const hours = parseInt(match[1] || '0', 10);
+  const minutes = parseInt(match[2] || '0', 10);
+  const seconds = parseInt(match[3] || '0', 10);
+  return hours * 3600 + minutes * 60 + seconds;
 }
 
 // §6b part 2/3 — same videos.list call as fetchVideoChannelId above, just
-// requesting part=snippet,status together so the AI-disclosure + thumbnail
-// checks cost zero extra API quota over the existing §6 channel check. Use
-// this instead of fetchVideoChannelId wherever these checks are needed
-// (i.e. the upload route) — fetchVideoChannelId is kept as-is since other
-// callers (e.g. future re-verification flows) may only need the channelId.
+// requesting part=snippet,status,contentDetails together so the
+// AI-disclosure + thumbnail + duration checks cost zero extra API quota
+// over the existing §6 channel check. Use this instead of
+// fetchVideoChannelId wherever these checks are needed (i.e. the upload
+// route) — fetchVideoChannelId is kept as-is since other callers (e.g.
+// future re-verification flows) may only need the channelId.
 export async function fetchVideoModerationInfo(videoId: string): Promise<VideoModerationInfo | null> {
   const apiKey = getApiKey();
-  const params = new URLSearchParams({ part: 'snippet,status', id: videoId, key: apiKey });
+  const params = new URLSearchParams({ part: 'snippet,status,contentDetails', id: videoId, key: apiKey });
   const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
   if (!res.ok) return null;
   const data = await res.json();
@@ -129,6 +148,7 @@ export async function fetchVideoModerationInfo(videoId: string): Promise<VideoMo
     channelId: item.snippet.channelId,
     containsSyntheticMedia: item.status?.containsSyntheticMedia === true,
     thumbnailUrl,
+    durationSeconds: parseIso8601Duration(item.contentDetails?.duration),
   };
 }
 
