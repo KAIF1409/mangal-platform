@@ -74,7 +74,9 @@ function RailAvatar({ name, avatarUrl, size }: { name: string; avatarUrl?: strin
 }
 
 interface KCircleRailProps {
-  active: KCircleRailActive;
+  /** Omit when the current page isn't one of the five rail destinations
+   * (e.g. close-friends, settings, a profile page) — nothing highlights. */
+  active?: KCircleRailActive;
   userId: string | null;
   myUsername?: string | null;
   myAvatarUrl?: string | null;

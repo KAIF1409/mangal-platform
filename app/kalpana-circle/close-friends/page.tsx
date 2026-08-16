@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/authRedirect';
+import { useKCircleTheme } from '../theme';
+import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import { ArrowLeft } from 'lucide-react';
 
 // ── K Circle — manage close friends (story audience) ──
@@ -21,6 +23,7 @@ function initials(name: string) { return name.slice(0, 2).toUpperCase(); }
 interface Friend { user_id: string; username: string; }
 
 export default function CloseFriendsPage() {
+  const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +32,10 @@ export default function CloseFriendsPage() {
   const [results, setResults] = useState<Friend[]>([]);
   const [searching, setSearching] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Own username/avatar — this page never needed these before, but the
+  // shared K Circle rail's profile icon does (see components/Shell.tsx, §66).
+  const [myUsername, setMyUsername] = useState<string | null>(null);
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
 
   const loadFriends = useCallback(async (uid: string) => {
     const { data: rows } = await supabase.from('kcircle_close_friends').select('friend_id').eq('user_id', uid);
@@ -45,6 +52,9 @@ export default function CloseFriendsPage() {
       if (!uid) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
       setUserId(uid);
       await loadFriends(uid);
+      const { data: profile } = await supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', uid).maybeSingle();
+      setMyUsername(profile?.username ?? null);
+      setMyAvatarUrl(profile?.avatar_url ?? null);
       setLoading(false);
     };
     load();
@@ -86,11 +96,22 @@ export default function CloseFriendsPage() {
   };
 
   if (loading) {
-    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-primary)' }}>Loading…</div>;
+    return <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-primary)' }}>Loading…</div>;
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      <KCircleShellStyle />
+      <div className="kc-shell">
+        <KCircleRail
+          userId={userId}
+          myUsername={myUsername}
+          myAvatarUrl={myAvatarUrl}
+          profileHref={userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/kalpana-circle/settings') : '/login?next=/kalpana-circle'}
+          navHref={(path) => (userId ? path : `/login?next=${encodeURIComponent(path)}`)}
+          setIsLight={setIsLight}
+        />
+        <div className="kc-main">
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100, background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)', padding: '0 16px', height: '58px',
@@ -166,6 +187,8 @@ export default function CloseFriendsPage() {
           ))
         )}
       </div>
+        </div>{/* /.kc-main */}
+      </div>{/* /.kc-shell */}
     </div>
   );
 }
