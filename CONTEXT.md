@@ -4080,3 +4080,166 @@ a creator's display info is read).
 **Deliberately not done:** §27 item 7 ("deeper cross-promotion" — extends
 the KaTube↔K Circle auto-post) and item 8 (creator-only K Circle space)
 were skipped on request since both are explicitly K Circle-scoped.
+
+## §58 — AI features backlog (future implementation) — by product, with cost-minimization + priority split
+
+**Status: planning only, nothing built yet.** Founder asked for a categorized
+list of concrete AI features per product, how to keep the cost near-zero even
+at large reader/viewer scale, and — specifically — for any feature that costs
+literally nothing to be pulled out into its own "do this first" priority list
+instead of sitting in the costed backlog. Structured that way below.
+
+### 58a. The one idea that makes all of this cheap at scale — read this first
+
+Every costed feature below is written to run **once per piece of content**
+(one chapter, one video upload, one long thread) and cache the result in
+Supabase — not once per reader/viewer. That's the whole trick:
+
+- Cost scales with **how much content creators publish**, not with **how
+  many readers show up**. 10 readers or 10 lakh readers hitting the same
+  cached AI summary costs the same: ₹0 extra, it's just a DB read.
+- This means a sudden traffic spike / viral growth does **not** blow up the
+  AI bill — only creator upload volume does, and that grows much slower and
+  more predictably.
+- Anything that *would* scale per-user (e.g. an interactive writing
+  assistant a creator chats with) is called out separately below with its
+  own cap, precisely because that one doesn't get the free ride.
+
+### 58b. Priority list — zero cost, build these first (no paid API, no budget approval needed)
+
+These need no LLM API key and no budget decision, so per founder's
+instruction they're pulled out of the costed list below and should be built
+before any paid item:
+
+1. **Extractive (non-generative) thread digest for Kalpana Circle** — instead
+   of an LLM writing a summary, just surface the top-N most-liked/most-replied
+   comments in a thread as a "highlights" strip. Zero AI cost, same practical
+   effect (new visitor gets the gist of a 200-comment thread fast) without any
+   API call. Can be upgraded to the real generative summary (§58f) later
+   without changing the UI shape.
+2. **YouTube's own AI-disclosure field for KaTube moderation** — already
+   live per §6b (`selfDeclaredMadeForKids`/AI-disclosure metadata read via
+   YouTube's oEmbed/Data API, which is free). This already covers the
+   "is this AI-generated" signal at ₹0; no separate paid classifier is
+   needed for that specific check.
+3. **Rule-based tag inference** — auto-suggest tags for a new KaTube upload
+   or WebMangal chapter by matching the title/description text against the
+   existing tag vocabulary already in Supabase (simple keyword/substring
+   match, no model call). Weaker than the LLM version in §58d but genuinely
+   free, and can ship immediately as the default with the LLM version as an
+   opt-in "improve with AI" upgrade later.
+4. **Self-hosted small embedding model for "similar content" matching** —
+   sentence-transformer-class open-source model (e.g. all-MiniLM class)
+   run inside a serverless function on CPU, computed once per chapter/video
+   at publish time and cached as a vector in Supabase (`pgvector`). No
+   per-call API fee — the only cost is normal Vercel/Supabase compute,
+   which is already inside the existing zero-cost architecture. This
+   directly upgrades the tag-based "Up next"/recommendation logic (§8)
+   toward the "similar vibe, not just same tag" behavior discussed earlier,
+   without opening an AI API bill at all.
+
+None of the four above need a founder budget call — they can be scheduled
+like any other feature.
+
+### 58c. WebMangal (readers) — AI-written short summary/blurb per chapter or series
+
+- **What:** if a creator hasn't written a blurb, or wants a one-line "so far"
+  recap at the start of a new chapter, an LLM generates it from the chapter
+  text.
+- **Data needed:** the chapter/series text already in Supabase — nothing new
+  to collect.
+- **Cost-minimization:** generate once when the chapter is published, store
+  the summary as a new column (e.g. `chapters.ai_summary`), never regenerate
+  on read. Use the cheapest small-model tier (the "mini/flash/haiku" class of
+  model, not a flagship model) — a summary task doesn't need the expensive
+  model. Only run if the creator hasn't supplied their own blurb (opt-out,
+  not forced), so volume tracks "creators who skip writing a blurb," not
+  every chapter.
+- **Cost at scale (illustrative — small-model API pricing, verify current
+  rates before building, these move often):**
+  - Small scale (~200 chapters/month needing a summary): well under
+    ₹50/month.
+  - Large scale, even a big breakout month (~20,000 chapters/month across
+    all creators): still roughly ₹300–₹600/month, because each call is a
+    few hundred tokens and it's a one-time cost per chapter, not per reader.
+  - Reader count is irrelevant to this number per §58a.
+
+### 58d. WebMangal (creators) — AI writing assistant
+
+- **What:** in-editor help — continuity/plot-hole check, grammar pass,
+  "suggest 3 directions for the next chapter" — the item already flagged in
+  §27 item 10 / §41 as gated behind an AI budget decision.
+- **Data needed:** the creator's own draft text (already local to their
+  editor session), optionally their published chapters for continuity
+  context.
+- **Cost-minimization — this is the one feature in this list that does
+  scale per-user, not per-content, so it needs its own cap:**
+  - Ship as an explicit "Ask AI" button the creator presses, not something
+    that runs automatically on every keystroke/save.
+  - Give each creator a monthly quota (e.g. a fixed number of AI assists per
+    month on the free tier), enforced with a simple counter column —
+    protects against one runaway user driving the whole bill.
+  - Use the small-model tier here too; a "check continuity" or "suggest next
+    beat" task doesn't need a flagship model.
+- **Cost at scale (illustrative, verify current pricing):**
+  - Small scale (~500 creators, ~20 assist-requests/month each = 10,000
+    requests/month): roughly ₹500/month.
+  - Large scale (~5,000 active creators at the same usage rate = 100,000
+    requests/month): roughly ₹5,000/month.
+  - This is the one line item that genuinely grows with adoption, so it's
+    the one to keep an eye on and quota — not because it's expensive per
+    call, but because unlike 58c/58e/58f it isn't capped by content volume.
+
+### 58e. KaTube — AI-generated tags, description + AI moderation assist
+
+- **What:** on upload, suggest tags/description from the title + creator's
+  own input text (paid upgrade over the free rule-based version in §58b.3);
+  and a secondary AI check for the moderation queue for whatever the free
+  YouTube-disclosure signal (§58b.2) doesn't already resolve on its own.
+- **Data needed:** upload form text fields already collected; for the
+  moderation assist, only the subset of uploads that the existing free
+  checks (§6b, §58b.2) flag as ambiguous — not every upload.
+- **Cost-minimization:** run once at upload time, cache on the `videos` row,
+  never recomputed. Route the moderation-assist call only to the ambiguous
+  minority of uploads (most are already resolved for free), so that cost
+  scales with "uploads YouTube's own metadata couldn't classify," which is
+  a small slice of total uploads, not all of them.
+- **Cost at scale (illustrative, verify current pricing):**
+  - Small scale (~150 uploads/month, ~15% needing the moderation-assist
+    call): a few hundred rupees/month total for both tag/description +
+    moderation-assist combined.
+  - Large scale (~15,000 uploads/month, same ~15% ambiguous rate): roughly
+    ₹2,000–₹4,000/month — still small because per-video cost is a few
+    paise, and it's one call per upload, not per view.
+
+### 58f. Kalpana Circle — AI-summarized discussion threads (generative upgrade)
+
+- **What:** the real LLM-written version of the summary — a 2–3 line "what
+  this thread is about" recap for long threads, upgrading the free
+  extractive version shipped first in §58b.1.
+- **Data needed:** the thread's comment text, already in Supabase.
+- **Cost-minimization:** only trigger once a thread crosses a size threshold
+  (e.g. 50+ comments) where a digest actually adds value; cache the summary
+  and only regenerate periodically (e.g. every N new comments, or an
+  on-demand "refresh summary" button) rather than after every single new
+  comment.
+- **Cost at scale (illustrative, verify current pricing):**
+  - Small scale (~50 threads/month cross the size threshold): a few tens of
+    rupees/month.
+  - Large scale (~5,000 threads/month cross it, a genuinely very active
+    community): still well under ₹1,000/month at a few-times-a-day refresh
+    cadence, because it's capped by "threads big enough to need it," not by
+    total messages or total members reading them.
+
+### 58g. Net picture
+
+- 58b (four items) — zero cost, no approval needed, schedule anytime.
+- 58c, 58e, 58f — paid but per-content, so cheap and stay cheap even with a
+  large reader/viewer base; the number that matters is creator-side content
+  volume, not audience size.
+- 58d — the one genuinely usage-scaling item; ship it capped/quota'd from
+  day one rather than uncapped.
+- All rupee figures above are illustrative planning estimates from current
+  small-model API pricing tiers, not a quote — re-check actual pricing at
+  build time before committing to a budget, since provider pricing changes
+  fairly often.
