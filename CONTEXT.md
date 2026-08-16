@@ -4298,3 +4298,43 @@ cross-promotion), item 8 (creator-only K Circle space), item 10 (AI creator
 tools — tracked separately now under §58e/§58d). §41 (Affiliate AI Toolkit
 page) still needs its K Circle tab trimmed out of spec before it's
 buildable as scoped — flagged, not started.
+
+## §60 — §27 item 4: Real creator analytics — retention/drop-off per chapter (DONE)
+
+**Correction to §59's note above:** §59 flagged item 4 as "bigger, needs
+new event-logging infra" — that's true for per-chapter *views* (view_events
+only logs series_id, not chapter_id) but not for retention/drop-off, which
+this section covers. `reading_progress` already carries `chapter_id`, so
+retention didn't need new infra, just regrouping existing data.
+
+**Why this over §41:** compared §27 item 4 (retention/drop-off dashboard)
+against §41 (Affiliate AI Toolkit page) to pick the faster win. §41 needs a
+new `ai_tools` table *and* individually applying to each affiliate program
+(external approval, not something that ships in one sitting) plus trimming
+its K Circle tab first. §27 item 4 turned out to already have all its
+infra: `/dashboard`'s analytics already computes a blended Chapter
+Completion Rate from `reading_progress` vs `pages` (last page per chapter)
+— per-chapter retention just needed the same data grouped by `chapter_id`
+instead of blended into one number. No migration, no new table.
+
+**What shipped:** `app/dashboard/page.tsx` — `AnalyticsData.chapterRetention`
+(new `ChapterRetentionStat[]`), populated in `fetchAnalytics` by grouping
+the existing `reading_progress`/`pages` join per `chapter_id` (chapter
+number/title/series title resolved from `chaptersBySeriesId`, already in
+state from `fetchStories` — no extra query). Chapters with under 3 tracked
+readers are dropped to avoid a misleading 0%/100% from a single reader.
+Rendered as a new "Retention — Where Readers Drop Off" panel on the
+Analytics tab, sorted worst-completion-first (capped to 15 rows), each row
+a progress bar colored red/amber/accent by completion %.
+
+**Deliberately not done:** true "views per chapter" (the existing dashed
+placeholder note) is a separate gap — view_events only logs `series_id`,
+not `chapter_id` yet, so it still needs the small migration + reader-view
+hook called out in that note. Not touched here; only the retention/
+completion metric (which was already chapter-addressable via
+`reading_progress`) was extended.
+
+**Not started (§41 remains backlog):** Affiliate AI Toolkit page — still
+needs the `ai_tools`/`tool_clicks` tables, the K Circle tab trimmed per its
+spec, and affiliate-program applications submitted individually before any
+tool card goes live monetized.

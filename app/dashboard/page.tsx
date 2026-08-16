@@ -70,6 +70,21 @@ interface AnalyticsData {
   countryCounts: Record<string, number>; // ISO country code -> view count
   genderCounts: { male: number; female: number; unspecified: number; unknown: number };
   completion: { started: number; completed: number }; // reading_progress vs last page per chapter
+  // §27 item 4 — Real Creator Analytics: per-chapter retention/drop-off.
+  // Same reading_progress + pages source as `completion` above, just grouped
+  // by chapter_id instead of blended into one number, so a creator can see
+  // *which* chapter loses readers rather than only an overall rate.
+  chapterRetention: ChapterRetentionStat[];
+}
+
+interface ChapterRetentionStat {
+  chapterId: string;
+  seriesId: string;
+  seriesTitle: string;
+  chapterNumber: number;
+  chapterTitle: string;
+  started: number; // readers who opened this chapter (have a progress row)
+  completed: number; // of those, readers who reached the last page
 }
 
 // Step 28 — mirrors formatViews used on homepage/search cards for consistent display
@@ -204,7 +219,7 @@ export default function Dashboard() {
           totalChapters: 0, totalWords: 0, viewsPerSeries: [], wordsBySeriesId: {},
           dailyViews: [], hourlyViews: new Array(24).fill(0), countryCounts: {},
           genderCounts: { male: 0, female: 0, unspecified: 0, unknown: 0 },
-          completion: { started: 0, completed: 0 },
+          completion: { started: 0, completed: 0 }, chapterRetention: [],
         });
         setAnalyticsLoaded(true);
         return;
@@ -302,12 +317,56 @@ export default function Dashboard() {
       });
       let started = 0;
       let completed = 0;
+      // §27 item 4 — same rows, grouped per chapter instead of blended.
+      const perChapter: Record<string, { started: number; completed: number }> = {};
       (progressResult.data || []).forEach((row: { chapter_id: string; page_number: number }) => {
         const lastPage = lastPageByChapter[row.chapter_id];
         if (lastPage === undefined) return; // not a paged (manga) chapter — not measurable
         started++;
-        if (row.page_number >= lastPage) completed++;
+        const isDone = row.page_number >= lastPage;
+        if (isDone) completed++;
+        if (!perChapter[row.chapter_id]) perChapter[row.chapter_id] = { started: 0, completed: 0 };
+        perChapter[row.chapter_id].started++;
+        if (isDone) perChapter[row.chapter_id].completed++;
       });
+
+      // Chapter number/title/series-title lookup, built from chaptersBySeriesId
+      // (already fetched in fetchStories) + the series list already in state —
+      // no extra query needed.
+      const chapterMeta: Record<string, { seriesId: string; seriesTitle: string; chapterNumber: number; chapterTitle: string }> = {};
+      const seriesTitleById: Record<string, string> = {};
+      stories.forEach((s) => { seriesTitleById[s.id] = s.title; });
+      Object.entries(chaptersBySeriesId).forEach(([seriesId, chs]) => {
+        chs.forEach((ch) => {
+          chapterMeta[ch.id] = {
+            seriesId,
+            seriesTitle: seriesTitleById[seriesId] || '',
+            chapterNumber: ch.chapter_number,
+            chapterTitle: ch.title,
+          };
+        });
+      });
+
+      // Only chapters with at least a few readers so single-reader noise
+      // doesn't produce a misleading 0%/100% drop-off entry; sorted worst
+      // drop-off (lowest completion rate) first so the creator sees problem
+      // chapters immediately, capped to 15 rows for a scan-able list.
+      const chapterRetention: ChapterRetentionStat[] = Object.entries(perChapter)
+        .filter(([, v]) => v.started >= 3)
+        .map(([chapterId, v]) => {
+          const meta = chapterMeta[chapterId];
+          return {
+            chapterId,
+            seriesId: meta?.seriesId || '',
+            seriesTitle: meta?.seriesTitle || '',
+            chapterNumber: meta?.chapterNumber ?? 0,
+            chapterTitle: meta?.chapterTitle || '',
+            started: v.started,
+            completed: v.completed,
+          };
+        })
+        .sort((a, b) => (a.completed / a.started) - (b.completed / b.started))
+        .slice(0, 15);
 
       setAnalytics({
         totalViews,
@@ -323,6 +382,7 @@ export default function Dashboard() {
         countryCounts,
         genderCounts,
         completion: { started, completed },
+        chapterRetention,
       });
     } catch (err) {
       console.error('Error fetching analytics:', err instanceof Error ? err.message : err);
@@ -1259,6 +1319,53 @@ export default function Dashboard() {
                     <div style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>Across all published chapters</div>
                   </div>
                 </div>
+
+                {/* §27 item 4 — Retention / drop-off per chapter. Real data,
+                    sourced from reading_progress vs pages (same source as
+                    Chapter Completion Rate above), just grouped per chapter
+                    so a creator can see exactly where readers stop. Chapters
+                    with under 3 tracked readers are omitted to avoid noisy
+                    0%/100% entries from a single reader. */}
+                <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px' }}>
+                  <TrendingDown size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Retention — Where Readers Drop Off
+                </h3>
+                {analytics.chapterRetention.length === 0 ? (
+                  <div style={{
+                    border: '1px dashed #2a2a38', borderRadius: '14px', padding: '16px 18px',
+                    color: 'var(--text-tertiary)', fontSize: '12px', lineHeight: 1.6, marginBottom: '24px',
+                  }}>
+                    Not enough tracked reads yet — this fills in once a few readers have
+                    progressed through a paged (manga-style) chapter.
+                  </div>
+                ) : (
+                  <div style={{
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px',
+                    padding: '6px', marginBottom: '24px',
+                  }}>
+                    {analytics.chapterRetention.map((c, i, arr) => {
+                      const pct = Math.round((c.completed / c.started) * 100);
+                      const barColor = pct < 40 ? '#e5484d' : pct < 70 ? '#e5a63a' : 'var(--accent)';
+                      return (
+                        <div key={c.chapterId} style={{
+                          padding: '12px 14px', borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--divider)',
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-soft)' }}>
+                              {c.seriesTitle ? `${c.seriesTitle} — ` : ''}Ch. {c.chapterNumber}{c.chapterTitle ? `: ${c.chapterTitle}` : ''}
+                            </span>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: barColor, flexShrink: 0 }}>{pct}%</span>
+                          </div>
+                          <div style={{ height: '6px', borderRadius: '3px', background: 'var(--divider)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: '3px' }} />
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-faint)', marginTop: '4px' }}>
+                            {c.completed} of {c.started} readers finished this chapter
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <div style={{
                   border: '1px dashed #2a2a38', borderRadius: '14px', padding: '16px 18px',
