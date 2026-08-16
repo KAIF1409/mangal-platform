@@ -53,6 +53,7 @@ interface RealVideo {
   category: string;
   ai_tool: string;
   creator: string;
+  creatorId: string;
   basedOn: string | null;
   durationSeconds: number | null;
 }
@@ -470,6 +471,8 @@ export default function KaTubePage() {
   const [activeDurationBucket, setActiveDurationBucket] = useState(0);
   const [activeUploadDateBucket, setActiveUploadDateBucket] = useState(0);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+  // §27 item 6 — New Voices: ordered list of recently-joined creator user_ids
+  const [newVoiceOrder, setNewVoiceOrder] = useState<string[]>([]);
   // §28a — snapshot "now" once per mount rather than calling Date.now()
   // inline in the filter chain below (that trips React's purity rule,
   // since it'd produce a different value on every render). Good enough for
@@ -527,11 +530,20 @@ export default function KaTubePage() {
         category: r.category,
         ai_tool: r.ai_tool,
         creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
+        creatorId: r.creator_id,
         basedOn: r.series_id ? (seriesMap.get(r.series_id) || null) : null,
         durationSeconds: r.duration_seconds ?? null,
       })));
       setLoading(false);
     })();
+
+    // §27 item 6 — New Voices: most recently-joined creators, ordered by
+    // creator_profiles.joined_at desc rather than by views/popularity —
+    // gives a brand-new creator a guaranteed discovery slot instead of
+    // always losing to whoever already has the most views. Same pattern
+    // just shipped on WebMangal's home page.
+    supabase.from('creator_profiles').select('user_id, joined_at').order('joined_at', { ascending: false }).limit(20)
+      .then(({ data }) => { if (data) setNewVoiceOrder(data.map(c => c.user_id)); });
   }, []);
 
   // Popular = views desc, New = created_at desc, Rankings = likes desc
@@ -575,6 +587,19 @@ export default function KaTubePage() {
     if (activeFilter === 1) return [...filteredVideos].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // New
     if (activeFilter === 2) return [...filteredVideos].sort((a, b) => b.likes - a.likes); // Rankings
     return filteredVideos; // Categories / Tools
+  })();
+
+  // §27 item 6 — New Voices row: one (most recent) video per recently-
+  // joined creator, in join-date order — not filtered/sorted by the
+  // Popular/New/Rankings chips above, this is its own always-recency-
+  // ordered row, same as WebMangal's version of this section.
+  const newVoices = (() => {
+    if (newVoiceOrder.length === 0) return [];
+    const byCreator = new Map<string, RealVideo>();
+    for (const v of videos) {
+      if (!byCreator.has(v.creatorId)) byCreator.set(v.creatorId, v); // videos is created_at desc, so first = latest
+    }
+    return newVoiceOrder.map(id => byCreator.get(id)).filter((v): v is RealVideo => !!v).slice(0, 6);
   })();
 
   // Forced dark by default — founder confirmed dark is the right look for
@@ -955,6 +980,25 @@ export default function KaTubePage() {
           viewer with in-progress videos (component itself returns null
           otherwise, so no empty-state flash). */}
       {activeSidebar === 'home' && userId && <ContinueWatchingRow userId={userId} />}
+
+      {/* §27 item 6 — New Voices: recently-joined creators, ordered by
+          join date not popularity/views, so a brand-new KaTube creator
+          gets a guaranteed discovery slot instead of always losing to
+          whoever already has the most views. One (their latest) video
+          per creator. Home-only, same as Continue Watching above — this
+          is a discovery row, not something that belongs inside the
+          Fast/Slow tap tab filters. Reuses RealVideoCard (same file,
+          below) rather than the separate VideoGridCard used by the
+          standalone Subscriptions/Trending pages, since this row lives
+          inside this page's own grid styling. */}
+      {activeSidebar === 'home' && newVoices.length > 0 && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto 28px', padding: '0 20px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 14px', letterSpacing: '-0.02em' }}>New Voices</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+            {newVoices.map(v => <RealVideoCard key={v.id} video={v} />)}
+          </div>
+        </div>
+      )}
 
       {/* Fast tap — renamed from "Shorts" per the wireframe. Grid instead of
           a horizontal scroll strip so it can collapse/expand via "Show more",
