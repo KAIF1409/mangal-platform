@@ -3680,3 +3680,61 @@ route.
 integration exists. Connecting this for real is still gated on a
 Razorpay account + env vars (§48) and a decision on which payment
 feature ships first (§31 decision 3 stays deferred).
+
+## §50 — K Circle Instagram-style profile page + settings (fixes "no logout in K Circle")
+
+**Founder-reported gap:** K Circle had no real profile page — the
+profile avatar in the nav linked to `/creator/[username]`, a generic
+WebMangal-themed page with no Sign Out option anywhere in K Circle.
+Founder shared Instagram profile screenshots as the reference.
+
+**Built:**
+- `app/kalpana-circle/profile/[username]/page.tsx` (new) — avatar, bio,
+  Posts/Likes stat row (no Followers/Following shown — K Circle has no
+  follow-graph table, didn't want to fabricate a number), Edit Profile
+  button (own profile) or Message button (others, links to
+  `/kalpana-circle/chat`), a real posts grid from `kcircle_posts` with
+  hover like/comment-count overlay and a click-through lightbox. Own
+  profile gets a hamburger menu (Settings, Saved, Close Friends,
+  Broadcast Channels, Log Out) — **this is the logout fix**.
+- `app/kalpana-circle/settings/page.tsx` (new) — Edit Profile (avatar
+  upload to the existing `kcircle-media` bucket under `avatars/`, bio
+  editor with a 150-char counter), quick links to Saved/Close
+  Friends/Broadcast Channels, a link out to the sitewide `/settings`
+  for account-level stuff (delete account/data export/consent —
+  deliberately not duplicated here), and Log Out.
+- `creator_profiles.avatar_url` column added (`bio` already existed).
+  Migration `20260816150000_creator_profiles_avatar_url.sql`, applied
+  live via Supabase MCP. No new RLS needed — existing "viewable by
+  everyone" SELECT + "update own" UPDATE policies are row-level, cover
+  the new column automatically.
+- `app/kalpana-circle/page.tsx`: `Avatar` now renders the real
+  `avatar_url` photo when set (falls back to initials otherwise); the
+  desktop nav avatar link and mobile bottom-tab profile icon both now
+  point to `/kalpana-circle/profile/[username]` instead of the old
+  `/creator/[username]`.
+
+**Explicitly not touched:** the site-wide `/creator/[username]` page
+(WebMangal's own creator profile) is untouched — K Circle now has its
+own separate profile route instead, matching how KaTube/Kalpana Circle
+already have their own dashboards rather than sharing WebMangal's.
+Default theme: confirmed already correct per founder's ask — K Circle
+homepage already defaults to dark with light as a toggle
+(`useKCircleTheme`, §unnumbered in `app/kalpana-circle/theme.ts`), so
+nothing changed there; the new profile/settings pages just reuse the
+same hook so they stay in sync with whatever the feed is set to.
+
+**Verification:** `tsc --noEmit` clean, `eslint` clean on all touched
+files (only a pre-existing unrelated warning remains in
+`app/kalpana-circle/page.tsx`). `next build` itself couldn't complete
+in the sandbox because outbound access to `fonts.googleapis.com` is
+blocked there (unrelated to this change — Vercel's build environment
+has normal internet access).
+
+**Not done / left open:** Message button on another user's profile
+links to the general `/kalpana-circle/chat` inbox rather than
+deep-linking straight into a DM thread with that user — chat's
+`startDirectMessage` helper exists but isn't wired to a URL param yet.
+Username is shown read-only in Settings (no rename flow) since other
+parts of the app reference usernames directly and a rename needs its
+own pass to check nothing breaks.
