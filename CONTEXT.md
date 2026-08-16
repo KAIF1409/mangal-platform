@@ -71,15 +71,49 @@ for Mangal" fixes that with three pieces:
 - Add `is_collab` + `collab_writer_id` columns to the KaTube videos table (if not
   already present) — needed to distinguish Tier 1 (collab) vs Tier 2 (solo)
 
-**Phase 1 — Mangal Ideas feed (KaTube home)**
-1. Admin-only insert UI for company idea cards (reuse existing admin/dashboard
-   pattern)
-2. Scheduled/on-load query to auto-surface story-demand cards: WebMangal series
-   with high trending signal but low/zero KaTube adaptation count
-3. Card component on KaTube home, top section, horizontal scroll, mixing both
-   card types
-4. "Collaborate karna chahta hoon" button → notification/DM to the writer
-   (reuse Kalpana Circle DM infra)
+**Phase 1 — Mangal Ideas feed (KaTube home) — own dedicated phase, multi-source**
+
+> Supersedes the earlier single-source draft of this phase. The feed shows
+> **minimum 1, maximum 4 idea cards** at a time, pulled from **three sources**,
+> each card linking out to where it came from ("connection link"):
+
+| # | Source | What it is | Connection link |
+|---|--------|------------|------|
+| 1 | **WebMangal** | Auto-surfaced trending story with no/low KaTube adaptation yet (already designed above — `mangal_ideas.type = 'story_demand'`) | Links to the WebMangal series page |
+| 2 | **Audience (Kalpana Circle)** | The top audience-submitted idea/request post from Kalpana Circle, picked by **most likes + comments** (engagement) | Links to the original Kalpana Circle post |
+| 3 | **Company/platform** | Admin-authored idea card, same as before (`type = 'company'`) | Optional link, admin-set |
+
+**Selection rule:** show at least 1 card total (never empty if *any* source has
+content), up to 4 max. Prefer covering all three sources first (1 card each =
+3), then fill a 4th slot from whichever source has the next-strongest
+candidate (e.g. a second high-engagement audience idea, or a second
+story-demand series) — so the feed never looks empty even if one source is
+dry, but also never crowds out the other two sources if all three are active.
+
+**Schema addition needed (not yet applied):**
+- `mangal_ideas.type` check constraint extended to `('company', 'story_demand', 'audience')`
+- `mangal_ideas.source_post_id` — new nullable column, `references kcircle_posts(id) on delete cascade`, set only for `type = 'audience'` rows (this is the "connection link" target for audience cards)
+- `mangal_ideas.link_url` — new nullable column, for the company-card admin-set optional link
+- Need a way to mark a Kalpana Circle post as an "idea/request" post so the
+  audience-idea picker knows what pool to rank — reuse the existing
+  `kcircle_posts.tag` column (e.g. tag = `'idea'`) rather than a new table
+
+**Build steps:**
+1. Migration: extend `mangal_ideas` type constraint + add `source_post_id` and
+   `link_url` columns (see above)
+2. Admin-only insert UI for company idea cards (reuse existing admin/dashboard
+   pattern), with the optional link field
+3. Scheduled/on-load query for story-demand cards (WebMangal series trending,
+   no/low KaTube adaptation) — as originally designed
+4. Scheduled/on-load query for audience-idea cards: top `kcircle_posts` tagged
+   `'idea'`, ranked by `likes + comments` engagement, auto-inserted/refreshed
+   into `mangal_ideas` as `type = 'audience'` with `source_post_id` set
+5. Selection function implementing the "min 1, max 4, cover all sources first"
+   rule above
+6. Card component on KaTube home, top section, horizontal scroll, mixing all
+   three card types, each rendering its connection link
+7. "Collaborate karna chahta hoon" button (story-demand cards only) →
+   notification/DM to the writer (reuse Kalpana Circle DM infra)
 
 **Phase 2 — Mangal of the Week**
 1. Weekly scheduled job: pull top 20 videos by views for the week, snapshot into
