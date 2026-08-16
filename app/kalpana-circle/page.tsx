@@ -338,10 +338,20 @@ function KalpanaCircleInner() {
       if (pollErr) { setPostError(`Post published, but the poll failed to save: ${pollErr.message}`); }
     }
 
-    setDraft(''); setComposerImage(null); setComposerPreview(null);
+    setDraft(''); setComposerImage(null); setComposerPreview(null); setComposerTag('');
     setPollMode(false); setPollOptions(['', '']);
     setPosting(false);
     loadPosts();
+  };
+
+  // Bug fix: the composer had a way to remove just the attached photo (the
+  // X on the image preview) but nothing to discard the whole in-progress
+  // post — caption, tag, and poll all stayed stuck once started. This
+  // resets everything back to the empty state in one action.
+  const composerHasContent = !!(draft.trim() || composerTag.trim() || composerImage || pollMode);
+  const cancelComposer = () => {
+    setDraft(''); setComposerImage(null); setComposerPreview(null); setComposerTag('');
+    setPollMode(false); setPollOptions(['', '']); setPostError('');
   };
 
   // ── notifications ── fire-and-forget insert, actor-scoped per RLS
@@ -843,26 +853,36 @@ function KalpanaCircleInner() {
         }}>
           <div style={{ display: 'flex', gap: '10px' }}>
             <Avatar name={myUsername ?? 'you'} size={36} />
-            <textarea
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              placeholder={userId ? 'Share a theory, fan art, or request...' : 'Log in to post...'}
-              rows={2}
-              disabled={!userId}
-              style={{
-                flex: 1, minWidth: 0, border: 'none', outline: 'none', resize: 'none',
-                background: 'transparent', color: 'var(--text-primary)', fontSize: '13.5px',
-                fontFamily: 'inherit',
-              }}
-            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {(composerImage || userId) && (
+                <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                  DESCRIPTION
+                </label>
+              )}
+              <textarea
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                placeholder={userId ? (composerImage ? 'Write a caption for your photo...' : 'Share a theory, fan art, or request...') : 'Log in to post...'}
+                rows={2}
+                disabled={!userId}
+                style={{
+                  width: '100%', border: 'none', outline: 'none', resize: 'none',
+                  background: 'transparent', color: 'var(--text-primary)', fontSize: '13.5px',
+                  fontFamily: 'inherit', boxSizing: 'border-box', padding: 0,
+                }}
+              />
+            </div>
           </div>
           {userId && (
-            <div style={{ position: 'relative', marginTop: '8px' }}>
-              <Tag size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+            <div style={{ position: 'relative', marginTop: '10px' }}>
+              <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                SERIES TAG (OPTIONAL)
+              </label>
+              <Tag size={13} style={{ position: 'absolute', left: '10px', top: '32px', color: 'var(--text-tertiary)' }} />
               <input
                 value={composerTag}
                 onChange={e => setComposerTag(e.target.value)}
-                placeholder="Tag a series (optional) — e.g. exact series title"
+                placeholder="e.g. exact series title"
                 style={{
                   width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px',
                   border: '1px solid var(--border-color)', background: 'transparent',
@@ -927,17 +947,26 @@ function KalpanaCircleInner() {
               }}><BarChart3 size={14} /> Poll</button>
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleComposerFile} style={{ display: 'none' }} />
-            {userId ? (
-              <button onClick={submitPost} disabled={posting} style={{
-                fontSize: '12.5px', fontWeight: 800, padding: '8px 20px', borderRadius: '8px', border: 'none',
-                background: RADIANT, color: '#27272a', cursor: posting ? 'wait' : 'pointer',
-              }}>{posting ? 'Posting…' : 'Post'}</button>
-            ) : (
-              <Link href="/login?next=/kalpana-circle" style={{
-                fontSize: '12.5px', fontWeight: 800, padding: '8px 20px', borderRadius: '8px',
-                background: RADIANT, color: '#27272a', textDecoration: 'none',
-              }}>Log in to post</Link>
-            )}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {composerHasContent && (
+                <button onClick={cancelComposer} disabled={posting} style={{
+                  fontSize: '12.5px', fontWeight: 700, padding: '8px 16px', borderRadius: '8px',
+                  border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-secondary)',
+                  cursor: posting ? 'not-allowed' : 'pointer',
+                }}>Cancel</button>
+              )}
+              {userId ? (
+                <button onClick={submitPost} disabled={posting} style={{
+                  fontSize: '12.5px', fontWeight: 800, padding: '8px 20px', borderRadius: '8px', border: 'none',
+                  background: RADIANT, color: '#27272a', cursor: posting ? 'wait' : 'pointer',
+                }}>{posting ? 'Posting…' : 'Post'}</button>
+              ) : (
+                <Link href="/login?next=/kalpana-circle" style={{
+                  fontSize: '12.5px', fontWeight: 800, padding: '8px 20px', borderRadius: '8px',
+                  background: RADIANT, color: '#27272a', textDecoration: 'none',
+                }}>Log in to post</Link>
+              )}
+            </div>
           </div>
         </div>
 
