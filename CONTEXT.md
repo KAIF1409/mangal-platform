@@ -3579,3 +3579,65 @@ not a regression).
   Earnings' Performance half). Boost, Nova's AI, and most Tools remain
   intentionally stubbed pending their own separate build-out — §43 was
   scoped to the *shell/switcher* retrofit, not to building those features.
+
+## §48 — §27/§28d payment-provider unblock: Razorpay infra wired, no paywall/UI yet
+
+**Status: infra done, nothing user-facing.** Founder explicitly said not
+to build the ₹49/month paywall yet — no live users, and gating content
+now would hurt growth before there's an audience worth monetizing. This
+section is scoped to exactly what was asked: the checkout *plumbing*,
+so wiring a real payment feature later (whichever one ships first —
+tipping, the ₹49 tier, Pro Creator) is a same-day flip instead of a new
+integration.
+
+**Provider decision (research only, not yet acted on by founder):**
+compared Razorpay / Cashfree / PayU. Recommended Razorpay because it's
+the only one of the three with strong first-party products for both
+near-term needs at once — Subscriptions/UPI Autopay for recurring
+billing (§31 decision 3, still deferred) and Route for split payments
+(needed once tipping/platform-fee, §27 item 1 / §28d, ever ships) — so
+MANGAL doesn't onboard to a second provider later just for splits.
+Cashfree's ~0.05% lower headline rate wasn't worth that. **Founder has
+not created a Razorpay account yet** — this is a recommendation, not a
+completed decision; §31 decision 2's "this week" target is still open.
+
+**Built (live in Supabase + pushed):**
+- `payments` table (migration `20260816120000_payments_infra.sql`,
+  applied via Supabase MCP) — deliberately generic: `purpose` +
+  `purpose_ref_id` are free-form rather than a dedicated `subscriptions`
+  table, since which payment feature ships first isn't decided. RLS: a
+  user can `select` their own rows only; all writes happen server-side
+  via the API routes below, never directly from the client.
+- `app/lib/razorpay.ts` — server-only wrapper (`createOrder`,
+  `verifyPaymentSignature`, `verifyWebhookSignature`,
+  `isRazorpayConfigured`). Every function tolerates missing
+  `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` env vars gracefully (returns a
+  clear error / `false`, never throws at import time) since no real keys
+  exist yet.
+- `POST /api/payments/create-order` — authenticated route, takes
+  `{ amountPaise, purpose, purposeRefId? }`, inserts a `payments` row,
+  creates the matching Razorpay order, returns `orderId` for the
+  (not-yet-built) client-side Checkout.js call.
+- `POST /api/payments/verify` — authenticated route, takes Razorpay
+  Checkout's callback fields (`razorpay_order_id`, `razorpay_payment_id`,
+  `razorpay_signature`), verifies the HMAC signature server-side, flips
+  the matching `payments` row to `captured` only if valid and it belongs
+  to the requesting user.
+- `POST /api/payments/webhook` — unauthenticated (server-to-server from
+  Razorpay, same service-role-client pattern as
+  `confirm-parent-consent`), verifies the webhook signature header,
+  handles `payment.captured` / `payment.failed` / `payment.authorized`
+  events, updates the matching row by `razorpay_order_id`.
+- `razorpay` npm package added to `package.json`.
+
+**Env vars needed once a Razorpay account exists** (not set anywhere
+yet — add in Vercel project settings when ready): `RAZORPAY_KEY_ID`,
+`RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (the last one is
+separate from the API keys, generated when the webhook URL
+`/api/payments/webhook` is registered in the Razorpay dashboard).
+
+**Explicitly not built:** any checkout button, paywall, pricing page, or
+Checkout.js client-side integration. §31 decision 3's ₹49/month tier
+stays deferred per the founder's explicit instruction this session — this
+section is the backend only, waiting on both a real Razorpay account and
+a decision on which payment feature to build first.
