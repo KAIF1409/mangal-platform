@@ -4387,3 +4387,34 @@ rule hit), unrelated to this change.
 4), K Circle category (needs its own research pass first), and the actual
 affiliate-program applications/real referral links (plan item 3 — outside
 what this repo can do on its own).
+
+## §62 — §58b.3: Rule-based tag inference for series creation (DONE)
+
+**Picked from §58's zero-cost priority list (§58b).** Of the four items
+there: #2 (YouTube AI-disclosure) was already live; #4 (self-hosted
+embedding model for "similar content") needs a model deployed + `pgvector`
+wiring — bigger. Between #1 (K Circle extractive thread digest) and #3
+(rule-based tag inference), #3 was the faster build — a pure text-matching
+function plus one small UI addition to an existing form, no new query
+pattern to design against K Circle's thread/reply shape.
+
+**What shipped:** `app/lib/tagSuggest.ts` — `suggestTags(text, vocabulary,
+excludeNames, limit)`, plain keyword/substring matching against the
+existing `tags` table vocabulary (no LLM call, ₹0). Exact single-word and
+multi-word-phrase matches score higher than plain substring hits; tag names
+under 4 chars are excluded from substring matching to avoid noisy false
+positives (e.g. "ai", "op"). Wired into `app/upload/page.tsx`'s series
+creation step — the free-text Tags field there had no vocabulary picker at
+all (unlike `EditSeriesModal`, which already shows all tags as toggle
+chips). Vocabulary fetched once on mount; suggestions recomputed via
+`useMemo` from title + description as the creator types, rendered as
+dashed "+ #tagname" chips under the input that append to the comma-separated
+field on click.
+
+**Deliberately not done:** KaTube upload (§58e is its paid/LLM-backed
+version, not this) and `EditSeriesModal` (already shows the full vocabulary
+directly, so a suggestion layer adds less there) weren't touched.
+
+**Verified:** `tsc --noEmit` clean; `eslint` clean on both touched files
+(two pre-existing unrelated warnings on `app/upload/page.tsx`, neither on a
+line this change touched).

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { checkImageBatchQuality } from '../lib/imageQuality';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../lib/novelEditor';
+import { suggestTags } from '../lib/tagSuggest';
 import {
   ArrowLeft, Camera, BookOpen, BookText, ScrollText, ArrowRight,
   PartyPopper, Eye, Plus, CheckCircle2, Search, Upload, Check,
@@ -90,6 +91,9 @@ function UploadFlow() {
   // tables from the Step 25 tags system (previously only editable after
   // creation, via the dashboard's Edit Series modal).
   const [seriesTagsInput, setSeriesTagsInput] = useState('');
+  // §58b.3 — rule-based (zero-cost) tag suggestions, computed from title +
+  // description against the existing tag vocabulary. See app/lib/tagSuggest.ts.
+  const [tagVocabulary, setTagVocabulary] = useState<{ id: string; name: string; slug: string }[]>([]);
   // Step 30 — Mature content toggle. Handled defensively in handleCreateSeries
   // (falls back to an insert without this field) until the founder runs the
   // matching migration — see supabase/migrations/20260810_series_is_mature.sql.
@@ -132,6 +136,29 @@ function UploadFlow() {
       if (data.user) setUserId(data.user.id);
     });
   }, []);
+
+  // §58b.3 — fetch the existing tag vocabulary once, so the suggestion
+  // chips below the Tags field can match against it client-side (no
+  // per-keystroke query, no AI call).
+  useEffect(() => {
+    supabase.from('tags').select('id, name, slug').then(({ data }) => {
+      if (data) setTagVocabulary(data);
+    });
+  }, []);
+
+  // Suggestions recomputed from title + synopsis whenever those (or the
+  // vocabulary/current tag input) change — pure client-side, see
+  // app/lib/tagSuggest.ts. Capped at 6 so the chip row stays one line.
+  const suggestedSeriesTags = useMemo(
+    () => suggestTags(`${title} ${synopsis}`, tagVocabulary, seriesTagsInput.split(',')),
+    [title, synopsis, tagVocabulary, seriesTagsInput],
+  );
+
+  const addSuggestedTag = (name: string) => {
+    const current = seriesTagsInput.split(',').map((t) => t.trim()).filter(Boolean);
+    if (current.some((t) => t.toLowerCase() === name.toLowerCase())) return;
+    setSeriesTagsInput(current.length > 0 ? `${current.join(', ')}, ${name}` : name);
+  };
 
   // If arriving with an existing seriesId (from "+ Chapter" on dashboard),
   // load the series title + content_type for display and figure out the next chapter number
@@ -1009,6 +1036,28 @@ function UploadFlow() {
                   <span style={{ display: 'block', marginTop: '4px', fontSize: '10px', color: 'var(--text-tertiary)' }}>
                     Comma-separated. Helps readers find your series by trope/theme — you can always add more later from your dashboard.
                   </span>
+                  {/* §58b.3 — rule-based tag suggestions from title + description,
+                      matched against tags that already exist on the platform.
+                      Zero AI cost — see app/lib/tagSuggest.ts. */}
+                  {suggestedSeriesTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', alignSelf: 'center' }}>Suggested:</span>
+                      {suggestedSeriesTags.map((tag) => (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => addSuggestedTag(tag.name)}
+                          style={{
+                            fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px',
+                            cursor: 'pointer', border: '1px dashed var(--border-light)',
+                            background: 'transparent', color: 'var(--text-tertiary)',
+                          }}
+                        >
+                          + #{tag.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{
