@@ -123,6 +123,44 @@ const nextConfig: NextConfig = {
         destination: "/WebMangal/read/:chapterId",
         permanent: true,
       },
+      // Same reasoning — bookmarks, history, library, rankings, tags,
+      // and upload are all WebMangal-only pages, moved under the
+      // WebMangal namespace alongside home/search/series/read.
+      {
+        source: "/bookmarks",
+        destination: "/WebMangal/bookmarks",
+        permanent: true,
+      },
+      {
+        source: "/history",
+        destination: "/WebMangal/history",
+        permanent: true,
+      },
+      {
+        source: "/library",
+        destination: "/WebMangal/library",
+        permanent: true,
+      },
+      {
+        source: "/rankings",
+        destination: "/WebMangal/rankings",
+        permanent: true,
+      },
+      {
+        source: "/tags",
+        destination: "/WebMangal/tags",
+        permanent: true,
+      },
+      {
+        source: "/tags/:slug",
+        destination: "/WebMangal/tags/:slug",
+        permanent: true,
+      },
+      {
+        source: "/upload",
+        destination: "/WebMangal/upload",
+        permanent: true,
+      },
     ];
   },
 };

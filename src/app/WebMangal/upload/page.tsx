@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { supabase } from '../lib/supabase';
-import { checkImageBatchQuality } from '../lib/media/imageQuality';
-import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../lib/novelEditor';
-import { suggestTags } from '../lib/tagSuggest';
+import { supabase } from '../../lib/supabase';
+import { checkImageBatchQuality } from '../../lib/media/imageQuality';
+import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../../lib/novelEditor';
+import { suggestTags } from '../../lib/tagSuggest';
 import {
   ArrowLeft, Camera, BookOpen, BookText, ScrollText, ArrowRight,
   PartyPopper, Eye, Plus, CheckCircle2, Search, Upload, Check,
@@ -705,7 +705,7 @@ function UploadFlow() {
 
     // Move into edit mode pointing at this draft row so the next Save Draft
     // (or Publish) updates it instead of creating a duplicate chapter.
-    window.location.href = `/upload?seriesId=${seriesId}&chapterId=${chapter.id}`;
+    window.location.href = `/WebMangal/upload?seriesId=${seriesId}&chapterId=${chapter.id}`;
   };
 
   const handlePublishNovelChapter = async () => {

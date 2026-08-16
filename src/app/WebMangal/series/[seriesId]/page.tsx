@@ -755,7 +755,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           <ThemeToggle size={30} />
           <Link href="/WebMangal" className="mangal-series-nav-browse" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>Browse</Link>
           {isCreator && (
-            <a href={`/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            <a href={`/WebMangal/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>
               + Add Chapter
             </a>
           )}
@@ -865,7 +865,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 {tags.map(tag => (
                   <a
                     key={tag.id}
-                    href={`/tags/${tag.slug}`}
+                    href={`/WebMangal/tags/${tag.slug}`}
                     style={{
                       fontSize: '10px', fontWeight: 600, color: '#c3c7cf',
                       background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
@@ -995,7 +995,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                 </button>
               )}
               {isCreator && (
-                <a href={`/upload?seriesId=${series.id}`} style={{
+                <a href={`/WebMangal/upload?seriesId=${series.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
                   background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)',
@@ -1558,7 +1558,7 @@ function ChapterRow({
           {!confirmingDelete ? (
             <>
               <a
-                href={`/upload?seriesId=${seriesId}&chapterId=${chapter.id}`}
+                href={`/WebMangal/upload?seriesId=${seriesId}&chapterId=${chapter.id}`}
                 onClick={e => e.stopPropagation()}
                 title="Edit chapter"
                 style={{

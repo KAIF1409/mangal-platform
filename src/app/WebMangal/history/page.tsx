@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
-import ThemeToggle from '../components/shared/ThemeToggle';
+import ThemeToggle from '../../components/shared/ThemeToggle';
 
-import { setPostLoginRedirect } from '../lib/auth/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import {
   Flame, Clock, Trash2, ScrollText, BookText, BookOpen, Heart, Play, X,
 } from 'lucide-react';

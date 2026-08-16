@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { supabase } from '../lib/supabase';
-import Navbar from '../components/shared/Navbar';
-import Footer from '../components/shared/Footer';
+import { supabase } from '../../lib/supabase';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
 import { Flame, Eye, Star, Trophy, Users, Search, ScrollText, type LucideIcon } from 'lucide-react';
 
 interface Series {
@@ -111,14 +111,14 @@ export default function RankingsPage() {
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
               { label: 'Browse', href: '/WebMangal', icon: null as LucideIcon | null },
-              { label: 'Rankings', href: '/rankings', icon: Trophy },
+              { label: 'Rankings', href: '/WebMangal/rankings', icon: Trophy },
               { label: 'Creators', href: '/leaderboard', icon: Users },
               { label: 'Search', href: '/WebMangal/search', icon: Search },
-              { label: 'Tags', href: '/tags', icon: null as LucideIcon | null },
+              { label: 'Tags', href: '/WebMangal/tags', icon: null as LucideIcon | null },
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                color: link.href === '/rankings' ? '#d97706' : 'var(--text-secondary)', textDecoration: 'none',
+                color: link.href === '/WebMangal/rankings' ? '#d97706' : 'var(--text-secondary)', textDecoration: 'none',
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
               }}>{link.icon && <link.icon size={13} strokeWidth={2} />}{link.label}</a>
             ))}

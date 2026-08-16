@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import ProfileMenu from '../components/shared/ProfileMenu';
-import Navbar from '../components/shared/Navbar';
-import Footer from '../components/shared/Footer';
-import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
+import ProfileMenu from '../../components/shared/ProfileMenu';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
+import { hasCreatorAccess, isDeveloperRole } from '../../lib/auth/roles';
 import Link from 'next/link';
 
-import { setPostLoginRedirect } from '../lib/auth/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { Trophy, Search, Bookmark, Wrench, Bell, BookOpenText, Inbox, ScrollText, BellOff, type LucideIcon } from 'lucide-react';
 interface FollowedSeries {
   id: string;
@@ -192,9 +192,9 @@ export default function LibraryPage() {
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
               { label: 'Browse', href: '/WebMangal', icon: null as LucideIcon | null },
-              { label: 'Rankings', href: '/rankings', icon: Trophy },
+              { label: 'Rankings', href: '/WebMangal/rankings', icon: Trophy },
               { label: 'Search', href: '/WebMangal/search', icon: Search },
-              { label: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
+              { label: 'Bookmarks', href: '/WebMangal/bookmarks', icon: Bookmark },
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,

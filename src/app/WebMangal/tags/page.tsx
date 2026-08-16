@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { ArrowLeft } from 'lucide-react';
 
 interface TagWithCount {
@@ -67,7 +67,7 @@ export default function TagsIndexPage() {
             {tags.map(tag => (
               <a
                 key={tag.id}
-                href={`/tags/${tag.slug}`}
+                href={`/WebMangal/tags/${tag.slug}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   fontSize: '13px', fontWeight: 700, color: 'var(--text-soft)',

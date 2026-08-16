@@ -665,7 +665,7 @@ export default function Dashboard() {
           <div className="mangal-dash-nav-links">
             <Link href="/" className="mangal-clickable" style={navLinkStyle(false)}>{t('readerView')}</Link>
             <a href="/dashboard" className="mangal-clickable" style={navLinkStyle(true)}>{t('dashboard')}</a>
-            <a href="/upload" className="mangal-clickable" style={navLinkStyle(false)}>{t('createNew')}</a>
+            <a href="/WebMangal/upload" className="mangal-clickable" style={navLinkStyle(false)}>{t('createNew')}</a>
           </div>
         }
       />
@@ -690,7 +690,7 @@ export default function Dashboard() {
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: 0 }}>
           {t('manageSeriesIntro')}{' '}
-          <a href="/upload" style={{ color: '#d97706', fontWeight: 700, textDecoration: 'none' }}>{t('createNewArrow')}</a>
+          <a href="/WebMangal/upload" style={{ color: '#d97706', fontWeight: 700, textDecoration: 'none' }}>{t('createNewArrow')}</a>
         </p>
 
         <div style={{ height: '1px', background: 'var(--border-color)', margin: '24px 0' }} />
@@ -716,7 +716,7 @@ export default function Dashboard() {
               <div style={{ textAlign: 'center' as const, padding: '60px 0', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px' }}>
                 <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><BookOpen size={40} /></div>
                 <p style={{ color: 'var(--text-tertiary)', fontSize: '14px', marginBottom: '16px' }}>{t('noSeriesYet')}</p>
-                <a href="/upload" style={{
+                <a href="/WebMangal/upload" style={{
                   display: 'inline-block', padding: '12px 28px', borderRadius: '10px',
                   background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
                   color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: '13px',
@@ -948,7 +948,7 @@ export default function Dashboard() {
                         }}>
                           {t('view')}
                         </a>
-                        <a href={`/upload?seriesId=${story.id}`} style={{
+                        <a href={`/WebMangal/upload?seriesId=${story.id}`} style={{
                           flex: 1, textAlign: 'center' as const, borderRadius: '7px',
                           background: 'var(--bg-input)', border: '1px solid var(--border-light)', color: 'var(--text-secondary)',
                           fontWeight: 600, textDecoration: 'none',

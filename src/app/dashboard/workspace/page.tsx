@@ -131,13 +131,13 @@ export default function WorkspacePage() {
       title: 'Nothing here yet',
       sub: 'Start a new series, upload a video, or post to Kalpana Circle — it will show up here automatically.',
       cta: '+ Start a Series',
-      href: '/upload',
+      href: '/WebMangal/upload',
     },
     webmangal: {
       title: 'No WebMangal series yet',
       sub: 'Start a new series and it will show up in your workspace automatically.',
       cta: '+ Start a Series',
-      href: '/upload',
+      href: '/WebMangal/upload',
     },
     katube: {
       title: 'No KaTube uploads yet',

@@ -38,7 +38,7 @@ const TOOLS_BY_PRODUCT: Record<ProductKey, { label: string; icon: LucideIcon; to
   webmangal: {
     label: 'WebMangal', icon: PenTool,
     tools: [
-      { icon: Upload, title: 'Chapter Uploader', desc: 'Publish a new chapter to any of your series.', href: '/upload', live: true },
+      { icon: Upload, title: 'Chapter Uploader', desc: 'Publish a new chapter to any of your series.', href: '/WebMangal/upload', live: true },
       { icon: PenTool, title: 'Series Editor', desc: 'Edit titles, synopsis, cover and genre from your dashboard.', href: '/dashboard', live: true },
       { icon: BarChart3, title: 'Word Counter', desc: 'Check chapter length before publishing.', href: '#', live: false },
       { icon: Globe, title: 'Translation Helper', desc: 'Draft chapters in multiple languages.', href: '#', live: false },

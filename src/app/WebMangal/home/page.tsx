@@ -298,11 +298,11 @@ export default function HomePage() {
         <div className="mangal-home-nav-center">
           {[
             { label: t('browse'), href: '/' },
-            { label: 'Rankings', href: '/rankings' },
+            { label: 'Rankings', href: '/WebMangal/rankings' },
             { label: t('genres'), href: '/#genres' },
-            { label: 'Tags', href: '/tags' },
+            { label: 'Tags', href: '/WebMangal/tags' },
             { label: t('newReleases'), href: '/#new' },
-            { label: t('library'), href: '/library' },
+            { label: t('library'), href: '/WebMangal/library' },
           ].map(link => (
             <a key={link.label} href={link.href} style={{
               padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,

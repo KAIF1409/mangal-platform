@@ -165,10 +165,10 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
             <>
               <a href="/dashboard" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmDashboard')}</a>
               <Link href="/" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmReaderView')}</Link>
-              <a href="/upload" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmCreateNewSeries')}</a>
+              <a href="/WebMangal/upload" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmCreateNewSeries')}</a>
               <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
-              <a href="/history" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmReadingHistory')}</a>
-              <a href="/bookmarks" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmBookmarks')}</a>
+              <a href="/WebMangal/history" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmReadingHistory')}</a>
+              <a href="/WebMangal/bookmarks" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmBookmarks')}</a>
               {isDeveloper && (
                 <>
                   <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
@@ -178,8 +178,8 @@ export default function ProfileMenu({ user, isCreator, isDeveloper = false }: Pr
             </>
           ) : (
             <>
-              <a href="/history" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmReadingHistory')}</a>
-              <a href="/bookmarks" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmBookmarks')}</a>
+              <a href="/WebMangal/history" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmReadingHistory')}</a>
+              <a href="/WebMangal/bookmarks" style={itemStyle} onMouseEnter={handleItemHover} onMouseLeave={handleItemLeave}>{t('pmBookmarks')}</a>
               <div style={{ height: '1px', background: 'var(--border-color)', margin: '6px 4px' }} />
               {/* The ONLY path from reader to creator tools — no shortcuts elsewhere */}
               <a href="/become-creator" style={{

@@ -10,9 +10,9 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         "/dashboard",
         "/settings",
-        "/bookmarks",
-        "/history",
-        "/upload",
+        "/WebMangal/bookmarks",
+        "/WebMangal/history",
+        "/WebMangal/upload",
         "/admin",
         "/api",
         "/login",

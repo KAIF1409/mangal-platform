@@ -403,7 +403,7 @@ export default function LandingPage() {
           <div className="mangal-landing-nav-center">
             {[
               { label: 'Browse', href: '/WebMangal' },
-              { label: 'Rankings', href: '/rankings' },
+              { label: 'Rankings', href: '/WebMangal/rankings' },
               { label: 'Genres', href: '/WebMangal' },
               { label: 'New Releases', href: '/WebMangal' },
             ].map(link => (
@@ -482,7 +482,7 @@ export default function LandingPage() {
         >
           {[
             { label: 'Browse', href: '/WebMangal' },
-            { label: 'Rankings', href: '/rankings' },
+            { label: 'Rankings', href: '/WebMangal/rankings' },
             { label: 'Genres', href: '/WebMangal' },
             { label: 'New Releases', href: '/WebMangal' },
             { label: 'WebMangal', href: '/WebMangal', icon: '/webmangal-logo.png' },
@@ -738,11 +738,11 @@ export default function LandingPage() {
           <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
               <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 32px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}><Tag size={22} /> Browse by Tag</h2>
-              <Link href="/tags" data-cursor-hover="true" style={{ fontSize: '13px', fontWeight: 700, color: '#d97706', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>See all tags <ArrowRight size={13} strokeWidth={2} /></Link>
+              <Link href="/WebMangal/tags" data-cursor-hover="true" style={{ fontSize: '13px', fontWeight: 700, color: '#d97706', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>See all tags <ArrowRight size={13} strokeWidth={2} /></Link>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {tagCloud.map(tag => (
-                <a key={tag.id} href={`/tags/${tag.slug}`} data-cursor-hover="true" style={{
+                <a key={tag.id} href={`/WebMangal/tags/${tag.slug}`} data-cursor-hover="true" style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)',
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '10px 16px', borderRadius: '24px', textDecoration: 'none',
                   transition: 'border-color 0.15s, color 0.15s',
@@ -865,7 +865,7 @@ export default function LandingPage() {
 
               <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
                 <FooterCol title="Platform" links={[
-                  { label: 'Browse', href: '/WebMangal' }, { label: 'Rankings', href: '/rankings' },
+                  { label: 'Browse', href: '/WebMangal' }, { label: 'Rankings', href: '/WebMangal/rankings' },
                   { label: 'Genres', href: '/WebMangal' }, { label: 'New Releases', href: '/WebMangal' },
                 ]} />
                 <FooterCol title="Account" links={[

@@ -5232,3 +5232,45 @@ the stack trace it's a missing-credentials error inside
 `lib/supabase.ts`, not a broken import or routing issue; the import
 chain (`WebMangal/series/[seriesId]/page.tsx` → `lib/supabase.ts`)
 resolved correctly.
+
+## §74 — bookmarks/history/library/rankings/tags/upload moved under WebMangal/
+
+Same treatment as §73, for the rest of WebMangal's pages. Before moving
+anything, checked each top-level route for cross-product references
+(`grep` for "katube"/"kalpana-circle", not guessed) to confirm scope:
+
+- **Moved** (zero cross-product references, content scoped to
+  manga/novel chapters/series): `bookmarks`, `history`, `library`,
+  `rankings`, `tags` (+ `tags/[slug]`), `upload`.
+- **Left alone, on purpose:** `dashboard` (8 sub-pages reference KaTube —
+  it's the shared creator studio across products, gated by
+  `ProductScope`), `creator/[username]` (links to
+  `/kalpana-circle/broadcast/...`, ecosystem-wide profile), `leaderboard`
+  (explicitly "WebMangal and KaTube views combined"), `admin` (its
+  `mangal-ideas` pages are the cross-product "Unique for Mangal"
+  feature), `settings` (account-level DPDP controls, not product
+  content), `become-creator` (creates the ecosystem-wide creator
+  identity all three products link to, not WebMangal-specific).
+
+Same mechanics as §73: `git mv` each folder under `WebMangal/`, fixed
+the +1 relative-import depth in every moved file (checked each file's
+actual imports first, not assumed uniform depth — `tags/[slug]/page.tsx`
+was one level deeper than the rest), then found and rewrote every
+internal link across the whole codebase (`ProfileMenu`, `robots.ts`,
+`WebMangal/View.tsx`, `WebMangal/home`, landing page, `leaderboard`,
+`dashboard` + its `workspace`/`tools` sub-pages, and the moved pages'
+own cross-links to each other) to the new `/WebMangal/...` paths. Added
+6 more permanent redirects in `next.config.ts` (`/tags/:slug` as a
+dynamic segment, the rest static) following the same pattern as
+§73/`/home`.
+
+**Verified:** `tsc --noEmit` clean, `eslint` unchanged (62 problems, same
+baseline). Booted `next dev`, curl-tested all 6 old URLs — all correctly
+308-redirect to their new `/WebMangal/...` paths, including
+`/tags/action` (dynamic segment) and `/upload?seriesId=abc123` (Next.js
+auto-forwards unmatched query params to the redirect destination,
+confirmed live rather than assumed from docs).
+
+`dashboard`, `creator`, `leaderboard`, `admin`, `settings`,
+`become-creator` were explicitly confirmed and left in place — not an
+oversight.

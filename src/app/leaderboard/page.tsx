@@ -73,10 +73,10 @@ export default function LeaderboardPage() {
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
               { label: 'Browse', href: '/WebMangal', icon: null as typeof Trophy | null },
-              { label: 'Rankings', href: '/rankings', icon: Trophy },
+              { label: 'Rankings', href: '/WebMangal/rankings', icon: Trophy },
               { label: 'Creators', href: '/leaderboard', icon: Users },
               { label: 'Search', href: '/WebMangal/search', icon: Search },
-              { label: 'Tags', href: '/tags', icon: null as typeof Trophy | null },
+              { label: 'Tags', href: '/WebMangal/tags', icon: null as typeof Trophy | null },
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,

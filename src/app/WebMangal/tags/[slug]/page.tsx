@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 import Link from 'next/link';
 import { ScrollText, BookMarked, BookOpen, Eye, ArrowLeft, Search, BookOpenText } from 'lucide-react';
 
@@ -104,7 +104,7 @@ export default function TagPage({ params }: { params: Promise<{ slug: string }> 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px 24px' }}>
-        <Link href="/tags" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> All Tags</Link>
+        <Link href="/WebMangal/tags" style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> All Tags</Link>
 
         {loading ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>Loading...</div>

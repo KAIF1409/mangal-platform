@@ -20,11 +20,11 @@ import {
 // hamburger menu below so there's one source of truth for the nav items.
 const NAV_LINKS = [
   { label: 'Browse', href: '/' },
-  { label: 'Rankings', icon: <Trophy size={13} />, href: '/rankings' },
+  { label: 'Rankings', icon: <Trophy size={13} />, href: '/WebMangal/rankings' },
   { label: 'Genres', href: '/#genres' },
   { label: 'New Releases', href: '/#new' },
-  { label: 'Library', icon: <Bell size={13} />, href: '/library' },
-  { label: 'Bookmarks', icon: <Bookmark size={13} />, href: '/bookmarks' },
+  { label: 'Library', icon: <Bell size={13} />, href: '/WebMangal/library' },
+  { label: 'Bookmarks', icon: <Bookmark size={13} />, href: '/WebMangal/bookmarks' },
 ];
 
 interface Series {

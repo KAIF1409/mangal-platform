@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import Image from 'next/image';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import ProfileMenu from '../components/shared/ProfileMenu';
-import Navbar from '../components/shared/Navbar';
-import Footer from '../components/shared/Footer';
-import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
+import ProfileMenu from '../../components/shared/ProfileMenu';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
+import { hasCreatorAccess, isDeveloperRole } from '../../lib/auth/roles';
 import Link from 'next/link';
 
-import { setPostLoginRedirect } from '../lib/auth/authRedirect';
+import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import {
   BookOpen, BookText, Trophy, Search, Bell, Wrench, Bookmark, Inbox,
   ScrollText, Play, BellOff,
@@ -218,9 +218,9 @@ export default function BookmarksPage() {
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
             {[
               { label: 'Browse', href: '/WebMangal', icon: null as ReactNode },
-              { label: 'Rankings', href: '/rankings', icon: <Trophy size={13} /> },
+              { label: 'Rankings', href: '/WebMangal/rankings', icon: <Trophy size={13} /> },
               { label: 'Search', href: '/WebMangal/search', icon: <Search size={13} /> },
-              { label: 'Library', href: '/library', icon: <Bell size={13} /> },
+              { label: 'Library', href: '/WebMangal/library', icon: <Bell size={13} /> },
             ].map(link => (
               <a key={link.label} href={link.href} style={{
                 padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
