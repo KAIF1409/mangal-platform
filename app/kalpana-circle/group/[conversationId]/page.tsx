@@ -7,6 +7,7 @@ import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/authRedirect';
 import ThemeToggle from '../../../components/ThemeToggle';
 import { useKCircleTheme } from '../../theme';
+import { KCircleShellStyle, KCircleRail } from '../../components/Shell';
 import { Lock, Menu, X, Settings, Camera, ArrowLeft } from 'lucide-react';
 import {
   PERM, PERMISSION_LABELS, resolveBasePermissions, resolveChannelPermissions, can, highestRolePosition, canManageRoleAt,
@@ -52,6 +53,10 @@ export default function GroupChannelsPage() {
   const [notAllowed, setNotAllowed] = useState(false);
   const [groupTitle, setGroupTitle] = useState('');
   const [loading, setLoading] = useState(true);
+  // Own username/avatar — this page never needed these before, but the
+  // shared K Circle rail's profile icon does (see components/Shell.tsx, §66).
+  const [myUsername, setMyUsername] = useState<string | null>(null);
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
 
   const [channels, setChannels] = useState<ChannelRow[]>([]);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
@@ -84,6 +89,14 @@ export default function GroupChannelsPage() {
       if (!uid) { setPostLoginRedirect('/kalpana-circle'); router.replace(`/login?next=/kalpana-circle`); }
     });
   }, [router, conversationId]);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as ../../chat/page.tsx */
+  useEffect(() => {
+    if (!userId) { setMyUsername(null); setMyAvatarUrl(null); return; }
+    supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', userId).maybeSingle()
+      .then(({ data }) => { setMyUsername(data?.username ?? null); setMyAvatarUrl(data?.avatar_url ?? null); });
+  }, [userId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const loadAll = useCallback(async () => {
     if (!userId) return;
@@ -329,7 +342,7 @@ export default function GroupChannelsPage() {
   }
 
   return (
-    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
+    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <style>{`
         @media (max-width: 700px) {
           .kc-group-sidebar { display: none !important; }
@@ -338,6 +351,20 @@ export default function GroupChannelsPage() {
           .kc-group-sidebar-close { display: inline-flex !important; }
         }
       `}</style>
+      <KCircleShellStyle />
+
+      <div className="kc-shell">
+        <KCircleRail
+          active="chat"
+          userId={userId}
+          myUsername={myUsername}
+          myAvatarUrl={myAvatarUrl}
+          profileHref={userId ? (myUsername ? `/kalpana-circle/profile/${myUsername}` : '/kalpana-circle/settings') : '/login?next=/kalpana-circle'}
+          navHref={(path) => (userId ? path : `/login?next=${encodeURIComponent(path)}`)}
+          setIsLight={setIsLight}
+        />
+
+        <div className="kc-main" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100, background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)', padding: '0 14px', height: '56px',
@@ -601,6 +628,8 @@ export default function GroupChannelsPage() {
           );
         })()}
       </div>
+        </div>{/* /.kc-main */}
+      </div>{/* /.kc-shell */}
     </div>
   );
 }
