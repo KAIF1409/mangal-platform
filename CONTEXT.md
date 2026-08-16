@@ -3932,7 +3932,7 @@ conflicted (caught this via `tsc`, not by eye).
 are covered; nothing from that list deferred. §29/§30 (further backlog
 items) untouched.
 
-## §55 — K Circle: Discord+Instagram hybrid desktop shell
+## §57 — K Circle: Discord+Instagram hybrid desktop shell
 
 Founder wanted K Circle's desktop UI redesigned as a deliberate mix of
 Instagram (feed/stories) and Discord (nav structure), referencing actual
