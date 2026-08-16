@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { isMinor, isPlausibleDateOfBirth, PARENT_CONSENT_PENDING_COPY } from '../lib/dpdp';
-import { setPostLoginRedirect } from '../lib/authRedirect';
+import { setPostLoginRedirect, consumePostLoginRedirect } from '../lib/authRedirect';
 import { ArrowLeft } from 'lucide-react';
 
 // 'dob'     = Google OAuth new users — skipped register form so no DOB yet
@@ -427,11 +427,20 @@ export default function AuthPage() {
   };
 
   // Where to send the user after a successful login — read from
-  // /login?next=..., defaults to /WebMangal/home. Threaded through Google
-  // OAuth's redirectTo (as a query param on /auth/callback) and used
-  // directly for email/password login, so e.g. clicking "Log in" from
-  // /katube/upload actually returns you to /katube/upload instead of
-  // always landing on /WebMangal/home.
+  // /login?next=..., defaults to /WebMangal/home. ALSO checked against the
+  // mangal_post_login_redirect cookie (authRedirect.ts) as a fallback —
+  // this isn't just for the Google OAuth callback. Confirmed via debug
+  // logging (11 Aug 2026, see app/katube/upload/page.tsx's comment): when
+  // /login is reached via a Next.js <Link> (client-side soft navigation,
+  // as opposed to a hard window.location.href navigation), the ?next=
+  // query string sometimes doesn't make it into window.location.search by
+  // the time this component mounts — nextPath would silently fall back to
+  // the default even though the Link's href was correct. The query param
+  // still wins when present (it's synchronous and reliable for hard nav /
+  // direct visits); the cookie is what saves the soft-nav case, PROVIDED
+  // the page that sent the user here called setPostLoginRedirect() before
+  // navigating. Every gated redirect to /login in katube + kalpana-circle
+  // now does this — see authRedirect.ts's consumePostLoginRedirect().
   //
   // IMPORTANT: read via useState's lazy initializer (runs synchronously
   // during the client render, before any paint), NOT inside a useEffect.
@@ -445,7 +454,8 @@ export default function AuthPage() {
   const [nextPath] = useState(() => {
     if (typeof window === 'undefined') return '/WebMangal/home';
     const raw = new URLSearchParams(window.location.search).get('next');
-    return raw && /^\/(?!\/|\\)/.test(raw) ? raw : '/WebMangal/home';
+    const fromQuery = raw && /^\/(?!\/|\\)/.test(raw) ? raw : null;
+    return fromQuery ?? consumePostLoginRedirect() ?? '/WebMangal/home';
   });
 
   // Surface errors that /auth/callback redirects back with (e.g. Google

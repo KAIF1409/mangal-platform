@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
 import {
@@ -65,6 +66,7 @@ export default function KCircleSettingsPage() {
   }, []);
   useEffect(() => {
     if (checkedAuth && !userId) {
+      setPostLoginRedirect('/kalpana-circle/settings');
       router.replace('/login?next=/kalpana-circle/settings');
     }
   }, [checkedAuth, userId, router]);

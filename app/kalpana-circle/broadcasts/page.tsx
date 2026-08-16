@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
 import { Radio, ArrowLeft } from 'lucide-react';
@@ -58,7 +59,7 @@ export default function BroadcastDiscoveryPage() {
       // 20260813120000_kcircle_broadcast_channels.sql), so a signed-out
       // visitor would just see an always-empty list — send them to log in
       // instead, same as ../saved and ../chat.
-      if (!uid) router.replace('/login?next=/kalpana-circle');
+      if (!uid) { setPostLoginRedirect('/kalpana-circle'); router.replace('/login?next=/kalpana-circle'); }
     });
   }, [router]);
 

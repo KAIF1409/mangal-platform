@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 import NotificationBell from '../../components/NotificationBell';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useKCircleTheme } from '../theme';
@@ -131,7 +132,7 @@ export default function KCircleChatPage() {
   }, []);
 
   useEffect(() => {
-    if (checkedAuth && !userId) router.replace('/login?next=/kalpana-circle');
+    if (checkedAuth && !userId) { setPostLoginRedirect('/kalpana-circle'); router.replace('/login?next=/kalpana-circle'); }
   }, [checkedAuth, userId, router]);
 
   const loadConversations = useCallback(async () => {

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 import { Bookmark } from 'lucide-react';
 
 // ── K Circle — Saved posts (bookmarks) ──
@@ -50,7 +51,7 @@ export default function SavedPostsPage() {
       const uid = data.session?.user?.id ?? null;
       setUserId(uid);
       setCheckedAuth(true);
-      if (!uid) router.replace('/login?next=/kalpana-circle');
+      if (!uid) { setPostLoginRedirect('/kalpana-circle'); router.replace('/login?next=/kalpana-circle'); }
     });
   }, [router]);
 

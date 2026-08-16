@@ -109,6 +109,11 @@ export default function BroadcastChannelPage() {
       const { data: authUser } = await supabase.auth.getUser();
       const uid = authUser.user?.id ?? null;
       setUserId(uid);
+      // Eager cookie set (same fix as kalpana-circle/page.tsx and
+      // katube/upload) — covers the "Log in to comment" <Link> below
+      // without relying on the ?next= query param surviving Next.js's
+      // Link/prefetch quirk.
+      if (!uid) setPostLoginRedirect(`/kalpana-circle/broadcast/${username}`);
 
       const { data: creatorRow } = await supabase
         .from('creator_profiles').select('user_id, username').ilike('username', username).single();

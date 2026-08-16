@@ -183,6 +183,13 @@ function KalpanaCircleInner() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null); // eslint-disable-line react-hooks/set-state-in-effect -- mirrors katube/upload pattern
+      // Set eagerly the moment we know they're logged out — not only
+      // inside a click handler — same fix as katube/upload (see its
+      // comment): sidesteps the Next.js <Link>/prefetch quirk where
+      // /login?next=/kalpana-circle can render without ever picking up
+      // the ?next= value client-side. Covers every "Log in"/"Log in to
+      // post"/"Log in to comment" <Link> on this page in one place.
+      if (!data.user) setPostLoginRedirect('/kalpana-circle');
     });
   }, []);
 

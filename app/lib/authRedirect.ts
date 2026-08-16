@@ -30,3 +30,25 @@ export function setPostLoginRedirect(path: string) {
 }
 
 export const POST_LOGIN_REDIRECT_COOKIE = COOKIE_NAME;
+
+/**
+ * Read + clear the post-login redirect cookie client-side. Used by
+ * /login's own nextPath resolution (not just /auth/callback) — see the
+ * comment on nextPath in app/login/page.tsx for why the ?next= query
+ * param alone isn't reliable enough to be the only source of truth.
+ */
+export function consumePostLoginRedirect(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]*)`));
+  if (!match) return null;
+  // Clear it immediately — same one-shot semantics as the server-side
+  // read in /auth/callback, so a stale cookie can never redirect a later,
+  // unrelated login.
+  document.cookie = `${COOKIE_NAME}=; path=/; max-age=0`;
+  try {
+    const decoded = decodeURIComponent(match[1]);
+    return /^\/(?!\/|\\)/.test(decoded) ? decoded : null;
+  } catch {
+    return null;
+  }
+}

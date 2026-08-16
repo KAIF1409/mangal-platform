@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../../components/ThemeToggle';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 import { useKCircleTheme } from '../theme';
 import { supabase } from '../../lib/supabase';
 import {
@@ -168,7 +169,7 @@ export default function WatchTogetherPage() {
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login?next=/kalpana-circle'); return; }
+      if (!user) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
       setUserId(user.id);
       loadRooms(user.id);
       loadWatchThreads(user.id);

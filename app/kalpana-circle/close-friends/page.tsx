@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 import { ArrowLeft } from 'lucide-react';
 
 // ── K Circle — manage close friends (story audience) ──
@@ -41,7 +42,7 @@ export default function CloseFriendsPage() {
     const load = async () => {
       const { data } = await supabase.auth.getUser();
       const uid = data.user?.id ?? null;
-      if (!uid) { router.push('/login?next=/kalpana-circle'); return; }
+      if (!uid) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
       setUserId(uid);
       await loadFriends(uid);
       setLoading(false);

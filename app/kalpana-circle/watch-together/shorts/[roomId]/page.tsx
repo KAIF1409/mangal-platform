@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../lib/supabase';
+import { setPostLoginRedirect } from '../../../../lib/authRedirect';
 import {
   Check, ArrowLeft, MessageCircle, MessagesSquare, Paperclip,
   Zap, Lock, Globe, Plus, Link2, VolumeX, Volume2, X,
@@ -178,7 +179,7 @@ export default function FastTapWatchTogetherRoomPage() {
     let cancelled = false;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push(`/login?next=/kalpana-circle`); return; }
+      if (!user) { setPostLoginRedirect('/kalpana-circle'); router.push(`/login?next=/kalpana-circle`); return; }
       if (cancelled) return;
       setUserId(user.id);
 

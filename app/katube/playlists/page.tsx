@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { KaTubeShell } from '../components/VideoGridCard';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 import { ListVideo, Plus } from 'lucide-react';
 
 // §28a — Playlists: viewer builds their own playlist across creators/
@@ -22,7 +23,16 @@ export default function PlaylistsPage() {
   async function load() {
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
-    if (!uid) { setSignedIn(false); setLoading(false); return; }
+    if (!uid) {
+      setSignedIn(false);
+      setLoading(false);
+      // Set eagerly, not only when "Sign in" is clicked — sidesteps the
+      // Next.js <Link>/prefetch quirk (see app/katube/upload/page.tsx's
+      // comment, confirmed 11 Aug 2026) where /login?next=... can render
+      // without ever picking up the ?next= value client-side.
+      setPostLoginRedirect('/katube/playlists');
+      return;
+    }
     setSignedIn(true);
 
     const { data: rows } = await supabase.from('katube_playlists')

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
+import { setPostLoginRedirect } from '../../../lib/authRedirect';
 import ThemeToggle from '../../../components/ThemeToggle';
 import { useKCircleTheme } from '../../theme';
 import { Lock, Menu, X, Settings, Camera, ArrowLeft } from 'lucide-react';
@@ -80,7 +81,7 @@ export default function GroupChannelsPage() {
       const uid = data.session?.user?.id ?? null;
       setUserId(uid);
       setCheckedAuth(true);
-      if (!uid) router.replace(`/login?next=/kalpana-circle`);
+      if (!uid) { setPostLoginRedirect('/kalpana-circle'); router.replace(`/login?next=/kalpana-circle`); }
     });
   }, [router, conversationId]);
 

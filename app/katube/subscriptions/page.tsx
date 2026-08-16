@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import VideoGridCard, { type GridVideo } from '../components/VideoGridCard';
 import { KaTubeShell } from '../components/VideoGridCard';
+import { setPostLoginRedirect } from '../../lib/authRedirect';
 
 // §28a — Subscriptions feed: only new uploads from creators the viewer
 // already follows, separate from the general/trending grid. `creator_follows`
@@ -20,7 +21,15 @@ export default function SubscriptionsFeedPage() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id;
-      if (!uid) { setSignedIn(false); setLoading(false); return; }
+      if (!uid) {
+        setSignedIn(false);
+        setLoading(false);
+        // Eager cookie set — same fix as playlists/upload (see their
+        // comments): sidesteps the Link/prefetch quirk where ?next= can
+        // silently get dropped on the way to /login.
+        setPostLoginRedirect('/katube/subscriptions');
+        return;
+      }
       setSignedIn(true);
 
       const { data: follows } = await supabase.from('creator_follows').select('creator_id').eq('follower_id', uid);
