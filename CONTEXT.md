@@ -4974,3 +4974,78 @@ Google Fonts fetch in this sandbox, unrelated to any of this work.
 
 KaTube and every other MANGAL surface were untouched throughout this
 entire rollout, per the founder's explicit "K Circle only" instruction.
+
+## §68 — §0 "Unique for Mangal": all 4 phases audited, 3 issues found & fixed
+
+Founder asked for a correctness pass across §0's Phase 0-3 (the whole
+"Unique for Mangal" feature — Mangal Ideas, Mangal of the Week, Writer of
+the Month). Went file by file: every migration's SQL against the live DB
+schema, every RPC's table/column references, every UI file's `tsc`/`eslint`
+across all four phases. Found and fixed three issues, none of them
+data-loss-in-production so far (no month has been finalized twice with a
+real collision yet) but all worth catching before real usage:
+
+1. **Real lint error** — `app/kalpana-circle/mangal-of-the-week/page.tsx`
+   had a genuine `react-hooks/set-state-in-effect` **error** (not a
+   warning): the `eslint-disable` comment was attached to the wrong
+   `useEffect` (the one-time auth-check effect, which didn't even need it —
+   `setState` calls there are inside a `.then()` callback, which the rule
+   doesn't flag). The effect that actually needed the disable —
+   `loadPool(userId)` on `userId` change, same "reactive data fetch on a
+   dependency change" pattern used everywhere else in this codebase
+   (`chat/page.tsx`, `dashboard/page.tsx`) — had no disable comment at all.
+   Moved the comment to the correct effect. `tsc`/`eslint` both clean now.
+
+2. **Repo/DB drift reconciled** — Phase 2's `snapshot_weekly_top20()`
+   filters on `videos.moderation_status = 'approved'`, but no migration
+   file in this repo ever added that column. Checked the live DB directly:
+   the column *does* exist live (`text not null default 'approved'`, check
+   constraint `in ('approved', 'pending_review')`) — added straight to the
+   live DB at some point outside this repo's migration history, same drift
+   pattern as §13b. Not a functional bug (the function works fine), but
+   undocumented. Added `20260816260000_videos_moderation_status_reconcile.sql`
+   to close the gap — content verified against live DB first, so it's a
+   no-op on re-apply.
+
+3. **Real logic bug, fixed at the schema level** —
+   `finalize_monthly_writer_awards()`'s `INSERT ... ON CONFLICT (month,
+   series_id) DO UPDATE` had its upsert keyed on the *wrong* column. The
+   actual business rule is "one `monthly_writer_awards` row per writer per
+   month," but the unique constraint (and therefore the conflict target)
+   was `(month, series_id)`. If two different collab writers'
+   highest-scoring series for a month ever happened to share the same
+   `series_id` (e.g. two different videos on the same series crediting two
+   different `collab_writer_id`s across different weeks), a single `INSERT
+   ... SELECT` can't `DO UPDATE` the same conflict target twice in one
+   statement — Postgres would throw `ON CONFLICT DO UPDATE command cannot
+   affect row a second time` and the *entire* monthly finalize would fail,
+   not just that one writer. Low-probability (needs a real co-written
+   series with per-video writer credit split across weeks) but a real bug,
+   and cheap to eliminate entirely rather than just narrow. Re-keyed the
+   unique constraint from `(month, series_id)` to `(month, writer_id)` —
+   which is what the code actually means — via `alter table ... drop
+   constraint / add constraint` (`monthly_writer_awards_month_series_id_key`
+   → `monthly_writer_awards_month_writer_id_key`), and updated the `ON
+   CONFLICT` target + the `UPDATE SET` clause (now updates `series_id`
+   instead of `writer_id` on conflict, matching the new key). Applied live
+   via Supabase MCP, `20260816250000_unique_for_mangal_phase3.sql` updated
+   to match (this migration is `create or replace function` + the new
+   constraint, safe to re-apply). Confirmed nothing else in the app reads
+   or depends on the old `(month, series_id)` uniqueness.
+
+**Everything else checked clean:** Phase 0 schema/RLS, Phase 1's
+`refresh_mangal_ideas()`/`get_mangal_ideas_feed()` (table/column names all
+match live schema, `kcircle_posts`/`kcircle_post_likes`/
+`kcircle_post_comments` correctly referenced), Phase 2's scoring formula
+(log-scaled views/likes per the anti-abuse note, Tier-1 +15% multiplier,
+one-vote-per-week + 24h-account-age enforced at the DB level not just UI),
+all UI wiring (badges, banners, deep-links, RPC call sites across
+`katube/page.tsx`, `katube/channel/[username]/page.tsx`,
+`creator/[username]/page.tsx`, the two admin pages) — all correctly typed,
+correctly named, no dead references.
+
+**Verified:** `tsc --noEmit` clean across the whole repo; `eslint` clean on
+every touched file; `get_advisors` (security) re-run after both live
+migrations — no new warning class introduced, same pre-existing
+self-guarding `SECURITY DEFINER` pattern every other RPC in this codebase
+already has.

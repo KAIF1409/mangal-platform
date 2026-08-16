@@ -8,6 +8,19 @@
 alter table monthly_writer_awards
   add column if not exists prize_note text;
 
+-- Follow-up fix (this session): the original unique constraint was
+-- (month, series_id), matching the insert's ON CONFLICT target below. But
+-- the actual business rule is "one award row per writer per month" — if
+-- two different collab writers' monthly-best series ever happened to be
+-- the *same* series_id (e.g. co-written series with different videos
+-- crediting different collab_writer_id), a single INSERT ... SELECT can't
+-- ON CONFLICT DO UPDATE the same target row twice and would error out the
+-- whole finalize call for that month. Re-keyed to (month, writer_id),
+-- which is what the code actually means and removes the collision class
+-- entirely rather than just making it rarer.
+alter table monthly_writer_awards drop constraint if exists monthly_writer_awards_month_series_id_key;
+alter table monthly_writer_awards add constraint monthly_writer_awards_month_writer_id_key unique (month, writer_id);
+
 -- Phase 3 build step 1: monthly scheduled job (run manually via the admin
 -- page, no cron yet — same pattern as Phase 1/2's manual-refresh admin
 -- buttons). Aggregates Tier 1 (writer+creator collab) videos per writer for
@@ -21,10 +34,10 @@ alter table monthly_writer_awards
 --
 -- A writer can have collab videos across more than one series in a month;
 -- monthly_writer_awards still needs a single series_id per writer (FK,
--- not null, and unique together with month), so the writer's
--- highest-scoring series that month is stored as the representative
--- credit — the ranking itself is by the writer's summed score, not any
--- one series' score.
+-- not null), so the writer's highest-scoring series that month is stored
+-- as the representative credit — the ranking itself is by the writer's
+-- summed score, not any one series' score. Upsert target is (month,
+-- writer_id) — see the constraint fix above.
 create or replace function public.finalize_monthly_writer_awards(p_month date default null)
 returns void
 language plpgsql
@@ -68,8 +81,8 @@ begin
   select v_month, bs.series_id, a.writer_id, a.total_score
   from agg a
   join best_series bs on bs.writer_id = a.writer_id
-  on conflict (month, series_id) do update
-    set writer_id = excluded.writer_id,
+  on conflict (month, writer_id) do update
+    set series_id = excluded.series_id,
         score = excluded.score;
 
   update monthly_writer_awards mwa

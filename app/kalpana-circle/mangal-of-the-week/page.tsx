@@ -108,7 +108,6 @@ export default function MangalOfTheWeekPage() {
       if (!uid) { setPostLoginRedirect('/kalpana-circle'); router.replace('/login?next=/kalpana-circle'); }
     });
   }, [router]);
-
   const loadPool = useCallback(async (uid: string) => {
     setLoadingPool(true);
     const week = currentWeekStart();
@@ -164,6 +163,7 @@ export default function MangalOfTheWeekPage() {
 
   useEffect(() => {
     if (!userId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as ../chat/page.tsx
     loadPool(userId);
     loadWinners();
     loadWriterOfMonth();
