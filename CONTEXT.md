@@ -4338,3 +4338,52 @@ completion metric (which was already chapter-addressable via
 needs the `ai_tools`/`tool_clicks` tables, the K Circle tab trimmed per its
 spec, and affiliate-program applications submitted individually before any
 tool card goes live monetized.
+
+## §60 — §41: AI Toolkit page shipped, trimmed to WebMangal + KaTube (`c5180ec`)
+
+**Status: done, K Circle intentionally deferred.** §41 was scoped with three
+category tabs (WebMangal, KaTube, K Circle); only the first two had actual
+affiliate-program research behind them (see §41's own research notes), so
+this session trimmed K Circle out of the build rather than shipping a tab
+with unresearched/fabricated tool entries. `ai_tools.product` already
+accepts `'kcircle'` as a value — adding that category later is a data
+insert once the research is done, not a migration.
+
+**Data layer** (`supabase/migrations/20260816220000_ai_tools_toolkit.sql`,
+applied live) — `ai_tools` table per §41 plan item 1 (data-driven list,
+public read via RLS, no client write — same "curated, not user-writable"
+pattern as `tags`), and `tool_clicks` per plan item 2 (internal click log,
+authenticated insert-only, no select policy yet since it isn't surfaced in
+a UI — read via Supabase SQL directly for now). Seeded with exactly the
+tools §41's research confirmed: 8 KaTube-category rows (ElevenLabs, Murf,
+Descript, InVideo, Veed, HeyGen, Synthesia, Runway) and 2 WebMangal-category
+rows (Midjourney, Canva — both flagged `is_affiliate = false` since neither
+has a live program per that research, listed as free tools instead of
+skipped or mislabeled).
+
+**`affiliate_url` is null on every row right now** — no real referral
+links exist yet. Getting them means actually applying to each program
+(ElevenLabs/Murf via PartnerStack, the video tools via their own affiliate
+pages) — that's an account-creation step outside what a repo commit can
+do, flagged rather than filled with placeholder/fake links. Page renders a
+"Referral link not added yet" state on those cards until the real URLs are
+added via Supabase.
+
+**Page** — `/dashboard/ai-tools`, reuses `/dashboard/tools`'s visual
+pattern (card grid, `ProductScopeSwitcher`) but scoped to
+`options={['all','webmangal','katube']}` — no `kcircle` pill shown, not
+just an empty one. Every card with `is_affiliate = true` shows a
+"SPONSORED" badge — legal disclosure requirement per §41, not cosmetic.
+Clicking a card with a real `affiliate_url` logs a row to `tool_clicks`
+(fire-and-forget, never blocks navigation) before the link opens.
+Sidebar nav entry added in `StudioSidebar.tsx` under Tools.
+
+**Verified:** `tsc --noEmit` clean project-wide; `eslint` clean on both new
+files — the one error `eslint` reports on `StudioSidebar.tsx` is
+pre-existing on the untouched `useClock()` function (a `setState`-in-effect
+rule hit), unrelated to this change.
+
+**Not done (rest of §41):** public logged-out `/tools` version (plan item
+4), K Circle category (needs its own research pass first), and the actual
+affiliate-program applications/real referral links (plan item 3 — outside
+what this repo can do on its own).
