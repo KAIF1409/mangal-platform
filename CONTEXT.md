@@ -3931,3 +3931,42 @@ conflicted (caught this via `tsc`, not by eye).
 **Not done in this pass, flagged but out of scope:** all of §28a's items
 are covered; nothing from that list deferred. §29/§30 (further backlog
 items) untouched.
+
+## §55 — K Circle: Discord+Instagram hybrid desktop shell
+
+Founder wanted K Circle's desktop UI redesigned as a deliberate mix of
+Instagram (feed/stories) and Discord (nav structure), referencing actual
+screenshots of both apps' desktop and mobile layouts. Scoped to the main
+feed page (`app/kalpana-circle/page.tsx`) first — chat/watch-together/
+broadcasts pages not touched yet.
+
+**What shipped (`08b2b57`):**
+- Desktop-only (>=768px) left icon rail, Discord server-list pattern:
+  MANGAL app-switcher icon → divider → Home/Chat/Watch Together/
+  Broadcasts/Saved/Search → Create/Notifications/Profile/Theme/KaTube
+  pinned to the bottom. Circle→rounded-square hover morph via
+  `.kc-rail-btn` — Discord's signature nav interaction.
+- Old horizontal desktop top bar (which duplicated the rail's icons)
+  replaced with a slim `# home` channel-header strip (Discord pattern),
+  just search + section context now.
+- New right panel (>=1180px only): mini profile card (Instagram
+  account-switcher style) + "Recently Active" (story authors — real
+  recency signal, not fabricated presence) + "Trending Tags" (counted
+  from the currently-loaded feed's `tag` field, links into the existing
+  `?tag=` filter). Both derived from state already fetched for
+  stories/posts — no new Supabase queries added.
+- Mobile completely untouched: `.kc-shell` falls back to `display:
+  block` below 768px, so the existing top header + bottom tab bar
+  (already Discord/Insta-mobile-style, per founder's own reference
+  screenshots) renders exactly as before.
+- All feed/composer/stories/comments/search logic and data fetching
+  unchanged — this was a layout/shell restructure only, verified via
+  `tsc --noEmit` (clean) and `eslint` (0 errors, 1 pre-existing
+  unrelated warning). `next build` itself fails in this sandbox only
+  because Google Fonts (`fonts.googleapis.com`) isn't reachable — a
+  network-allowlist limitation, not a code issue.
+
+**Not done yet:** chat, watch-together, broadcasts, saved, profile, and
+settings pages still use their original layouts — same rail/right-panel
+treatment can be extended to them on request, one page at a time per
+the "one change at a time" convention (§5).
