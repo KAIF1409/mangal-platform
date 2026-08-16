@@ -5121,3 +5121,26 @@ moved, nothing renamed** — purely additive:
 
 **Verified:** `tsc --noEmit` clean, `eslint` clean (no files touched that
 affect either check — this pass added new files only).
+
+## §71 — Repo structure: Phase B — app/ moved to src/app/
+
+Pure directory move, per the Phase B plan in `docs/REPO_STRUCTURE.md`.
+Confirmed safe before moving: `grep`'d for the `@/*` tsconfig path alias
+across the whole codebase — zero hits, every import in this repo is
+relative, so moving the folder wholesale changes no import paths at all
+(git recorded all ~150 files as 100% renames, no content diffs). Also
+confirmed no `middleware.ts`/`instrumentation.ts` at the old root, and no
+config file hardcodes an `app/` path — Next.js auto-detects `src/app/`.
+
+Updated `tsconfig.json`'s `@/*` alias from `./*` to `./src/*` so it's
+correct going forward even though nothing currently uses it.
+
+**Verified:** cleared stale `.next/` cache, `tsc --noEmit` clean (0
+errors), `eslint` unchanged at 62 problems / 19 errors / 43 warnings —
+identical count to pre-move baseline, so nothing new broke. Booted
+`next dev` locally — Turbopack picked up `src/app/` immediately, ready in
+under 2s, no errors.
+
+`lib/` and `components/` (now `src/app/lib`, `src/app/components`) are
+untouched — that's Phase C/D, done separately since those touch specific
+import paths file-by-file rather than a single wholesale move.
