@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../../lib/supabase';
@@ -160,15 +160,39 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   const [voteBusy, setVoteBusy] = useState<string | null>(null); // quest_id currently voting
   const [pickBusy, setPickBusy] = useState<string | null>(null); // submission_id currently being picked
 
+  // Whether unpublished (draft / not-yet-scheduled) chapters should be
+  // included when fetching the chapter list — true only for the series
+  // owner/developer. Kept as a ref (in sync with the `isCreator` state,
+  // set below) because it's read from closures created before the auth
+  // check resolves and from a focus/visibility listener with a `[seriesId]`-
+  // only dependency array, both of which would otherwise capture a stale
+  // `false` via a normal state read.
+  const canManageRef = useRef(false);
+
   // Pulled out of the main load() below so it can also be called on its own
   // whenever the tab/page becomes visible again (see effect below) — we only
   // want to refresh the chapter list itself in that case, not redo the view
   // count increment, follow status, or rating fetch every time someone tabs
   // back in.
+  //
+  // Bug fix — this used to fetch every chapter regardless of is_draft /
+  // scheduled_at, for every visitor, not just the creator. Anyone opening a
+  // series page (logged in or not) could see draft chapter titles and
+  // not-yet-live scheduled chapters in the chapter list, the chapter count,
+  // and the "Latest"/"Continue Reading" CTA — and clicking any of them hit
+  // the reader's draft/scheduled gate wall instead of actually reading
+  // something. No published platform leaks unreleased chapters like that.
+  // Now filtered server-side exactly like the reader's own prev/next-chapter
+  // query, unless the viewer can manage this series (creator/dev), who still
+  // needs to see drafts to edit them.
   const fetchChapters = async () => {
-    const { data: c } = await supabase
+    let query = supabase
       .from('chapters').select('id, chapter_number, title, created_at, word_count')
-      .eq('series_id', seriesId).order('chapter_number', { ascending: true });
+      .eq('series_id', seriesId);
+    if (!canManageRef.current) {
+      query = query.eq('is_draft', false).or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`);
+    }
+    const { data: c } = await query.order('chapter_number', { ascending: true });
     return c;
   };
 
@@ -238,7 +262,9 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           .single();
 
         const owns = !!(s && u.user.id === s.creator_id);
-        setIsCreator(canManageSeries(profile?.role, owns));
+        const canManage = canManageSeries(profile?.role, owns);
+        setIsCreator(canManage);
+        canManageRef.current = canManage;
         setIsDeveloper(isDeveloperRole(profile?.role));
 
         const { data: existingFollow } = await supabase

@@ -119,10 +119,15 @@ export default function BookmarksPage() {
       }).filter(Boolean);
 
       // Batch fetch latest chapters for all followed series
+      // Bug fix — same gap as library/series pages: no is_draft/scheduled_at
+      // filter, so a bookmarked series' "latest chapter" link/count could
+      // point at content that isn't actually published yet.
       const { data: allChapters } = await supabase
         .from('chapters')
         .select('id, series_id, chapter_number')
         .in('series_id', seriesIds)
+        .eq('is_draft', false)
+        .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`)
         .order('chapter_number', { ascending: false });
 
       // Build a map: series_id → latest chapter
