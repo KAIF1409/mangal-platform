@@ -190,11 +190,25 @@ export default function BecomeCreatorPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', }}>
-    <main style={{
+    {/* Mobile pass: the 24px outer + 36/32px card padding left only ~200px
+        of usable width for form fields on a ~360px phone — tight, and the
+        24px outer padding alone forced the card narrower than it needed to
+        be on very small screens. Tightened both under 480px/360px. */}
+    <style>{`
+      @media (max-width: 480px) {
+        .mangal-btc-main { padding: 14px !important; }
+        .mangal-btc-card { padding: 26px 20px !important; border-radius: 16px !important; }
+      }
+      @media (max-width: 360px) {
+        .mangal-btc-main { padding: 8px !important; }
+        .mangal-btc-card { padding: 22px 16px !important; }
+      }
+    `}</style>
+    <main className="mangal-btc-main" style={{
       flex: 1, display: 'flex',
       alignItems: 'center', justifyContent: 'center', padding: '24px',
     }}>
-      <div style={{
+      <div className="mangal-btc-card" style={{
         width: '100%', maxWidth: '460px', background: 'var(--bg-card)',
         border: '1px solid var(--border-color)', borderRadius: '20px', padding: '36px 32px',
         boxShadow: '0 32px 80px rgba(0,0,0,0.6)', position: 'relative',
