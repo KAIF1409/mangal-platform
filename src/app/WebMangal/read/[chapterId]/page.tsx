@@ -693,14 +693,25 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   }, [effectiveMode, isRTL, pages]);
 
   // Step 2 — Reading Progress: page mode writes on every page turn
+  //
+  // Bug fix — this fired on every currentPage change including the very
+  // first render after a chapter loads (currentPage resets to 0), which
+  // scheduled an 800ms-debounced save of page 1 immediately. On a slow
+  // connection that debounce can fire before the resume-in-chapter lookup
+  // above finishes its own round trip, silently overwriting the saved
+  // progress this chapter was trying to restore, right before it gets
+  // read back. Gating on resumeApplied means nothing gets saved until we
+  // know whether there was something to resume in the first place.
   useEffect(() => {
+    if (!resumeApplied) return;
     if (effectiveMode !== 'page') return;
     if (!userId || !series || !currentChapter || pages.length === 0) return;
     scheduleUpsert(currentPage + 1);
-  }, [currentPage, effectiveMode, userId, series, currentChapter, pages.length]);
+  }, [currentPage, effectiveMode, userId, series, currentChapter, pages.length, resumeApplied]);
 
   // Step 2 — Reading Progress: scroll mode writes when a page crosses 50% visible
   useEffect(() => {
+    if (!resumeApplied) return;
     if (effectiveMode !== 'scroll' || pages.length === 0) return;
     if (!userId || !series || !currentChapter) return;
     const observer = new IntersectionObserver(
@@ -715,13 +726,15 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     );
     pageRefs.current.forEach(el => el && observer.observe(el));
     return () => observer.disconnect();
-  }, [effectiveMode, pages, userId, series, currentChapter]);
+  }, [effectiveMode, pages, userId, series, currentChapter, resumeApplied]);
 
   // Step 21 — Novel Reading Progress: tracks scroll % through the text container.
   // page_number is repurposed as a 1–100 integer (percent complete) for novels
   // since novels have no discrete pages array to track via IntersectionObserver.
   // Also drives the visual progress bar at the top of the screen — that part
-  // runs regardless of login state, so guests still see it.
+  // runs regardless of login state (and regardless of resumeApplied — a guest
+  // or first-visit reader should still see the bar move), only the actual save
+  // to reading_progress is gated on the resume check having settled first.
   useEffect(() => {
     if (!isNovel || !containerRef.current) return;
     const el = containerRef.current;
@@ -730,11 +743,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       if (scrollable <= 0) return;
       const pct = Math.round((el.scrollTop / scrollable) * 100);
       setScrollPercent(pct);
-      if (userId && series && currentChapter) scheduleUpsert(pct);
+      if (resumeApplied && userId && series && currentChapter) scheduleUpsert(pct);
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [isNovel, userId, series, currentChapter]);
+  }, [isNovel, userId, series, currentChapter, resumeApplied]);
   // (width / screen / actual) instead of a fixed width:100% + numeric zoom
   const getImgStyle = (): React.CSSProperties => {
     // pointerEvents:'none' is intentionally removed — it was blocking touch-scroll on mobile.
