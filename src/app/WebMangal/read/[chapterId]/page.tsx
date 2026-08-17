@@ -9,7 +9,7 @@ import {
   CalendarClock, FileText, ArrowLeft, BookOpen, Sparkles, Wrench,
   Menu, Expand, Shrink, Lock, Unlock, Settings, X, ScrollText,
   MoveHorizontal, ChevronRight, ListOrdered, CornerDownRight,
-  Minus, Plus,
+  Minus, Plus, Wifi,
 } from 'lucide-react';
 
 
@@ -50,7 +50,13 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const [modeOverride, setModeOverride] = useState<'scroll' | 'page' | null>('scroll');
   const [fitMode, setFitMode] = useState<'width' | 'screen' | 'actual'>('width');
   const [tapZonesEnabled, setTapZonesEnabled] = useState(false);
-  const [dataSaver, setDataSaver] = useState(false);
+  // Image quality: 'auto' picks a floor of 720p on slow connections and full
+  // resolution on good ones; 'low'/'high' are the reader's manual override.
+  const [imageQuality, setImageQuality] = useState<'auto' | 'low' | 'high'>('auto');
+  // What 'auto' currently resolves to, based on the Network Information API
+  // (connection type/downlink/saveData). Defaults to 'high' when the API isn't
+  // available (Safari, etc.) so we never under-serve users we can't measure.
+  const [autoResolvedQuality, setAutoResolvedQuality] = useState<'low' | 'high'>('high');
   const [prefsLoaded, setPrefsLoaded] = useState(false);
 
   // Step 21 — Novel reader state
@@ -173,7 +179,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         if (saved.modeOverride) setModeOverride(saved.modeOverride);
         if (saved.fitMode) setFitMode(saved.fitMode);
         if (typeof saved.tapZonesEnabled === 'boolean') setTapZonesEnabled(saved.tapZonesEnabled);
-        if (typeof saved.dataSaver === 'boolean') setDataSaver(saved.dataSaver);
+        if (saved.imageQuality === 'auto' || saved.imageQuality === 'low' || saved.imageQuality === 'high') {
+          setImageQuality(saved.imageQuality);
+        } else if (typeof saved.dataSaver === 'boolean') {
+          // Migrate the old binary "Data Saver" pref to the new 3-way selector.
+          setImageQuality(saved.dataSaver ? 'low' : 'auto');
+        }
         if (saved.fontSize && saved.fontSize >= 14 && saved.fontSize <= 24) setFontSize(saved.fontSize);
         if (saved.fontFamily === 'serif' || saved.fontFamily === 'sans' || saved.fontFamily === 'dyslexic') setFontFamily(saved.fontFamily);
         if (saved.lineHeight === 1.5 || saved.lineHeight === 2 || saved.lineHeight === 2.4) setLineHeight(saved.lineHeight);
@@ -186,6 +197,30 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     setPrefsLoaded(true);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Detect connection speed for 'auto' image quality. Network Information API
+  // is Chrome/Edge/Android only (no Safari/Firefox support as of this writing) —
+  // where it's missing we just stay on 'high', which is the safe default.
+  useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    const nav = navigator as Navigator & {
+      connection?: { effectiveType?: string; downlink?: number; saveData?: boolean; addEventListener?: (t: string, l: () => void) => void; removeEventListener?: (t: string, l: () => void) => void };
+      mozConnection?: typeof nav.connection;
+      webkitConnection?: typeof nav.connection;
+    };
+    const conn = nav.connection || nav.mozConnection || nav.webkitConnection;
+    const evaluate = () => {
+      if (!conn) { setAutoResolvedQuality('high'); return; }
+      const slow =
+        conn.saveData === true ||
+        (conn.effectiveType ? ['slow-2g', '2g', '3g'].includes(conn.effectiveType) : false) ||
+        (typeof conn.downlink === 'number' && conn.downlink < 1.5);
+      setAutoResolvedQuality(slow ? 'low' : 'high');
+    };
+    evaluate();
+    conn?.addEventListener?.('change', evaluate);
+    return () => conn?.removeEventListener?.('change', evaluate);
+  }, []);
 
   // Once series loads we know content_type. Apply per-type bgColor default:
   // sepia for novels (easy on eyes at night), black for manga.
@@ -216,11 +251,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       // Save bgColor under a type-specific key so novel and manga prefs don't overwrite each other.
       const existing = (() => { try { return JSON.parse(localStorage.getItem('mangal_reader_prefs') || '{}'); } catch { return {}; } })();
       const bgKey = isNovel ? 'novelBgColor' : 'mangaBgColor';
-      localStorage.setItem('mangal_reader_prefs', JSON.stringify({ ...existing, modeOverride, fitMode, tapZonesEnabled, dataSaver, [bgKey]: bgColor, fontSize, fontFamily, lineHeight }));
+      localStorage.setItem('mangal_reader_prefs', JSON.stringify({ ...existing, modeOverride, fitMode, tapZonesEnabled, imageQuality, [bgKey]: bgColor, fontSize, fontFamily, lineHeight }));
     } catch {
       // ignore storage errors (private browsing, quota, etc.)
     }
-  }, [modeOverride, fitMode, tapZonesEnabled, dataSaver, bgColor, prefsLoaded, fontSize, fontFamily, lineHeight]);
+  }, [modeOverride, fitMode, tapZonesEnabled, imageQuality, bgColor, prefsLoaded, fontSize, fontFamily, lineHeight]);
 
   // Effective reading mode = reader's override if set, else the series' default.
   // Novels are always scroll — page-by-page navigation doesn't apply to text.
@@ -813,19 +848,22 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     }
   };
 
-  // Sprint 4 — data saver: routes images through Supabase Storage's image
-  // transform endpoint (lower width + quality). Requires image transformations
-  // to be enabled on the Supabase project (Pro plan or self-hosted imgproxy) —
-  // if it's not enabled the request 400s and onError below falls back to the
-  // original full-quality image automatically.
+  // Image quality: routes images through Supabase Storage's image transform
+  // endpoint (lower width + quality) when the reader is on 'low', or when
+  // 'auto' has resolved to 'low' based on detected connection speed. 720px
+  // width is a deliberate floor — even the compact tier stays readable —
+  // never go lower. Requires image transformations to be enabled on the
+  // Supabase project (Pro plan or self-hosted imgproxy); if not enabled the
+  // request 400s and onError below falls back to the original image.
+  const effectiveImageQuality: 'low' | 'high' = imageQuality === 'auto' ? autoResolvedQuality : imageQuality;
   const getImageSrc = (url: string): string => {
-    if (!dataSaver || !url.includes('/object/public/')) return url;
+    if (effectiveImageQuality !== 'low' || !url.includes('/object/public/')) return url;
     const transformed = url.replace('/object/public/', '/render/image/public/');
-    return `${transformed}${transformed.includes('?') ? '&' : '?'}width=720&quality=60`;
+    return `${transformed}${transformed.includes('?') ? '&' : '?'}width=720&quality=65`;
   };
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, originalUrl: string) => {
-    if (dataSaver && e.currentTarget.src !== originalUrl) {
-      e.currentTarget.src = originalUrl; // transform unsupported on this project — fall back silently
+    if (e.currentTarget.src !== originalUrl) {
+      e.currentTarget.src = originalUrl; // transform unsupported/failed — fall back to original
     }
   };
 
@@ -1379,15 +1417,23 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           </button>
         </div>
 
-        {/* Data saver toggle — manga only */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Data Saver</div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', maxWidth: '160px' }}>Lower-res images for slow connections</div>
+        {/* Image quality selector — manga only */}
+        <div>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '8px' }}>Image Quality</div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button onClick={() => setImageQuality('auto')} style={settingsBtn(imageQuality === 'auto')}>
+              <Wifi size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Auto
+            </button>
+            <button onClick={() => setImageQuality('low')} style={settingsBtn(imageQuality === 'low')}>Low</button>
+            <button onClick={() => setImageQuality('high')} style={settingsBtn(imageQuality === 'high')}>High</button>
           </div>
-          <button onClick={() => setDataSaver(v => !v)} style={toggleSwitch(dataSaver)}>
-            <span style={toggleKnob(dataSaver)} />
-          </button>
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '8px', maxWidth: '220px', lineHeight: 1.4 }}>
+            {imageQuality === 'auto'
+              ? `Matches your connection automatically — right now that's ${autoResolvedQuality === 'low' ? 'compact 720p pages' : 'full original quality'}.`
+              : imageQuality === 'low'
+              ? 'Always loads compact 720p pages — best on slow or metered connections.'
+              : 'Always loads the original full-resolution pages the creator uploaded.'}
+          </div>
         </div>
         </>)}
       </div>

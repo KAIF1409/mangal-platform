@@ -5512,3 +5512,73 @@ sandbox doesn't have, not more static reading.
 **Verified:** `tsc --noEmit` clean, `eslint` on WebMangal scope: 0 errors
 (13 pre-existing warnings, down from 16). `next build` succeeds. Committed
 and pushed directly to `main` per founder's instruction — no branch/PR.
+
+## §80 — WebMangal perf: series-page load waterfall + manga reader quality selector
+
+Founder-reported: WebMangal (series pages, upload flow, "many more pages") and
+KaTube both feel slow to load, and manga chapter images are too heavy by
+default — asked for a per-user image quality control, auto-set from the
+reader's connection, with a 720p floor.
+
+**Series page load waterfall (`WebMangal/series/[seriesId]/page.tsx`).** The
+page's main `load()` was ~14 `await supabase...` calls in a strict sequence —
+series row, creator username, tags, view-count POST, auth, profile, follow
+status, reading progress, my rating, helpful-votes, follow count, all ratings,
+written reviews, chapters, related series, Circle fan-art — each one a full
+round trip before the next could even start. Rewrote it into three batches
+that run concurrently instead of serially:
+1. Everything that only needs `seriesId` (series row, auth, follow count, all
+   ratings, reviews, chapters, related series) — one `Promise.all`.
+2. Everything that needs the series row back (creator username, tags, Circle
+   fan-art) — a second `Promise.all`, kicked off once batch 1's series query
+   resolves.
+3. Everything that needs the logged-in user (role/profile, follow status,
+   reading progress, my rating, helpful-votes) — a third `Promise.all`, kicked
+   off once batch 1's auth call resolves.
+
+View-count logging (the `/api/log-view` POST) is fired without being awaited
+— it was never on the critical path for anything else in the function, just
+run in sequence with everything else by accident. Net effect: same data,
+same state updates, same query shapes — just concurrent instead of
+sequential. This is the single biggest lever on series-page load time since
+it was ~14 round trips deep before `setLoading(false)`.
+
+Audited `katube/watch/[videoId]/page.tsx` (also flagged as slow) and
+`WebMangal/upload/page.tsx` for the same waterfall pattern — watch page's
+main load effect already batches its two dependent queries via `Promise.all`
+and defers related-videos/comments/accuracy-reviews into their own
+non-blocking effects (already following the same pattern applied above, no
+change needed); upload page's sequential awaits are almost all inside
+save/submit handlers (user-triggered mutations), not the initial page load,
+so they don't affect perceived page-load speed the way the series page's did.
+
+**Manga reader image quality selector (`WebMangal/read/[chapterId]/page.tsx`).**
+Replaced the old binary "Data Saver" toggle with a 3-way **Auto / Low / High**
+selector, reachable from the same reader settings panel:
+- **Auto** (default) — reads `navigator.connection` (Network Information
+  API: `effectiveType`, `downlink`, `saveData`) and picks Low on slow/metered
+  connections, High otherwise. Re-evaluates on the browser's own `change`
+  event (e.g. wifi → mobile data mid-session). Where the API isn't available
+  (Safari/Firefox have no support), falls back to High rather than guessing.
+- **Low** — always routes through Supabase Storage's image-transform
+  endpoint at **`width=720`** — the founder's specified floor, so even the
+  compact tier stays readable — `quality=65`.
+- **High** — always serves the original, full-resolution page the creator
+  uploaded, no transform.
+Preference persists in the existing `mangal_reader_prefs` localStorage blob
+under a new `imageQuality` key; old saved `dataSaver: true/false` values are
+read once and migrated to `'low'`/`'auto'` respectively so returning readers
+don't lose their setting. `onError` fallback (transform endpoint 400s if
+image transformations aren't enabled on the Supabase plan) now fires
+regardless of the selected tier, not just under the old Data Saver flag.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on both touched
+files: 0 errors (warning counts unchanged from a clean `git stash` baseline
+— 7 pre-existing on the reader page, 3 on the series page, all
+`react-hooks/exhaustive-deps` on unrelated effects). Full-project `eslint .`:
+0 errors, 41 pre-existing warnings, same as baseline. `next build` in this
+sandbox fails at the Google Fonts fetch step (`fonts.googleapis.com` is
+outside the sandbox's allowed network egress) — unrelated to this change,
+same sandbox limitation noted in earlier sessions for Supabase-env-dependent
+checks. Committed and pushed directly to `main` per founder's instruction —
+no branch/PR.

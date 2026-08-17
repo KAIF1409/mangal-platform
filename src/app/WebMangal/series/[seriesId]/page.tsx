@@ -174,136 +174,58 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
 
   useEffect(() => {
     const load = async () => {
-      const { data: s } = await supabase.from('series').select('*').eq('id', seriesId).single();
+      // Perf fix — this used to be ~14 `await supabase...` calls back-to-back,
+      // each one a full network round trip before the next could even start
+      // (a "waterfall"). None of these actually depend on each other's
+      // *results* except where noted below, so batch 1 fires every
+      // seriesId-only query at once via Promise.all — turning ~14 sequential
+      // round trips into a handful of parallel ones. This is the single
+      // biggest win for series-page load time.
+      const [
+        seriesRes,
+        authRes,
+        followCountRes,
+        allRatingsRes,
+        reviewRowsRes,
+        chaptersData,
+        relatedRes,
+      ] = await Promise.all([
+        supabase.from('series').select('*').eq('id', seriesId).single(),
+        supabase.auth.getUser(),
+        supabase.from('follows').select('id', { count: 'exact', head: true }).eq('series_id', seriesId),
+        supabase.from('ratings').select('stars').eq('series_id', seriesId),
+        // Step 26 — Written reviews: only rows with actual review text, newest
+        // first. Helpful count via embedded aggregate, same no-N+1 pattern used
+        // for chapter counts and tag counts elsewhere.
+        supabase
+          .from('ratings')
+          .select('id, reader_id, stars, review_title, review_text, created_at, profiles(full_name), review_helpful_votes(count)')
+          .eq('series_id', seriesId)
+          .not('review_text', 'is', null)
+          .order('created_at', { ascending: false }),
+        fetchChapters(),
+        // Step 27 — Readers Also Liked
+        supabase.rpc('related_series', { target_series_id: seriesId, result_limit: 6 }),
+      ]);
+
+      const s = seriesRes.data;
+      const u = authRes.data;
+
       if (s) {
         setSeries(s);
         setViewCount(s.views ?? 0);
-
-        // Step 13 — Public Creator Profile: fetch the creator's username so the
-        // hero can link to /creator/[username]. Separate query since series has
-        // no username column itself, same pattern as the search page.
-        const { data: creatorRow } = await supabase
-          .from('creator_profiles')
-          .select('username')
-          .eq('user_id', s.creator_id)
-          .single();
-        if (creatorRow) setCreatorUsername(creatorRow.username);
-
-        // Step 25 — Tags: joined through series_tags. Table may not exist yet
-        // on older deployments before the migration runs, so fail silently.
-        const { data: tagRows } = await supabase
-          .from('series_tags')
-          .select('tags(id, name, slug)')
-          .eq('series_id', seriesId);
-        if (tagRows) {
-          const flat = tagRows
-            .map((r: { tags: { id: string; name: string; slug: string }[] | { id: string; name: string; slug: string } | null }) => (Array.isArray(r.tags) ? r.tags[0] : r.tags))
-            .filter((tag): tag is { id: string; name: string; slug: string } => !!tag);
-          setTags(flat);
-        }
       }
 
-      // Step 7 — view count: once per visitor per series per day (industry-standard
-      // anti-spam pattern, same idea as YouTube/Webtoon). Guarded via localStorage so
-      // refreshes, re-renders, and repeat same-day visits don't inflate the number.
-      // Routed through /api/log-view (instead of calling the RPC directly from the
-      // browser) so the server can read Vercel's edge geo header and record which
-      // country the view came from — used by creator Audience Insights.
-      try {
-        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-        const storageKey = `viewed:${seriesId}:${today}`;
-        if (!localStorage.getItem(storageKey)) {
-          localStorage.setItem(storageKey, '1');
-          const res = await fetch('/api/log-view', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ seriesId }),
-          });
-          if (res.ok) {
-            setViewCount(c => c + 1);
-          }
-        }
-      } catch {
-        // localStorage unavailable (private browsing, etc.) — skip incrementing silently
-      }
+      setFollowCount(followCountRes.count ?? 0);
 
-      const { data: u } = await supabase.auth.getUser();
-      if (u.user) {
-        setUser(u.user);
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', u.user.id)
-          .single();
-
-        const owns = !!(s && u.user.id === s.creator_id);
-        setIsCreator(canManageSeries(profile?.role, owns));
-        setIsDeveloper(isDeveloperRole(profile?.role));
-
-        const { data: existingFollow } = await supabase
-          .from('follows')
-          .select('id')
-          .eq('reader_id', u.user.id)
-          .eq('series_id', seriesId)
-          .maybeSingle();
-        setIsFollowing(!!existingFollow);
-
-        const { data: prog } = await supabase
-          .from('reading_progress')
-          .select('chapter_id, page_number')
-          .eq('reader_id', u.user.id)
-          .eq('series_id', seriesId)
-          .maybeSingle();
-        if (prog) setProgress(prog);
-
-        const { data: myR } = await supabase
-          .from('ratings')
-          .select('stars, review_title, review_text')
-          .eq('series_id', seriesId)
-          .eq('reader_id', u.user.id)
-          .maybeSingle();
-        if (myR) {
-          setMyRating(myR.stars);
-          setReviewTitle(myR.review_title ?? '');
-          setReviewText(myR.review_text ?? '');
-        }
-
-        // Step 26 — which reviews this reader has already marked helpful
-        const { data: voteRows } = await supabase
-          .from('review_helpful_votes')
-          .select('rating_id')
-          .eq('voter_id', u.user.id);
-        if (voteRows) setMyVotedHelpful(new Set(voteRows.map((v: { rating_id: string }) => v.rating_id)));
-      }
-
-      const { count } = await supabase
-        .from('follows')
-        .select('id', { count: 'exact', head: true })
-        .eq('series_id', seriesId);
-      setFollowCount(count ?? 0);
-
-      const { data: allRatings } = await supabase
-        .from('ratings')
-        .select('stars')
-        .eq('series_id', seriesId);
-      if (allRatings && allRatings.length > 0) {
-        setRatingCount(allRatings.length);
-        const avg = allRatings.reduce((sum, r) => sum + r.stars, 0) / allRatings.length;
+      if (allRatingsRes.data && allRatingsRes.data.length > 0) {
+        setRatingCount(allRatingsRes.data.length);
+        const avg = allRatingsRes.data.reduce((sum, r) => sum + r.stars, 0) / allRatingsRes.data.length;
         setAvgRating(Math.round(avg * 10) / 10);
       }
 
-      // Step 26 — Written reviews: only rows with actual review text, newest
-      // first. Helpful count via embedded aggregate, same no-N+1 pattern used
-      // for chapter counts and tag counts elsewhere.
-      const { data: reviewRows } = await supabase
-        .from('ratings')
-        .select('id, reader_id, stars, review_title, review_text, created_at, profiles(full_name), review_helpful_votes(count)')
-        .eq('series_id', seriesId)
-        .not('review_text', 'is', null)
-        .order('created_at', { ascending: false });
-      if (reviewRows) {
-        const mapped: Review[] = reviewRows.map((r: ReviewQueryRow) => ({
+      if (reviewRowsRes.data) {
+        const mapped: Review[] = reviewRowsRes.data.map((r: ReviewQueryRow) => ({
           id: r.id,
           reader_id: r.reader_id,
           stars: r.stars,
@@ -316,34 +238,124 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         setReviews(mapped);
       }
 
-      const c = await fetchChapters();
-      if (c) setChapters(c);
+      if (chaptersData) setChapters(chaptersData);
+      if (relatedRes.data) setRelatedSeries(relatedRes.data as Series[]);
 
-      // Step 27 — Readers Also Liked
-      const { data: related } = await supabase.rpc('related_series', { target_series_id: seriesId, result_limit: 6 });
-      if (related) setRelatedSeries(related as Series[]);
-
-      // Fan Theories & Art preview — latest kcircle_posts tagged with this
-      // series' title (same ilike match §12f's ?tag= filter uses on the
-      // Circle side, kept exact-ish/free-text on purpose, see that note).
-      if (s?.title) {
-        const { data: taggedPosts } = await supabase
-          .from('kcircle_posts')
-          .select('id, caption, image_url, author_id')
-          .ilike('tag', s.title)
-          .order('created_at', { ascending: false })
-          .limit(4);
-        if (taggedPosts && taggedPosts.length > 0) {
-          const authorIds = Array.from(new Set(taggedPosts.map(p => p.author_id)));
-          const { data: authorRows } = await supabase
-            .from('creator_profiles').select('user_id, username').in('user_id', authorIds);
-          const usernameMap = new Map((authorRows ?? []).map(a => [a.user_id, a.username]));
-          setCirclePosts(taggedPosts.map(p => ({
-            id: p.id, caption: p.caption, image_url: p.image_url,
-            username: usernameMap.get(p.author_id) ?? 'dreamer',
-          })));
+      // Step 7 — view count: once per visitor per series per day (industry-standard
+      // anti-spam pattern, same idea as YouTube/Webtoon). Guarded via localStorage so
+      // refreshes, re-renders, and repeat same-day visits don't inflate the number.
+      // Routed through /api/log-view (instead of calling the RPC directly from the
+      // browser) so the server can read Vercel's edge geo header and record which
+      // country the view came from — used by creator Audience Insights.
+      // Fired without awaiting — it's independent of every other query below,
+      // no need to hold up the rest of the page for it.
+      const logView = (async () => {
+        try {
+          const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+          const storageKey = `viewed:${seriesId}:${today}`;
+          if (!localStorage.getItem(storageKey)) {
+            localStorage.setItem(storageKey, '1');
+            const res = await fetch('/api/log-view', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ seriesId }),
+            });
+            if (res.ok) {
+              setViewCount(c => c + 1);
+            }
+          }
+        } catch {
+          // localStorage unavailable (private browsing, etc.) — skip incrementing silently
         }
-      }
+      })();
+
+      // Batch 2 — needs `s` (creator id / title), so it can only start once
+      // batch 1's series row is back, but its three queries are independent
+      // of each other and run together.
+      const seriesDependent = (async () => {
+        if (!s) return;
+        const tasks: PromiseLike<void>[] = [
+          // Step 13 — Public Creator Profile: fetch the creator's username so the
+          // hero can link to /creator/[username]. Separate query since series has
+          // no username column itself, same pattern as the search page.
+          supabase
+            .from('creator_profiles')
+            .select('username')
+            .eq('user_id', s.creator_id)
+            .single()
+            .then(({ data }) => { if (data) setCreatorUsername(data.username); }),
+          // Step 25 — Tags: joined through series_tags. Table may not exist yet
+          // on older deployments before the migration runs, so fail silently.
+          supabase
+            .from('series_tags')
+            .select('tags(id, name, slug)')
+            .eq('series_id', seriesId)
+            .then(({ data: tagRows }) => {
+              if (tagRows) {
+                const flat = tagRows
+                  .map((r: { tags: { id: string; name: string; slug: string }[] | { id: string; name: string; slug: string } | null }) => (Array.isArray(r.tags) ? r.tags[0] : r.tags))
+                  .filter((tag): tag is { id: string; name: string; slug: string } => !!tag);
+                setTags(flat);
+              }
+            }),
+        ];
+        // Fan Theories & Art preview — latest kcircle_posts tagged with this
+        // series' title (same ilike match §12f's ?tag= filter uses on the
+        // Circle side, kept exact-ish/free-text on purpose, see that note).
+        if (s.title) {
+          tasks.push(
+            supabase
+              .from('kcircle_posts')
+              .select('id, caption, image_url, author_id')
+              .ilike('tag', s.title)
+              .order('created_at', { ascending: false })
+              .limit(4)
+              .then(async ({ data: taggedPosts }) => {
+                if (taggedPosts && taggedPosts.length > 0) {
+                  const authorIds = Array.from(new Set(taggedPosts.map(p => p.author_id)));
+                  const { data: authorRows } = await supabase
+                    .from('creator_profiles').select('user_id, username').in('user_id', authorIds);
+                  const usernameMap = new Map((authorRows ?? []).map(a => [a.user_id, a.username]));
+                  setCirclePosts(taggedPosts.map(p => ({
+                    id: p.id, caption: p.caption, image_url: p.image_url,
+                    username: usernameMap.get(p.author_id) ?? 'dreamer',
+                  })));
+                }
+              })
+          );
+        }
+        await Promise.all(tasks);
+      })();
+
+      // Batch 3 — needs the logged-in user, so it can only start once batch 1's
+      // auth call is back, but its five queries are independent of each other.
+      const userDependent = (async () => {
+        if (!u.user) return;
+        setUser(u.user);
+
+        const [profileRes, followRes, progRes, myRRes, voteRowsRes] = await Promise.all([
+          supabase.from('profiles').select('role').eq('id', u.user!.id).single(),
+          supabase.from('follows').select('id').eq('reader_id', u.user!.id).eq('series_id', seriesId).maybeSingle(),
+          supabase.from('reading_progress').select('chapter_id, page_number').eq('reader_id', u.user!.id).eq('series_id', seriesId).maybeSingle(),
+          supabase.from('ratings').select('stars, review_title, review_text').eq('series_id', seriesId).eq('reader_id', u.user!.id).maybeSingle(),
+          // Step 26 — which reviews this reader has already marked helpful
+          supabase.from('review_helpful_votes').select('rating_id').eq('voter_id', u.user!.id),
+        ]);
+
+        const owns = !!(s && u.user!.id === s.creator_id);
+        setIsCreator(canManageSeries(profileRes.data?.role, owns));
+        setIsDeveloper(isDeveloperRole(profileRes.data?.role));
+        setIsFollowing(!!followRes.data);
+        if (progRes.data) setProgress(progRes.data);
+        if (myRRes.data) {
+          setMyRating(myRRes.data.stars);
+          setReviewTitle(myRRes.data.review_title ?? '');
+          setReviewText(myRRes.data.review_text ?? '');
+        }
+        if (voteRowsRes.data) setMyVotedHelpful(new Set(voteRowsRes.data.map((v: { rating_id: string }) => v.rating_id)));
+      })();
+
+      await Promise.all([logView, seriesDependent, userDependent]);
 
       setLoading(false);
     };
