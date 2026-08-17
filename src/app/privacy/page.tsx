@@ -251,7 +251,7 @@ export default function PrivacyPolicyPage() {
         {/* Your Rights */}
         <div style={sectionCard}>
           <h2 style={{ ...sectionTitle, display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle2 size={18} strokeWidth={2} /> Your Rights as a Data Principal</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px', marginTop: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))', gap: '12px', marginTop: '8px' }}>
             {YOUR_RIGHTS.map((r) => (
               <div key={r.title} style={{
                 background: 'var(--bg-input)', border: '1px solid var(--divider)',
