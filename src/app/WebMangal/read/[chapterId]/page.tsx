@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, useRef, useMemo, use } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { parseChapterContent, estimateReadTime } from '../../../lib/novelEditor';
@@ -83,6 +83,15 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   type CommentRow = { id: string; reader_id: string; body: string; created_at: string; full_name: string; parent_id: string | null; replies?: CommentRow[] };
   type CommentQueryRow = { id: string; reader_id: string; body: string; created_at: string; parent_id: string | null; profiles: { full_name: string | null }[] | { full_name: string | null } | null };
   const [comments, setComments] = useState<CommentRow[]>([]);
+  // Bug fix — the "Comments (N)" badge was showing comments.length, which is
+  // only the count of top-level comments; a thread with 3 top-level comments
+  // and 5 replies displayed "(3)" instead of "(8)". Replies are nested one
+  // level deep under their parent (see loadComments below), so the true total
+  // is top-level count + every parent's replies array length.
+  const totalCommentCount = useMemo(
+    () => comments.reduce((sum, c) => sum + 1 + (c.replies?.length ?? 0), 0),
+    [comments]
+  );
   const [commentBody, setCommentBody] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -606,8 +615,14 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     setReplySubmitting(false);
   };
 
-  // Step 4 — Delete own comment (optimistic). Also removes from parent's replies array.
+  // Step 4 — Delete own comment. Optimistic, but rolled back on failure —
+  // previously the DB delete's result was never checked, so an RLS block or
+  // network failure left the comment removed from the UI while still sitting
+  // in the DB, only to reappear confusingly on the next reload. Same
+  // silent-failure gotcha already fixed elsewhere in this app (EditSeriesModal
+  // etc) via checking the actual result instead of assuming success.
   const handleDeleteComment = async (commentId: string, parentId?: string | null) => {
+    const prevComments = comments;
     if (parentId) {
       setComments(c => c.map(top => top.id === parentId
         ? { ...top, replies: (top.replies || []).filter(r => r.id !== commentId) }
@@ -616,7 +631,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     } else {
       setComments(c => c.filter(x => x.id !== commentId));
     }
-    await supabase.from('comments').delete().eq('id', commentId).eq('reader_id', userId!);
+    const { error, count } = await supabase
+      .from('comments')
+      .delete({ count: 'exact' })
+      .eq('id', commentId)
+      .eq('reader_id', userId!);
+    if (error || !count) setComments(prevComments);
   };
 
   // Content protection
@@ -1720,7 +1740,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           {/* Comments section */}
           <div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '14px' }}>
-              Comments {comments.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({comments.length})</span>}
+              Comments {totalCommentCount > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({totalCommentCount})</span>}
             </div>
 
             {/* Comment input */}
