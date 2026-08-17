@@ -5483,3 +5483,32 @@ baseline). Booted `next dev` — full import chain through
 `kalpana-circle/page.tsx` compiled without error (only failure was the
 same missing-Supabase-env-in-sandbox issue seen on every other route
 tested this way, confirmed via stack trace, not a code problem).
+
+## §79 — WebMangal reader: lazy-load chapter images
+
+Founder asked for a WebMangal bug pass + quality push toward
+WebNovel/Webtoon-grade UX. Audited `read/[chapterId]`, `series/[seriesId]`,
+`home`, `View.tsx`: `tsc`/`eslint` were already clean (no errors, only
+pre-existing `exhaustive-deps` warnings), cover thumbnails already use
+`next/image` via `SeriesCard`. The real gap: scroll-mode chapter pages
+(30-50 stacked images/chapter) had no `loading`/`decoding` attrs, so every
+image in a chapter fetched and decoded at once on open — slow first paint,
+images popping in as they arrived. This is the #1 complaint in Webtoon-style
+reader UX research (images "flashing" while loading).
+
+- Scroll-mode images: first 2 `loading="eager"` (above-the-fold), rest
+  `loading="lazy"`; `decoding="async"` throughout.
+- Page-mode reader image + series-page community-post thumbnail also get
+  `decoding="async"` / `loading="lazy"` for consistency.
+- Removed unused `Trophy` import in `WebMangal/home` (lint cleanup).
+
+Left untouched, flagged for a future session rather than guessed at blind:
+the `react-hooks/exhaustive-deps` warnings on `loadChapter`/`fetchChapters`/
+`fetchQuests`/`scheduleUpsert` (13 warnings, pre-existing, 0 errors) — each
+looked like a deliberate stable-callback pattern rather than a real staleness
+bug on inspection, but confirming that needs a live Supabase env this
+sandbox doesn't have, not more static reading.
+
+**Verified:** `tsc --noEmit` clean, `eslint` on WebMangal scope: 0 errors
+(13 pre-existing warnings, down from 16). `next build` succeeds. Committed
+and pushed directly to `main` per founder's instruction — no branch/PR.
