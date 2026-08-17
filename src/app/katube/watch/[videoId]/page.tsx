@@ -7,7 +7,7 @@ import Image from 'next/image';
 import ThemeToggle from '../../../components/shared/ThemeToggle';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
-import { Users, ThumbsUp, BookOpen, Star, ArrowLeft, Share2 } from 'lucide-react';
+import { Users, ThumbsUp, BookOpen, Star, ArrowLeft, Share2, MessageCircle, X, ChevronUp } from 'lucide-react';
 import { AddToPlaylistButton } from '../../components/VideoGridCard';
 import KaTubePlayer from '../../components/KaTubePlayer';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
@@ -104,6 +104,31 @@ export default function KaTubeWatchPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [watchTogetherOpen, setWatchTogetherOpen] = useState(false);
 
+  // ── Mobile watch-page polish (YouTube-app parity) ──
+  // Sticky mini-player on scroll: once the real player scrolls out of the
+  // viewport (mobile, long-form only — Shorts are already full-screen),
+  // pin a small thumbnail+title bar to the bottom so the user keeps a
+  // visual anchor while reading info/comments, same as the YouTube app.
+  const playerWrapRef = useRef<HTMLDivElement | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
+  const [miniPlayerDismissed, setMiniPlayerDismissed] = useState(false);
+
+  // Swipe-friendly comments drawer (mobile only). Desktop keeps comments
+  // inline in the left column, unchanged. On mobile the same comments
+  // block is re-styled into a bottom-sheet the user can pull up via a
+  // pill button, or swipe/drag back down to dismiss.
+  const [commentsDrawerOpen, setCommentsDrawerOpen] = useState(false);
+  const drawerDragStartY = useRef<number | null>(null);
+  const [drawerDragOffset, setDrawerDragOffset] = useState(0);
+
+  useEffect(() => {
+    const check = () => setIsMobileViewport(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   // §28a — Continue Watching (resume position) + Autoplay Next.
   const [resumeSeconds, setResumeSeconds] = useState<number | undefined>(undefined);
   const [autoplayEnabled, setAutoplayEnabled] = useState(true);
@@ -111,6 +136,24 @@ export default function KaTubeWatchPage() {
   const upNextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [video, setVideo] = useState<WatchVideo | null>(null);
+
+  useEffect(() => {
+    if (!isMobileViewport || video?.isShort) return;
+    function onScroll() {
+      const el = playerWrapRef.current;
+      if (!el) return;
+      const bottom = el.getBoundingClientRect().bottom;
+      if (bottom < 0) {
+        if (!miniPlayerDismissed) setShowMiniPlayer(true);
+      } else {
+        setShowMiniPlayer(false);
+        setMiniPlayerDismissed(false);
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isMobileViewport, video?.isShort, miniPlayerDismissed]);
+
   const [recommended, setRecommended] = useState<RecommendedVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -494,6 +537,98 @@ export default function KaTubeWatchPage() {
     setLikeBusy(false);
   }
 
+  // Shared comments body — rendered inline on desktop (in the left column,
+  // as before) and again inside the mobile bottom-sheet drawer, so there's
+  // one source of truth for the list/input instead of two JSX copies that
+  // could drift apart.
+  const commentsBody = (
+    <>
+      <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 12px' }}>
+        {comments.length > 0 ? `${comments.length.toLocaleString()} Comments` : 'Comments'}
+      </h2>
+
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '18px' }}>
+        <input
+          value={commentText}
+          onChange={e => setCommentText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !commentBusy) handleCommentSubmit(); }}
+          placeholder={userId ? 'Add a comment…' : 'Log in to comment'}
+          disabled={commentBusy}
+          style={{
+            flex: 1, minWidth: 0, padding: '10px 14px', borderRadius: '20px',
+            border: '1px solid var(--border-color)', background: 'var(--bg-card)',
+            color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
+          }}
+        />
+        <button
+          onClick={handleCommentSubmit}
+          disabled={commentBusy || !commentText.trim()}
+          style={{
+            fontSize: '12.5px', fontWeight: 700, color: '#fff', background: '#f97316',
+            border: 'none', borderRadius: '20px', padding: '0 18px', cursor: 'pointer',
+            opacity: (commentBusy || !commentText.trim()) ? 0.5 : 1, flexShrink: 0,
+          }}
+        >
+          Post
+        </button>
+      </div>
+
+      {commentsLoading ? (
+        <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>Loading comments…</p>
+      ) : comments.length === 0 ? (
+        <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>
+          No comments yet — be the first to say something.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {comments.map(c => (
+            <div key={c.id} style={{ display: 'flex', gap: '10px' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(249,115,22,0.15)', color: '#f97316',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '13px', fontWeight: 800,
+              }}>
+                {c.commenterName.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)' }}>{c.commenterName}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                    {new Date(c.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, wordBreak: 'break-word' }}>
+                  {c.comment_text}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  // Drag-to-dismiss for the mobile comments drawer — a plain touch-driven
+  // translateY, not a physics library (nothing in package.json for that);
+  // close once dragged past a quarter of the viewport height, else snap
+  // back to fully open.
+  function onDrawerTouchStart(e: React.TouchEvent) {
+    drawerDragStartY.current = e.touches[0].clientY;
+  }
+  function onDrawerTouchMove(e: React.TouchEvent) {
+    if (drawerDragStartY.current === null) return;
+    const delta = e.touches[0].clientY - drawerDragStartY.current;
+    if (delta > 0) setDrawerDragOffset(delta);
+  }
+  function onDrawerTouchEnd() {
+    if (drawerDragOffset > window.innerHeight * 0.25) {
+      setCommentsDrawerOpen(false);
+    }
+    setDrawerDragOffset(0);
+    drawerDragStartY.current = null;
+  }
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
@@ -508,6 +643,11 @@ export default function KaTubeWatchPage() {
           .mangal-watch-brand-text { display: none; }
           .mangal-watch-back-text { display: none; }
           .mangal-watch-back { padding: 8px 10px !important; }
+        }
+        @media (max-width: 768px) {
+          .mangal-watch-comments-trigger { display: flex !important; }
+          .mangal-watch-comments-inline { display: none !important; }
+          .mangal-watch-upnext { padding: 0 4px; }
         }
       `}</style>
 
@@ -556,7 +696,7 @@ export default function KaTubeWatchPage() {
             {/* Left column — player + info */}
             <div style={{ flex: video.isShort ? undefined : '1 1 640px', minWidth: 0, width: video.isShort ? '100%' : undefined }}>
               {/* Player */}
-              <div style={{
+              <div ref={playerWrapRef} style={{
                 position: 'relative', width: '100%', aspectRatio: video.isShort ? '9/16' : '16/9', maxWidth: video.isShort ? '420px' : 'none', margin: video.isShort ? '0 auto' : '0',
               }}>
                 <KaTubePlayer
@@ -655,6 +795,20 @@ export default function KaTubeWatchPage() {
                     <Users size={15} /> Watch with Friends
                   </button>
                 )}
+                {/* Comments-drawer trigger — mobile only (CSS-gated below).
+                    Desktop reads comments inline further down the page, so
+                    this pill stays hidden there. */}
+                <button
+                  onClick={() => { setDrawerDragOffset(0); setCommentsDrawerOpen(true); }}
+                  className="mangal-watch-comments-trigger"
+                  style={{
+                    display: 'none', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px',
+                    padding: '9px 16px', cursor: 'pointer', alignItems: 'center', gap: '8px',
+                  }}
+                >
+                  <MessageCircle size={15} /> {comments.length > 0 ? comments.length.toLocaleString() : ''} Comments
+                </button>
               </div>
               {video && (
                 <>
@@ -825,77 +979,17 @@ export default function KaTubeWatchPage() {
                 </div>
               )}
 
-              {/* Comments */}
-              <div style={{ marginTop: '8px' }}>
-                <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 12px' }}>
-                  {comments.length > 0 ? `${comments.length.toLocaleString()} Comments` : 'Comments'}
-                </h2>
-
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '18px' }}>
-                  <input
-                    value={commentText}
-                    onChange={e => setCommentText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !commentBusy) handleCommentSubmit(); }}
-                    placeholder={userId ? 'Add a comment…' : 'Log in to comment'}
-                    disabled={commentBusy}
-                    style={{
-                      flex: 1, minWidth: 0, padding: '10px 14px', borderRadius: '20px',
-                      border: '1px solid var(--border-color)', background: 'var(--bg-card)',
-                      color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
-                    }}
-                  />
-                  <button
-                    onClick={handleCommentSubmit}
-                    disabled={commentBusy || !commentText.trim()}
-                    style={{
-                      fontSize: '12.5px', fontWeight: 700, color: '#fff', background: '#f97316',
-                      border: 'none', borderRadius: '20px', padding: '0 18px', cursor: 'pointer',
-                      opacity: (commentBusy || !commentText.trim()) ? 0.5 : 1, flexShrink: 0,
-                    }}
-                  >
-                    Post
-                  </button>
-                </div>
-
-                {commentsLoading ? (
-                  <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>Loading comments…</p>
-                ) : comments.length === 0 ? (
-                  <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>
-                    No comments yet — be the first to say something.
-                  </p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {comments.map(c => (
-                      <div key={c.id} style={{ display: 'flex', gap: '10px' }}>
-                        <div style={{
-                          width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
-                          background: 'rgba(249,115,22,0.15)', color: '#f97316',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '13px', fontWeight: 800,
-                        }}>
-                          {c.commenterName.charAt(0).toUpperCase()}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
-                            <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)' }}>{c.commenterName}</span>
-                            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                              {new Date(c.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, wordBreak: 'break-word' }}>
-                            {c.comment_text}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* Comments — inline on desktop; hidden here on mobile
+                  (CSS above) in favor of the drawer triggered by the pill
+                  button near Share/Watch with Friends. */}
+              <div className="mangal-watch-comments-inline" style={{ marginTop: '8px' }}>
+                {commentsBody}
               </div>
             </div>
 
             {/* Right column — tag-based recommendations, long-form videos only */}
             {!video.isShort && (
-              <div style={{ flex: '1 1 320px', maxWidth: '400px', minWidth: '280px' }}>
+              <div className="mangal-watch-upnext" style={{ flex: '1 1 320px', maxWidth: '400px', minWidth: '280px' }}>
                 <h2 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-secondary)', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                   Up next
                 </h2>
@@ -913,6 +1007,87 @@ export default function KaTubeWatchPage() {
           </>
         )}
       </div>
+
+      {/* Mobile sticky mini-player — appears once the real player scrolls
+          out of view (long-form only; Shorts stay full-bleed and never
+          trigger this). Tapping the bar scrolls back up to the real
+          player; the X dismisses it until the next scroll-out. */}
+      {showMiniPlayer && isMobileViewport && video && !video.isShort && (
+        <button
+          onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          style={{
+            position: 'fixed', left: '10px', right: '10px', bottom: '10px', zIndex: 200,
+            display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left',
+            background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
+            border: '1px solid var(--border-color)', borderRadius: '12px',
+            padding: '8px', boxShadow: '0 6px 24px rgba(0,0,0,0.25)', cursor: 'pointer',
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://img.youtube.com/vi/${video.youtube_id}/mqdefault.jpg`}
+            alt=""
+            style={{ width: '64px', height: '36px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0, background: '#000' }}
+          />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{
+              fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{video.title}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <ChevronUp size={12} /> Tap to return to player
+            </div>
+          </div>
+          <span
+            role="button"
+            aria-label="Dismiss mini player"
+            onClick={(e) => { e.stopPropagation(); setShowMiniPlayer(false); setMiniPlayerDismissed(true); }}
+            style={{
+              flexShrink: 0, padding: '8px', color: 'var(--text-tertiary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          ><X size={16} /></span>
+        </button>
+      )}
+
+      {/* Mobile comments bottom-sheet drawer — same commentsBody as the
+          desktop inline section, wrapped in a slide-up sheet. Backdrop
+          tap, the X, or a downward swipe/drag all close it. */}
+      {commentsDrawerOpen && (
+        <div
+          onClick={() => setCommentsDrawerOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 300 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={onDrawerTouchStart}
+            onTouchMove={onDrawerTouchMove}
+            onTouchEnd={onDrawerTouchEnd}
+            style={{
+              position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '80vh',
+              background: 'var(--bg-primary)', borderTopLeftRadius: '18px', borderTopRightRadius: '18px',
+              display: 'flex', flexDirection: 'column',
+              transform: `translateY(${drawerDragOffset}px)`,
+              transition: drawerDragOffset ? 'none' : 'transform 0.2s ease-out',
+              boxShadow: '0 -8px 30px rgba(0,0,0,0.3)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px', flexShrink: 0 }}>
+              <div style={{ width: '36px', height: '4px', borderRadius: '999px', background: 'var(--border-color)' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 16px', flexShrink: 0 }}>
+              <button
+                onClick={() => setCommentsDrawerOpen(false)}
+                aria-label="Close comments"
+                style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', padding: '6px', cursor: 'pointer' }}
+              ><X size={18} /></button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '4px 16px 24px' }}>
+              {commentsBody}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
