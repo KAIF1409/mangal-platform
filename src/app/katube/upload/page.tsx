@@ -91,6 +91,21 @@ export default function KaTubeUploadPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // Mobile step flow (YouTube Studio-style: Video -> Details -> Publish).
+  // Desktop keeps the original single flat form — this only kicks in under
+  // the 768px breakpoint. Steps: 1 = link/title/preview, 2 = series +
+  // category + AI tool, 3 = Short/auto-post toggles + submit.
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [mobileStep, setMobileStep] = useState(1);
+  const TOTAL_STEPS = 3;
+
+  useEffect(() => {
+    const check = () => setIsMobileViewport(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   // KaTube §6 — channel-ownership verification, gates the rest of the form.
   // The one-time connect/verify flow itself now lives at /katube/dashboard
   // (a creator's KaTube profile) — this page only reads the status to decide
@@ -146,9 +161,28 @@ export default function KaTubeUploadPage() {
 
   const previewId = extractYoutubeId(youtubeLink);
 
+  function goNextStep() {
+    setError('');
+    if (mobileStep === 1 && (!previewId || !title.trim())) {
+      setError(!previewId ? "Add a valid YouTube link first." : 'Give the video a title.');
+      return;
+    }
+    setMobileStep(s => Math.min(TOTAL_STEPS, s + 1));
+  }
+  function goPrevStep() {
+    setError('');
+    setMobileStep(s => Math.max(1, s - 1));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+
+    // On mobile, Enter/submit from an earlier step should advance the
+    // wizard, not submit the form — the browser will still fire a form
+    // submit on Enter inside a text input regardless of which step is
+    // visually shown.
+    if (isMobileViewport && mobileStep < TOTAL_STEPS) { goNextStep(); return; }
 
     if (!userId) { setError('You need to be logged in to upload.'); return; }
 
@@ -275,7 +309,33 @@ export default function KaTubeUploadPage() {
             background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.25)',
             fontSize: '12px', fontWeight: 700, color: '#f97316', display: 'flex', alignItems: 'center', gap: '6px',
           }}><CheckCircle2 size={14} /> Verified channel — every upload is still checked against it. <Link href="/katube/dashboard" style={{ color: '#f97316' }}>View KaTube profile</Link></div>
+
+          {/* Step indicator — mobile only. YouTube Studio's mobile upload
+              flow is step-by-step rather than one long scroll; desktop
+              keeps the original flat form (isMobileViewport false ->
+              this whole block renders nothing). */}
+          {isMobileViewport && (
+            <div style={{ marginBottom: '22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-secondary)' }}>
+                  Step {mobileStep} of {TOTAL_STEPS} — {mobileStep === 1 ? 'Video' : mobileStep === 2 ? 'Details' : 'Publish'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+                  <div key={i} style={{
+                    flex: 1, height: '4px', borderRadius: '999px',
+                    background: i < mobileStep ? '#f97316' : 'var(--border-color)',
+                    transition: 'background 0.2s',
+                  }} />
+                ))}
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
+            {(!isMobileViewport || mobileStep === 1) && (
+            <>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
               YouTube link
             </label>
@@ -291,9 +351,28 @@ export default function KaTubeUploadPage() {
                 boxSizing: 'border-box',
               }}
             />
-            <p style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', marginBottom: '20px', minHeight: '16px' }}>
+            <p style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', marginBottom: previewId ? '10px' : '20px', minHeight: '16px' }}>
               {youtubeLink && !previewId ? "Couldn't read a video from that link." : previewId ? `Video ID detected: ${previewId}` : ' '}
             </p>
+
+            {/* Thumbnail preview — YouTube Studio-style confirmation that
+                the right video was picked up, pulled straight from
+                YouTube's own thumbnail CDN (no upload/storage on our side,
+                matches the "we only store the link" copy above). */}
+            {previewId && (
+              <div style={{
+                position: 'relative', width: '100%', maxWidth: '280px', aspectRatio: '16/9',
+                borderRadius: '10px', overflow: 'hidden', marginBottom: '20px', background: '#000',
+                border: '1px solid var(--border-color)',
+              }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://img.youtube.com/vi/${previewId}/hqdefault.jpg`}
+                  alt="Video thumbnail preview"
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+            )}
 
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
               Title
@@ -311,6 +390,31 @@ export default function KaTubeUploadPage() {
               }}
             />
 
+            {isMobileViewport && error && (
+              <div style={{
+                padding: '12px 14px', borderRadius: '10px', background: 'rgba(220,38,38,0.08)',
+                border: '1px solid rgba(220,38,38,0.3)', color: '#dc2626', fontSize: '12.5px',
+                marginBottom: '20px',
+              }}>
+                {error}
+              </div>
+            )}
+            {isMobileViewport && (
+              <button
+                type="button"
+                onClick={goNextStep}
+                style={{
+                  width: '100%', padding: '13px', borderRadius: '10px', border: 'none',
+                  background: '#f97316', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '10px',
+                }}
+              >Next <ArrowRight size={15} /></button>
+            )}
+            </>
+            )}
+
+            {(!isMobileViewport || mobileStep === 2) && (
+            <>
             <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
               Based on which MANGAL series? <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span>
             </label>
@@ -371,6 +475,34 @@ export default function KaTubeUploadPage() {
               ))}
             </div>
 
+            {isMobileViewport && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                <button
+                  type="button"
+                  onClick={goPrevStep}
+                  style={{
+                    flex: '0 0 auto', padding: '13px 18px', borderRadius: '10px',
+                    border: '1px solid var(--border-color)', background: 'transparent',
+                    color: 'var(--text-secondary)', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                  }}
+                ><ArrowLeft size={15} /> Back</button>
+                <button
+                  type="button"
+                  onClick={goNextStep}
+                  style={{
+                    flex: 1, padding: '13px', borderRadius: '10px', border: 'none',
+                    background: '#f97316', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  }}
+                >Next <ArrowRight size={15} /></button>
+              </div>
+            )}
+            </>
+            )}
+
+            {(!isMobileViewport || mobileStep === 3) && (
+            <>
             <label style={{
               display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px',
               padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)',
@@ -439,17 +571,34 @@ export default function KaTubeUploadPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                width: '100%', padding: '13px', borderRadius: '10px', border: 'none',
-                background: submitting ? '#fdba8c' : '#f97316', color: '#fff',
-                fontSize: '14px', fontWeight: 800, cursor: submitting ? 'default' : 'pointer',
-              }}
-            >
-              {submitting ? 'Uploading…' : 'Upload video'}
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {isMobileViewport && (
+                <button
+                  type="button"
+                  onClick={goPrevStep}
+                  disabled={submitting}
+                  style={{
+                    flex: '0 0 auto', padding: '13px 18px', borderRadius: '10px',
+                    border: '1px solid var(--border-color)', background: 'transparent',
+                    color: 'var(--text-secondary)', fontSize: '14px', fontWeight: 700,
+                    cursor: submitting ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                  }}
+                ><ArrowLeft size={15} /> Back</button>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  flex: 1, padding: '13px', borderRadius: '10px', border: 'none',
+                  background: submitting ? '#fdba8c' : '#f97316', color: '#fff',
+                  fontSize: '14px', fontWeight: 800, cursor: submitting ? 'default' : 'pointer',
+                }}
+              >
+                {submitting ? 'Uploading…' : 'Upload video'}
+              </button>
+            </div>
+            </>
+            )}
           </form>
           </>
         )}
