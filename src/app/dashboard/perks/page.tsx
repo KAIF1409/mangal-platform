@@ -237,7 +237,7 @@ export default function PerksPage() {
                   <p style={{ color: 'var(--text-tertiary)', fontSize: '12.5px', margin: '0 0 14px' }}>
                     Based on your {perks.metricLabel} — currently {formatCount(metric)}.
                   </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '14px' }}>
                     {perks.tiers.map((tier, i) => (
                       <TierCard
                         key={tier.name}

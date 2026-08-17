@@ -123,7 +123,7 @@ export default function ToolsPage() {
                       <ProductIcon size={14} strokeWidth={2} /> {label}
                     </div>
                   )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '12px' }}>
                     {tools.map((tool) => (
                       <Link
                         key={tool.title}

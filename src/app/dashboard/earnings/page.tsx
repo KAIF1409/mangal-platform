@@ -188,7 +188,7 @@ export default function EarningsPage() {
                       <perf.icon size={13} strokeWidth={2} /> {perf.label}
                     </div>
                   )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '12px' }}>
                     {perf.boxes.map((b) => (
                       <StatBox key={b.label} label={b.label} value={b.value} sub={b.sub} />
                     ))}
@@ -203,7 +203,7 @@ export default function EarningsPage() {
               {EARNINGS_SUB[scope]}
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '12px', marginBottom: '20px' }}>
               <StatBox label="Total Earned" value="₹0" sub="+0.00% this month" />
               <StatBox label="Available to Withdraw" value="₹0" />
               <StatBox label="Pending" value="₹0" />

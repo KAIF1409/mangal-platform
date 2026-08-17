@@ -103,7 +103,7 @@ export default function NovaPage() {
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-tertiary)' }}>Loading…</div>
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '10px', marginBottom: '20px' }}>
               {visibleSuggestions.map((s) => (
                 <div key={s.title} style={{
                   background: 'var(--bg-card)', border: '1px solid var(--border-color)',

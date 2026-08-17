@@ -106,7 +106,7 @@ export default function BoostPage() {
                       <ProductIcon size={14} strokeWidth={2} /> {label}
                     </div>
                   )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '14px' }}>
                     {options.map((opt) => (
                       <div key={opt.title} style={{
                         background: 'var(--bg-card)', border: '1px solid var(--border-color)',

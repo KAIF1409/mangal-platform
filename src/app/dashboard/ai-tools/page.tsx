@@ -131,7 +131,7 @@ export default function AiToolkitPage() {
                       <ProductIcon size={14} strokeWidth={2} /> {label}
                     </div>
                   )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '12px' }}>
                     {productTools.map((tool) => {
                       const ToolIcon = (tool.icon && ICONS[tool.icon]) || Sparkles;
                       const hasLiveLink = Boolean(tool.affiliate_url);
