@@ -703,11 +703,26 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // etc. — search isFullscreen below) already gives the same expanded-reading
   // look without ever calling the real Fullscreen API, so the page never
   // leaves the normal viewport/zoom context and pinch-zoom keeps working.
+  // BUG FIX: previously this only flipped `isFullscreen`, which was solely read
+  // by a maxWidth cap (720px/600px vs 'none') on the image container. On any
+  // screen narrower than that cap — i.e. every phone, the primary reading
+  // device — the cap was never actually binding, so toggling it produced zero
+  // visible change ("nothing happens when I tap fullscreen"). Fullscreen now
+  // also immediately hides the top bar/chrome (instead of waiting for the
+  // normal idle timer) and the content padding that reserves space for it
+  // collapses to 0 in the same instant (see paddingTop below), which is a
+  // real, immediate, viewport-size-independent visual change.
   const toggleFullscreen = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsFullscreen(v => {
       const next = !v;
-      if (!next) setLockScreen(false); // leaving "fullscreen" always exits lock screen too
+      if (next) {
+        setShowUI(false);
+        if (hideTimer.current) clearTimeout(hideTimer.current);
+      } else {
+        setLockScreen(false); // leaving "fullscreen" always exits lock screen too
+        setShowUI(true);
+      }
       return next;
     });
   };
@@ -1223,14 +1238,16 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >{isFullscreen ? <Shrink size={16} /> : <Expand size={16} />}</button>
 
-          {/* Lock Screen toggle — only offered once in fullscreen */}
-          {isFullscreen && (
-            <button
-              onClick={toggleLockScreen}
-              style={{ ...topBtn, background: 'var(--bg-card)', color: 'var(--text-secondary)' }}
-              title="Lock Screen"
-            ><Lock size={16} /></button>
-          )}
+          {/* Lock Screen toggle — BUG FIX: previously gated behind `isFullscreen &&`,
+              so the button only appeared once fullscreen was toggled on, which read
+              as "lock isn't there" since nothing about locking itself needs
+              fullscreen to work (toggleLockScreen never reads isFullscreen). Now
+              always visible in the top bar like the other reader controls. */}
+          <button
+            onClick={toggleLockScreen}
+            style={{ ...topBtn, background: lockScreen ? 'var(--border-color)' : 'var(--bg-card)', color: lockScreen ? '#d97706' : 'var(--text-secondary)' }}
+            title="Lock Screen"
+          ><Lock size={16} /></button>
 
           {/* Settings */}
           <button
@@ -1480,7 +1497,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             : <><CalendarClock size={12} style={{ verticalAlign: 'middle' }} /> PREVIEW — scheduled{unavailableUntil ? ` for ${new Date(unavailableUntil).toLocaleString()}` : ''}. Readers can&apos;t see this yet.</>}
         </div>
       )}
-      <div style={{ paddingTop: lockScreen ? 0 : '56px' }}>
+      <div style={{ paddingTop: (lockScreen || !showUI) ? 0 : '56px', transition: 'padding-top 0.3s' }}>
 
         {/* NOVEL MODE — freewebnovel-style clean reading experience */}
         {isNovel && novelContent && (() => {
@@ -1664,7 +1681,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
         {/* PAGE MODE — one image at a time, original ratio, fit mode applied */}
         {!isNovel && effectiveMode === 'page' && pages.length > 0 && (
-          <div style={{ minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px' }}>
+          <div style={{ minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isFullscreen ? '0' : '12px', transition: 'padding 0.3s' }}>
             <div onClick={handleContentTap} style={{
               width: '100%',
               maxWidth: isFullscreen ? 'none' : '600px',

@@ -5686,3 +5686,48 @@ didn't touch. Committed and pushed directly to `main`
 (`145140c`→rebased→`bc53f77`) — rebased cleanly onto a concurrent commit
 (`e8e009d`, unrelated History-page fix) found on fetch before pushing, per
 this repo's standing convention.
+
+## §81 — WebMangal reader: fullscreen had no visible effect, Lock hidden behind it, Follow/Add Chapter button UI upgrade
+
+**Founder-reported bugs:** (1) Fullscreen button — "nothing visibly changes" when
+tapped. (2) Lock option — "only working for fullscreen, it's not visible
+always." (3) Series-page buttons should look like a "professional/big
+platform" button, using the orange-green gradient already established
+product-wide (§69), applied to Follow "everywhere" and the Add button.
+
+**Fullscreen (`WebMangal/read/[chapterId]/page.tsx`):** `isFullscreen` only
+ever drove a `maxWidth` cap (720px/600px → 'none') on the image container.
+On any screen narrower than that cap — every phone, the primary reading
+device — the cap never actually bound, so toggling it was a genuine no-op
+visually. Fixed by making fullscreen entry immediately hide the top bar
+(instead of waiting for the normal 4s idle timer) and collapsing the
+content's `paddingTop` (56px → 0) in the same instant the bar hides —
+tied to `showUI` generally, not just `lockScreen` as before. This is a
+real, immediate, viewport-size-independent visual change instead of a cap
+that only mattered on wide desktop windows. Page-mode's fixed 12px
+padding also now collapses to 0 in fullscreen for true edge-to-edge.
+Exiting fullscreen restores the top bar and normal padding.
+
+**Lock Screen:** the toggle button was gated behind `{isFullscreen && (...)}`,
+so it simply wasn't in the DOM until fullscreen was turned on first —
+read as "the lock option isn't there." `toggleLockScreen` never actually
+depended on `isFullscreen` for anything, so the gate served no functional
+purpose; removed it. Lock button is now always present in the reader top
+bar like the other controls (Chapters/Fullscreen/Settings), with an
+active-state highlight matching the others.
+
+**Button UI (`WebMangal/series/[seriesId]/page.tsx`):** Follow button and
+the creator-only "+ Add Chapter" button were still on the old thin
+outlined/translucent style from before §69's gradient rollout (they sit
+in a CTA row built earlier than that pass and were missed). Both now use
+the same `linear-gradient(135deg, #f97316, #22c55e)` solid-pill CTA style
+as the rest of the product's primary buttons — Follow shows the full
+gradient when not-yet-following (the prominent ask) and a filled
+green-tinted confirmed state once following, rather than fading to a
+plain outline that reads as disabled. Add Chapter gets the same gradient
+treatment plus a proper `Plus` icon in place of a literal "+" character.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on both touched
+files: 0 errors (10 pre-existing `react-hooks/exhaustive-deps` warnings,
+same as baseline, none introduced). `next build` succeeds. Committed and
+pushed directly to `main` per founder's instruction — no branch/PR.
