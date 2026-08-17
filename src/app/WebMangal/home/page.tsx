@@ -10,7 +10,7 @@ import ThemeToggle from '../../components/shared/ThemeToggle';
 import SeriesCard from '../../components/webmangal/SeriesCard';
 import { formatViews } from '../../lib/format';
 import { hasCreatorAccess, isDeveloperRole } from '../../lib/auth/roles';
-import { Trophy, Search, BookOpen, Sparkles, Eye, ScrollText, BookText, ArrowRight } from 'lucide-react';
+import { Search, BookOpen, Sparkles, Eye, ScrollText, BookText, ArrowRight } from 'lucide-react';
 import { useUiLanguage, LANGUAGES } from '../../lib/i18n';
 import Link from 'next/link';
 

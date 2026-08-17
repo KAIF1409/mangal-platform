@@ -1491,7 +1491,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               overflowX: 'visible',
               touchAction: 'pan-y pinch-zoom',
             }}>
+              {/* Reader images are variable-count (30-50/chapter), variable-aspect-ratio
+                  Supabase Storage URLs read via getImageSrc()'s own data-saver transform;
+                  next/image's fixed-dimension + remote-pattern config model doesn't fit
+                  this case, hence the per-image eslint-disable below. */}
               {pages.map((page, idx) => (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   key={page.id}
                   ref={el => { pageRefs.current[idx] = el; }}
@@ -1500,6 +1505,14 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                   alt=""
                   style={getImgStyle()}
                   draggable={false}
+                  // Perf/UX fix: a chapter can have 30-50 stacked images — loading
+                  // all of them at once (previous behaviour) meant a slow, janky
+                  // first paint and every image popping/flashing in as it arrived.
+                  // Only eager-load the first 2 (above-the-fold on most screens);
+                  // the browser now lazy-loads the rest as the reader scrolls down,
+                  // which is standard practice on Webtoon/WebNovel-style readers.
+                  loading={idx < 2 ? 'eager' : 'lazy'}
+                  decoding="async"
                 />
               ))}
             </div>
@@ -1527,12 +1540,15 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               maxWidth: isFullscreen ? 'none' : '600px',
               overflowX: fitMode === 'actual' ? 'auto' : 'visible',
             }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- same reasoning as
+                  the scroll-mode image above: variable Supabase Storage URL, not a static asset */}
               <img
                 src={getImageSrc(pages[currentPage].image_url)}
                 onError={(e) => handleImageError(e, pages[currentPage].image_url)}
                 alt=""
                 style={getImgStyle()}
                 draggable={false}
+                decoding="async"
               />
             </div>
 

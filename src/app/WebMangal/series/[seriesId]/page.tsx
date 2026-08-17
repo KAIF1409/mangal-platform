@@ -1643,7 +1643,7 @@ function CirclePostCard({ post, seriesTitle }: { post: { id: string; caption: st
         <div style={{ position: 'relative', aspectRatio: '3/4', background: 'var(--bg-input)' }}>
           {post.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element -- external Supabase storage URL, not a static asset
-            <img src={post.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img src={post.image_url} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           ) : (
             <div style={{
               width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
