@@ -13,7 +13,7 @@ import { setPostLoginRedirect } from '../lib/auth/authRedirect';
 import {
   Search, Home, MessageCircle, Clapperboard, Megaphone, Bookmark,
   X, Circle, Globe, Tag, Camera, BarChart3, Sparkles, Pin, Check,
-  Heart, User, Users, TrendingUp, Trophy,
+  Heart, User, Users, TrendingUp, Trophy, Menu,
 } from 'lucide-react';
 
 // ── K Circle — Instagram-style social layer for MANGAL ──
@@ -175,6 +175,14 @@ function KalpanaCircleInner() {
 
   // ── search (was a disabled "coming soon" placeholder) ──
   const [showSearch, setShowSearch] = useState(false);
+  // Mobile bottom nav had 9 icons crammed into one bar (Home, Search,
+  // Create, Chat, Watch Together, Mangal of the Week, Broadcasts, Saved,
+  // Profile) — cramped/messy on real phone widths. Kept only the 4
+  // highest-frequency actions in the bar itself; everything else lives in
+  // this scrollable "More" drawer, mobile-only (desktop already has every
+  // item as its own icon in KCircleRail, so the drawer is never needed
+  // there — see kc-mobile-menu-overlay's 768px cutoff below).
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [userResults, setUserResults] = useState<{ user_id: string; username: string }[]>([]);
@@ -633,6 +641,7 @@ function KalpanaCircleInner() {
           .kc-nav-mobile { display: none; }
           .kc-bottom-nav { display: none; }
           .kc-page { padding-bottom: 40px; }
+          .kc-mobile-menu-overlay { display: none !important; }
         }
         /* Very-small-phone tier (same 380px breakpoint app/page.tsx and
            app/WebMangal/home/page.tsx already use for their own nav bars) — the
@@ -1273,7 +1282,7 @@ function KalpanaCircleInner() {
 
       </div>{/* /.kc-shell */}
 
-      {/* ── BOTTOM TAB BAR — mobile only (Instagram mobile-web pattern); hidden on desktop via .kc-bottom-nav in the <style> block above, where the top nav's icons take over ── */}
+      {/* ── BOTTOM TAB BAR — mobile only (Instagram mobile-web pattern); hidden on desktop via .kc-bottom-nav in the <style> block above, where the top nav's icons take over. Kept to 4 highest-frequency actions (Home, Search, Create, Chat) — everything else (Watch Together, Mangal of the Week, Broadcasts, Saved, Profile) lives in the "More" drawer below so the bar doesn't get cramped on real phone widths. ── */}
       <div className="kc-bottom-nav" style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)', borderTop: '1px solid var(--border-color)',
@@ -1286,12 +1295,51 @@ function KalpanaCircleInner() {
           fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>+</button>
         <Link href={navHref('/kalpana-circle/chat')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><MessageCircle size={20} /></Link>
-        <Link href={navHref('/kalpana-circle/watch-together')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Clapperboard size={20} /></Link>
-        <Link href={navHref('/kalpana-circle/mangal-of-the-week')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Trophy size={20} /></Link>
-        <Link href={navHref('/kalpana-circle/broadcasts')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Megaphone size={20} /></Link>
-        <Link href={navHref('/kalpana-circle/saved')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><Bookmark size={20} /></Link>
-        <Link href={profileHref} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><User size={20} /></Link>
+        <button onClick={() => setShowMobileMenu(true)} style={{ background: 'none', border: 'none', display: 'flex', color: 'var(--text-tertiary)', cursor: 'pointer' }}><Menu size={20} /></button>
       </div>
+
+      {/* ── "MORE" DRAWER — mobile only, scrollable side sheet holding
+          everything that didn't fit in the 4-item bottom bar. Same
+          overlay/backdrop pattern as the search overlay above. ── */}
+      {showMobileMenu && (
+        <div
+          className="kc-mobile-menu-overlay"
+          onClick={() => setShowMobileMenu(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.45)',
+            display: 'flex', justifyContent: 'flex-end',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '78%', maxWidth: '300px', height: '100%', overflowY: 'auto',
+              background: 'var(--bg-primary)', borderLeft: '1px solid var(--border-color)',
+              display: 'flex', flexDirection: 'column', padding: '14px 0',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 14px', borderBottom: '1px solid var(--border-color)', marginBottom: '6px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.03em' }}>MORE</span>
+              <button onClick={() => setShowMobileMenu(false)} style={{ background: 'none', border: 'none', display: 'flex', color: 'var(--text-tertiary)', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+            {[
+              { href: navHref('/kalpana-circle/watch-together'), icon: <Clapperboard size={19} />, label: 'Watch Together' },
+              { href: navHref('/kalpana-circle/mangal-of-the-week'), icon: <Trophy size={19} />, label: 'Mangal of the Week' },
+              { href: navHref('/kalpana-circle/broadcasts'), icon: <Megaphone size={19} />, label: 'Broadcasts' },
+              { href: navHref('/kalpana-circle/saved'), icon: <Bookmark size={19} />, label: 'Saved' },
+              { href: profileHref, icon: <User size={19} />, label: 'Profile' },
+            ].map(item => (
+              <Link key={item.label} href={item.href} onClick={() => setShowMobileMenu(false)} style={{
+                display: 'flex', alignItems: 'center', gap: '14px', padding: '13px 16px',
+                textDecoration: 'none', color: 'var(--text-primary)', fontSize: '14.5px', fontWeight: 600,
+              }}>
+                <span style={{ color: 'var(--text-tertiary)', display: 'flex' }}>{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

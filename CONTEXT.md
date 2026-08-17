@@ -5449,3 +5449,37 @@ unrelated). Full-project `eslint .`: same 19 pre-existing errors / 43
 warnings with or without this change (diffed directly against a clean
 `git stash` of the working tree to confirm). Committed and pushed directly
 to `main` per founder's instruction — no branch/PR.
+## §78 — K Circle mobile bottom nav: 9 icons → 4 + scrollable "More" drawer
+
+Founder-reported (with a screenshot): the mobile bottom tab bar on the K
+Circle home feed had 9 icons crammed into one row (Home, Search, Create,
+Chat, Watch Together, Mangal of the Week, Broadcasts, Saved, Profile) —
+cramped/messy on real phone widths.
+
+Only `app/kalpana-circle/page.tsx` had this bar (`grep`'d every other
+K Circle page first — chat/watch-together/broadcasts/saved/etc. don't
+duplicate it, so this was a single-file fix, not a sweep).
+
+**Kept in the bottom bar (4, highest-frequency actions):** Home, Search,
+Create (+), Chat.
+
+**Moved into a new scrollable "More" drawer** (slides in from the right,
+same overlay/backdrop pattern as the existing search overlay, tap
+backdrop or X to close): Watch Together, Mangal of the Week, Broadcasts,
+Saved, Profile — each rendered with icon + label (a drawer has room for
+labels a cramped icon-only bar didn't).
+
+Mobile-only per founder's request — desktop is untouched; `KCircleRail`
+(`components/Shell.tsx`) already gives every one of these its own icon
+with no crowding problem, so the drawer is never needed there. Added a
+`.kc-mobile-menu-overlay { display: none !important; }` rule at the
+existing 768px breakpoint as a defensive guard (in case someone resizes
+a window with the drawer already open — the trigger button itself is
+already mobile-only via `.kc-bottom-nav`'s existing display rules, so
+this is belt-and-suspenders, not load-bearing).
+
+**Verified:** `tsc --noEmit` clean, `eslint` unchanged (62/19/43, same
+baseline). Booted `next dev` — full import chain through
+`kalpana-circle/page.tsx` compiled without error (only failure was the
+same missing-Supabase-env-in-sandbox issue seen on every other route
+tested this way, confirmed via stack trace, not a code problem).
