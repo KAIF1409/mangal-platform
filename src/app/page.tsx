@@ -68,7 +68,7 @@ const DOORS = [
   },
   {
     href: '/katube', title: 'KaTube', video: '/videos/katube-door-preview.mp4',
-    blurb: "A YouTube-style discovery space for AI-generated anime, from quick Shorts to full videos — built for the MANGAL creator niche.",
+    blurb: "A YouTube-style discovery space for AI-generated anime, from quick Fast Tap clips to full videos — built for the MANGAL creator niche.",
     tag: 'COMING SOON',
   },
   {

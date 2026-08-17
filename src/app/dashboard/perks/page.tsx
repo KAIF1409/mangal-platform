@@ -45,7 +45,7 @@ const PRODUCT_PERKS: Record<ProductKey, ProductPerks> = {
   katube: {
     label: 'KaTube', icon: PlaySquare, metricLabel: 'total views',
     tiers: [
-      { name: 'Starter', threshold: 0, benefits: ['Upload unlimited videos & Shorts', 'Basic view/like analytics', 'Community forum access'] },
+      { name: 'Starter', threshold: 0, benefits: ['Upload unlimited videos & Fast Tap clips', 'Basic view/like analytics', 'Community forum access'] },
       { name: 'Rising', threshold: 1_000, benefits: ['Priority placement in KaTube discovery', 'Advanced analytics', 'Early access to new tools'] },
       { name: 'Elite', threshold: 10_000, benefits: ['Dedicated support line', 'Custom channel branding', 'Revenue share bonus'] },
     ],

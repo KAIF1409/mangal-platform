@@ -244,7 +244,7 @@ export default function WatchTogetherPage() {
       .from('watch_rooms')
       .insert({
         video_id: firstShort.id, current_short_id: firstShort.id, host_id: userId, visibility,
-        title: 'Shorts together', mode: 'shorts',
+        title: 'Fast Tap together', mode: 'shorts',
       })
       .select('id')
       .single();
@@ -335,7 +335,7 @@ export default function WatchTogetherPage() {
             <p style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>Loading chats...</p>
           ) : watchThreads.length === 0 ? (
             <p style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>
-              No Watch Together chats yet — chat while scrolling Shorts together in a Fast tap room and it&rsquo;ll show up here.
+              No Watch Together chats yet — chat while scrolling Fast Tap together in a room and it&rsquo;ll show up here.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
@@ -420,8 +420,8 @@ export default function WatchTogetherPage() {
                   }}>
                     <Zap size={26} />
                     <span>
-                      <span style={{ display: 'block', fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)' }}>Fast tap — Shorts</span>
-                      <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--text-tertiary)' }}>Scroll Shorts together, side-by-side chat</span>
+                      <span style={{ display: 'block', fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)' }}>Fast Tap</span>
+                      <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--text-tertiary)' }}>Scroll Fast Tap together, side-by-side chat</span>
                     </span>
                   </button>
                   <button onClick={() => setCreateStep('pick-video')} style={{
@@ -477,7 +477,7 @@ export default function WatchTogetherPage() {
 
             {createStep === 'pick-visibility' && (
               <>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px' }}>Start a Fast tap room</h3>
+                <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '4px' }}>Start a Fast Tap room</h3>
                 <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '14px' }}>
                   Comment stays public on the Short itself. Chat is private — it&rsquo;ll automatically link to whoever
                   you&rsquo;re actually watching with, saved as its own Watch Together chat below.

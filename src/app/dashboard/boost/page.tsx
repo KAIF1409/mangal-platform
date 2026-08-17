@@ -39,7 +39,7 @@ const OPTIONS_BY_PRODUCT: Record<ProductKey, { label: string; icon: LucideIcon; 
   katube: {
     label: 'KaTube', icon: PlaySquare,
     options: [
-      { title: 'Shorts Spotlight', desc: 'Get your Short placed in the full-screen Shorts feed rotation for 24 hours.', icon: Pin },
+      { title: 'Fast Tap Spotlight', desc: 'Get your Fast Tap video placed in the full-screen Fast Tap feed rotation for 24 hours.', icon: Pin },
       { title: 'Subscriber Push', desc: 'Send a push notification about your latest upload to your subscribers.', icon: Megaphone },
       { title: 'Tag Boost', desc: 'Rank higher in search and recommendations for your video\u2019s tags.', icon: Tag },
       { title: 'Cross-Promo', desc: 'Trade a shoutout with another creator in your niche.', icon: Handshake },

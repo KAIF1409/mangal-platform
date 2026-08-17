@@ -157,7 +157,7 @@ const SIDEBAR_GROUPS: { label: string; items: { id: SidebarItem; label: string; 
     label: 'Menu',
     items: [
       { id: 'home', label: 'Home', icon: Home },
-      { id: 'fast', label: 'Fast tap', icon: Zap },
+      { id: 'fast', label: 'Fast Tap', icon: Zap },
       { id: 'slow', label: 'Slow tap', icon: Play },
     ],
   },
@@ -326,7 +326,7 @@ function DemoShortCard({ short }: { short: DemoShort }) {
         position: 'absolute', top: '10px', left: '10px', fontSize: '11px', fontWeight: 800, color: '#fff',
         background: 'rgba(0,0,0,0.5)', padding: '3px 9px', borderRadius: '20px', letterSpacing: '0.02em',
         display: 'inline-flex', alignItems: 'center', gap: '3px',
-      }}><Zap size={11} fill="#fff" /> SHORTS</span>
+      }}><Zap size={11} fill="#fff" /> FAST TAP</span>
       <div style={{
         position: 'relative', width: '100%', padding: '24px 14px 14px',
         background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
@@ -365,7 +365,7 @@ function RealShortCard({ short }: { short: RealShort }) {
         position: 'absolute', top: '10px', left: '10px', fontSize: '11px', fontWeight: 800, color: '#fff',
         background: 'rgba(0,0,0,0.5)', padding: '3px 9px', borderRadius: '20px', letterSpacing: '0.02em',
         display: 'inline-flex', alignItems: 'center', gap: '3px',
-      }}><Zap size={11} fill="#fff" /> SHORTS</span>
+      }}><Zap size={11} fill="#fff" /> FAST TAP</span>
       <div style={{
         position: 'relative', width: '100%', padding: '24px 14px 14px',
         background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)',
@@ -1085,7 +1085,7 @@ export default function KaTubePage() {
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              ▷ Fast tap
+              ▷ Fast Tap
             </h2>
             <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>9:16 · quick swipe-through</span>
           </div>
@@ -1156,7 +1156,7 @@ export default function KaTubePage() {
       {/* Placeholder note (engagement actions still pending) */}
       <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
         <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-          The video grid and Shorts row above are live Supabase data with a working watch page and upload
+          The video grid and Fast Tap row above are live Supabase data with a working watch page and upload
           flow. Subscribe, like, and comment aren&apos;t built yet — that&apos;s the next step.
         </p>
       </div>
@@ -1199,7 +1199,7 @@ export default function KaTubePage() {
           }}
         >
           <Zap size={20} strokeWidth={activeSidebar === 'fast' ? 2.4 : 2} />
-          <span style={{ fontSize: '10px', fontWeight: 700 }}>Shorts</span>
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>Fast Tap</span>
         </button>
         <Link
           href="/katube/upload"

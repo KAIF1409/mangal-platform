@@ -199,7 +199,7 @@ export default function FastTapWatchTogetherRoomPage() {
         .single();
 
       if (error || !roomRow || !roomRow.is_active || roomRow.mode !== 'shorts') {
-        if (!cancelled) setLoadError("This room doesn't exist, has ended, or isn't a Fast tap room.");
+        if (!cancelled) setLoadError("This room doesn't exist, has ended, or isn't a Fast Tap room.");
         return;
       }
       if (cancelled) return;

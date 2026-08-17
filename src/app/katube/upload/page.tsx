@@ -515,8 +515,8 @@ export default function KaTubeUploadPage() {
                 style={{ width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <span style={{ fontSize: '13px' }}>
-                <span style={{ fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Zap size={13} /> This is a Short</span>
-                <span style={{ color: 'var(--text-tertiary)' }}> — vertical/short-form, shows in the Shorts row instead of the main grid</span>
+                <span style={{ fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Zap size={13} /> This is a Fast Tap video</span>
+                <span style={{ color: 'var(--text-tertiary)' }}> — vertical/short-form, shows in the Fast Tap row instead of the main grid</span>
               </span>
             </label>
 

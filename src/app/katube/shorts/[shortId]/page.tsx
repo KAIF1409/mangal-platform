@@ -53,6 +53,15 @@ export default function KaTubeShortsFeedPage() {
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
 
+  // Double-tap-to-like (YouTube Shorts/Instagram Reels staple) — a big
+  // heart briefly bursts over whichever short was tapped. There's no real
+  // like backend yet for this feed (see the sidebar Like button's toast
+  // below), so this reuses the same "not built yet" toast rather than
+  // faking a persisted like — it's purely the gesture + animation.
+  // Defined below, after showToast (needs it as a dependency).
+  const [heartBurstIndex, setHeartBurstIndex] = useState<number | null>(null);
+  const lastTapRef = useRef<{ idx: number; time: number }>({ idx: -1, time: 0 });
+
   // Default is UNMUTED (sound on), matching the founder's ask — only falls
   // back to muted if the person explicitly muted on a previous short/visit.
   const [muted, setMuted] = useState<boolean>(() => {
@@ -134,6 +143,16 @@ export default function KaTubeShortsFeedPage() {
     setTimeout(() => setToast(null), 1800);
   }, []);
 
+  const handleVideoTap = useCallback((idx: number) => {
+    const now = Date.now();
+    const isDoubleTap = lastTapRef.current.idx === idx && now - lastTapRef.current.time < 300;
+    lastTapRef.current = { idx, time: now };
+    if (!isDoubleTap) return;
+    setHeartBurstIndex(idx);
+    showToast('Like isn\u2019t built yet');
+    setTimeout(() => setHeartBurstIndex(v => (v === idx ? null : v)), 700);
+  }, [showToast]);
+
   // Sync audio on the active short: browsers only reliably allow autoplay
   // when it starts muted, so the iframe always loads with mute=1 in its src
   // (never remounted/restarted on toggle) — the real on/off happens here via
@@ -155,8 +174,21 @@ export default function KaTubeShortsFeedPage() {
 
   return (
     <div style={{ height: '100vh', width: '100vw', background: '#000', position: 'relative', overflow: 'hidden' }}>
+      {/* Heart-burst pop for double-tap-to-like, and safe-area insets so
+          the back button / icon rail / caption never sit under a phone's
+          notch, Dynamic Island, or home-indicator gesture bar — real
+          devices, not just the browser chrome this was tested in before. */}
+      <style>{`
+        @keyframes katube-heart-burst {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+          25% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+          40% { transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+        }
+      `}</style>
+
       <Link href="/katube" style={{
-        position: 'absolute', top: '16px', left: '16px', zIndex: 20,
+        position: 'absolute', top: 'calc(16px + env(safe-area-inset-top))', left: 'calc(16px + env(safe-area-inset-left))', zIndex: 20,
         width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: '#fff', textDecoration: 'none',
@@ -168,7 +200,7 @@ export default function KaTubeShortsFeedPage() {
         </div>
       ) : shorts.length === 0 ? (
         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '20px', textAlign: 'center' }}>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>No Fast Tap shorts yet.</p>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>No Fast Tap videos yet.</p>
           <Link href="/katube" style={{ color: '#f97316', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={13} strokeWidth={2} /> Back to KaTube</Link>
         </div>
       ) : (
@@ -194,7 +226,9 @@ export default function KaTubeShortsFeedPage() {
                   background: '#000',
                 }}
               >
-                <div style={{ position: 'relative', height: '100%', maxWidth: '480px', width: '100%', aspectRatio: '9/16', margin: '0 auto' }}>
+                <div
+                  style={{ position: 'relative', height: '100%', maxWidth: '480px', width: '100%', aspectRatio: '9/16', margin: '0 auto' }}
+                >
                   {isNear ? (
                     <iframe
                       ref={el => { iframeRefs.current[idx] = el; }}
@@ -212,9 +246,31 @@ export default function KaTubeShortsFeedPage() {
                     />
                   )}
 
+                  {/* Transparent tap-capture overlay — a cross-origin
+                      YouTube iframe swallows click events (they never
+                      bubble to the parent DOM), so double-tap-to-like
+                      needs its own layer above the iframe/thumbnail to
+                      actually receive taps. controls=0 on the iframe means
+                      there's no native player UI underneath to preserve. */}
+                  <div
+                    onClick={() => handleVideoTap(idx)}
+                    style={{ position: 'absolute', inset: 0, zIndex: 3 }}
+                  />
+
+                  {heartBurstIndex === idx && (
+                    <div style={{
+                      position: 'absolute', top: '50%', left: '50%', zIndex: 6,
+                      transform: 'translate(-50%, -50%)', pointerEvents: 'none',
+                      animation: 'katube-heart-burst 0.7s ease-out forwards',
+                    }}>
+                      <Heart size={90} color="#fff" fill="#ef4444" stroke="#ef4444" />
+                    </div>
+                  )}
+
                   {/* Bottom-left creator + caption */}
                   <div style={{
-                    position: 'absolute', bottom: 0, left: 0, right: '70px', padding: '16px 60px 20px 16px',
+                    position: 'absolute', bottom: 0, left: 0, right: '70px',
+                    padding: '16px 60px calc(20px + env(safe-area-inset-bottom)) 16px',
                     background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)', zIndex: 5,
                   }}>
                     <div style={{ color: '#fff', fontWeight: 800, fontSize: '13.5px', marginBottom: '4px' }}>@{short.creator}</div>
@@ -226,19 +282,19 @@ export default function KaTubeShortsFeedPage() {
 
                   {/* Right-edge overlay icons */}
                   <div style={{
-                    position: 'absolute', bottom: '20px', right: '10px', zIndex: 5,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px',
+                    position: 'absolute', bottom: 'calc(20px + env(safe-area-inset-bottom))', right: 'calc(10px + env(safe-area-inset-right))', zIndex: 5,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
                   }}>
                     <button
                       onClick={() => showToast('Like isn\u2019t built yet')}
-                      style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
+                      style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px' }}
                     >
                       <Heart size={26} color="#fff" fill="#ef4444" stroke="#ef4444" />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>{short.likes.toLocaleString()}</span>
                     </button>
                     <button
                       onClick={() => showToast('Comments aren\u2019t built yet')}
-                      style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
+                      style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px' }}
                     >
                       <MessageCircle size={24} color="#fff" />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Comment</span>
@@ -249,7 +305,7 @@ export default function KaTubeShortsFeedPage() {
                         setActiveIndex(idx);
                         setShareOpen(true);
                       }}
-                      style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
+                      style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px' }}
                     >
                       <Share2 size={24} color="#fff" />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Share</span>
@@ -260,7 +316,7 @@ export default function KaTubeShortsFeedPage() {
                         setActiveIndex(idx);
                         setWatchTogetherOpen(true);
                       }}
-                      style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
+                      style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px' }}
                     >
                       <Users size={24} color="#fff" />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Together</span>
@@ -270,7 +326,7 @@ export default function KaTubeShortsFeedPage() {
                         onClick={toggleMuted}
                         aria-label={muted ? 'Unmute' : 'Mute'}
                         title={muted ? 'Unmute' : 'Mute'}
-                        style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
+                        style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '6px' }}
                       >
                         {muted ? <VolumeX size={24} color="#fff" /> : <Volume2 size={24} color="#fff" />}
                         <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>{muted ? 'Muted' : 'Sound'}</span>
@@ -306,7 +362,7 @@ export default function KaTubeShortsFeedPage() {
 
       {toast && (
         <div style={{
-          position: 'absolute', bottom: '90px', left: '50%', transform: 'translateX(-50%)',
+          position: 'absolute', bottom: 'calc(90px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)',
           background: 'rgba(0,0,0,0.85)', color: '#fff', fontSize: '12.5px', fontWeight: 600,
           padding: '9px 16px', borderRadius: '20px', zIndex: 30, whiteSpace: 'nowrap',
         }}>{toast}</div>

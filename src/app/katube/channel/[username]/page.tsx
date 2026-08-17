@@ -211,7 +211,7 @@ export default function KaTubeChannelPage() {
 
       {shorts.length > 0 && (
         <>
-          <h3 style={{ fontSize: '14px', fontWeight: 800, margin: '24px 0 12px' }}>Fast tap</h3>
+          <h3 style={{ fontSize: '14px', fontWeight: 800, margin: '24px 0 12px' }}>Fast Tap</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginBottom: '10px' }}>
             {shorts.map(s => (
               <div
