@@ -15,7 +15,7 @@ import {
 
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 type PageItem = { id: string; page_number: number; image_url: string };
-type SeriesInfo = { id: string; title: string; reading_mode: 'scroll' | 'page'; content_type: 'mangal' | 'novel'; reading_direction: 'ltr' | 'rtl' | null };
+type SeriesInfo = { id: string; title: string; reading_mode: 'scroll' | 'page'; content_type: 'mangal' | 'novel'; reading_direction: 'ltr' | 'rtl' | null; cover_url?: string | null };
 type ChapterNav = { id: string; chapter_number: number; title: string };
 
 // Step 3 — Chapter Reactions: stored emoji keys map to display emoji + a label for the title attr
@@ -238,7 +238,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const loadChapter = async (silent = false) => {
       const { data: chapter } = await supabase
         .from('chapters')
-        .select('id, chapter_number, title, series_id, content, word_count, author_note_before, author_note_after, tags, is_draft, scheduled_at, series(id, title, reading_mode, content_type, reading_direction, creator_id)')
+        .select('id, chapter_number, title, series_id, content, word_count, author_note_before, author_note_after, tags, is_draft, scheduled_at, series(id, title, reading_mode, content_type, reading_direction, creator_id, cover_url)')
         .eq('id', chapterId)
         .single();
 
@@ -751,6 +751,45 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     // Default: fit-width — also what Scroll mode always uses, since continuous
     // scroll reading doesn't benefit from per-image screen-fit the way Page mode does
     return { ...base, width: '100%', height: 'auto' };
+  };
+
+  // "Up Next" end-of-chapter card — the big tappable cover+title block Webtoon/
+  // WebNovel show right after the last panel/paragraph, instead of leaving the
+  // reader to hunt for a small "Next" pill. Falls back to a plain gradient tile
+  // (no broken-image icon) when the series has no cover_url set yet.
+  const renderUpNextCard = () => {
+    if (!nextChapter) return null;
+    return (
+      <Link
+        href={`/WebMangal/read/${nextChapter.id}`}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '14px', width: '100%', maxWidth: '520px',
+          margin: '0 auto', padding: '12px', borderRadius: '14px', textDecoration: 'none',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+          transition: 'transform 0.15s, border-color 0.15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = '#d97706'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+      >
+        <div style={{
+          width: '56px', height: '56px', borderRadius: '10px', flexShrink: 0, overflow: 'hidden',
+          background: series?.cover_url ? undefined : 'linear-gradient(135deg, #7f1d1d, #d97706)',
+        }}>
+          {series?.cover_url && (
+            // eslint-disable-next-line @next/next/no-img-element -- small fixed-size thumbnail from a dynamic Supabase URL
+            <img src={series.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} />
+          )}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#d97706', marginBottom: '2px' }}>Up Next</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Chapter {nextChapter.chapter_number}{nextChapter.title ? ` — ${nextChapter.title}` : ''}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>Continue reading</div>
+        </div>
+        <ChevronRight size={18} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+      </Link>
+    );
   };
 
   // Sprint 4 — tap-zone navigation: left third of the image container = previous,
@@ -1453,6 +1492,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 {/* Divider before nav */}
                 <div style={{ height: '1px', background: dividerColor, margin: '48px 0 32px' }} />
 
+                {/* End-of-chapter "Up Next" card */}
+                {!lockScreen && nextChapter && (
+                  <div style={{ marginBottom: '20px' }}>{renderUpNextCard()}</div>
+                )}
+
                 {/* Chapter nav — prev / all / next */}
                 {!lockScreen && (
                   <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -1517,9 +1561,16 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               ))}
             </div>
 
+            {/* End-of-chapter "Up Next" card — sits above the compact nav pills */}
+            {!lockScreen && nextChapter && (
+              <div style={{ padding: '40px 24px 0', width: '100%', boxSizing: 'border-box' }}>
+                {renderUpNextCard()}
+              </div>
+            )}
+
             {/* Chapter nav bottom */}
             {!lockScreen && (
-            <div style={{ padding: '48px 24px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div style={{ padding: '24px 24px 48px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               {prevChapter && <Link href={`/WebMangal/read/${prevChapter.id}`} style={navBtnStyle}><ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}</Link>}
               <Link href={series ? `/WebMangal/series/${series.id}` : '/'} style={navBtnStyle}><ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters</Link>
               {nextChapter && (
@@ -1556,6 +1607,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             {/* Step 24 — RTL: swap visual positions of Prev/Next buttons.
                 In RTL manga, "next page" button sits on the LEFT, "prev" on the RIGHT.
                 Click handlers also swap so each button does what its new position implies. */}
+            {!lockScreen && currentPage === pages.length - 1 && nextChapter && (
+              <div style={{ padding: '8px 16px 0', width: '100%', boxSizing: 'border-box' }}>
+                {renderUpNextCard()}
+              </div>
+            )}
             {!lockScreen && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '20px 16px', flexWrap: 'wrap', justifyContent: 'center' }}>
 
