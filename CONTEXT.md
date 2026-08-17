@@ -5303,12 +5303,36 @@ replace what they lost by no longer sharing that page:
 - `/kalpana-circle/profile/[username]` — a Kalpana Circle-native profile
   page
 
-Neither exists yet. The 8 links found above that pointed at
-`/creator/[username]` from KaTube/Kalpana Circle context (video-watch
-page's creator byline, `WriterOfTheMonthBanner`, Kalpana Circle's search
-results and `saved` page) currently redirect through to the WebMangal
-profile — that's correct/harmless for now (a KaTube viewer clicking a
-creator's name landing on their WebMangal writer page isn't broken,
-just not ideal), but once the two new pages exist those specific links
-should be re-pointed to the product-native profile instead of the
-WebMangal one, based on which product context the link appears in.
+### §76 — correction + the actual fix (next session, same morning)
+
+**Correction to the note above: it was wrong.** Both pages already
+existed — `/katube/channel/[username]` (built at §55, deliberately left
+unlinked from the watch page's creator byline pending exactly this
+founder decision) and `/kalpana-circle/profile/[username]` (built at
+§50, already wired into K Circle's nav/settings, just not swept into
+*every* K Circle surface that links to a creator). I missed both when
+writing the note above — should have grepped for their existence before
+concluding "neither exists yet."
+
+The real remaining work was just the link rewiring §55 had explicitly
+deferred: `git grep` confirmed 4 of the 8 links found in §75 still
+pointed at `/WebMangal/creator/[username]` from the wrong product
+context — repointed each to its product-native page:
+- `katube/watch/[videoId]/page.tsx`'s creator byline → `/katube/channel/[username]`
+- `kalpana-circle/page.tsx`'s two search-result links ("Dreamers" user
+  results + post-author links) → `/kalpana-circle/profile/[username]`
+- `kalpana-circle/saved/page.tsx`'s post-author link → same
+
+The other 4 (`SeriesCard`, `WriterOfTheMonthBanner`, `WebMangal/series`'s
+creator credit, `leaderboard`) correctly stay pointed at
+`/WebMangal/creator/[username]` — genuinely WebMangal-context (series
+cards, the WebMangal writer-of-the-month award, a WebMangal series page)
+or, for `leaderboard`, a deliberate cross-product ranking that still
+needs one generic identity link to point at (same reasoning as
+`become-creator`'s site-wide role).
+
+**Verified:** `tsc --noEmit` clean, `eslint` unchanged (62/19/43, same
+baseline). Booted `next dev`, hit both product-native pages live —
+both compiled and resolved their full import chain correctly (confirmed
+via the 500's stack trace pointing at `lib/supabase.ts` needing real env
+credentials this sandbox doesn't have, not a broken import or route).

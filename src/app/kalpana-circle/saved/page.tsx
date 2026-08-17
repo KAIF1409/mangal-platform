@@ -152,7 +152,7 @@ export default function SavedPostsPage() {
             marginBottom: '14px', overflow: 'hidden',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}>
-              <Link href={`/WebMangal/creator/${post.username}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flex: 1, minWidth: 0 }}>
+              <Link href={`/kalpana-circle/profile/${post.username}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flex: 1, minWidth: 0 }}>
                 <div style={{
                   width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
                   background: RADIANT, display: 'flex', alignItems: 'center', justifyContent: 'center',
