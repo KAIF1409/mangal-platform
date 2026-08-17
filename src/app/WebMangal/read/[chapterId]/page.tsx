@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, use } from 'react';
+import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { parseChapterContent, estimateReadTime } from '../../../lib/novelEditor';
 import ThemeToggle from '../../../components/shared/ThemeToggle';
@@ -97,6 +98,14 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const [readGate, setReadGate] = useState<ReadGateState>({ gated: false, reason: null });
   const [chaptersReadThisSeries, setChaptersReadThisSeries] = useState(0);
   const [uniqueSeriesRead, setUniqueSeriesRead] = useState(0);
+
+  // Resume-in-chapter: "Continue Reading" on the series page only lands you on
+  // the right chapter — it never restored the exact page/scroll position within
+  // it, so every resume silently dropped you back at page 1. Restored below by
+  // reading the same reading_progress row upsertProgress() writes to, but only
+  // applied when it belongs to *this* chapter (a fresh link/sidebar nav into an
+  // arbitrary chapter should still start at the top, not hijack scroll).
+  const [resumeApplied, setResumeApplied] = useState(false);
 
   // Helper: Load read history from localStorage
   const getReadHistory = (): ReadHistoryEntry[] => {
@@ -358,8 +367,58 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     setCurrentPage(0);
     lastSavedPage.current = 0;
     loadChapter();
+    // Chapter nav now goes through next/link (instant client-side transition,
+    // no full page reload — see nav-link conversion below), so scroll position
+    // no longer resets for free the way it did with <a href> full reloads.
+    // Reset explicitly: window scroll for manga (page + scroll mode both
+    // scroll the window), containerRef for novels (their own inner scroll div).
+    window.scrollTo(0, 0);
+    if (containerRef.current) containerRef.current.scrollTop = 0;
+    setResumeApplied(false);
   }, [chapterId]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Resume-in-chapter: once we know who's reading and which chapter/series
+  // we're in, check for a saved reading_progress row and, if it's for this
+  // exact chapter, jump to that spot — page number in page mode, the matching
+  // page's position in scroll mode, or the saved scroll % for novels.
+  useEffect(() => {
+    if (resumeApplied || !userId || !series || !currentChapter) return;
+    let cancelled = false;
+    (async () => {
+      const { data: prog } = await supabase
+        .from('reading_progress')
+        .select('chapter_id, page_number')
+        .eq('reader_id', userId)
+        .eq('series_id', series.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (!prog || prog.chapter_id !== currentChapter.id) { setResumeApplied(true); return; }
+      if (isNovel) {
+        requestAnimationFrame(() => {
+          const el = containerRef.current;
+          if (!el) return;
+          const scrollable = el.scrollHeight - el.clientHeight;
+          if (scrollable > 0) el.scrollTop = (prog.page_number / 100) * scrollable;
+        });
+      } else if (effectiveMode === 'page') {
+        if (pages.length > 0) {
+          setCurrentPage(Math.max(0, Math.min(prog.page_number - 1, pages.length - 1)));
+          lastSavedPage.current = prog.page_number;
+        } else {
+          return; // pages haven't loaded yet — retry once they do (effect re-fires on pages.length change)
+        }
+      } else if (pages.length > 0) {
+        requestAnimationFrame(() => {
+          pageRefs.current[prog.page_number - 1]?.scrollIntoView({ block: 'start' });
+        });
+      } else {
+        return; // wait for scroll-mode page refs to exist
+      }
+      setResumeApplied(true);
+    })();
+    return () => { cancelled = true; };
+  }, [userId, series, currentChapter, resumeApplied, isNovel, effectiveMode, pages.length]);
 
 
   // Bug fix — a creator editing this exact chapter (title, pages, content)
@@ -996,11 +1055,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         )}
         {/* Left: Back + title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-          <a href={series ? `/WebMangal/series/${series.id}` : '/'} className="mangal-reader-back" style={{
+          <Link href={series ? `/WebMangal/series/${series.id}` : '/'} className="mangal-reader-back" style={{
             display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
             background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px',
             padding: '6px 12px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px',
-          }}><ArrowLeft size={14} /><span className="mangal-reader-back-text"> Back</span></a>
+          }}><ArrowLeft size={14} /><span className="mangal-reader-back-text"> Back</span></Link>
           <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', flexShrink: 0 }} />
           <div style={{ overflow: 'hidden', minWidth: 0 }}>
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1031,11 +1090,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           <ThemeToggle size={32} />
           {/* Creator-only: Go to Dashboard */}
           {isCreator && (
-            <a href="/dashboard" onClick={e => e.stopPropagation()} className="mangal-reader-studio" style={{
+            <Link href="/dashboard" onClick={e => e.stopPropagation()} className="mangal-reader-studio" style={{
               padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
               background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)',
               color: '#d97706', textDecoration: 'none', whiteSpace: 'nowrap',
-            }}><Wrench size={14} /><span className="mangal-reader-studio-text"> Studio</span></a>
+            }}><Wrench size={14} /><span className="mangal-reader-studio-text"> Studio</span></Link>
           )}
 
           {/* Chapter list toggle */}
@@ -1125,7 +1184,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
           {allChapters.map(ch => (
-            <a key={ch.id} href={`/WebMangal/read/${ch.id}`} style={{
+            <Link key={ch.id} href={`/WebMangal/read/${ch.id}`} style={{
               display: 'block', padding: '11px 14px', borderRadius: '8px', textDecoration: 'none',
               background: ch.id === chapterId ? 'rgba(217,119,6,0.12)' : 'transparent',
               border: `1px solid ${ch.id === chapterId ? 'rgba(217,119,6,0.25)' : 'transparent'}`,
@@ -1134,21 +1193,21 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               <div style={{ fontSize: '13px', fontWeight: ch.id === chapterId ? 700 : 400, color: ch.id === chapterId ? '#d97706' : 'var(--text-secondary)' }}>
                 Ch.{ch.chapter_number}{ch.title ? ` — ${ch.title}` : ''}
               </div>
-            </a>
+            </Link>
           ))}
         </div>
 
         {/* Prev/Next at bottom of sidebar */}
         <div style={{ padding: '12px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
           {prevChapter ? (
-            <a href={`/WebMangal/read/${prevChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>
+            <Link href={`/WebMangal/read/${prevChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>
               <ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}
-            </a>
+            </Link>
           ) : <div style={{ flex: 1 }} />}
           {nextChapter ? (
-            <a href={`/WebMangal/read/${nextChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '12px', fontWeight: 700, textAlign: 'center', border: 'none' }}>
+            <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '12px', fontWeight: 700, textAlign: 'center', border: 'none' }}>
               Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
-            </a>
+            </Link>
           ) : <div style={{ flex: 1 }} />}
         </div>
       </div>
@@ -1398,17 +1457,17 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 {!lockScreen && (
                   <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                     {prevChapter ? (
-                      <a href={`/WebMangal/read/${prevChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, }}>
+                      <Link href={`/WebMangal/read/${prevChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, }}>
                         <ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}
-                      </a>
+                      </Link>
                     ) : <div />}
-                    <a href={series ? `/WebMangal/series/${series.id}` : '/'} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, }}>
+                    <Link href={series ? `/WebMangal/series/${series.id}` : '/'} style={{ padding: '10px 20px', borderRadius: '8px', border: `1px solid ${navBorder}`, background: navBg, color: navColor, textDecoration: 'none', fontSize: '13px', fontWeight: 600, }}>
                       <ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters
-                    </a>
+                    </Link>
                     {nextChapter ? (
-                      <a href={`/WebMangal/read/${nextChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, }}>
+                      <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, }}>
                         Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
-                      </a>
+                      </Link>
                     ) : <div />}
                   </div>
                 )}
@@ -1448,12 +1507,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             {/* Chapter nav bottom */}
             {!lockScreen && (
             <div style={{ padding: '48px 24px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {prevChapter && <a href={`/WebMangal/read/${prevChapter.id}`} style={navBtnStyle}><ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}</a>}
-              <a href={series ? `/WebMangal/series/${series.id}` : '/'} style={navBtnStyle}><ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters</a>
+              {prevChapter && <Link href={`/WebMangal/read/${prevChapter.id}`} style={navBtnStyle}><ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}</Link>}
+              <Link href={series ? `/WebMangal/series/${series.id}` : '/'} style={navBtnStyle}><ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters</Link>
               {nextChapter && (
-                <a href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff' }}>
+                <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff' }}>
                   Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
-                </a>
+                </Link>
               )}
             </div>
             )}
@@ -1488,11 +1547,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               {isRTL ? (
                 currentPage === pages.length - 1 ? (
                   nextChapter ? (
-                    <a href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
+                    <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
                       <ArrowLeft size={13} style={{ verticalAlign: 'middle' }} /> Next Chapter
-                    </a>
+                    </Link>
                   ) : (
-                    <a href={series ? `/WebMangal/series/${series.id}` : '/'} style={{ ...navBtnStyle, textDecoration: 'none' }}>All Chapters</a>
+                    <Link href={series ? `/WebMangal/series/${series.id}` : '/'} style={{ ...navBtnStyle, textDecoration: 'none' }}>All Chapters</Link>
                   )
                 ) : (
                   <button onClick={() => setCurrentPage(p => Math.min(p + 1, pages.length - 1))} style={pageBtn(false)}><ArrowLeft size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Next</button>
@@ -1519,11 +1578,11 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               ) : (
                 currentPage === pages.length - 1 ? (
                   nextChapter ? (
-                    <a href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
+                    <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
                       Next Chapter <ChevronRight size={13} style={{ verticalAlign: 'middle' }} />
-                    </a>
+                    </Link>
                   ) : (
-                    <a href={series ? `/WebMangal/series/${series.id}` : '/'} style={{ ...navBtnStyle, textDecoration: 'none' }}>All Chapters</a>
+                    <Link href={series ? `/WebMangal/series/${series.id}` : '/'} style={{ ...navBtnStyle, textDecoration: 'none' }}>All Chapters</Link>
                   )
                 ) : (
                   <button onClick={() => setCurrentPage(p => Math.min(p + 1, pages.length - 1))} style={pageBtn(false)}>Next <ChevronRight size={13} style={{ verticalAlign: 'middle' }} /></button>
