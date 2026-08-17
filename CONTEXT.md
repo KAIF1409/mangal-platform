@@ -5731,3 +5731,56 @@ treatment plus a proper `Plus` icon in place of a literal "+" character.
 files: 0 errors (10 pre-existing `react-hooks/exhaustive-deps` warnings,
 same as baseline, none introduced). `next build` succeeds. Committed and
 pushed directly to `main` per founder's instruction — no branch/PR.
+
+## §82 — WebMangal reader fullscreen round 2: real browser fullscreen, persists across chapters, trimmed nav, dedicated exit control
+
+**Founder feedback on §81 (with screenshot):** the simulated fullscreen from
+§81 didn't hide the mobile browser's own address bar / status bar chrome
+(the actual ask, "like how F12 behaves on desktop") — it only reflowed our
+own layout. Also: no obvious exit-fullscreen control once the top bar
+auto-hid; the end-of-chapter block was too busy for fullscreen (Up Next
+card + Prev + All Chapters + Ch.N pill all visible — only the next-chapter
+action and reactions/comments should remain); and fullscreen has to
+survive tapping "Next Chapter", not reset every chapter.
+
+**Real Fullscreen API.** `toggleFullscreen` now calls
+`document.documentElement.requestFullscreen()` / `document.exitFullscreen()`
+— actually hides mobile browser chrome, not just CSS. Deliberately targets
+`document.documentElement` and not this component's own root div: the root
+div gets unmounted and replaced by a fresh one on every chapter navigation
+(different `chapterId` route param), and the Fullscreen API auto-exits the
+moment its target element leaves the DOM — `<html>` never unmounts during
+Next.js client-side nav, so requesting on it is what actually makes
+fullscreen survive clicking "Next Chapter" as asked. A `fullscreenchange`
+listener keeps React state in sync in both directions: (a) if the browser
+exits fullscreen on its own (Esc, swipe-down, back gesture) rather than via
+our button, state falls back to normal instead of leaving an edge-to-edge
+layout with no chrome to escape it; (b) on mount, if `document.fullscreenElement`
+is already truthy (arrived here via in-app nav while still in real
+fullscreen from the previous chapter), state initializes to `true` instead
+of dropping to windowed layout while the browser is still actually
+fullscreen underneath. `requestFullscreen` is wrapped in try/catch — iOS
+Safari doesn't support it on non-`<video>` elements at all, so this falls
+back to the §81 CSS-only edge-to-edge layout there rather than silently
+failing.
+
+**Dedicated exit control.** §81 hid the whole top bar (including the old
+Shrink-icon exit button) the instant fullscreen was entered, which is
+exactly why the exit option "disappeared" — technically reachable by
+tapping to reveal the bar again, but not obvious. Added a persistent
+top-right corner button (same video-player pattern as the existing Lock
+Screen exit affordance, just not tied to the auto-hide timer so it's never
+gone) — shown whenever `isFullscreen && !lockScreen`.
+
+**Trimmed end-of-chapter block in fullscreen** (scroll mode, matches the
+founder's screenshot): the "Up Next" card and the Prev/All Chapters pills
+are hidden; only the Next Chapter gradient pill remains, plus the
+reactions/comments section below (already unconditional on fullscreen,
+untouched). Page mode's equivalent Up Next card gets the same treatment;
+its in-chapter Prev/dots/Next page-turn row was left alone since that's
+core reading navigation, not the extra chrome in question.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on the touched
+file: 0 errors (7 pre-existing warnings, same baseline). `next build`
+succeeds. Committed and pushed directly to `main` per founder's
+instruction — no branch/PR.

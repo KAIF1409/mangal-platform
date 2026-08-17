@@ -703,29 +703,70 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // etc. — search isFullscreen below) already gives the same expanded-reading
   // look without ever calling the real Fullscreen API, so the page never
   // leaves the normal viewport/zoom context and pinch-zoom keeps working.
-  // BUG FIX: previously this only flipped `isFullscreen`, which was solely read
-  // by a maxWidth cap (720px/600px vs 'none') on the image container. On any
-  // screen narrower than that cap — i.e. every phone, the primary reading
-  // device — the cap was never actually binding, so toggling it produced zero
-  // visible change ("nothing happens when I tap fullscreen"). Fullscreen now
-  // also immediately hides the top bar/chrome (instead of waiting for the
-  // normal idle timer) and the content padding that reserves space for it
-  // collapses to 0 in the same instant (see paddingTop below), which is a
-  // real, immediate, viewport-size-independent visual change.
-  const toggleFullscreen = (e: React.MouseEvent) => {
+  // BUG FIX (round 2): founder wants *real* fullscreen — hiding the mobile
+  // browser's own address bar / status bar chrome (top red circle in the
+  // screenshot), not just our internal layout. That needs the actual
+  // Fullscreen API (Element.requestFullscreen), not the simulated
+  // CSS-only version from before. Trade-off, stated plainly rather than
+  // hidden: iOS Safari doesn't support requestFullscreen on non-<video>
+  // elements at all, and calling it can suspend pinch-zoom on some mobile
+  // browsers (the original reason this was simulated) — the try/catch
+  // below means the button still does the CSS-only edge-to-edge fallback
+  // even where the real API is unavailable or rejects the call, so it's
+  // never a silent no-op.
+  const toggleFullscreen = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsFullscreen(v => {
-      const next = !v;
-      if (next) {
-        setShowUI(false);
-        if (hideTimer.current) clearTimeout(hideTimer.current);
-      } else {
-        setLockScreen(false); // leaving "fullscreen" always exits lock screen too
-        setShowUI(true);
+    const goingFullscreen = !isFullscreen;
+    try {
+      if (goingFullscreen) {
+        // Request on document.documentElement, not this component's own
+        // rootRef div — that div gets unmounted and replaced by a fresh one
+        // on every chapter navigation (different route param), and the
+        // Fullscreen API auto-exits the instant its target element leaves
+        // the DOM. <html> never unmounts during client-side nav, so
+        // fullscreen actually survives clicking "Next Chapter" this way.
+        await document.documentElement.requestFullscreen?.();
+      } else if (document.fullscreenElement) {
+        await document.exitFullscreen();
       }
-      return next;
-    });
+    } catch {
+      // Real Fullscreen API unsupported/denied — fall through to the
+      // simulated layout change below regardless.
+    }
+    setIsFullscreen(goingFullscreen);
+    if (goingFullscreen) {
+      setShowUI(false);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    } else {
+      setLockScreen(false); // leaving fullscreen always exits lock screen too
+      setShowUI(true);
+    }
   };
+
+  // Keep `isFullscreen` in sync with the browser's real fullscreen state.
+  // Two things this covers:
+  // 1) The user exits via the browser's own UI (Esc key, swipe-down gesture,
+  //    back button) rather than our button — 'fullscreenchange' fires and we
+  //    fall back to normal layout instead of getting stuck showing an
+  //    edge-to-edge layout with no chrome to escape it.
+  // 2) Founder's ask: fullscreen must survive clicking "Next Chapter". Next.js
+  //    client-side navigation to `/WebMangal/read/[chapterId]` swaps this
+  //    component for a fresh instance (different route param = different
+  //    key), which resets `isFullscreen` state to false — but it does NOT
+  //    reload the document, so the browser's real fullscreen mode is
+  //    actually still active underneath. This re-syncs our state to match
+  //    on mount instead of dropping back to a windowed-looking layout while
+  //    the browser chrome is still hidden.
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      const active = !!document.fullscreenElement;
+      setIsFullscreen(active);
+      if (!active) setLockScreen(false);
+    };
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    syncFullscreenState();
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, []);
 
   // Lock Screen — strips every control except the one transient exit affordance.
   // Closes any open panels so nothing is left mid-open behind the locked view.
@@ -1288,6 +1329,31 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         ><Unlock size={16} /></button>
       )}
 
+      {/* ── FULLSCREEN EXIT — BUG FIX: the only way to exit fullscreen before
+          was the Shrink icon inside the top bar, but entering fullscreen now
+          immediately hides that whole bar (see toggleFullscreen), so the exit
+          control vanished along with it — read as "no exit option". This is a
+          dedicated, always-visible (not tied to the auto-hide timer) corner
+          button, same pattern video players use, so there's never a moment in
+          fullscreen with no obvious way out. Not shown during lock screen,
+          which already has its own dedicated exit button above. ── */}
+      {isFullscreen && !lockScreen && (
+        <button
+          onClick={toggleFullscreen}
+          title="Exit fullscreen"
+          style={{
+            position: 'fixed', top: '14px', right: '14px', zIndex: 400,
+            width: '34px', height: '34px', borderRadius: '17px',
+            border: '1px solid var(--border-color)', background: 'var(--nav-bg-transparent)', backdropFilter: 'blur(8px)',
+            color: 'var(--text-secondary)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: 0.6, transition: 'opacity 0.2s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; }}
+        ><Shrink size={16} /></button>
+      )}
+
       {/* ── CHAPTER SIDEBAR ── */}
       {!lockScreen && (
       <div
@@ -1657,18 +1723,26 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               ))}
             </div>
 
-            {/* End-of-chapter "Up Next" card — sits above the compact nav pills */}
-            {!lockScreen && nextChapter && (
+            {/* End-of-chapter "Up Next" card — sits above the compact nav pills.
+                Hidden in fullscreen per founder's ask: only the next-chapter
+                action and reactions/comments should remain, not this extra
+                card (it duplicates the Ch.N pill below anyway). */}
+            {!lockScreen && !isFullscreen && nextChapter && (
               <div style={{ padding: '40px 24px 0', width: '100%', boxSizing: 'border-box' }}>
                 {renderUpNextCard()}
               </div>
             )}
 
-            {/* Chapter nav bottom */}
+            {/* Chapter nav bottom — in fullscreen, only the Next Chapter pill
+                stays; Prev / All Chapters are the "extra chrome" founder
+                wanted stripped, matching only next-chapter + reactions/
+                comments remaining. */}
             {!lockScreen && (
             <div style={{ padding: '24px 24px 48px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {prevChapter && <Link href={`/WebMangal/read/${prevChapter.id}`} style={navBtnStyle}><ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}</Link>}
-              <Link href={series ? `/WebMangal/series/${series.id}` : '/'} style={navBtnStyle}><ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters</Link>
+              {!isFullscreen && prevChapter && <Link href={`/WebMangal/read/${prevChapter.id}`} style={navBtnStyle}><ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}</Link>}
+              {!isFullscreen && (
+                <Link href={series ? `/WebMangal/series/${series.id}` : '/'} style={navBtnStyle}><ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters</Link>
+              )}
               {nextChapter && (
                 <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #f97316, #22c55e)', borderColor: 'transparent', color: '#fff' }}>
                   Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
@@ -1703,7 +1777,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             {/* Step 24 — RTL: swap visual positions of Prev/Next buttons.
                 In RTL manga, "next page" button sits on the LEFT, "prev" on the RIGHT.
                 Click handlers also swap so each button does what its new position implies. */}
-            {!lockScreen && currentPage === pages.length - 1 && nextChapter && (
+            {!lockScreen && !isFullscreen && currentPage === pages.length - 1 && nextChapter && (
               <div style={{ padding: '8px 16px 0', width: '100%', boxSizing: 'border-box' }}>
                 {renderUpNextCard()}
               </div>
