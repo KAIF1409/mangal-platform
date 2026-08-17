@@ -1205,7 +1205,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0, width: '280px', zIndex: 300,
+          position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(280px, 84vw)', zIndex: 300,
           background: 'var(--bg-primary)', borderLeft: '1px solid var(--border-color)',
           transform: showSidebar ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
@@ -1257,8 +1257,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          position: 'fixed', top: '64px', right: showSettings ? '16px' : '-280px', zIndex: 250,
-          width: '240px', maxHeight: 'calc(100vh - 96px)', overflowY: 'auto',
+          position: 'fixed', top: '64px', right: showSettings ? '16px' : '-100vw', zIndex: 250,
+          width: 'min(240px, 82vw)', maxHeight: 'calc(100vh - 96px)', overflowY: 'auto',
           background: 'var(--bg-card)', border: '1px solid var(--border-color)',
           borderRadius: '12px', padding: '16px',
           transition: 'right 0.2s',
