@@ -327,7 +327,7 @@ export default function HistoryPage() {
             </p>
             <Link href="/" style={{
               padding: '10px 24px', borderRadius: '10px',
-              background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+              background: 'linear-gradient(135deg, #f97316, #22c55e)',
               color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700,
             }}>
               Browse Series
@@ -409,7 +409,7 @@ function HistoryRow({
   // Accent colours
   const accentGradient = isNovel
     ? 'linear-gradient(135deg, #4c1d95, #6d28d9)'
-    : 'linear-gradient(135deg, #7f1d1d, #991b1b)';
+    : 'linear-gradient(135deg, #f97316, #22c55e)';
 
   const progressGradient = isNovel
     ? 'linear-gradient(90deg, #4c1d95, #6d28d9)'

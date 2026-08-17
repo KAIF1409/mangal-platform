@@ -382,8 +382,8 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               {username ? `@${username}` : 'MANGAL'} · {categoryLabel}
             </span>
             <span style={{
-              flexShrink: 0, fontSize: '11px', fontWeight: 800, color: '#052e21',
-              background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)',
+              flexShrink: 0, fontSize: '11px', fontWeight: 800, color: '#fff',
+              background: 'linear-gradient(135deg, #f97316, #22c55e)',
               padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.02em',
             }}>+ ADD</span>
           </div>
@@ -414,11 +414,22 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
 
         .mangal-search-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 200px)); }
 
-        /* Hide the "powered by MANGAL" subtitle on very narrow phones so the
+        /* Hide the "powered by MANGAL" subtitle on most phones so the
            centered WebMangal wordmark never gets squeezed against the
-           hamburger/search icons on the left or login/avatar on the right. */
-        @media (max-width: 380px) {
+           hamburger/search icons on the left or login/avatar on the right.
+           Raised from 380px -> 460px: the subtitle was still showing (and
+           overlapping the LOG IN button) on common phone widths above the
+           old threshold — the wordmark+subtitle block also now clips with
+           an ellipsis as a fallback for anything still tight below this. */
+        @media (max-width: 460px) {
           .mangal-webmangal-mobile-subtitle { display: none; }
+        }
+
+        /* Extra-narrow phones: tighten the icon cluster and LOG IN button
+           padding too, so there's more room for the wordmark itself. */
+        @media (max-width: 340px) {
+          .mangal-webmangal-mobile-iconbtn { width: 32px !important; height: 32px !important; }
+          .mangal-webmangal-mobile-cta { padding: 7px 12px !important; font-size: 11px !important; }
         }
 
         /* ── Tablet & small laptop ───────────────────────────────────── */
@@ -510,7 +521,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                 <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>Log in</a>
                 <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{
                   padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-                  background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                  background: 'linear-gradient(135deg, #f97316, #22c55e)',
                   color: '#fff', textDecoration: 'none',
                 }}>Get Started</a>
               </div>
@@ -537,10 +548,12 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               onClick={() => setMobileMenuOpen(o => !o)}
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileMenuOpen}
+              className="mangal-webmangal-mobile-iconbtn"
               style={{
                 width: '36px', height: '36px', borderRadius: '8px', border: 'none',
                 background: 'transparent', color: '#f9fafb', fontSize: '18px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                flexShrink: 0,
               }}
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -548,28 +561,45 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
             <button
               onClick={() => setMobileSearchOpen(true)}
               aria-label="Search"
+              className="mangal-webmangal-mobile-iconbtn"
               style={{
                 width: '36px', height: '36px', borderRadius: '8px', border: 'none',
                 background: 'transparent', color: '#f9fafb', fontSize: '16px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                flexShrink: 0,
               }}
             >
               <Search size={16} />
             </button>
           </div>
 
-          <Link href="/WebMangal" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', minWidth: 0, flex: 1, justifyContent: 'center' }}>
-            <Image src="/webmangal-logo.png" alt="WebMangal" width={200} height={200} style={{ display: 'block', height: '34px', width: '34px', objectFit: 'contain', flexShrink: 0 }} priority />
-            <span style={{ fontWeight: 900, fontSize: '16px', color: '#f9fafb', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>WebMangal</span>
-            <span style={{ fontSize: '9px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.01em', whiteSpace: 'nowrap', marginLeft: '2px' }} className="mangal-webmangal-mobile-subtitle">powered by MANGAL</span>
+          <Link href="/WebMangal" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', minWidth: 0, flex: 1, overflow: 'hidden', justifyContent: 'center' }}>
+            <Image src="/webmangal-logo.png" alt="WebMangal" width={200} height={200} style={{ display: 'block', height: '28px', width: '28px', objectFit: 'contain', flexShrink: 0 }} priority />
+            {/* Wordmark + subtitle wrapped together and clipped as a unit
+                (minWidth:0 + overflow:hidden + ellipsis) instead of being
+                left to overflow — on a narrow phone this used to bleed out
+                of its flex:1 center slot and visually overlap the
+                hamburger/search icons on the left and the LOG IN button on
+                the right (the bug in the screenshot). Now it truncates
+                cleanly instead of colliding with its neighbors. */}
+            <span style={{ display: 'flex', alignItems: 'baseline', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
+              <span style={{
+                fontWeight: 900, fontSize: '15px', color: '#f9fafb', letterSpacing: '0.02em',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>WebMangal</span>
+              <span
+                className="mangal-webmangal-mobile-subtitle"
+                style={{ fontSize: '9px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.01em', whiteSpace: 'nowrap', flexShrink: 0 }}
+              >powered by MANGAL</span>
+            </span>
           </Link>
 
           {user ? (
             <div style={{ flexShrink: 0 }}><ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} /></div>
           ) : (
-            <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{
+            <a href={`/login?next=${encodeURIComponent(loginNext)}`} className="mangal-webmangal-mobile-cta" style={{
               flexShrink: 0, padding: '8px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: 800,
-              background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)', color: '#052e21', textDecoration: 'none',
+              background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff', textDecoration: 'none',
               whiteSpace: 'nowrap', letterSpacing: '0.03em',
             }}>LOG IN</a>
           )}
@@ -613,8 +643,8 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                   onClick={() => setMobileMenuOpen(false)}
                   style={{
                     marginTop: '4px', padding: '12px 14px', borderRadius: '20px', fontSize: '14px', fontWeight: 800,
-                    textAlign: 'center', background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)',
-                    color: '#052e21', textDecoration: 'none', letterSpacing: '0.03em',
+                    textAlign: 'center', background: 'linear-gradient(135deg, #f97316, #22c55e)',
+                    color: '#fff', textDecoration: 'none', letterSpacing: '0.03em',
                   }}
                 >SIGN UP</a>
               )}
@@ -670,7 +700,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               onClick={submitSearch}
               style={{
                 flexShrink: 0, padding: '11px 18px', borderRadius: '10px', border: 'none',
-                background: 'linear-gradient(135deg, #a7f3d0, #6ee7b7)', color: '#052e21',
+                background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff',
                 fontSize: '13px', fontWeight: 800, cursor: 'pointer',
               }}
             >Search</button>
@@ -922,7 +952,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                 <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>Be the first to create it!</div>
                 <a href={createHref} style={{
                   display: 'inline-block', padding: '10px 20px', borderRadius: '8px',
-                  background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
+                  background: 'linear-gradient(135deg, #f97316, #22c55e)',
                   color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none',
                 }}>{createLabel}</a>
               </>

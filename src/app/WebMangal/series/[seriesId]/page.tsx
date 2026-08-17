@@ -805,14 +805,14 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           <ThemeToggle size={30} />
           <Link href="/WebMangal" className="mangal-series-nav-browse" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>Browse</Link>
           {isCreator && (
-            <a href={`/WebMangal/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            <a href={`/WebMangal/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>
               + Add Chapter
             </a>
           )}
           {user ? (
             <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
           ) : (
-            <a href={`/login?next=${encodeURIComponent(pathname)}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>Log in</a>
+            <a href={`/login?next=${encodeURIComponent(pathname)}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>Log in</a>
           )}
         </div>
       </nav>
@@ -1244,8 +1244,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     disabled={questSubmitting || !questDescription.trim()}
                     style={{
                       padding: '10px 20px', borderRadius: '10px', border: 'none',
-                      background: (questSubmitting || !questDescription.trim()) ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #d97706)',
-                      color: 'var(--text-primary)', fontSize: '12px', fontWeight: 700,
+                      background: (questSubmitting || !questDescription.trim()) ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316, #22c55e)',
+                      color: (questSubmitting || !questDescription.trim()) ? 'var(--text-primary)' : '#fff', fontSize: '12px', fontWeight: 700,
                       cursor: (questSubmitting || !questDescription.trim()) ? 'not-allowed' : 'pointer',
                     }}
                   >{questSubmitting ? 'Posting...' : 'Post Quest'}</button>
@@ -1442,8 +1442,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   disabled={reviewSubmitting}
                   style={{
                     padding: '10px 20px', borderRadius: '10px', border: 'none',
-                    background: reviewSubmitting ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #d97706)',
-                    color: 'var(--text-primary)', fontSize: '12px', fontWeight: 700, cursor: reviewSubmitting ? 'not-allowed' : 'pointer',
+                    background: reviewSubmitting ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316, #22c55e)',
+                    color: reviewSubmitting ? 'var(--text-primary)' : '#fff', fontSize: '12px', fontWeight: 700, cursor: reviewSubmitting ? 'not-allowed' : 'pointer',
                   }}
                 >{reviewSubmitting ? 'Posting...' : 'Post Review'}</button>
               </div>

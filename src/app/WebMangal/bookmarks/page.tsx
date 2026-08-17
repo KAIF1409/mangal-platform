@@ -323,7 +323,7 @@ export default function BookmarksPage() {
             </p>
             <Link href="/" style={{
               padding: '10px 24px', borderRadius: '10px',
-              background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+              background: 'linear-gradient(135deg, #f97316, #22c55e)',
               color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700,
             }}>
               Browse Series
@@ -342,7 +342,7 @@ export default function BookmarksPage() {
               onClick={() => handleContentTypeToggle(activeContentType)}
               style={{
                 padding: '10px 24px', borderRadius: '10px',
-                background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                background: 'linear-gradient(135deg, #f97316, #22c55e)',
                 color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
               }}
             >
@@ -461,7 +461,7 @@ function BookmarkCard({
               padding: '9px', borderRadius: '9px', fontSize: '12px', fontWeight: 700,
               background: series.content_type === 'novel'
                 ? 'linear-gradient(135deg, #4c1d95, #6d28d9)'
-                : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                : 'linear-gradient(135deg, #f97316, #22c55e)',
               color: '#fff', textDecoration: 'none', textAlign: 'center',
             }}>
               <Play size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Read Ch.{series.latest_chapter_number}

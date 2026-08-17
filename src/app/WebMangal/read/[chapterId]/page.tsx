@@ -1058,12 +1058,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               }}
               style={{
                 padding: '14px 24px', borderRadius: '10px', border: 'none',
-                background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                background: 'linear-gradient(135deg, #f97316, #22c55e)',
                 color: '#fff', fontSize: '14px', fontWeight: 700,
                 cursor: 'pointer', width: '100%', transition: 'all 0.2s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #991b1b, #b91c1c)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #7f1d1d, #991b1b)')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #ea580c, #16a34a)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #f97316, #22c55e)')}
             >
               <Sparkles size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Unlimited Unlock Karo
             </button>
@@ -1315,7 +1315,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
             </Link>
           ) : <div style={{ flex: 1 }} />}
           {nextChapter ? (
-            <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '12px', fontWeight: 700, textAlign: 'center', border: 'none' }}>
+            <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff', textDecoration: 'none', fontSize: '12px', fontWeight: 700, textAlign: 'center', border: 'none' }}>
               Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
             </Link>
           ) : <div style={{ flex: 1 }} />}
@@ -1588,7 +1588,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                       <ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters
                     </Link>
                     {nextChapter ? (
-                      <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, }}>
+                      <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700, }}>
                         Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
                       </Link>
                     ) : <div />}
@@ -1653,7 +1653,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               {prevChapter && <Link href={`/WebMangal/read/${prevChapter.id}`} style={navBtnStyle}><ArrowLeft size={12} style={{ verticalAlign: 'middle' }} /> Ch.{prevChapter.chapter_number}</Link>}
               <Link href={series ? `/WebMangal/series/${series.id}` : '/'} style={navBtnStyle}><ListOrdered size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />All Chapters</Link>
               {nextChapter && (
-                <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff' }}>
+                <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #f97316, #22c55e)', borderColor: 'transparent', color: '#fff' }}>
                   Ch.{nextChapter.chapter_number} <ChevronRight size={12} style={{ verticalAlign: 'middle' }} />
                 </Link>
               )}
@@ -1698,7 +1698,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               {isRTL ? (
                 currentPage === pages.length - 1 ? (
                   nextChapter ? (
-                    <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
+                    <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #f97316, #22c55e)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
                       <ArrowLeft size={13} style={{ verticalAlign: 'middle' }} /> Next Chapter
                     </Link>
                   ) : (
@@ -1729,7 +1729,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               ) : (
                 currentPage === pages.length - 1 ? (
                   nextChapter ? (
-                    <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
+                    <Link href={`/WebMangal/read/${nextChapter.id}`} style={{ ...navBtnStyle, background: 'linear-gradient(135deg, #f97316, #22c55e)', borderColor: 'transparent', color: '#fff', textDecoration: 'none' }}>
                       Next Chapter <ChevronRight size={13} style={{ verticalAlign: 'middle' }} />
                     </Link>
                   ) : (
@@ -1811,7 +1811,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 disabled={!commentBody.trim() || commentSubmitting || !userId}
                 style={{
                   padding: '10px 14px', borderRadius: '10px', border: 'none',
-                  background: commentBody.trim() && userId ? 'linear-gradient(135deg,#7f1d1d,#991b1b)' : 'var(--border-color)',
+                  background: commentBody.trim() && userId ? 'linear-gradient(135deg, #f97316, #22c55e)' : 'var(--border-color)',
                   color: commentBody.trim() && userId ? '#fff' : 'var(--text-muted)',
                   fontSize: '13px', fontWeight: 700, cursor: commentBody.trim() && userId ? 'pointer' : 'not-allowed',
                   alignSelf: 'flex-end', whiteSpace: 'nowrap',
@@ -1900,7 +1900,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                               disabled={!replyBody.trim() || replySubmitting}
                               style={{
                                 padding: '6px 12px', borderRadius: '8px', border: 'none',
-                                background: replyBody.trim() ? 'linear-gradient(135deg,#7f1d1d,#991b1b)' : 'var(--border-color)',
+                                background: replyBody.trim() ? 'linear-gradient(135deg, #f97316, #22c55e)' : 'var(--border-color)',
                                 color: replyBody.trim() ? '#fff' : 'var(--text-muted)',
                                 fontSize: '12px', fontWeight: 700, cursor: replyBody.trim() ? 'pointer' : 'not-allowed',
                               }}

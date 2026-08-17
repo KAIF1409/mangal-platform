@@ -273,7 +273,7 @@ export default function LibraryPage() {
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}><Inbox size={48} strokeWidth={1.5} color="var(--text-tertiary)" /></div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Your library is empty</p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 24px' }}>Follow a series to get notified when new chapters drop</p>
-            <Link href="/" style={{ padding: '10px 24px', borderRadius: '10px', background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+            <Link href="/" style={{ padding: '10px 24px', borderRadius: '10px', background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
               Browse Series
             </Link>
           </div>
@@ -339,7 +339,7 @@ function LibraryCard({ series, onUnfollow }: { series: FollowedSeries; onUnfollo
         {series.latest_chapter_id && (
           <a href={`/WebMangal/read/${series.latest_chapter_id}`} style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-            background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+            background: 'linear-gradient(135deg, #f97316, #22c55e)',
             color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
           }}>
             ▶ Ch.{series.latest_chapter_number}

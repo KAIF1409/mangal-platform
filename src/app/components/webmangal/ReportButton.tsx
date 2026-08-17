@@ -128,7 +128,7 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
                   onClick={reset}
                   style={{
                     padding: '10px 20px', borderRadius: '8px', fontWeight: 700, fontSize: '13px',
-                    background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                    background: 'linear-gradient(135deg, #f97316, #22c55e)',
                     color: '#fff', border: 'none', cursor: 'pointer',
                   }}
                 >
@@ -195,7 +195,7 @@ export default function ReportButton({ targetType, targetId, variant = 'text' }:
                     disabled={!reason || submitting}
                     style={{
                       flex: 1, padding: '10px', borderRadius: '8px', fontWeight: 700, fontSize: '13px',
-                      background: !reason ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                      background: !reason ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316, #22c55e)',
                       color: !reason ? 'var(--text-muted)' : '#fff',
                       border: 'none', cursor: !reason || submitting ? 'not-allowed' : 'pointer',
                       opacity: submitting ? 0.7 : 1,

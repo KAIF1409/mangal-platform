@@ -395,7 +395,7 @@ export default function HomePage() {
               <a href="/login" className="mangal-home-login-link" style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>{t('logIn')}</a>
               <a href="/login" style={{
                 padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-                background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+                background: 'linear-gradient(135deg, #f97316, #22c55e)',
                 color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap',
               }}>{t('getStarted')}</a>
             </>
