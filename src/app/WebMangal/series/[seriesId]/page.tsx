@@ -845,7 +845,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             </h1>
             {/* Step 13 — Public Creator Profile: links to /creator/[username] */}
             {creatorUsername && (
-              <a href={`/creator/${creatorUsername}`} style={{
+              <a href={`/WebMangal/creator/${creatorUsername}`} style={{
                 fontSize: '13px', color: '#9aa0ab', textDecoration: 'none',
                 display: 'inline-block', marginBottom: '14px',
               }}

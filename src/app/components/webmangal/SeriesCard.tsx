@@ -156,7 +156,7 @@ export default function SeriesCard({
 
           {creatorUsername && (
             <div
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/creator/${creatorUsername}`); }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/WebMangal/creator/${creatorUsername}`); }}
               style={{ fontSize: '10px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
               onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--accent)'; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-tertiary)'; }}

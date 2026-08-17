@@ -161,6 +161,15 @@ const nextConfig: NextConfig = {
         destination: "/WebMangal/upload",
         permanent: true,
       },
+      // creator/[username] is content-wise WebMangal-only (renders a
+      // series grid) - KaTube and Kalpana Circle have their own
+      // dedicated profile pages now (/katube/channel/[username],
+      // /kalpana-circle/profile/[username], planned).
+      {
+        source: "/creator/:username",
+        destination: "/WebMangal/creator/:username",
+        permanent: true,
+      },
     ];
   },
 };

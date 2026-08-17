@@ -758,7 +758,7 @@ function KalpanaCircleInner() {
                     <div style={{ padding: '6px 14px' }}>
                       <div style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em', margin: '6px 0' }}>DREAMERS</div>
                       {userResults.map(u => (
-                        <Link key={u.user_id} href={`/creator/${u.username}`} onClick={closeSearch} style={{
+                        <Link key={u.user_id} href={`/WebMangal/creator/${u.username}`} onClick={closeSearch} style={{
                           display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', textDecoration: 'none', color: 'var(--text-primary)',
                         }}>
                           <Avatar name={u.username} size={32} />
@@ -771,7 +771,7 @@ function KalpanaCircleInner() {
                     <div style={{ padding: '6px 14px', borderTop: userResults.length ? '1px solid var(--border-color)' : 'none' }}>
                       <div style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em', margin: '6px 0' }}>POSTS</div>
                       {postResults.map(p => (
-                        <Link key={p.id} href={`/creator/${p.username}`} onClick={closeSearch} style={{
+                        <Link key={p.id} href={`/WebMangal/creator/${p.username}`} onClick={closeSearch} style={{
                           display: 'block', padding: '8px 0', textDecoration: 'none', color: 'var(--text-primary)',
                         }}>
                           <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-tertiary)' }}>@{p.username}</div>

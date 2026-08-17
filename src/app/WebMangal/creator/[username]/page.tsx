@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { getBackNav } from '../../lib/backNav';
+import { getBackNav } from '../../../lib/backNav';
 import Image from 'next/image';
-import { supabase } from '../../lib/supabase';
-import { isDeveloperRole } from '../../lib/auth/roles';
+import { supabase } from '../../../lib/supabase';
+import { isDeveloperRole } from '../../../lib/auth/roles';
 import Link from 'next/link';
 import { Search, ArrowLeft, Flame, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText, PenLine } from 'lucide-react';
-import VerifiedBadge from '../../components/shared/VerifiedBadge';
+import VerifiedBadge from '../../../components/shared/VerifiedBadge';
 
 interface Series {
   id: string;

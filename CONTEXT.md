@@ -5274,3 +5274,41 @@ confirmed live rather than assumed from docs).
 `dashboard`, `creator`, `leaderboard`, `admin`, `settings`,
 `become-creator` were explicitly confirmed and left in place — not an
 oversight.
+
+## §75 — creator/[username] moved under WebMangal/ (option B chosen)
+
+Founder decision on the open question from §74: went with **option B** —
+`/creator/[username]` formally becomes WebMangal's writer profile page
+(matches what it actually renders — series grid only), rather than being
+extended into a shared cross-product hub (option A). Moved it under
+`WebMangal/`, same mechanics as every prior move: fixed the +1
+relative-import depth (`../../lib/...` → `../../../lib/...`), found and
+rewrote every internal link across the codebase — and this one reached
+further than expected, since it really had been linked from everywhere:
+`SeriesCard`, KaTube's `WriterOfTheMonthBanner` and video-watch page,
+`WebMangal/series/[seriesId]`, Kalpana Circle's main page (2 places) and
+`saved` page, and `leaderboard`. Added a `/creator/:username` →
+`/WebMangal/creator/:username` permanent redirect.
+
+**Verified:** `tsc --noEmit` clean, `eslint` unchanged (62/19/43, same
+baseline), live redirect test: `/creator/someuser` → 308 →
+`/WebMangal/creator/someuser`.
+
+### Deferred to next session (founder said "continue" when ready — don't start on its own)
+
+Now that `/creator/[username]` is committed to being WebMangal-only,
+**KaTube and Kalpana Circle need their own dedicated profile pages** to
+replace what they lost by no longer sharing that page:
+- `/katube/channel/[username]` — a KaTube-native channel/creator page
+- `/kalpana-circle/profile/[username]` — a Kalpana Circle-native profile
+  page
+
+Neither exists yet. The 8 links found above that pointed at
+`/creator/[username]` from KaTube/Kalpana Circle context (video-watch
+page's creator byline, `WriterOfTheMonthBanner`, Kalpana Circle's search
+results and `saved` page) currently redirect through to the WebMangal
+profile — that's correct/harmless for now (a KaTube viewer clicking a
+creator's name landing on their WebMangal writer page isn't broken,
+just not ideal), but once the two new pages exist those specific links
+should be re-pointed to the product-native profile instead of the
+WebMangal one, based on which product context the link appears in.

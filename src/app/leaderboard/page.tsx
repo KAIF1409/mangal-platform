@@ -123,7 +123,7 @@ function LeaderRow({ row, rank }: { row: LeaderboardRow; rank: number }) {
 
   return (
     <Link
-      href={`/creator/${row.username}`}
+      href={`/WebMangal/creator/${row.username}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

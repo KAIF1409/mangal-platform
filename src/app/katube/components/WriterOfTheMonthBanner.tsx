@@ -38,7 +38,7 @@ export default function WriterOfTheMonthBanner() {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto 28px', padding: '0 20px' }}>
       <Link
-        href={winner.writer_username ? `/creator/${winner.writer_username}` : '/kalpana-circle/mangal-of-the-week'}
+        href={winner.writer_username ? `/WebMangal/creator/${winner.writer_username}` : '/kalpana-circle/mangal-of-the-week'}
         style={{
           display: 'flex', alignItems: 'center', gap: '16px', textDecoration: 'none',
           padding: '16px 20px', borderRadius: '16px', flexWrap: 'wrap',
