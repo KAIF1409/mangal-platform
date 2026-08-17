@@ -12,7 +12,7 @@ import MangalOfTheWeekBanner from './components/MangalOfTheWeekBanner';
 import WriterOfTheMonthBanner from './components/WriterOfTheMonthBanner';
 import { MangalWeekBadge } from './components/VideoGridCard';
 import { supabase } from '../lib/supabase';
-import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo } from 'lucide-react';
+import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo, X, PlusSquare, UserCircle2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // ── KaTube — Step 3 (video grid + watch page) + Step 4 (upload flow,
@@ -452,6 +452,7 @@ function RealVideoCard({ video, winnerRank }: { video: RealVideo; winnerRank?: n
 }
 
 export default function KaTubePage() {
+  const router = useRouter();
   const [videos, setVideos] = useState<RealVideo[]>([]);
   const [shorts, setShorts] = useState<RealShort[]>([]);
   const [loading, setLoading] = useState(true);
@@ -489,6 +490,15 @@ export default function KaTubePage() {
   const [nowMs] = useState(() => Date.now());
   const [isLight, setIsLight] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // Mobile search takeover (YouTube-app style): the desktop search bar is
+  // `display: none` below 768px (no room in the nav — see the Mobile
+  // compatibility note above), which left phone users with literally no
+  // way to search. This adds a magnifying-glass icon (mobile only, via the
+  // same .katube-mobile-search-btn CSS pattern) that opens a full-screen
+  // overlay with its own input, reusing the exact same `searchQuery` state
+  // and `filteredVideos` results the desktop bar already computes — so
+  // there's only one search implementation, just two entry points into it.
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   // Lightweight display-name lookup for the nav avatar (template shows the
   // name next to the avatar). No redirect/gating like /dashboard does —
   // KaTube is a public discovery page, so a logged-out visitor just sees the
@@ -679,6 +689,9 @@ export default function KaTubePage() {
         .katube-theme-toggle { display: inline-flex; }
 
         .katube-backdrop { display: none; }
+        .katube-mobile-search-btn { display: none; }
+        .katube-bottom-nav { display: none; }
+        .katube-bottom-nav-spacer { display: none; }
 
         .katube-sidebar {
           width: 240px;
@@ -713,6 +726,26 @@ export default function KaTubePage() {
           .katube-label-full { display: none; }
           .katube-label-mobile { display: inline; }
           .katube-theme-toggle { display: none; }
+          .katube-mobile-search-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 34px; height: 34px; border-radius: 50%; border: none;
+            background: transparent; color: var(--text-secondary); cursor: pointer;
+            flex-shrink: 0;
+          }
+
+          /* ── Bottom tab bar — YouTube-app style (Home / Shorts / Create /
+             Subscriptions / You). Only below 768px; desktop keeps the
+             sidebar as the primary nav and has no bottom bar. A spacer div
+             at the end of the page reserves the same height so the bar
+             never covers the last row of content/footer links. */
+          .katube-bottom-nav {
+            display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 180;
+            background: var(--nav-bg); backdrop-filter: blur(16px);
+            border-top: 1px solid var(--border-color);
+            padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+            justify-content: space-between;
+          }
+          .katube-bottom-nav-spacer { display: block; height: 58px; }
 
           .katube-backdrop.katube-backdrop--open {
             display: block;
@@ -809,6 +842,11 @@ export default function KaTubePage() {
         </form>
 
         <div className="katube-nav-right" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <button
+            className="katube-mobile-search-btn"
+            onClick={() => setMobileSearchOpen(true)}
+            aria-label="Search KaTube"
+          ><Search size={19} /></button>
           <Link href="/katube/upload" style={{
             padding: '8px 14px', borderRadius: '18px', fontSize: '12.5px', fontWeight: 700,
             color: '#fff', textDecoration: 'none', background: '#f97316',
@@ -1123,8 +1161,185 @@ export default function KaTubePage() {
         </p>
       </div>
 
+      {/* Reserves space at the bottom of the scrollable content on mobile so
+          the fixed bottom tab bar never overlaps the last row of cards or
+          the placeholder note above. No-op on desktop (bar isn't rendered
+          there). */}
+      <div className="katube-bottom-nav-spacer" aria-hidden="true" />
+
         </div>
       </div>
+
+      {/* ── Mobile bottom tab bar — YouTube-app layout ──
+          Home / Shorts / Create / Subscriptions / You. Home and Shorts
+          reuse the exact same activeSidebar state the desktop sidebar
+          items already drive (tapping either just filters this same page,
+          same as clicking "Home"/"Fast tap" in the drawer) — Create,
+          Subscriptions, and You are real routes. CSS-only hidden above
+          768px (see .katube-bottom-nav in the <style> block above), so
+          it's harmless to always render. */}
+      <nav className="katube-bottom-nav" aria-label="KaTube mobile navigation">
+        <button
+          onClick={() => { setActiveSidebar('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+            flex: 1, padding: '6px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
+            color: activeSidebar === 'home' ? '#f97316' : 'var(--text-tertiary)',
+          }}
+        >
+          <Home size={20} strokeWidth={activeSidebar === 'home' ? 2.4 : 2} />
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>Home</span>
+        </button>
+        <button
+          onClick={() => { setActiveSidebar('fast'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+            flex: 1, padding: '6px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
+            color: activeSidebar === 'fast' ? '#f97316' : 'var(--text-tertiary)',
+          }}
+        >
+          <Zap size={20} strokeWidth={activeSidebar === 'fast' ? 2.4 : 2} />
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>Shorts</span>
+        </button>
+        <Link
+          href="/katube/upload"
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+            flex: 1, padding: '6px 2px', textDecoration: 'none', color: 'var(--text-tertiary)',
+          }}
+        >
+          <span style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '30px', height: '30px', borderRadius: '8px', background: '#f97316', color: '#fff',
+          }}><PlusSquare size={17} strokeWidth={2.4} /></span>
+        </Link>
+        <Link
+          href="/katube/subscriptions"
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+            flex: 1, padding: '6px 2px', textDecoration: 'none', color: 'var(--text-tertiary)',
+          }}
+        >
+          <Users size={20} />
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>Subs</span>
+        </Link>
+        <Link
+          href="/katube/dashboard"
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+            flex: 1, padding: '6px 2px', textDecoration: 'none', color: 'var(--text-tertiary)',
+          }}
+        >
+          {userName ? (
+            <span style={{
+              width: '20px', height: '20px', borderRadius: '50%',
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '10px', color: 'var(--text-tertiary)', fontWeight: 700,
+            }}>K</span>
+          ) : (
+            <UserCircle2 size={20} />
+          )}
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>You</span>
+        </Link>
+      </nav>
+
+      {/* ── Mobile full-screen search takeover ──
+          Opens over everything (nav included) via the search icon added to
+          .katube-mobile-search-btn. Reuses `searchQuery`/`filteredVideos`
+          from the desktop search bar's own state — typing here filters the
+          exact same list, just rendered as a dedicated results list instead
+          of the underlying grid. Empty query shows a "Trending now" list
+          (top of sortedVideos) so the screen is never blank, matching
+          YouTube mobile's suggestion behavior before you type anything. */}
+      {mobileSearchOpen && (
+        <div
+          role="dialog"
+          aria-label="Search KaTube"
+          style={{
+            position: 'fixed', inset: 0, zIndex: 300,
+            background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column',
+          }}
+        >
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px',
+            borderBottom: '1px solid var(--border-color)', flexShrink: 0,
+          }}>
+            <button
+              onClick={() => { setMobileSearchOpen(false); }}
+              aria-label="Close search"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '34px', height: '34px', borderRadius: '50%', border: 'none',
+                background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0,
+              }}
+            ><ArrowLeft size={19} /></button>
+            <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search KaTube"
+                style={{
+                  width: '100%', height: '38px', padding: '0 34px 0 14px', borderRadius: '20px',
+                  border: '1px solid var(--border-color)', background: 'var(--bg-input)',
+                  color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  style={{
+                    position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
+                    display: 'flex', width: '26px', height: '26px', borderRadius: '50%', border: 'none',
+                    background: 'transparent', color: 'var(--text-tertiary)', cursor: 'pointer',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}
+                ><X size={15} /></button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            {!searchQuery.trim() && (
+              <div style={{ padding: '14px 16px 4px', fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
+                Trending on KaTube
+              </div>
+            )}
+            {(searchQuery.trim() ? sortedVideos : [...videos].sort((a, b) => b.views - a.views)).slice(0, searchQuery.trim() ? 40 : 10).map(v => (
+              <button
+                key={v.id}
+                onClick={() => {
+                  setMobileSearchOpen(false);
+                  router.push(`/katube/watch/${v.id}`);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
+                  padding: '10px 16px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{ width: '96px', height: '54px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#000', position: 'relative' }}>
+                  <img
+                    src={`https://img.youtube.com/vi/${v.youtube_id}/hqdefault.jpg`}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </span>
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <span style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.title}</span>
+                  <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{v.creator} · {v.views} views</span>
+                </span>
+              </button>
+            ))}
+            {searchQuery.trim() && sortedVideos.length === 0 && (
+              <div style={{ padding: '40px 20px', textAlign: 'center', fontSize: '13px', color: 'var(--text-tertiary)' }}>
+                No results for &quot;{searchQuery}&quot;
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
