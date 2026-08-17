@@ -53,6 +53,50 @@ export default function KaTubeShortsFeedPage() {
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
 
+  // ── Perf fix: "Fast tap takes very long to load while scrolling" ──
+  // Two things were actually going on, neither of them a fake/artificial
+  // delay — both are now fixed:
+  // 1. The preload window was only active ± 1, so a normal-speed swipe
+  //    (which lands 1-2 shorts further than the previous "near" set)
+  //    regularly arrived at a short whose iframe hadn't started loading
+  //    yet at all — a real load, not a slow one, just one that hadn't been
+  //    kicked off in time. Widened to active-1 .. active+2 (bias toward the
+  //    scroll-forward direction, since that's the overwhelmingly common
+  //    swipe direction in a Reels/Shorts-style feed) so the next couple of
+  //    shorts are already warm by the time a normal swipe reaches them.
+  // 2. There was no loading indicator at all — a still-loading short just
+  //    showed a blank black frame, which reads as "stuck"/"very slow" even
+  //    when it's actually only a second away. Added a real spinner keyed
+  //    off the iframe's own load event (not a timer), so it only appears
+  //    when a short is genuinely still loading (e.g. weak network) and
+  //    disappears the instant the player is actually ready — on a good
+  //    connection the preloaded short is normally already marked loaded
+  //    before the user scrolls to it, so the spinner never shows at all.
+  const [loadedIdx, setLoadedIdx] = useState<Set<number>>(new Set());
+  const markLoaded = useCallback((idx: number) => {
+    setLoadedIdx(prev => (prev.has(idx) ? prev : new Set(prev).add(idx)));
+  }, []);
+
+  // Preconnect to YouTube's embed + thumbnail hosts so the very first
+  // connection (DNS + TLS handshake) for a short isn't paid for on the
+  // critical path of the first/next iframe load — shaves a real chunk of
+  // time off "time to first frame" especially on higher-latency mobile
+  // networks, at zero cost on fast ones.
+  useEffect(() => {
+    const hosts = ['https://www.youtube.com', 'https://i.ytimg.com', 'https://img.youtube.com'];
+    const added: HTMLLinkElement[] = [];
+    hosts.forEach(href => {
+      if (document.querySelector(`link[rel="preconnect"][href="${href}"]`)) return;
+      const link = document.createElement('link');
+      link.rel = 'preconnect';
+      link.href = href;
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+      added.push(link);
+    });
+    return () => added.forEach(l => l.remove());
+  }, []);
+
   // Double-tap-to-like (YouTube Shorts/Instagram Reels staple) — a big
   // heart briefly bursts over whichever short was tapped. There's no real
   // like backend yet for this feed (see the sidebar Like button's toast
@@ -185,6 +229,9 @@ export default function KaTubeShortsFeedPage() {
           40% { transform: translate(-50%, -50%) scale(1); }
           100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
         }
+        @keyframes katube-shorts-spin {
+          to { transform: rotate(360deg); }
+        }
       `}</style>
 
       <Link href="/katube" style={{
@@ -212,9 +259,16 @@ export default function KaTubeShortsFeedPage() {
           }}
         >
           {shorts.map((short, idx) => {
-            // Windowing: only mount the iframe for active ± 1
-            const isNear = Math.abs(idx - activeIndex) <= 1;
+            // Windowing: mount the iframe for the active short, the one
+            // just behind it, and the two ahead of it. Biased forward
+            // (2 ahead vs 1 behind) since a Shorts-style feed is scrolled
+            // forward far more often than backward — this is what actually
+            // keeps the *next* short warm before a normal-speed swipe
+            // reaches it, instead of only ever preloading after arrival.
+            const distanceFromActive = idx - activeIndex;
+            const isNear = distanceFromActive >= -1 && distanceFromActive <= 2;
             const isActive = idx === activeIndex;
+            const isBuffering = isActive && !loadedIdx.has(idx);
             return (
               <div
                 key={short.id}
@@ -230,20 +284,53 @@ export default function KaTubeShortsFeedPage() {
                   style={{ position: 'relative', height: '100%', maxWidth: '480px', width: '100%', aspectRatio: '9/16', margin: '0 auto' }}
                 >
                   {isNear ? (
-                    <iframe
-                      ref={el => { iframeRefs.current[idx] = el; }}
-                      src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&enablejsapi=1${isActive ? '&autoplay=1&mute=1' : ''}`}
-                      title={short.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
-                    />
+                    <>
+                      {/* Thumbnail stays underneath the iframe until the
+                          player actually reports loaded — covers the gap
+                          between mount and first frame so it never reads
+                          as a blank black screen while genuinely waiting
+                          on a slow network. */}
+                      {!loadedIdx.has(idx) && (
+                        <img
+                          src={`https://img.youtube.com/vi/${short.youtube_id}/hqdefault.jpg`}
+                          alt={short.title}
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      )}
+                      <iframe
+                        ref={el => { iframeRefs.current[idx] = el; }}
+                        src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&enablejsapi=1${isActive ? '&autoplay=1&mute=1' : ''}`}
+                        title={short.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        onLoad={() => markLoaded(idx)}
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+                      />
+                    </>
                   ) : (
                     <img
                       src={`https://img.youtube.com/vi/${short.youtube_id}/hqdefault.jpg`}
                       alt={short.title}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                     />
+                  )}
+
+                  {/* Real network-tied buffering indicator — only shows for
+                      the active short while it's genuinely still loading.
+                      Never an artificial/timed delay: it's driven purely by
+                      whether this iframe has actually fired its load event. */}
+                  {isBuffering && (
+                    <div style={{
+                      position: 'absolute', top: '50%', left: '50%', zIndex: 4,
+                      transform: 'translate(-50%, -50%)', pointerEvents: 'none',
+                    }}>
+                      <div style={{
+                        width: '34px', height: '34px', borderRadius: '50%',
+                        border: '3px solid rgba(255,255,255,0.25)',
+                        borderTopColor: '#fff',
+                        animation: 'katube-shorts-spin 0.8s linear infinite',
+                      }} />
+                    </div>
                   )}
 
                   {/* Transparent tap-capture overlay — a cross-origin

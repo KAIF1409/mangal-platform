@@ -5513,6 +5513,52 @@ sandbox doesn't have, not more static reading.
 (13 pre-existing warnings, down from 16). `next build` succeeds. Committed
 and pushed directly to `main` per founder's instruction — no branch/PR.
 
+## §68 — Fast tap (Shorts feed): fixed slow/laggy loading while scrolling
+
+**Founder-reported bug:** Fast Tap (Shorts) feed took very long to load
+between videos while scrolling — not matching the instant Reels/DramaBox-
+style scroll it's meant to have. Fixed in
+`app/katube/shorts/[shortId]/page.tsx`.
+
+**Two real causes, not an artificial delay:**
+1. The iframe preload window was only "active ± 1" (§7's original
+   windowing choice). A normal-speed swipe regularly landed on a short
+   whose iframe hadn't started loading at all yet — a genuine cold load,
+   not a slow one, just one that hadn't been kicked off in time.
+2. No loading indicator existed at all — a still-loading short showed a
+   blank black frame, which reads as "stuck" even a second before it's
+   actually ready.
+
+**Fix:**
+- Widened the preload window to `active-1 .. active+2`, biased forward
+  (2 ahead vs 1 behind) since a Shorts feed is swiped forward far more
+  than backward — the next couple of shorts are now warm before a normal
+  swipe reaches them.
+- Added a real buffering spinner keyed off the iframe's own `onLoad`
+  event (not a timer) — only appears for the *active* short while it's
+  genuinely still loading. On good network the short is already
+  preloaded by arrival, so the spinner essentially never shows; on a
+  weak network it shows honestly instead of a dead black frame. This is
+  the "if network problem, loading circle; if network's fine, no
+  loading circle" behavior the founder asked for.
+- Kept the YouTube thumbnail visible underneath the iframe until load
+  fires, so there's never a blank frame during the gap either way.
+- Added `preconnect` hints for `youtube.com`/`i.ytimg.com`/
+  `img.youtube.com` so first-connection setup (DNS/TLS) isn't on the
+  critical path of the very first video.
+
+**Not done:** doesn't change the underlying `<iframe src=...>` embed
+architecture (still no full YouTube IFrame Player JS API here, unlike
+`KaTubePlayer.tsx` used on the long-video watch page per §54) — kept
+consistent with §7's original "keep this feed's DOM/network light"
+choice rather than adding the heavier JS API script to every short.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on the touched
+file: 0 errors (2 pre-existing `<img>`-vs-`next/image` warnings, same
+style already used elsewhere in this file, not introduced by this fix).
+Committed and pushed directly to `main` (`c325fe0`) per founder's
+instruction — no branch/PR.
+
 ## §80 — WebMangal perf: series-page load waterfall + manga reader quality selector
 
 Founder-reported: WebMangal (series pages, upload flow, "many more pages") and
