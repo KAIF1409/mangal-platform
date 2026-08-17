@@ -301,7 +301,7 @@ export function useUiLanguage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === 'en' || saved === 'hi') setLangState(saved);
+      if (saved === 'en' || saved === 'hi') setLangState(saved); // eslint-disable-line react-hooks/set-state-in-effect
     } catch {
       // localStorage unavailable (e.g. private mode) — silently fall back to English
     }

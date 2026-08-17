@@ -153,6 +153,9 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
   // Load reader prefs once on mount (these are reader-level preferences,
   // not series-level — they persist across every chapter/series this reader opens)
+  /* eslint-disable react-hooks/set-state-in-effect -- one-time hydration from
+     localStorage on mount; can't run during render (localStorage isn't
+     available server-side / during SSR), so this has to be an effect. */
   useEffect(() => {
     try {
       const raw = localStorage.getItem('mangal_reader_prefs');
@@ -173,9 +176,13 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     }
     setPrefsLoaded(true);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Once series loads we know content_type. Apply per-type bgColor default:
   // sepia for novels (easy on eyes at night), black for manga.
+  /* eslint-disable react-hooks/set-state-in-effect -- reading the same
+     localStorage prefs once content_type becomes known; same "can't run
+     during render" constraint as the effect above. */
   useEffect(() => {
     if (!series) return;
     try {
@@ -190,6 +197,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       setBgColor(series.content_type === 'novel' ? '#f5f0e0' : '#000000');
     }
   }, [series?.content_type]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Persist whenever a preference changes (skip the very first render so we
   // don't immediately overwrite saved prefs with defaults before they load)
@@ -340,12 +348,18 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     });
   }, []);
 
+  // Reset reader state and reload whenever the chapter param changes (next/
+  // prev chapter nav within the same page instance, no full remount).
+  /* eslint-disable react-hooks/set-state-in-effect -- resetting pager state
+     on navigation between chapters, not a mount-time fetch; genuinely needs
+     to run in response to chapterId changing. */
   useEffect(() => {
     setLoading(true);
     setCurrentPage(0);
     lastSavedPage.current = 0;
     loadChapter();
   }, [chapterId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
 
   // Bug fix — a creator editing this exact chapter (title, pages, content)
@@ -1285,8 +1299,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       {previewingOwnUnpublished && (
         <div style={{ position: 'fixed', top: '52px', left: 0, right: 0, zIndex: 90, textAlign: 'center', fontSize: '11px', fontWeight: 700, color: '#fff', background: previewingOwnUnpublished === 'draft' ? '#92400e' : '#1d4ed8', padding: '6px 12px' }}>
           {previewingOwnUnpublished === 'draft'
-            ? <><FileText size={12} style={{ verticalAlign: 'middle' }} /> PREVIEW — this chapter is still a draft. Readers can't see this.</>
-            : <><CalendarClock size={12} style={{ verticalAlign: 'middle' }} /> PREVIEW — scheduled{unavailableUntil ? ` for ${new Date(unavailableUntil).toLocaleString()}` : ''}. Readers can't see this yet.</>}
+            ? <><FileText size={12} style={{ verticalAlign: 'middle' }} /> PREVIEW — this chapter is still a draft. Readers can&apos;t see this.</>
+            : <><CalendarClock size={12} style={{ verticalAlign: 'middle' }} /> PREVIEW — scheduled{unavailableUntil ? ` for ${new Date(unavailableUntil).toLocaleString()}` : ''}. Readers can&apos;t see this yet.</>}
         </div>
       )}
       <div style={{ paddingTop: lockScreen ? 0 : '56px' }}>

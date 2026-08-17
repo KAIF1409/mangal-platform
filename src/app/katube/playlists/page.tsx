@@ -47,7 +47,7 @@ export default function PlaylistsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/set-state-in-effect
 
   async function createPlaylist() {
     if (!newTitle.trim()) return;

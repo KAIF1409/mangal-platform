@@ -47,7 +47,7 @@ function useClock() {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    setNow(new Date());
+    setNow(new Date()); // eslint-disable-line react-hooks/set-state-in-effect
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);

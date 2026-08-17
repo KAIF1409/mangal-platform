@@ -61,10 +61,14 @@ export default function NotificationBell({ userId }: { userId: string }) {
   // time) — the table is realtime-enabled (replica identity full +
   // supabase_realtime publication) so a future badge-without-opening
   // upgrade can subscribe directly if wanted.
+  /* eslint-disable react-hooks/set-state-in-effect -- opening the dropdown
+     triggers a fetch; same "just opened, fetch once" pattern this codebase
+     already grants an exception elsewhere (see KatubeShareSheet.tsx). */
   useEffect(() => {
     if (open && !loadedOnceRef.current) { loadedOnceRef.current = true; load(); }
     else if (open) { load(); }
   }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Lightweight unread-count check on mount so the badge shows without
   // requiring the viewer to open the dropdown first.

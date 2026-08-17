@@ -100,7 +100,7 @@ export default function HomePage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('mangal_content_type') as 'all' | 'mangal' | 'novel' | null;
-      if (saved && ['all', 'mangal', 'novel'].includes(saved)) setActiveContentType(saved);
+      if (saved && ['all', 'mangal', 'novel'].includes(saved)) setActiveContentType(saved); // eslint-disable-line react-hooks/set-state-in-effect
     } catch { /* ignore */ }
   }, []);
 

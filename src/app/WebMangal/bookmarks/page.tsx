@@ -80,7 +80,7 @@ export default function BookmarksPage() {
   useEffect(() => {
     const stored = localStorage.getItem(CONTENT_TYPE_STORAGE_KEY);
     if (stored === 'mangal' || stored === 'novel' || stored === 'all') {
-      setActiveContentType(stored);
+      setActiveContentType(stored); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, []);
 

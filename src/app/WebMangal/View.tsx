@@ -131,7 +131,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
     // Step 21 — Dual Content Mode: restore the reader's last toggle choice
     try {
       const saved = localStorage.getItem(CONTENT_TYPE_STORAGE_KEY);
-      if (saved === 'all' || saved === 'mangal' || saved === 'novel') setActiveContentType(saved);
+      if (saved === 'all' || saved === 'mangal' || saved === 'novel') setActiveContentType(saved); // eslint-disable-line react-hooks/set-state-in-effect
     } catch {
       // localStorage unavailable — default 'all' is fine
     }
@@ -303,7 +303,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
   // Date.now() can't be called during render (impure), so it's captured
   // once via effect instead.
   const [nowMs, setNowMs] = useState<number | null>(null);
-  useEffect(() => { setNowMs(Date.now()); }, []);
+  useEffect(() => { setNowMs(Date.now()); }, []); // eslint-disable-line react-hooks/set-state-in-effect
   const recentlyUpdatedIds = useMemo(() => {
     if (nowMs === null) return new Set<string>();
     const cutoff = nowMs - 3 * 86_400_000;

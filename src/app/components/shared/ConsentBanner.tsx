@@ -52,7 +52,7 @@ export default function ConsentBanner() {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) {
-        setVisible(true);
+        setVisible(true); // eslint-disable-line react-hooks/set-state-in-effect
         return;
       }
       const parsed: StoredConsent = JSON.parse(raw);

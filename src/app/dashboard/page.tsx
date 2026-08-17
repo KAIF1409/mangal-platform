@@ -428,7 +428,7 @@ export default function Dashboard() {
   // switching tabs back and forth doesn't refire the queries.
   useEffect(() => {
     if (activeTab === 'analytics' && !fetching) {
-      fetchAnalytics();
+      fetchAnalytics(); // eslint-disable-line react-hooks/set-state-in-effect
     }
   }, [activeTab, fetching]);
 

@@ -71,7 +71,7 @@ export default function ManagePagesModal({
   }, [chapterId]);
 
   useEffect(() => {
-    fetchPages();
+    fetchPages(); // eslint-disable-line react-hooks/set-state-in-effect
   }, [fetchPages]);
 
   // ── Reorder ────────────────────────────────────────────────────────────────

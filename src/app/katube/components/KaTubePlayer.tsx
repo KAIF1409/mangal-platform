@@ -69,7 +69,7 @@ export default function KaTubePlayer({
   const playerRef = useRef<YTPlayerInstance | null>(null);
   const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onEndedRef = useRef(onEnded);
-  onEndedRef.current = onEnded;
+  useEffect(() => { onEndedRef.current = onEnded; }, [onEnded]);
 
   useEffect(() => {
     let cancelled = false;

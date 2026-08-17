@@ -51,7 +51,7 @@ export default function PlaylistDetailPage() {
     setLoading(false);
   }
 
-  useEffect(() => { if (playlistId) load(); }, [playlistId]);
+  useEffect(() => { if (playlistId) load(); }, [playlistId]); // eslint-disable-line react-hooks/set-state-in-effect
 
   async function removeVideo(videoId: string) {
     await supabase.from('katube_playlist_videos').delete().eq('playlist_id', playlistId).eq('video_id', videoId);

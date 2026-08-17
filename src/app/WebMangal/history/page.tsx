@@ -68,7 +68,7 @@ export default function HistoryPage() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored === 'mangal' || stored === 'novel') {
-        setActiveContentType(stored);
+        setActiveContentType(stored); // eslint-disable-line react-hooks/set-state-in-effect
       }
     } catch {}
   }, []);
