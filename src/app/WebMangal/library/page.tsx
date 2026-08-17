@@ -89,10 +89,19 @@ export default function LibraryPage() {
           const s = Array.isArray(f.series) ? f.series[0] : f.series;
           if (!s) return null;
 
+          // Bug fix — same gap as the series page: this fetched the latest
+          // chapter by chapter_number with no is_draft/scheduled_at filter,
+          // so a follower's "New" badge and read-through link could point at
+          // a chapter that isn't actually out yet, landing them on the
+          // reader's draft/scheduled wall instead of a chapter. This is a
+          // reader's own followed-series list, not a creator management
+          // view, so always filter to what's actually published.
           const { data: chapters } = await supabase
             .from('chapters')
             .select('id, chapter_number, created_at')
             .eq('series_id', s.id)
+            .eq('is_draft', false)
+            .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`)
             .order('chapter_number', { ascending: false })
             .limit(1);
 
@@ -101,7 +110,9 @@ export default function LibraryPage() {
           const { count } = await supabase
             .from('chapters')
             .select('id', { count: 'exact', head: true })
-            .eq('series_id', s.id);
+            .eq('series_id', s.id)
+            .eq('is_draft', false)
+            .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`);
 
           return {
             ...s,
