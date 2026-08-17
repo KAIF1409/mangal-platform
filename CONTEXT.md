@@ -5628,3 +5628,61 @@ outside the sandbox's allowed network egress) — unrelated to this change,
 same sandbox limitation noted in earlier sessions for Supabase-env-dependent
 checks. Committed and pushed directly to `main` per founder's instruction —
 no branch/PR.
+
+## §69 — WebMangal: mobile nav overlap fix + orange-green primary-button gradient
+
+**Founder-reported bug (screenshot):** on the WebMangal mobile compact
+header, the hamburger/search icons, the WebMangal wordmark + "powered by
+MANGAL" subtitle, and the LOG IN button were all visually overlapping on
+narrow phones.
+
+**Root cause:** the wordmark+subtitle `<Link>` had `flex: 1,
+justifyContent: 'center'` but nothing constraining its own width — on a
+narrow viewport its content (logo + "WebMangal" + "powered by MANGAL", all
+`whiteSpace: 'nowrap'`) simply overflowed its allotted center slot and
+bled into the icon cluster on the left and the LOG IN button on the right,
+instead of shrinking. The existing `@media (max-width: 380px)` rule meant
+to hide the subtitle wasn't kicking in early enough on common phone
+widths.
+
+**Fixed (`app/WebMangal/View.tsx`, mobile-only compact header):**
+- Wordmark + subtitle now wrapped in a `minWidth: 0, overflow: 'hidden'`
+  block with `textOverflow: 'ellipsis'` on the wordmark — clips instead of
+  overlapping siblings if it's ever still tight.
+- Logo shrunk 34px → 28px on this header.
+- Subtitle's auto-hide breakpoint raised 380px → 460px (matches where it
+  was actually still colliding).
+- New `@media (max-width: 340px)` rule shrinks the icon buttons and LOG IN
+  pill further on very small phones, freeing more room for the wordmark.
+
+**Buttons — green → orange-green gradient, extended product-wide:**
+Per founder's ask ("replace login colour button from green to gradient
+orange-green add this for every or most of the buttons in webmangal"):
+- Replaced the mint-green (`#a7f3d0`/`#6ee7b7`) LOG IN / SIGN UP / mobile
+  search buttons with `linear-gradient(135deg, #f97316, #22c55e)`
+  (orange → green), text switched to white for contrast.
+- Extended the same gradient to WebMangal's existing primary red CTA
+  gradient (`#7f1d1d`/`#991b1b`) everywhere it appeared as an actual
+  clickable button — Log in/Get Started (desktop nav), series page
+  Follow/Save/Publish/Post Quest/Post Review, chapter page Post
+  comment/Post reply/Next chapter/"Unlimited Unlock", library/bookmarks/
+  history empty-state "Browse Series"/"Show All" CTAs,
+  `EditSeriesModal`'s Save, `ReportButton`'s Submit/Close, and
+  `ManagePagesModal`'s Save Order (2 spots) — 12 files total.
+- **Deliberately left alone:** destructive/danger buttons (Delete series,
+  Ban user, Delete page — solid `#7f1d1d`, no gradient) stay red, since
+  that's an intentional danger-action convention, not the brand CTA
+  color, and wasn't part of the ask. Also left the decorative flame-icon
+  badges and genre-pill accent chips on their original `#7f1d1d`/`#d97706`
+  red-orange gradient — those are branding/decorative marks, not
+  interactive buttons.
+- `ProfileMenu.tsx`'s avatar-initials circle (same red/amber gradient)
+  also left untouched — decorative avatar coloring, not a button.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` clean (0 errors)
+on all 12 touched files — the 13 warnings present are all pre-existing
+`react-hooks/exhaustive-deps`/unused-var notices on lines this change
+didn't touch. Committed and pushed directly to `main`
+(`145140c`→rebased→`bc53f77`) — rebased cleanly onto a concurrent commit
+(`e8e009d`, unrelated History-page fix) found on fetch before pushing, per
+this repo's standing convention.
