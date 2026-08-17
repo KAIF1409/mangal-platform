@@ -6,6 +6,12 @@
 
 ---
 
+> **⭐ CURRENT TOP PRIORITY (per founder, this session):** §77 (bottom of
+> this file) — KaTube Share sheet (K Circle send) + separate Watch
+> with Friends/Watch Together entry point, on both long-video and Shorts
+> pages. §0's "Unique for Mangal" phases are all done (§64/§68), so its
+> standing "don't pick up anything else" rule no longer blocks this.
+
 ## 0. 🔴 HIGHEST PRIORITY — "Unique for Mangal" (build this before anything else)
 
 > **Rule for every future session: do not pick up other backlog items (§4 or any
@@ -5336,3 +5342,110 @@ baseline). Booted `next dev`, hit both product-native pages live —
 both compiled and resolved their full import chain correctly (confirmed
 via the 500's stack trace pointing at `lib/supabase.ts` needing real env
 credentials this sandbox doesn't have, not a broken import or route).
+
+## §77 — KaTube: Share sheet (K Circle send) + separate Watch Together entry point, video & Shorts
+
+**Spec, as corrected by the founder mid-session — read this before touching
+these buttons again:** two distinct buttons on every KaTube long-video and
+Shorts page, **never merged into one menu**:
+
+1. **Share** — link/URL only. Opens a sheet: send straight to a K Circle
+   friend (DM), WhatsApp, Instagram/more apps (native `navigator.share`,
+   falls back to copy), copy link. Does **not** contain a Watch Together
+   option — an earlier draft this session put Watch Together inside Share
+   and the founder explicitly reversed that.
+2. **Watch with Friends** (long video) / **Together** (Shorts icon) — a
+   *separate* button. Opens straight to a private/public choice, video/short
+   already preselected (no picker step — we're already on it), then an
+   invite screen using the K Circle mutual-friends list. Long-video rooms
+   use the existing sync-play room; Shorts rooms land in the existing
+   reels-style continuous-scroll watch-together room
+   (`kalpana-circle/watch-together/shorts/[roomId]`), started on *this*
+   short instead of always defaulting to the most recent one. Replaces the
+   old single-tap "Watch with Friends" button, which always silently
+   created a private room with no visibility choice and no in-app invite
+   (copy-link only) — that behavior's gone now, folded into the new sheet.
+
+**Built this session — twice, because of a mid-session repo-structure
+change (see §70-74):** the first pass was built and committed against a
+stale local clone ~145 commits behind `origin/main` (missing the entire
+emoji→lucide-icon sweep, the Discord-rail K Circle rollout, and the Phase
+A-D repo restructure). That version never reached `origin/main` — caught it
+at push time (rejected, non-fast-forward), reset to the real `main`, and
+rebuilt from scratch against the current tree/conventions rather than
+force-pushing or fixing up the stale diff. Notes for future sessions: don't
+trust a sandbox's existing clone without `git fetch && git log
+main..origin/main` first, even mid-session — the founder pushed a repo
+restructure (§70-74) *during* this same session, after the first rebuild
+was already done in the old `app/` layout, hence "twice."
+
+- **New:** `src/app/katube/components/KatubeShareSheet.tsx` — shared
+  bottom-sheet, used by both entry points via an `initialView` prop
+  (`'main'` for Share, `'wt-visibility'` for Watch Together) — one
+  component, two doors in. Lives alongside `KaTubePlayer.tsx`/
+  `VideoGridCard.tsx` (KaTube-local), not under `components/shared/` or
+  `components/webmangal/` — this has no WebMangal use case.
+  - K Circle send: reuses the mutual-follow query
+    (`creator_follows.creator_id`/`follower_id`, intersected both
+    directions) the Shorts watch-room's `loadSuggestedFriends` already
+    uses, plus username search. Sends via `getOrCreateConversation` (find
+    an existing 1:1 `kcircle_conversations` row by participant-id
+    intersection, else insert one) + a `kcircle_messages` insert +
+    `last_message_at` bump + `kcircle_notifications` insert (`type:
+    'message'`) — same shape `chat/page.tsx`'s own send flow uses. Shorts
+    use `short_ref_id` for a rich "tap to open" link (existing
+    column/rendering); long videos send title+URL as plain text (see
+    follow-up #1 below).
+  - Watch Together: `wt-visibility` (private/public toggle + "Start room")
+    → creates a `watch_rooms` row (`mode: 'video'` with `video_id` set to
+    the current video, or `mode: 'shorts'` with `video_id`/
+    `current_short_id` both set to the current short) → `wt-invite`
+    (same friend list) sends a `kcircle_notifications` insert (`type:
+    'watch_invite'`, `room_id`) per selected friend — **not** a DM message;
+    matches the existing room's own Add Friend picker exactly (invitee's
+    `watch_room_members` row only ever gets inserted by them, via the
+    self-insert RLS policy, when they actually open the room).
+- `src/app/katube/watch/[videoId]/page.tsx` — removed the old
+  `handleWatchWithFriends` single-tap handler and its `creatingRoom` state
+  entirely; now a `Share` button (opens the sheet on `'main'`) sits next to
+  a `Watch with Friends` button (opens it on `'wt-visibility'`) — two
+  separate `<button>`s, two separate sheet instances/open-states.
+- `src/app/katube/shorts/[shortId]/page.tsx` — Share icon (was a
+  `showToast('Share isn't built yet')` stub) now opens the sheet on
+  `'main'`; added a `Together` icon next to it opening it on
+  `'wt-visibility'`. Both sheets render `dark` (Shorts feed is always
+  full-screen black, no theme wrapper) and act on `shorts[activeIndex]` —
+  tapping either icon also snaps `activeIndex` to that card's `idx` first,
+  so the sheet always targets the short actually being shared/watched,
+  even mid-scroll. Added a `userId` fetch (untracked on this page before)
+  so both buttons gate behind login the same way the rest of KaTube does.
+
+**No schema changes** — reuses `kcircle_conversations` /
+`kcircle_conversation_participants` / `kcircle_messages` /
+`kcircle_notifications` / `creator_follows` / `watch_rooms` /
+`watch_room_members` exactly as they already exist.
+
+**Deliberately not built yet (follow-ups, in priority order):**
+1. **Generic video reference for K Circle DMs.** `short_ref_id` only makes
+   sense for shorts — its existing rendering (`chat.tsx`, watch-together
+   `page.tsx`) always links to `/katube/shorts/:id`. A long video shared via
+   K Circle today is plain text (title + URL), not a rich tappable card.
+   Needs either a new `video_ref_id` column (routes to `/katube/watch/:id`
+   instead) or generalizing `short_ref_id`'s renderer to branch on the
+   referenced row's `is_short`.
+2. **"Most-chatted friend" as the Share sheet's default/first row**, instead
+   of the flat mutual-follows list — rank by recent DM activity
+   (`kcircle_conversations.last_message_at` per 1:1 thread) so whoever you
+   actually talk to most surfaces first. Not started — today's list is
+   unranked (whatever order `creator_follows` returns).
+3. **Logged-out empty state.** Right now a logged-out tap on either button
+   just redirects to `/login` with no explanation. A one-line "log in to
+   send to K Circle friends" would help, especially for someone hitting
+   KaTube for the first time who doesn't know K Circle exists yet.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on all three
+touched/new files: 0 errors (two pre-existing `<img>`-vs-`<Image>` warnings,
+unrelated). Full-project `eslint .`: same 19 pre-existing errors / 43
+warnings with or without this change (diffed directly against a clean
+`git stash` of the working tree to confirm). Committed and pushed directly
+to `main` per founder's instruction — no branch/PR.

@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
-import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft } from 'lucide-react';
+import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
+import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users } from 'lucide-react';
+import KatubeShareSheet from '../../components/KatubeShareSheet';
 
 // ── KaTube §7 — Fast Tap full-screen Shorts/Reels feed ──
 // Full-screen vertical snap-scroll feed for is_short=true videos, replacing
@@ -44,6 +46,9 @@ export default function KaTubeShortsFeedPage() {
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [watchTogetherOpen, setWatchTogetherOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
@@ -61,6 +66,10 @@ export default function KaTubeShortsFeedPage() {
       window.localStorage.setItem(MUTE_PREF_KEY, String(next));
       return next;
     });
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
   }, []);
 
   useEffect(() => {
@@ -235,11 +244,26 @@ export default function KaTubeShortsFeedPage() {
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Comment</span>
                     </button>
                     <button
-                      onClick={() => showToast('Share isn\u2019t built yet')}
+                      onClick={() => {
+                        if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname); return; }
+                        setActiveIndex(idx);
+                        setShareOpen(true);
+                      }}
                       style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
                     >
                       <Share2 size={24} color="#fff" />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Share</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname); return; }
+                        setActiveIndex(idx);
+                        setWatchTogetherOpen(true);
+                      }}
+                      style={{ background: 'none', border: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
+                    >
+                      <Users size={24} color="#fff" />
+                      <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>Together</span>
                     </button>
                     {isActive && (
                       <button
@@ -258,6 +282,26 @@ export default function KaTubeShortsFeedPage() {
             );
           })}
         </div>
+      )}
+
+      {shorts[activeIndex] && (
+        <>
+          <KatubeShareSheet
+            open={shareOpen}
+            onClose={() => setShareOpen(false)}
+            video={{ id: shorts[activeIndex].id, title: shorts[activeIndex].title, isShort: true }}
+            url={typeof window !== 'undefined' ? `${window.location.origin}/katube/shorts/${shorts[activeIndex].id}` : ''}
+            dark
+          />
+          <KatubeShareSheet
+            open={watchTogetherOpen}
+            onClose={() => setWatchTogetherOpen(false)}
+            video={{ id: shorts[activeIndex].id, title: shorts[activeIndex].title, isShort: true }}
+            url={typeof window !== 'undefined' ? `${window.location.origin}/katube/shorts/${shorts[activeIndex].id}` : ''}
+            dark
+            initialView="wt-visibility"
+          />
+        </>
       )}
 
       {toast && (

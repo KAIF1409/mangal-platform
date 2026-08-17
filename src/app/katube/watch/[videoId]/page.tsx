@@ -7,9 +7,10 @@ import Image from 'next/image';
 import ThemeToggle from '../../../components/shared/ThemeToggle';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
-import { Users, ThumbsUp, BookOpen, Star, ArrowLeft } from 'lucide-react';
+import { Users, ThumbsUp, BookOpen, Star, ArrowLeft, Share2 } from 'lucide-react';
 import { AddToPlaylistButton } from '../../components/VideoGridCard';
 import KaTubePlayer from '../../components/KaTubePlayer';
+import KatubeShareSheet from '../../components/KatubeShareSheet';
 
 // ── KaTube — Step 3: watch page ──
 // Clicking a video card on /katube now opens this page, which loads the
@@ -100,7 +101,8 @@ export default function KaTubeWatchPage() {
   const router = useRouter();
   const videoId = params?.videoId as string;
 
-  const [creatingRoom, setCreatingRoom] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [watchTogetherOpen, setWatchTogetherOpen] = useState(false);
 
   // §28a — Continue Watching (resume position) + Autoplay Next.
   const [resumeSeconds, setResumeSeconds] = useState<number | undefined>(undefined);
@@ -458,30 +460,6 @@ export default function KaTubeWatchPage() {
     setAccuracyBusy(false);
   }
 
-  async function handleWatchWithFriends() {
-    if (!video) return;
-    if (!userId) {
-      setPostLoginRedirect(window.location.pathname);
-      window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
-      return;
-    }
-    setCreatingRoom(true);
-    const { data: newRoom, error } = await supabase
-      .from('watch_rooms')
-      .insert({ video_id: video.id, host_id: userId, visibility: 'private', title: video.title })
-      .select('id')
-      .single();
-    if (error || !newRoom) {
-      setCreatingRoom(false);
-      return;
-    }
-    // Host also gets a membership row, so the room's member list (which
-    // reads from watch_room_members, not host_id, for a single unified
-    // list) shows them immediately without a separate "host" special case.
-    await supabase.from('watch_room_members').insert({ room_id: newRoom.id, user_id: userId });
-    router.push(`/katube/watch/${videoId}/room/${newRoom.id}`);
-  }
-
   async function handleLike() {
     if (!video) return;
     if (!userId) {
@@ -643,25 +621,57 @@ export default function KaTubeWatchPage() {
               )}
 
 
-              {/* Watch with Friends — Sync-Play Watch Rooms, KaTube entry
-                  point. Always creates a *private* room: KaTube's normal
-                  watch page is already the "public" surface (anyone can
-                  open this URL any time), so a public room here would just
-                  duplicate that with extra steps. Public rooms live on the
-                  Kalpana Circle "Watch Together" tab instead. */}
-              {!video.isShort && (
+              {/* Share (link/URL only) and Watch with Friends — two
+                  separate buttons, never merged (see
+                  katube/components/KatubeShareSheet.tsx). Watch with
+                  Friends now offers a private/public choice + invite step
+                  instead of always silently creating a private room. */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                 <button
-                  onClick={handleWatchWithFriends}
-                  disabled={creatingRoom}
+                  onClick={() => {
+                    if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname); return; }
+                    setShareOpen(true);
+                  }}
                   style={{
-                    marginTop: '12px', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
+                    fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
                     background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px',
-                    padding: '9px 16px', cursor: creatingRoom ? 'default' : 'pointer', opacity: creatingRoom ? 0.6 : 1,
-                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '9px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
                   }}
                 >
-                  <Users size={15} /> {creatingRoom ? 'Setting up room...' : 'Watch with Friends'}
+                  <Share2 size={15} /> Share
                 </button>
+                {!video.isShort && (
+                  <button
+                    onClick={() => {
+                      if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname); return; }
+                      setWatchTogetherOpen(true);
+                    }}
+                    style={{
+                      fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
+                      background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px',
+                      padding: '9px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                    }}
+                  >
+                    <Users size={15} /> Watch with Friends
+                  </button>
+                )}
+              </div>
+              {video && (
+                <>
+                  <KatubeShareSheet
+                    open={shareOpen}
+                    onClose={() => setShareOpen(false)}
+                    video={{ id: video.id, title: video.title, isShort: !!video.isShort }}
+                    url={typeof window !== 'undefined' ? window.location.href : ''}
+                  />
+                  <KatubeShareSheet
+                    open={watchTogetherOpen}
+                    onClose={() => setWatchTogetherOpen(false)}
+                    video={{ id: video.id, title: video.title, isShort: !!video.isShort }}
+                    url={typeof window !== 'undefined' ? window.location.href : ''}
+                    initialView="wt-visibility"
+                  />
+                </>
               )}
 
               {/* Info */}
