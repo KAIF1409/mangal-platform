@@ -30,10 +30,6 @@ interface Series {
   creator_id?: string;
 }
 
-interface SeriesQueryRow extends Omit<Series, 'chapter_count'> {
-  chapters: { count: number }[] | { count: number } | null;
-}
-
 type SortOption = 'latest' | 'views' | 'az';
 
 // Step 2 — Reading Progress: one resumable series for the "Continue Reading" row
@@ -143,21 +139,43 @@ export default function HomePage() {
       }
     });
 
-    // Step 24 — chapters(count) is a single embedded aggregate query (Supabase/
-    // PostgREST FK count), not a per-series round trip — safe at homepage scale.
+    // Step 24 — chapter counts. Was a single embedded aggregate query
+    // (`chapters(count)`) with no is_draft/scheduled_at filter, so every
+    // SeriesCard's chapter badge on the homepage included draft and
+    // not-yet-live scheduled chapters in the count — same root bug already
+    // fixed on the series/library/bookmarks pages. Filtering an embedded
+    // count via PostgREST's dot-notation (`.eq('chapters.is_draft', false)`)
+    // is possible but isn't exercised anywhere else in this codebase and
+    // couldn't be verified against a live Supabase instance, so rather than
+    // guess on the homepage, this now uses the same batched-fetch-then-
+    // client-side-count pattern already proven in bookmarks/page.tsx:
+    // one query for all published chapters across every series, reduced
+    // into a series_id -> count map.
     supabase
       .from('series')
-      .select('*, chapters(count)')
+      .select('*')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) {
-          const normalized = data.map((s: SeriesQueryRow) => ({
-            ...s,
-            chapter_count: Array.isArray(s.chapters) ? (s.chapters[0]?.count ?? 0) : 0,
-          }));
-          setSeries(normalized);
+      .then(async ({ data }) => {
+        if (!data) { setLoading(false); return; }
+        const seriesIds = data.map((s: Series) => s.id);
+        const countMap: Record<string, number> = {};
+        if (seriesIds.length > 0) {
+          const { data: publishedChapters } = await supabase
+            .from('chapters')
+            .select('series_id')
+            .in('series_id', seriesIds)
+            .eq('is_draft', false)
+            .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`);
+          (publishedChapters ?? []).forEach((ch: { series_id: string }) => {
+            countMap[ch.series_id] = (countMap[ch.series_id] ?? 0) + 1;
+          });
         }
+        const normalized = data.map((s: Series) => ({
+          ...s,
+          chapter_count: countMap[s.id] ?? 0,
+        }));
+        setSeries(normalized);
         setLoading(false);
       });
 
