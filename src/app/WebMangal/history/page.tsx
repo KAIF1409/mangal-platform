@@ -96,11 +96,24 @@ export default function HistoryPage() {
       if (!progress || progress.length === 0) { setLoading(false); return; }
 
       // Batch fetch chapter counts for all series in history
+      //
+      // Bug fix — same root issue fixed on the series/library/bookmarks/home
+      // pages: this had no is_draft/scheduled_at filter, so a series with,
+      // say, 10 published chapters + 2 drafts reported total_chapters=12.
+      // That denominator directly feeds HistoryRow's progress bar
+      // (chapter_number / total_chapters), so finishing chapter 10 of 10
+      // published showed as 83% instead of 100% — a visibly wrong number,
+      // not just a miscount. (I'd previously reasoned this page didn't need
+      // the fix since chapter_id itself is always something actually read —
+      // true, but missed that total_chapters is used as a denominator here,
+      // not just a display count.)
       const seriesIds = progress.map((p: ProgressRow) => p.series_id);
       const { data: allChapters } = await supabase
         .from('chapters')
         .select('series_id')
-        .in('series_id', seriesIds);
+        .in('series_id', seriesIds)
+        .eq('is_draft', false)
+        .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`);
 
       const countMap: Record<string, number> = {};
       (allChapters ?? []).forEach((ch: ChapterCountRow) => {
@@ -416,7 +429,7 @@ function HistoryRow({
       borderRadius: '12px', padding: '14px 16px',
     }}>
       {/* Cover thumbnail */}
-      <a href={`/WebMangal/series/${entry.series_id}`} style={{ flexShrink: 0, textDecoration: 'none', position: 'relative' }}>
+      <Link href={`/WebMangal/series/${entry.series_id}`} style={{ flexShrink: 0, textDecoration: 'none', position: 'relative' }}>
         <div className="mangal-hist-cover" style={{ width: '52px', height: '70px', borderRadius: '7px', overflow: 'hidden', background: coverBg, border: '1px solid var(--border-color)', position: 'relative' }}>
           {entry.series_cover ? (
             <Image src={entry.series_cover} alt={entry.series_title} fill sizes="52px" style={{ objectFit: 'cover' }} />
@@ -433,15 +446,15 @@ function HistoryRow({
             {badgeLabel}
           </div>
         </div>
-      </a>
+      </Link>
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <a href={`/WebMangal/series/${entry.series_id}`} style={{ textDecoration: 'none' }}>
+        <Link href={`/WebMangal/series/${entry.series_id}`} style={{ textDecoration: 'none' }}>
           <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {entry.series_title}
           </div>
-        </a>
+        </Link>
         <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '8px' }}>
           {entry.chapter_number != null && (
             <span>Ch.{entry.chapter_number}{entry.chapter_title ? ` — ${entry.chapter_title}` : ''}{!isNovel && ` · p.${entry.page_number}`} · </span>
@@ -463,7 +476,7 @@ function HistoryRow({
 
       {/* Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', flexShrink: 0, alignItems: 'flex-end' }}>
-        <a
+        <Link
           href={`/WebMangal/read/${entry.chapter_id}`}
           style={{
             padding: '7px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
@@ -472,7 +485,7 @@ function HistoryRow({
           }}
         >
           <Play size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Continue
-        </a>
+        </Link>
         {confirmRemove ? (
           <div style={{ display: 'flex', gap: '5px' }}>
             <button
