@@ -13,6 +13,7 @@
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@cf-wasm/photon": "^0.4.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tensorflow/tfjs": "^4.22.0",
@@ -25,8 +26,7 @@
     "nsfwjs": "^4.3.0",
     "razorpay": "^2.9.8",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "sharp": "^0.35.3"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.20.2",

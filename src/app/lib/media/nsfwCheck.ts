@@ -5,17 +5,22 @@
 // binary downloaded at install time, which is a common source of broken builds on
 // serverless platforms (wrong platform binary, blocked download host, etc). Pure
 // tfjs + the CPU backend has no native binary at all: slower per-classification,
-// but it always builds and runs anywhere Node runs, including Vercel's functions.
-// Image decode/resize uses `sharp` (already a de-facto standard native dep — Next.js
-// itself uses it for image optimization when present) instead of tf.node.decodeImage.
+// but it always builds and runs anywhere Node runs.
 //
-// Model loads once per warm serverless instance (module-level singleton) and is
-// reused across requests in that instance.
+// Image decode/resize uses `@cf-wasm/photon` (a WASM build of the Rust `photon`
+// image library, purpose-built as a `sharp` replacement for Cloudflare Workers —
+// `sharp` needs a native binary and cannot run in the Workers isolate at all,
+// not even with nodejs_compat on). Package auto-selects the right entrypoint
+// (workerd on Cloudflare, Node locally/CI) via conditional exports, no separate
+// init call needed here.
+//
+// Model loads once per warm instance (module-level singleton) and is reused
+// across requests in that instance.
 
 import '@tensorflow/tfjs-backend-cpu';
 import * as tf from '@tensorflow/tfjs';
 import * as nsfwjs from 'nsfwjs';
-import sharp from 'sharp';
+import { PhotonImage, resize, SamplingFilter } from '@cf-wasm/photon';
 
 let modelPromise: Promise<nsfwjs.NSFWJS> | null = null;
 
@@ -59,13 +64,23 @@ export async function checkThumbnailNsfw(thumbnailUrl: string | null): Promise<N
     const arrayBuffer = await imgRes.arrayBuffer();
 
     // Decode + resize to the 224x224 RGB input NSFWJS's MobileNet expects.
-    const { data, info } = await sharp(Buffer.from(arrayBuffer))
-      .resize(224, 224, { fit: 'fill' })
-      .removeAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+    // Photon's own resize (unlike sharp's `fit: 'fill'`) already stretches to
+    // the exact target dims with no aspect-ratio cropping, so it's a direct
+    // match. get_raw_pixels() comes back as RGBA — strip the alpha byte per
+    // pixel to get the same 3-channel RGB buffer sharp used to produce.
+    const inputImage = PhotonImage.new_from_byteslice(new Uint8Array(arrayBuffer));
+    const resized = resize(inputImage, 224, 224, SamplingFilter.Lanczos3);
+    const rgba = resized.get_raw_pixels();
+    const rgb = new Uint8Array((rgba.length / 4) * 3);
+    for (let i = 0, j = 0; i < rgba.length; i += 4, j += 3) {
+      rgb[j] = rgba[i];
+      rgb[j + 1] = rgba[i + 1];
+      rgb[j + 2] = rgba[i + 2];
+    }
+    inputImage.free();
+    resized.free();
 
-    const tensor = tf.tensor3d(new Uint8Array(data), [info.height, info.width, info.channels]);
+    const tensor = tf.tensor3d(rgb, [224, 224, 3]);
     const model = await getModel();
     const predictions = await model.classify(tensor);
     tensor.dispose();
