@@ -690,10 +690,12 @@ function KalpanaCircleInner() {
         {/* Small MANGAL icon was href="/" (site-wide marketing page) —
             clicking it dropped users out of K Circle entirely. Same fix
             as KaTube's "Back to MANGAL" link: keep it in-product. */}
-        <Link href="/kalpana-circle" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
-          <MangalLogo size={28} />
-        </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {/* Product's own logo comes first — K Circle wordmark, not a link
+            since we're already on this page (same pattern as KaTube's own
+            page). The official MANGAL company logo now sits at the END of
+            the right-side icon group instead of leading the nav — see
+            CrossProductLinks + MangalLogo below. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, minWidth: 0 }}>
           <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={130} style={{ display: 'block', height: '38px', width: '38px', objectFit: 'contain' }} priority />
           <span style={{ fontWeight: 900, fontSize: '15px', color: '#7c3aed', letterSpacing: '-0.02em' }}>Circle</span>
         </div>
@@ -702,6 +704,12 @@ function KalpanaCircleInner() {
               no text label (replaces the old text+icon "Tube" badge, which
               only pointed at KaTube — see CrossProductLinks). */}
           <CrossProductLinks current="kcircle" size={20} />
+          {/* Official MANGAL company logo — last in the row, after the
+              product logos, per founder's ordering: product's own brand
+              leads, company mark trails. */}
+          <Link href="/home" title="MANGAL" aria-label="Back to MANGAL" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <MangalLogo size={20} />
+          </Link>
           <NotificationBell userId={userId} iconSize={18} />
           <ThemeToggle size={28} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
         </div>

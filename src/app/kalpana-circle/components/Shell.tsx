@@ -119,11 +119,16 @@ export function KCircleRail({
 
   return (
     <aside className="kc-rail">
-      <Link href="/home" title="Back to MANGAL" className="kc-rail-btn" style={{
+      {/* Product's own logo leads the rail — K Circle brand mark first,
+          doubling as the home-feed link (was previously a plain divider
+          under the MANGAL logo up top; that MANGAL logo has moved to the
+          bottom of the rail, after CrossProductLinks, per founder's
+          ordering: product logo first, company logo last in the scroll). */}
+      <Link href="/kalpana-circle" title="K Circle Home" className="kc-rail-btn" style={{
         width: '46px', height: '46px', borderRadius: '14px', display: 'flex',
         alignItems: 'center', justifyContent: 'center', marginBottom: '10px', flexShrink: 0,
       }}>
-        <MangalLogo size={30} />
+        <Image src="/kcircle-logo.png" alt="K Circle" width={100} height={100} style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
       </Link>
       <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '10px', flexShrink: 0 }} />
 
@@ -164,6 +169,12 @@ export function KCircleRail({
         {/* Logo-only links to the other two MANGAL products (replaces the
             old single hardcoded KaTube-only link — see CrossProductLinks). */}
         <CrossProductLinks current="kcircle" size={18} gap={6} direction="column" />
+        {/* Official MANGAL company logo — last item in the rail, after the
+            product logos, per founder's ordering: product's own brand
+            leads, company mark trails at the end of the scroll/list. */}
+        <Link href="/home" title="Back to MANGAL" aria-label="Back to MANGAL">
+          <MangalLogo size={20} />
+        </Link>
       </div>
     </aside>
   );

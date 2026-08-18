@@ -238,15 +238,10 @@ export default function KaTubeUploadPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         gap: '8px',
       }}>
-        <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <MangalLogo size={32} />
-          <span className="mangal-upload-brand-text" style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
-        </Link>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+        <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
           <Image src="/katube-logo.png" alt="KaTube" width={140} height={140} style={{ display: 'block', height: '44px', width: '44px', objectFit: 'contain' }} priority />
-          <span style={{ fontWeight: 900, fontSize: '17px', color: '#2563eb', letterSpacing: '-0.02em' }}>Tube</span>
-        </div>
+          <span className="mangal-upload-brand-text" style={{ fontWeight: 900, fontSize: '17px', color: '#2563eb', letterSpacing: '-0.02em' }}>Tube</span>
+        </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <ThemeToggle size={30} />
@@ -255,6 +250,9 @@ export default function KaTubeUploadPage() {
             color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap',
             display: 'inline-flex', alignItems: 'center', gap: '6px',
           }}><ArrowLeft size={13} strokeWidth={2} /> <span className="mangal-upload-back-text">Back to KaTube</span></Link>
+          <Link href="/" title="MANGAL" aria-label="Back to MANGAL" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <MangalLogo size={26} />
+          </Link>
         </div>
       </nav>
 
