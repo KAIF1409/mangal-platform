@@ -17,8 +17,9 @@ import {
   BookOpen, BookText, ScrollText, AlertCircle, ArrowLeft, CheckCircle2,
   Star, Play, RotateCcw, Zap, Bell, AlertTriangle, Trash2, MessageCircle,
   Library, ArrowDown, ArrowUp, Inbox, Clapperboard, Circle, Trophy,
-  Edit3, PenLine, ThumbsUp, Heart, ChevronRight, Eye, Pause, ChevronUp, Flame, Plus,
+  Edit3, PenLine, ThumbsUp, Heart, ChevronRight, Eye, Pause, ChevronUp, Flame, Plus, Music,
 } from 'lucide-react';
+import SongCard from '../../../components/webmangal/SongCard';
 
 interface Series {
   id: string;
@@ -127,6 +128,14 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
     username: string;
   }
   const [circlePosts, setCirclePosts] = useState<CirclePostPreview[]>([]);
+
+  // §85 — "Fan Songs" section. Same visual slot as Fan Theories & Art above,
+  // but queries `songs` by linked_series_id (exact FK) instead of
+  // kcircle_posts by loose title tag.
+  interface FanSongPreview {
+    id: string; title: string; genre: string | null; cover_url: string | null; views: number;
+  }
+  const [fanSongs, setFanSongs] = useState<FanSongPreview[]>([]);
 
   // Step 28 — Creator Bounties ("Visual Quests"). Author posts a request
   // for a specific scene, fans submit YouTube links, the community votes,
@@ -345,6 +354,18 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
               })
           );
         }
+        // Fan Songs — published songs linked to this exact series via FK
+        // (see §85). Independent of the title-tag Fan Theories query above.
+        tasks.push(
+          supabase
+            .from('songs')
+            .select('id, title, genre, cover_url, views')
+            .eq('linked_series_id', seriesId)
+            .eq('status', 'published')
+            .order('created_at', { ascending: false })
+            .limit(4)
+            .then(({ data }) => setFanSongs(data ?? []))
+        );
         await Promise.all(tasks);
       })();
 
@@ -1194,6 +1215,25 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
               {circlePosts.map(p => <CirclePostCard key={p.id} post={p} seriesTitle={series.title} />)}
+            </div>
+          </section>
+        )}
+
+        {/* ── Fan Songs — K Circle cross-link, exact FK match ── */}
+        {fanSongs.length > 0 && (
+          <section style={{ padding: '40px 0 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                <Music size={14} /> Fan Songs
+              </h2>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
+              {fanSongs.map(s => (
+                <SongCard
+                  key={s.id}
+                  song={{ id: s.id, title: s.title, genre: s.genre, cover_url: s.cover_url, views: s.views }}
+                />
+              ))}
             </div>
           </section>
         )}

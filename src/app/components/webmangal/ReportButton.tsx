@@ -5,7 +5,9 @@ import { Flag, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
-type TargetType = 'series' | 'chapter' | 'comment';
+// §85 — added 'song' so the WebMangal Songs feature can reuse this exact
+// component (same Report button, zero new UI) instead of building its own.
+type TargetType = 'series' | 'chapter' | 'comment' | 'song';
 
 const REASONS = ['Inappropriate', 'Spam', 'Copyright', 'Other'] as const;
 
