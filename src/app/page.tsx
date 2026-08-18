@@ -52,10 +52,12 @@ function formatViews(n: number): string {
 }
 
 const FEATURE_CARDS = [
-  { icon: ScrollText, title: 'Desi Stories', desc: 'Mythology, Folk Tales, Street Life — genres born from Bharat.' },
-  { icon: Flame, title: 'New Every Week', desc: 'Fresh chapters drop constantly from creators across India.' },
-  { icon: Smartphone, title: 'Read Anywhere', desc: 'Scroll or page mode. Mobile-first. Zero ads, forever free.' },
-  { icon: PenLine, title: 'Be a Creator', desc: 'Publish your own Mangal or Novel — no gatekeepers.' },
+  { icon: ScrollText, title: 'Stories Rooted in Bharat', desc: 'Mythology, folk tales, street life, school drama — genres you grew up hearing, written by people who actually lived them. Not a translated import, the real thing.' },
+  { icon: Flame, title: 'Never Run Out to Read', desc: 'Hundreds of creators publishing on their own schedule means there is always a fresh chapter waiting. Bookmark a series and we\'ll keep it front and centre until you\'re caught up.' },
+  { icon: Smartphone, title: 'Built Mobile-First', desc: 'Scroll mode for webtoons, page mode for manga and novels — both tuned for a thumb on a phone screen, not a mouse on a desktop. Zero ads, zero paywalls, forever.' },
+  { icon: PenLine, title: 'Publish With Zero Gatekeepers', desc: 'No submission queue, no editor approval, no minimum follower count. Upload your first chapter today and it\'s live for readers within minutes.' },
+  { icon: Tag, title: 'Discover by Vibe, Not Just Rank', desc: 'Browse by tag, genre, or what\'s trending this week — so a brand-new series with real quality has just as much shot at being found as an established one.' },
+  { icon: BookOpen, title: 'One Login, One Ecosystem', desc: 'WebMangal for reading and writing, KaTube for AI-anime adaptations of your favourite series, Kalpana Circle for the community around them — all under one MANGAL account.' },
 ];
 
 const GENRE_PILLS = ['Mythology', 'Action', 'Romance', 'Folk Tale', 'Desi Horror', 'Thriller', 'Fantasy', 'School Life', 'Street Life', 'Sci-Fi'];
@@ -63,17 +65,17 @@ const GENRE_PILLS = ['Mythology', 'Action', 'Romance', 'Folk Tale', 'Desi Horror
 const DOORS = [
   {
     href: '/WebMangal', title: 'WebMangal', image: '/webmangal-door.png',
-    blurb: 'Read manga, comics, and novels made by Desi creators — free forever, no ads, no gatekeepers.',
+    blurb: 'Read manga, comics, and novels made by Desi creators — free forever, no ads, no gatekeepers. Bookmark series, track your reading progress chapter by chapter, and browse by tag, genre, or what\'s trending this week.',
     tag: null,
   },
   {
     href: '/katube', title: 'KaTube', video: '/videos/katube-door-preview.mp4',
-    blurb: "A YouTube-style discovery space for AI-generated anime, from quick Fast Tap clips to full videos — built for the MANGAL creator niche.",
+    blurb: "A YouTube-style discovery space for original, AI-generated anime adaptations of MANGAL stories — quick Fast Tap clips or full-length Slow Tap videos, made by creators bringing their own (or a fellow writer's) series to life.",
     tag: 'COMING SOON',
   },
   {
     href: '/kalpana-circle', title: 'K Circle', image: '/kcircle-door.png',
-    blurb: 'Groups and chats for people into the anime niche — post, react, and talk about MANGAL series together.',
+    blurb: 'The community layer for readers and creators — post theories, share fan art, react to the latest chapter, and DM or group-chat with people who are into the exact same series you are.',
     tag: 'COMING SOON',
   },
 ];
@@ -383,6 +385,15 @@ export default function LandingPage() {
             .mangal-tilt-card { width: 100% !important; height: 320px !important; }
             .mangal-elem { width: 100% !important; }
           }
+
+          /* About section side images — used to sit at a fixed 160x160 next
+             to the copy on every viewport, which on narrow phones pushed
+             the paragraph text into a cramped middle column or forced
+             horizontal scroll. Hide the decorative side images below 560px
+             and let the copy take the full width instead. */
+          @media (max-width: 560px) {
+            .mangal-about-side-img { display: none !important; }
+          }
         `}</style>
 
         {/* ── NAV ── */}
@@ -597,19 +608,28 @@ export default function LandingPage() {
         {/* ── ABOUT ── */}
         <section id="mangal-about" style={{ padding: 'clamp(60px,8vw,100px) 24px', maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '32px', flexWrap: 'wrap' }}>
-            <div id="mangal-about-media" style={{ position: 'relative', width: '160px', height: '160px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0 }}>
+            <div id="mangal-about-media" className="mangal-about-side-img" style={{ position: 'relative', width: '160px', height: '160px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0 }}>
               <Image src="/comics.jpg" alt="Mangal stories" fill style={{ objectFit: 'cover' }} />
             </div>
             <div id="mangal-about-copy" style={{ flex: '1 1 360px', textAlign: 'center' }}>
               <h3 style={{ fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 900, margin: '0 0 20px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>About Mangal</h3>
               <p style={{ fontSize: 'clamp(13px,1.6vw,16px)', color: 'var(--text-tertiary)', lineHeight: 1.8, margin: '0 0 16px' }}>
-                India&apos;s home for original comics and novels — mythology, folk tales, and street life told by Desi creators, for Desi readers. Bookmark series, track your reading progress, and discover something new every week.
+                India&apos;s home for original comics and novels — mythology, folk tales, and street life told by Desi creators, for Desi readers. MANGAL started as a reading platform and is now growing into a full ecosystem: <strong style={{ color: 'var(--text-secondary)' }}>WebMangal</strong> writes the story, <strong style={{ color: 'var(--text-secondary)' }}>KaTube</strong> brings it to life as original AI-anime, and <strong style={{ color: 'var(--text-secondary)' }}>Kalpana Circle</strong> is where the dreamers gather to talk about it.
               </p>
-              <p style={{ fontSize: 'clamp(13px,1.6vw,16px)', color: 'var(--text-tertiary)', lineHeight: 1.8, margin: 0 }}>
-                No paywalls, no gatekeepers — just stories, forever free to read.
+              <p style={{ fontSize: 'clamp(13px,1.6vw,16px)', color: 'var(--text-tertiary)', lineHeight: 1.8, margin: '0 0 20px' }}>
+                No paywalls, no gatekeepers — just stories, forever free to read, and a straight path from &quot;I have a story&quot; to a real audience for anyone willing to write it.
               </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
+                {['Bookmarks & reading history', 'Scroll or page reading mode', 'Tag & genre discovery', 'Creator dashboard & analytics', 'Weekly rankings', 'Direct reader comments'].map(item => (
+                  <span key={item} style={{
+                    fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)',
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                    padding: '7px 14px', borderRadius: '20px',
+                  }}>{item}</span>
+                ))}
+              </div>
             </div>
-            <div style={{ position: 'relative', width: '160px', height: '160px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0 }}>
+            <div className="mangal-about-side-img" style={{ position: 'relative', width: '160px', height: '160px', borderRadius: '20px', overflow: 'hidden', flexShrink: 0 }}>
               <Image src="/kcommunity-preview.jpg" alt="K Circle community" fill style={{ objectFit: 'cover' }} />
             </div>
           </div>
