@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import MangalLogo from './MangalLogo';
 
 type FooterLink = { label: string; href: string };
 
@@ -15,6 +15,11 @@ interface FooterProps {
   logoSize?: number;
   /** Show the logo + name block above the tagline. Set false for a links-only footer. */
   showBrandBlock?: boolean;
+  /** Where the footer logo links to. Defaults to "/". Pass the official
+   *  MANGAL site (e.g. on legal pages) to point at the company's official
+   *  page instead of this app's own homepage. External (http/https) values
+   *  open in a new tab; internal paths navigate normally. */
+  logoHref?: string;
 }
 
 const DEFAULT_FOOTER_LINKS: FooterLink[] = [
@@ -32,7 +37,17 @@ export default function Footer({
   platformName = 'MANGAL',
   logoSize = 28,
   showBrandBlock = true,
+  logoHref = '/',
 }: FooterProps) {
+  const isExternal = logoHref.startsWith('http://') || logoHref.startsWith('https://');
+
+  const brandMark = (
+    <>
+      <MangalLogo size={logoSize} />
+      <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>{platformName}</span>
+    </>
+  );
+
   return (
     <footer
       style={{
@@ -44,24 +59,20 @@ export default function Footer({
       }}
     >
       {showBrandBlock && (
-        <div
+        <a
+          href={logoHref}
+          {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             justifyContent: 'center',
             marginBottom: '12px',
+            textDecoration: 'none',
           }}
         >
-          <Image
-            src="/icon.png"
-            alt={platformName}
-            width={logoSize}
-            height={logoSize}
-            style={{ display: 'block', filter: 'drop-shadow(0 0 6px rgba(217,119,6,0.4))' }}
-          />
-          <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>{platformName}</span>
-        </div>
+          {brandMark}
+        </a>
       )}
 
       <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 14px' }}>{tagline}</p>

@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ThemeToggle from './components/shared/ThemeToggle';
+import MangalLogo from './components/shared/MangalLogo';
 import ParticleField from './components/shared/ParticleField';
 import CustomCursor from './components/shared/CustomCursor';
 import { supabase } from './lib/supabase';
@@ -450,7 +451,7 @@ export default function LandingPage() {
           transition: 'background 0.3s, border-color 0.3s',
         }}>
           <Link href="/" data-cursor-hover="true" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-            <Image src="/logo-icon.png" alt="MANGAL" width={36} height={36} style={{ borderRadius: '10px', boxShadow: '0 0 20px rgba(217,119,6,0.3)', display: 'block' }} priority />
+            <MangalLogo size={36} />
             <span className="mangal-landing-brand-text" style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
           </Link>
 
@@ -964,7 +965,7 @@ export default function LandingPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', justifyContent: 'space-between', marginBottom: '32px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <Image src="/logo-icon.png" alt="MANGAL" width={32} height={32} style={{ borderRadius: '9px', display: 'block' }} />
+                  <MangalLogo size={32} />
                   <span style={{ fontWeight: 900, fontSize: '18px', color: '#0d0d14' }}>MANGAL</span>
                 </div>
                 <p style={{ fontSize: '12px', color: 'rgba(13,13,20,0.75)', maxWidth: '200px', lineHeight: 1.6, margin: '0 0 16px', fontWeight: 600 }}>

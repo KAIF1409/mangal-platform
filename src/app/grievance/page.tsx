@@ -22,8 +22,8 @@
 // grievance form that should ideally get zero submissions.
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import MangalLogo from '../components/shared/MangalLogo';
 import { ArrowLeft, Scale, Timer, FileEdit, CheckCircle2, Check, Send } from 'lucide-react';
 
 // ── CONFIGURE THESE BEFORE GOING LIVE ────────────────────────────────────────
@@ -123,13 +123,7 @@ export default function GrievancePage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-          <Image
-            src="/logo-icon.png"
-            alt={PLATFORM_NAME}
-            width={32}
-            height={32}
-            style={{ borderRadius: '8px', display: 'block' }}
-          />
+          <MangalLogo size={32} />
           <span style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             {PLATFORM_NAME}
           </span>

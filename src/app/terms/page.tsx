@@ -364,8 +364,10 @@ export default function TermsOfServicePage() {
         }
       `}</style>
 
-      {/* FOOTER COMPONENT */}
-      <Footer showBrandBlock={false} />
+      {/* FOOTER COMPONENT — official MANGAL logo shown here (unlike other
+          "legal" pages that hide the brand block), linking out to the
+          company's official production site rather than this app's own "/". */}
+      <Footer logoHref="https://mangal-platform.vercel.app/" />
     </div>
   );
 }

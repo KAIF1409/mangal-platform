@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense, CSSProperties } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import MangalLogo from '../components/shared/MangalLogo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import { useKCircleTheme, KC_DARK_VARS } from './theme';
@@ -690,7 +691,7 @@ function KalpanaCircleInner() {
             clicking it dropped users out of K Circle entirely. Same fix
             as KaTube's "Back to MANGAL" link: keep it in-product. */}
         <Link href="/kalpana-circle" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0, minWidth: 0 }}>
-          <Image src="/icon.png" alt="MANGAL" width={28} height={28} style={{ display: 'block', borderRadius: '7px', flexShrink: 0 }} />
+          <MangalLogo size={28} />
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Image src="/kcircle-logo.png" alt="K Circle" width={130} height={130} style={{ display: 'block', height: '38px', width: '38px', objectFit: 'contain' }} priority />

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../../../components/shared/ThemeToggle';
+import MangalLogo from '../../../components/shared/MangalLogo';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import { Users, ThumbsUp, BookOpen, Star, ArrowLeft, Share2, MessageCircle, X, ChevronUp } from 'lucide-react';
@@ -661,7 +662,7 @@ export default function KaTubeWatchPage() {
         gap: '8px',
       }}>
         <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <Image src="/icon.png" alt="MANGAL" width={32} height={32} style={{ display: 'block', borderRadius: '8px' }} />
+          <MangalLogo size={32} />
           <span className="mangal-watch-brand-text" style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
         </Link>
 

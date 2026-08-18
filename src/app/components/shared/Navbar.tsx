@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from './ThemeToggle';
+import MangalLogo from './MangalLogo';
 import { ArrowLeft } from 'lucide-react';
 
 interface NavbarProps {
@@ -88,13 +89,11 @@ export default function Navbar({
           href={href}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}
         >
-          <Image
-            src={logoSrc}
-            alt={platformName}
-            width={logoSize}
-            height={logoSize}
-            style={{ display: 'block', filter: logoSrc === '/icon.png' ? 'drop-shadow(0 0 8px rgba(217,119,6,0.5))' : undefined }}
-          />
+          {logoSrc === '/icon.png' ? (
+            <MangalLogo size={logoSize} />
+          ) : (
+            <Image src={logoSrc} alt={platformName} width={logoSize} height={logoSize} style={{ display: 'block' }} />
+          )}
           <span className="mangal-shared-nav-brand-text" style={{ fontWeight: 900, fontSize: '18px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
             {platformName}
           </span>

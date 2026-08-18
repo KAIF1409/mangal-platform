@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '../../components/shared/ThemeToggle';
+import MangalLogo from '../../components/shared/MangalLogo';
 import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { CheckCircle2, Zap, Megaphone, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -238,7 +239,7 @@ export default function KaTubeUploadPage() {
         gap: '8px',
       }}>
         <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <Image src="/icon.png" alt="MANGAL" width={32} height={32} style={{ display: 'block', borderRadius: '8px' }} />
+          <MangalLogo size={32} />
           <span className="mangal-upload-brand-text" style={{ fontWeight: 900, fontSize: '13px', color: 'var(--text-tertiary)', letterSpacing: '-0.02em' }}>MANGAL</span>
         </Link>
 

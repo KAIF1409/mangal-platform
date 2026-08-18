@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../../components/shared/ThemeToggle';
+import MangalLogo from '../../components/shared/MangalLogo';
 import NotificationBell from '../../components/shared/NotificationBell';
 import CrossProductLinks from '../../components/shared/CrossProductLinks';
 import { Search, MessageCircle, Clapperboard, Megaphone, Bookmark, Trophy } from 'lucide-react';
@@ -122,7 +123,7 @@ export function KCircleRail({
         width: '46px', height: '46px', borderRadius: '14px', display: 'flex',
         alignItems: 'center', justifyContent: 'center', marginBottom: '10px', flexShrink: 0,
       }}>
-        <Image src="/icon.png" alt="MANGAL" width={30} height={30} style={{ borderRadius: '9px', display: 'block' }} />
+        <MangalLogo size={30} />
       </Link>
       <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '10px', flexShrink: 0 }} />
 
