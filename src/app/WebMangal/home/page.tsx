@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
@@ -8,6 +8,7 @@ import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../../components/shared/ProfileMenu';
 import ThemeToggle from '../../components/shared/ThemeToggle';
 import SeriesCard from '../../components/webmangal/SeriesCard';
+import SongCard, { type SongCardData } from '../../components/webmangal/SongCard';
 import { formatViews } from '../../lib/format';
 import { hasCreatorAccess, isDeveloperRole } from '../../lib/auth/roles';
 import { Search, BookOpen, Sparkles, Eye, ScrollText, BookText, ArrowRight, Music } from 'lucide-react';
@@ -54,6 +55,7 @@ async function attachChapterCounts(rows: Series[]): Promise<Series[]> {
 }
 
 const BROWSE_PAGE_SIZE = 24;
+const SONGS_PAGE_SIZE = 24;
 
 // Step 2 — Reading Progress: one resumable series for the "Continue Reading" row
 interface ContinueItem {
@@ -107,6 +109,25 @@ export default function HomePage() {
   // founder's request. Independent of activeGenre/activeContentType so it
   // can layer on top of either filter state.
   const [showDesiComics, setShowDesiComics] = useState(false);
+  // §85 continued (3) — Songs as a real toggle option alongside All/Manga/
+  // Novel, "same tier" per the founder's spec. Deliberately kept as its
+  // OWN boolean rather than a 4th value on activeContentType: every
+  // existing query in this file (trending/newArrivals/staffPicks/
+  // newVoices/browseSeries) filters the `series` table by
+  // `content_type: 'mangal' | 'novel'` — folding songs into that same
+  // union would mean touching every one of those queries and they'd all
+  // need a parallel songs-table branch anyway (different columns, no
+  // chapter_count/reading_mode). Toggling this on swaps the whole content
+  // area below the pills to a dedicated Songs section instead, leaving
+  // every series query/state above completely untouched.
+  const [songsMode, setSongsMode] = useState(false);
+  const [songs, setSongs] = useState<(SongCardData & { creator_id: string })[]>([]);
+  const [songUsernames, setSongUsernames] = useState<Record<string, string>>({});
+  const [songsLoading, setSongsLoading] = useState(true);
+  const [songsLoadingMore, setSongsLoadingMore] = useState(false);
+  const [songsHasMore, setSongsHasMore] = useState(true);
+  const songsPageRef = useRef(0);
+  const songsFetchedRef = useRef(false);
   const [sortBy, setSortBy] = useState<SortOption>('latest');
   const [user, setUser] = useState<User | null>(null);
   const [isCreator, setIsCreator] = useState(false);
@@ -294,6 +315,57 @@ export default function HomePage() {
     const next = browsePage + 1;
     setBrowsePage(next);
     fetchBrowsePage(next, false);
+  };
+
+  // §85 continued (3) — Songs section fetch. Own small page/query, entirely
+  // separate from fetchBrowsePage above — no genre/content-type coupling
+  // to the series grid. Latest-first only (no sort/genre controls here;
+  // those live on the full /WebMangal/songs browse page this section
+  // links out to). Fetched lazily the first time Songs mode is opened,
+  // not on every mount, since most visitors never toggle it.
+  const fetchSongsPage = async (page: number, reset: boolean) => {
+    if (reset) setSongsLoading(true); else setSongsLoadingMore(true);
+
+    let q = supabase.from('songs').select('id, title, genre, cover_url, views, blocks, creator_id, linked_series_id').eq('status', 'published').order('created_at', { ascending: false });
+    q = q.range(page * SONGS_PAGE_SIZE, page * SONGS_PAGE_SIZE + SONGS_PAGE_SIZE - 1);
+
+    const { data } = await q;
+    const rows = (data ?? []) as { id: string; title: string; genre: string | null; cover_url: string | null; views: number; blocks: unknown[]; creator_id: string; linked_series_id: string | null }[];
+
+    const creatorIds = Array.from(new Set(rows.map(r => r.creator_id)));
+    const linkedSeriesIds = Array.from(new Set(rows.map(r => r.linked_series_id).filter(Boolean))) as string[];
+    const [usernameRes, seriesRes] = await Promise.all([
+      creatorIds.length > 0 ? supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds) : Promise.resolve({ data: [] as { user_id: string; username: string }[] }),
+      linkedSeriesIds.length > 0 ? supabase.from('series').select('id, title').in('id', linkedSeriesIds) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    ]);
+    setSongUsernames(prev => ({ ...prev, ...Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username])) }));
+    const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
+
+    const mapped: (SongCardData & { creator_id: string })[] = rows.map(r => ({
+      id: r.id, title: r.title, genre: r.genre, cover_url: r.cover_url, views: r.views,
+      block_count: Array.isArray(r.blocks) ? r.blocks.length : 0,
+      linked_series_title: r.linked_series_id ? seriesTitleMap[r.linked_series_id] ?? null : null,
+      creator_id: r.creator_id,
+    }));
+
+    setSongs(prev => (reset ? mapped : [...prev, ...mapped]));
+    setSongsHasMore(rows.length === SONGS_PAGE_SIZE);
+    setSongsLoading(false);
+    setSongsLoadingMore(false);
+  };
+
+  useEffect(() => {
+    if (songsMode && !songsFetchedRef.current) {
+      songsFetchedRef.current = true;
+      songsPageRef.current = 0;
+      fetchSongsPage(0, true);
+    }
+  }, [songsMode]);
+
+  const handleSongsLoadMore = () => {
+    const next = songsPageRef.current + 1;
+    songsPageRef.current = next;
+    fetchSongsPage(next, false);
   };
 
   // Only carved into a separate "Featured" hero when browsing the
@@ -598,9 +670,28 @@ export default function HomePage() {
           >
             🇮🇳 {t('desiComics')}
           </button>
+
+          {/* §85 continued (3) — Songs, same tier as the All/Manga/Novel
+              pills but its own boolean (see songsMode declaration above for
+              why it isn't folded into activeContentType). Toggling this
+              swaps the whole section below to the Songs grid. */}
+          <button
+            onClick={() => setSongsMode(v => !v)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '7px 18px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+              fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap',
+              background: songsMode ? 'linear-gradient(135deg, #7c3aed, #a78bfa)' : 'var(--bg-card)',
+              color: songsMode ? '#fff' : 'var(--text-tertiary)',
+              transition: 'all 0.15s',
+            }}
+          >
+            <Music size={13} strokeWidth={2} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Songs
+          </button>
         </div>
 
         {/* ── GENRE TABS ── */}
+        {!songsMode && (
         <div id="genres" style={{
           display: 'flex', gap: '6px', overflowX: 'auto', padding: '20px 0',
           scrollbarWidth: 'none', borderBottom: '1px solid var(--border-color)',
@@ -617,8 +708,60 @@ export default function HomePage() {
             </button>
           ))}
         </div>
+        )}
 
-        {browseLoading ? (
+        {/* ── SONGS SECTION (§85 continued (3)) ── */}
+        {songsMode ? (
+          <section style={{ padding: '28px 0 40px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: '10px', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Music size={18} strokeWidth={2} color="#a78bfa" /> Songs
+              </h2>
+              <Link href="/WebMangal/songs" style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none' }}>
+                Search &amp; filter all songs →
+              </Link>
+            </div>
+
+            {songsLoading ? (
+              <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><Music size={32} strokeWidth={1.5} /></div>
+                <div style={{ fontSize: '14px' }}>Loading songs...</div>
+              </div>
+            ) : songs.length === 0 ? (
+              <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><Music size={32} strokeWidth={1.5} /></div>
+                <div style={{ fontSize: '14px', marginBottom: '16px' }}>No songs yet — be the first to write one.</div>
+                <Link href="/WebMangal/songs/upload" style={{ padding: '10px 24px', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #a78bfa)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+                  Write a Song
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
+                  {songs.map(s => (
+                    <SongCard key={s.id} song={s} creatorUsername={songUsernames[s.creator_id]} />
+                  ))}
+                </div>
+                {songsHasMore && (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '28px' }}>
+                    <button
+                      onClick={handleSongsLoadMore}
+                      disabled={songsLoadingMore}
+                      style={{
+                        padding: '10px 28px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                        background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 700,
+                        cursor: songsLoadingMore ? 'default' : 'pointer', opacity: songsLoadingMore ? 0.6 : 1,
+                        transition: 'opacity 0.15s',
+                      }}
+                    >
+                      {songsLoadingMore ? t('loadingStories') : 'Load More'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        ) : browseLoading ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><BookOpen size={32} strokeWidth={1.5} /></div>
             <div style={{ fontSize: '14px' }}>{t('loadingStories')}</div>

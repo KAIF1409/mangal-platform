@@ -6214,3 +6214,29 @@ hardwired-to-series risk flagged twice already — still deferred).
 detail page, library, bookmarks) 0 errors/0 warnings; `eslint src/app`
 project-wide quiet run (errors only) also clean, no regressions in
 untouched files.
+
+## §85 continued (3) — Songs on the home page toggle
+
+Tackling the two remaining deferred items one at a time, as instructed —
+this is the home-page-toggle half; `/search` is still open.
+
+- **`home/page.tsx`** — added "Songs" as a 4th pill next to All/Manga/
+  Novel, "same tier" per the founder's spec. Implemented as its own
+  boolean (`songsMode`), *not* a 4th value folded into `activeContentType`:
+  every existing query in this file (trending/newArrivals/staffPicks/
+  newVoices/browseSeries) filters `series` by
+  `content_type: 'mangal' | 'novel'` — extending that union would mean
+  touching all five of those queries, each needing a parallel songs-table
+  branch anyway since `songs` has different columns (no chapter_count/
+  reading_mode, block count instead). Toggling Songs on instead swaps the
+  whole content area below the pills to a dedicated Songs grid (own fetch,
+  own loading/pagination state, lazy-fetched only the first time it's
+  opened) and hides the genre tabs — every series query/state above it is
+  completely untouched when the toggle is off (the default), so this is
+  zero-risk to existing behavior. The section links out to
+  `/WebMangal/songs` for search/genre/sort — kept deliberately simple here
+  (latest-first only) since that's a short list, not the main destination.
+
+**Verified:** `tsc --noEmit` clean; `eslint` on the changed file 0
+errors/0 warnings; `eslint src/app` project-wide quiet run clean — diff
+isolated to this one file, nothing else touched.
