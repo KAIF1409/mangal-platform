@@ -5703,3 +5703,158 @@ before push; one real conflict (the draft/scheduled chapter-filter fix
 needed `canManageRef` set before `fetchChapters()` runs, which raced against
 this session's own batching — fixed by ordering `fetchChapters()` after the
 role check resolves, same principle applied again here for the reader page).
+## §69 — WebMangal: mobile nav overlap fix + orange-green primary-button gradient
+
+**Founder-reported bug (screenshot):** on the WebMangal mobile compact
+header, the hamburger/search icons, the WebMangal wordmark + "powered by
+MANGAL" subtitle, and the LOG IN button were all visually overlapping on
+narrow phones.
+
+**Root cause:** the wordmark+subtitle `<Link>` had `flex: 1,
+justifyContent: 'center'` but nothing constraining its own width — on a
+narrow viewport its content (logo + "WebMangal" + "powered by MANGAL", all
+`whiteSpace: 'nowrap'`) simply overflowed its allotted center slot and
+bled into the icon cluster on the left and the LOG IN button on the right,
+instead of shrinking. The existing `@media (max-width: 380px)` rule meant
+to hide the subtitle wasn't kicking in early enough on common phone
+widths.
+
+**Fixed (`app/WebMangal/View.tsx`, mobile-only compact header):**
+- Wordmark + subtitle now wrapped in a `minWidth: 0, overflow: 'hidden'`
+  block with `textOverflow: 'ellipsis'` on the wordmark — clips instead of
+  overlapping siblings if it's ever still tight.
+- Logo shrunk 34px → 28px on this header.
+- Subtitle's auto-hide breakpoint raised 380px → 460px (matches where it
+  was actually still colliding).
+- New `@media (max-width: 340px)` rule shrinks the icon buttons and LOG IN
+  pill further on very small phones, freeing more room for the wordmark.
+
+**Buttons — green → orange-green gradient, extended product-wide:**
+Per founder's ask ("replace login colour button from green to gradient
+orange-green add this for every or most of the buttons in webmangal"):
+- Replaced the mint-green (`#a7f3d0`/`#6ee7b7`) LOG IN / SIGN UP / mobile
+  search buttons with `linear-gradient(135deg, #f97316, #22c55e)`
+  (orange → green), text switched to white for contrast.
+- Extended the same gradient to WebMangal's existing primary red CTA
+  gradient (`#7f1d1d`/`#991b1b`) everywhere it appeared as an actual
+  clickable button — Log in/Get Started (desktop nav), series page
+  Follow/Save/Publish/Post Quest/Post Review, chapter page Post
+  comment/Post reply/Next chapter/"Unlimited Unlock", library/bookmarks/
+  history empty-state "Browse Series"/"Show All" CTAs,
+  `EditSeriesModal`'s Save, `ReportButton`'s Submit/Close, and
+  `ManagePagesModal`'s Save Order (2 spots) — 12 files total.
+- **Deliberately left alone:** destructive/danger buttons (Delete series,
+  Ban user, Delete page — solid `#7f1d1d`, no gradient) stay red, since
+  that's an intentional danger-action convention, not the brand CTA
+  color, and wasn't part of the ask. Also left the decorative flame-icon
+  badges and genre-pill accent chips on their original `#7f1d1d`/`#d97706`
+  red-orange gradient — those are branding/decorative marks, not
+  interactive buttons.
+- `ProfileMenu.tsx`'s avatar-initials circle (same red/amber gradient)
+  also left untouched — decorative avatar coloring, not a button.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` clean (0 errors)
+on all 12 touched files — the 13 warnings present are all pre-existing
+`react-hooks/exhaustive-deps`/unused-var notices on lines this change
+didn't touch. Committed and pushed directly to `main`
+(`145140c`→rebased→`bc53f77`) — rebased cleanly onto a concurrent commit
+(`e8e009d`, unrelated History-page fix) found on fetch before pushing, per
+this repo's standing convention.
+
+## §81 — WebMangal reader: fullscreen had no visible effect, Lock hidden behind it, Follow/Add Chapter button UI upgrade
+
+**Founder-reported bugs:** (1) Fullscreen button — "nothing visibly changes" when
+tapped. (2) Lock option — "only working for fullscreen, it's not visible
+always." (3) Series-page buttons should look like a "professional/big
+platform" button, using the orange-green gradient already established
+product-wide (§69), applied to Follow "everywhere" and the Add button.
+
+**Fullscreen (`WebMangal/read/[chapterId]/page.tsx`):** `isFullscreen` only
+ever drove a `maxWidth` cap (720px/600px → 'none') on the image container.
+On any screen narrower than that cap — every phone, the primary reading
+device — the cap never actually bound, so toggling it was a genuine no-op
+visually. Fixed by making fullscreen entry immediately hide the top bar
+(instead of waiting for the normal 4s idle timer) and collapsing the
+content's `paddingTop` (56px → 0) in the same instant the bar hides —
+tied to `showUI` generally, not just `lockScreen` as before. This is a
+real, immediate, viewport-size-independent visual change instead of a cap
+that only mattered on wide desktop windows. Page-mode's fixed 12px
+padding also now collapses to 0 in fullscreen for true edge-to-edge.
+Exiting fullscreen restores the top bar and normal padding.
+
+**Lock Screen:** the toggle button was gated behind `{isFullscreen && (...)}`,
+so it simply wasn't in the DOM until fullscreen was turned on first —
+read as "the lock option isn't there." `toggleLockScreen` never actually
+depended on `isFullscreen` for anything, so the gate served no functional
+purpose; removed it. Lock button is now always present in the reader top
+bar like the other controls (Chapters/Fullscreen/Settings), with an
+active-state highlight matching the others.
+
+**Button UI (`WebMangal/series/[seriesId]/page.tsx`):** Follow button and
+the creator-only "+ Add Chapter" button were still on the old thin
+outlined/translucent style from before §69's gradient rollout (they sit
+in a CTA row built earlier than that pass and were missed). Both now use
+the same `linear-gradient(135deg, #f97316, #22c55e)` solid-pill CTA style
+as the rest of the product's primary buttons — Follow shows the full
+gradient when not-yet-following (the prominent ask) and a filled
+green-tinted confirmed state once following, rather than fading to a
+plain outline that reads as disabled. Add Chapter gets the same gradient
+treatment plus a proper `Plus` icon in place of a literal "+" character.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on both touched
+files: 0 errors (10 pre-existing `react-hooks/exhaustive-deps` warnings,
+same as baseline, none introduced). `next build` succeeds. Committed and
+pushed directly to `main` per founder's instruction — no branch/PR.
+
+## §82 — WebMangal reader fullscreen round 2: real browser fullscreen, persists across chapters, trimmed nav, dedicated exit control
+
+**Founder feedback on §81 (with screenshot):** the simulated fullscreen from
+§81 didn't hide the mobile browser's own address bar / status bar chrome
+(the actual ask, "like how F12 behaves on desktop") — it only reflowed our
+own layout. Also: no obvious exit-fullscreen control once the top bar
+auto-hid; the end-of-chapter block was too busy for fullscreen (Up Next
+card + Prev + All Chapters + Ch.N pill all visible — only the next-chapter
+action and reactions/comments should remain); and fullscreen has to
+survive tapping "Next Chapter", not reset every chapter.
+
+**Real Fullscreen API.** `toggleFullscreen` now calls
+`document.documentElement.requestFullscreen()` / `document.exitFullscreen()`
+— actually hides mobile browser chrome, not just CSS. Deliberately targets
+`document.documentElement` and not this component's own root div: the root
+div gets unmounted and replaced by a fresh one on every chapter navigation
+(different `chapterId` route param), and the Fullscreen API auto-exits the
+moment its target element leaves the DOM — `<html>` never unmounts during
+Next.js client-side nav, so requesting on it is what actually makes
+fullscreen survive clicking "Next Chapter" as asked. A `fullscreenchange`
+listener keeps React state in sync in both directions: (a) if the browser
+exits fullscreen on its own (Esc, swipe-down, back gesture) rather than via
+our button, state falls back to normal instead of leaving an edge-to-edge
+layout with no chrome to escape it; (b) on mount, if `document.fullscreenElement`
+is already truthy (arrived here via in-app nav while still in real
+fullscreen from the previous chapter), state initializes to `true` instead
+of dropping to windowed layout while the browser is still actually
+fullscreen underneath. `requestFullscreen` is wrapped in try/catch — iOS
+Safari doesn't support it on non-`<video>` elements at all, so this falls
+back to the §81 CSS-only edge-to-edge layout there rather than silently
+failing.
+
+**Dedicated exit control.** §81 hid the whole top bar (including the old
+Shrink-icon exit button) the instant fullscreen was entered, which is
+exactly why the exit option "disappeared" — technically reachable by
+tapping to reveal the bar again, but not obvious. Added a persistent
+top-right corner button (same video-player pattern as the existing Lock
+Screen exit affordance, just not tied to the auto-hide timer so it's never
+gone) — shown whenever `isFullscreen && !lockScreen`.
+
+**Trimmed end-of-chapter block in fullscreen** (scroll mode, matches the
+founder's screenshot): the "Up Next" card and the Prev/All Chapters pills
+are hidden; only the Next Chapter gradient pill remains, plus the
+reactions/comments section below (already unconditional on fullscreen,
+untouched). Page mode's equivalent Up Next card gets the same treatment;
+its in-chapter Prev/dots/Next page-turn row was left alone since that's
+core reading navigation, not the extra chrome in question.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on the touched
+file: 0 errors (7 pre-existing warnings, same baseline). `next build`
+succeeds. Committed and pushed directly to `main` per founder's
+instruction — no branch/PR.

@@ -17,7 +17,7 @@ import {
   BookOpen, BookText, ScrollText, AlertCircle, ArrowLeft, CheckCircle2,
   Star, Play, RotateCcw, Zap, Bell, AlertTriangle, Trash2, MessageCircle,
   Library, ArrowDown, ArrowUp, Inbox, Clapperboard, Circle, Trophy,
-  Edit3, PenLine, ThumbsUp, Heart, ChevronRight, Eye, Pause, ChevronUp, Flame,
+  Edit3, PenLine, ThumbsUp, Heart, ChevronRight, Eye, Pause, ChevronUp, Flame, Plus,
 } from 'lucide-react';
 
 interface Series {
@@ -805,14 +805,14 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           <ThemeToggle size={30} />
           <Link href="/WebMangal" className="mangal-series-nav-browse" style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>Browse</Link>
           {isCreator && (
-            <a href={`/WebMangal/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            <a href={`/WebMangal/upload?seriesId=${series.id}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>
               + Add Chapter
             </a>
           )}
           {user ? (
             <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
           ) : (
-            <a href={`/login?next=${encodeURIComponent(pathname)}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>Log in</a>
+            <a href={`/login?next=${encodeURIComponent(pathname)}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>Log in</a>
           )}
         </div>
       </nav>
@@ -1027,31 +1027,43 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   <Zap size={13} /> Latest Chapter
                 </a>
               )}
+              {/* Follow button — restyled to match the orange→green gradient CTA
+                  used product-wide (per §69). Unfollowed = solid gradient pill,
+                  the prominent "big platform" look (MangaDex/Webtoon-style Follow
+                  CTA); Following = a filled, still-colored confirmed state rather
+                  than fading to a plain outline, so it still reads as a real
+                  button, not disabled/dead. */}
               {!isCreator && (
                 <button
                   onClick={toggleFollow}
                   disabled={followLoading}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
+                    padding: '12px 24px', borderRadius: '10px', fontWeight: 800, fontSize: '14px',
                     cursor: followLoading ? 'wait' : 'pointer',
-                    border: isFollowing ? '1px solid rgba(217,119,6,0.5)' : '1px solid rgba(255,255,255,0.16)',
-                    background: isFollowing ? 'rgba(217,119,6,0.12)' : 'rgba(255,255,255,0.08)',
-                    color: isFollowing ? '#d97706' : '#c3c7cf',
+                    border: 'none',
+                    background: isFollowing ? 'rgba(34,197,94,0.16)' : 'linear-gradient(135deg, #f97316, #22c55e)',
+                    color: isFollowing ? '#4ade80' : '#fff',
+                    boxShadow: isFollowing ? 'none' : '0 4px 20px rgba(34,197,94,0.25)',
                     transition: 'all 0.2s',
+                    opacity: followLoading ? 0.7 : 1,
                   }}
                 >
                   {followLoading ? '...' : <><Bell size={13} /> {isFollowing ? 'Following' : 'Follow'}</>}
                 </button>
               )}
+              {/* "+ Add Chapter" — same gradient CTA treatment, upgraded from the
+                  thin outlined/translucent link it was before to a solid button
+                  shape consistent with the platform's other primary CTAs. */}
               {isCreator && (
                 <a href={`/WebMangal/upload?seriesId=${series.id}`} style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
-                  padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
-                  background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)',
-                  color: '#d97706', textDecoration: 'none',
+                  padding: '12px 24px', borderRadius: '10px', fontWeight: 800, fontSize: '14px',
+                  background: 'linear-gradient(135deg, #f97316, #22c55e)',
+                  color: '#fff', textDecoration: 'none',
+                  boxShadow: '0 4px 20px rgba(34,197,94,0.25)',
                 }}>
-                  + Add Chapter
+                  <Plus size={14} /> Add Chapter
                 </a>
               )}
               {isCreator && (
@@ -1244,8 +1256,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     disabled={questSubmitting || !questDescription.trim()}
                     style={{
                       padding: '10px 20px', borderRadius: '10px', border: 'none',
-                      background: (questSubmitting || !questDescription.trim()) ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #d97706)',
-                      color: 'var(--text-primary)', fontSize: '12px', fontWeight: 700,
+                      background: (questSubmitting || !questDescription.trim()) ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316, #22c55e)',
+                      color: (questSubmitting || !questDescription.trim()) ? 'var(--text-primary)' : '#fff', fontSize: '12px', fontWeight: 700,
                       cursor: (questSubmitting || !questDescription.trim()) ? 'not-allowed' : 'pointer',
                     }}
                   >{questSubmitting ? 'Posting...' : 'Post Quest'}</button>
@@ -1442,8 +1454,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   disabled={reviewSubmitting}
                   style={{
                     padding: '10px 20px', borderRadius: '10px', border: 'none',
-                    background: reviewSubmitting ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #d97706)',
-                    color: 'var(--text-primary)', fontSize: '12px', fontWeight: 700, cursor: reviewSubmitting ? 'not-allowed' : 'pointer',
+                    background: reviewSubmitting ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316, #22c55e)',
+                    color: reviewSubmitting ? 'var(--text-primary)' : '#fff', fontSize: '12px', fontWeight: 700, cursor: reviewSubmitting ? 'not-allowed' : 'pointer',
                   }}
                 >{reviewSubmitting ? 'Posting...' : 'Post Review'}</button>
               </div>

@@ -1101,7 +1101,7 @@ function UploadFlow() {
                   </div>
                 )}
 
-                <button onClick={handleCreateSeries} disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', border: '1px solid #7f1d1d', borderRadius: '12px', color: loading ? 'var(--text-tertiary)' : '#fff', fontSize: '13px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px' }}>
+                <button onClick={handleCreateSeries} disabled={loading} style={{ width: '100%', padding: '14px', background: loading ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316 0%, #22c55e 100%)', border: '1px solid #ea580c', borderRadius: '12px', color: loading ? 'var(--text-tertiary)' : '#fff', fontSize: '13px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '8px' }}>
                   {loading ? 'Creating...' : <><ArrowRight size={13} style={{ verticalAlign: 'middle' }} /> {contentType === 'novel' ? 'Continue — Write Chapter' : 'Continue — Upload Pages'}</>}
                 </button>
               </div>
@@ -1122,7 +1122,7 @@ function UploadFlow() {
                 <Eye size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Preview this chapter as a reader
               </a>
 
-              <button onClick={handleAddAnotherChapter} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)', border: '1px solid #7f1d1d', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}>
+              <button onClick={handleAddAnotherChapter} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #f97316 0%, #22c55e 100%)', border: '1px solid #ea580c', borderRadius: '12px', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}>
                 <Plus size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Add Another Chapter
               </button>
 
@@ -1220,8 +1220,8 @@ function UploadFlow() {
                     disabled={loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER}
                     style={{
                       width: '100%', padding: '14px',
-                      background: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                      border: '1px solid #7f1d1d', borderRadius: '12px',
+                      background: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316 0%, #22c55e 100%)',
+                      border: '1px solid #ea580c', borderRadius: '12px',
                       color: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'var(--text-tertiary)' : '#fff',
                       fontSize: '13px', fontWeight: 700,
                       cursor: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'not-allowed' : 'pointer',
@@ -1402,8 +1402,8 @@ function UploadFlow() {
                       disabled={loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER}
                       style={{
                         flex: 2, padding: '14px',
-                        background: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                        border: '1px solid #7f1d1d', borderRadius: '12px',
+                        background: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316 0%, #22c55e 100%)',
+                        border: '1px solid #ea580c', borderRadius: '12px',
                         color: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? 'var(--text-tertiary)' : '#fff',
                         fontSize: '13px', fontWeight: 700,
                         cursor: (loading || countWords(novelContent) < MIN_WORDS_PER_CHAPTER) ? 'not-allowed' : 'pointer',

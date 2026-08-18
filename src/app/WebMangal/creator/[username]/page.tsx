@@ -205,7 +205,7 @@ export default function CreatorProfilePage() {
             </p>
             <Link href={backNav.href} style={{
               display: 'inline-block', padding: '12px 28px', borderRadius: '10px',
-              background: 'linear-gradient(135deg, #7f1d1d, #991b1b)',
+              background: 'linear-gradient(135deg, #f97316, #22c55e)',
               color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: '13px',
             }}>
               <ArrowLeft size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle' }} /> {backNav.label}

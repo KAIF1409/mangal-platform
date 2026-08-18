@@ -261,8 +261,8 @@ export default function ManagePagesModal({
                   disabled={saving}
                   style={{
                     padding: '8px 16px', borderRadius: '8px',
-                    background: saving ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d, #991b1b)',
-                    border: '1px solid #7f1d1d',
+                    background: saving ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316, #22c55e)',
+                    border: '1px solid #ea580c',
                     color: saving ? 'var(--text-muted)' : '#fff',
                     fontSize: '12px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
                     transition: 'all 0.15s',
@@ -545,8 +545,8 @@ export default function ManagePagesModal({
                   disabled={saving}
                   style={{
                     padding: '7px 16px', borderRadius: '7px',
-                    background: saving ? 'var(--border-color)' : 'linear-gradient(135deg,#7f1d1d,#991b1b)',
-                    border: '1px solid #7f1d1d',
+                    background: saving ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316, #22c55e)',
+                    border: '1px solid #ea580c',
                     color: saving ? 'var(--text-muted)' : '#fff',
                     fontSize: '11px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
                     display: 'flex', alignItems: 'center', gap: '6px',

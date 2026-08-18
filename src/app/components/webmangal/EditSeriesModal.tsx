@@ -397,8 +397,8 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
               disabled={saving || checkingQuality}
               style={{
                 flex: 2, padding: '13px', borderRadius: '10px',
-                background: (saving || checkingQuality) ? 'var(--border-color)' : 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-                border: '1px solid #7f1d1d', color: (saving || checkingQuality) ? 'var(--text-tertiary)' : '#fff',
+                background: (saving || checkingQuality) ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316 0%, #22c55e 100%)',
+                border: '1px solid #ea580c', color: (saving || checkingQuality) ? 'var(--text-tertiary)' : '#fff',
                 fontSize: '13px', fontWeight: 700, cursor: (saving || checkingQuality) ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}
