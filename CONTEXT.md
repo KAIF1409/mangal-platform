@@ -6,11 +6,13 @@
 
 ---
 
-> **⭐ CURRENT TOP PRIORITY (per founder, this session):** §77 (bottom of
-> this file) — KaTube Share sheet (K Circle send) + separate Watch
-> with Friends/Watch Together entry point, on both long-video and Shorts
-> pages. §0's "Unique for Mangal" phases are all done (§64/§68), so its
-> standing "don't pick up anything else" rule no longer blocks this.
+> **⭐ CURRENT TOP PRIORITY (per founder, this session):** §85 (bottom of
+> this file) — WebMangal "Songs" category: new content type for lyrics
+> linked to a manga/novel series or chapter, auto K Circle collab group
+> with the original creator, future KaTube integration. Plan is fully
+> spec'd out — build this before picking up any other backlog item,
+> including the §77 item below (now superseded as top priority, but still
+> open and worth doing after §85).
 
 ## 0. 🔴 HIGHEST PRIORITY — "Unique for Mangal" (build this before anything else)
 
@@ -6018,3 +6020,127 @@ pre-existing-pattern `<img>` line that isn't part of this work, rebased on
 top cleanly with no conflicts). `next build` fails in this sandbox only on
 the Google Fonts network fetch being blocked — unrelated to any of this,
 same sandbox limitation flagged in earlier entries.
+
+## §85 — 🔴 NEW TOP PRIORITY — WebMangal "Songs" category (plan only, not started — build next)
+
+Founder's pitch, worked out this session, full scope confirmed. A **third
+WebMangal content type alongside Manga/Novel**: songwriters publish lyrics
+inspired by a specific series/chapter, the original creator and the
+songwriter get auto-connected in a K Circle group to coordinate production,
+and — later — KaTube creators can pull these lyrics into AI-assisted video/
+music generation. Nothing below is built yet; this is the spec to implement
+next, in priority order over anything else in the backlog.
+
+**Confirmed scope (founder's answers this session):**
+- **Lyrics/text only for now** — no audio upload. The actual audio/music
+  gets produced separately (AI tools like the vidiq music/voice generation
+  already available, or manual production) and that coordination happens
+  inside the auto-created K Circle group, not on this platform. Audio
+  upload is an explicit future step, not part of this build.
+- **No approval gate to link** — any songwriter can publish a song and link
+  it to any series/chapter, no original-creator sign-off required. Instead,
+  the original creator gets: a **Report button** on the song (reuse
+  `ReportButton.tsx`, just add `'song'` to its `TargetType` union — same
+  component, zero new UI), and a way to **message the songwriter directly**
+  via K Circle to ask for changes if something doesn't fit the story.
+- **Mandatory K Circle profile link** — every song requires the songwriter's
+  K Circle profile, so both the audience (follow them in K Circle) and the
+  original creator (message them) always have a real point of contact.
+  Should be *resolved*, not free-typed — validate against `creator_profiles`/
+  K Circle username at submit time and store the resolved user id, not a raw
+  pasted URL, so it can't be faked or go stale.
+- **Discovery: full third category, not just a series-page section** — same
+  tier as Manga/Novel across WebMangal (home page content-type toggle,
+  library, bookmarks, search), *and* still shown on the linked series page
+  itself (a "Fan Songs" section, same visual slot as the existing "Fan
+  Theories & Art" block that reads `kcircle_posts` by tag — this one queries
+  by the song's actual `linked_series_id` FK instead of a loose title match,
+  so it's exact rather than fuzzy).
+
+**1. Data model (new migration, nothing built yet)**
+- `songs` table: `id`, `creator_id` (the songwriter), `title`,
+  `cover_url` (nullable), `genre` (nullable — open question below),
+  `language` (nullable), `linked_series_id` (nullable FK → `series.id`),
+  `linked_chapter_id` (nullable FK → `chapters.id`, only meaningful when
+  `linked_series_id` is set), `kcircle_user_id` (FK, NOT NULL — the resolved
+  profile link), `status` ('draft'/'published'), `views`, `created_at`.
+- `song_blocks` table (or a `blocks jsonb` column directly on `songs` —
+  lean toward jsonb since blocks are always read/written as one unit, never
+  queried individually, matching the "whole song uploads as one page"
+  requirement): ordered array of `{ block_type, label, content }`.
+  `block_type` from a **prebuilt list** — Intro, Verse, Pre-Chorus, Chorus,
+  Bridge, Hook, Outro — auto-numbered per type as the writer adds them
+  (Verse 1, Verse 2, ...), each its own labeled textarea in the composer so
+  nobody hand-types "Chorus:" labels themselves.
+- RLS: public read on published songs (same pattern as `series`), owner-only
+  write, same shape as every other content table in this schema.
+
+**2. Upload flow (new page, `WebMangal/songs/upload` or similar)**
+1. "Is this song based on a WebMangal chapter or series?" — Yes/No toggle
+   up front. Yes → series picker, then optional specific-chapter picker
+   scoped to that series.
+2. Block composer — "Add a block" button opens the prebuilt block-type
+   list; each added block becomes its own auto-labeled textarea, drag-
+   reorderable. No separate "write your chorus separately" step — it's all
+   one connected form.
+3. K Circle profile field — resolved/validated against the writer's own
+   K Circle username (likely just auto-filled from their own profile if
+   they're already a K Circle member, rather than making them paste
+   anything — simpler and can't be faked at all).
+4. Submit — one write: creates the `songs` row + its blocks together (matches
+   "har ek block se ek pura page ek saath upload"), and if linked, triggers
+   the auto-group creation below.
+
+**3. Auto K Circle group on link**
+- Reuses the existing K Circle group infra from §17 as-is — no new group/role
+  system needed. Inserting into `kcircle_conversations` (group type) already
+  auto-bootstraps an `@everyone` role, an `Owner` role, and a `#general`
+  channel via the existing trigger.
+- On a linked song's publish: auto-create that group with the songwriter and
+  the series' `creator_id` as initial members. Purpose is pre-publish
+  production/editing discussion — created immediately at link time, not
+  gated on anything.
+- Founder's explicit ask: a **separate "Invite" option** inside that
+  auto-group so either of them can pull in people who weren't
+  auto-included — an editor, a video producer, etc. This is just the
+  existing K Circle member-invite flow (§17's infra already supports
+  adding members to a group) — no new mechanic, just make sure it's
+  reachable from this auto-created group like any other.
+
+**4. Discovery integration**
+- Extend `content_type` from `'mangal' | 'novel'` to include `'song'`
+  everywhere it's currently checked — home page toggle, library, bookmarks,
+  search — same pattern already used for the novel/manga split, just a
+  third value.
+- Songs need their own card treatment (no `chapter_count`/`reading_mode` —
+  probably show block count + a "based on [Series Title]" badge when
+  linked instead). Reuse `SeriesCard`'s shell with a song-specific variant,
+  or a small dedicated `SongCard` — implementer's call at build time.
+- Series page: new "Fan Songs" section, same visual slot/pattern as the
+  existing "Fan Theories & Art" block, querying `songs` by
+  `linked_series_id` (and `linked_chapter_id` when set) instead of
+  `kcircle_posts` by tag.
+
+**5. Future — KaTube integration (explicitly NOT designed yet, later phase)**
+- Once songs exist and have real usage: a KaTube creator making a video
+  (or using the AI music/voiceover generation tools already available)
+  gets an option to pull in a published WebMangal song's lyrics as the
+  basis. Exactly how that hands off to actual audio generation — the AI
+  tools directly, or produced manually by the auto-formed K Circle group
+  and uploaded separately — is unresolved and deliberately deferred until
+  the song content type itself is live and has real songwriters using it.
+
+**Explicitly not decided — flag before/while building:**
+- Whether songs share WebMangal's existing `GENRES` list or get their own
+  (e.g. mood-based: Emotional, Upbeat, Epic, Sad) — default to reusing the
+  existing list unless founder says otherwise.
+- Whether a song can only ever link to one series/chapter, or could
+  reference multiple (e.g. a crossover song) — assumed single-link for v1.
+- Whether songs count toward the free-tier read-gate (§26) the same way
+  manga/novel chapters do — not decided.
+- Multiple songs per series/chapter — assumed unrestricted (same as fan
+  art), not capped.
+
+**Founder confirmed this is the new top priority — build this before
+picking up any other backlog item**, superseding the §77 pointer at the
+top of this file.
