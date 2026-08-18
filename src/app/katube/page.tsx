@@ -177,7 +177,7 @@ const SIDEBAR_GROUPS: { label: string; items: { id: SidebarItem; label: string; 
 // don't participate in.
 const SIDEBAR_LINKS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/katube/trending', label: 'Trending', icon: Flame },
-  { href: '/katube/subscriptions', label: 'Subscriptions', icon: Users },
+  { href: '/katube/subscriptions', label: 'Following', icon: Users },
   { href: '/katube/playlists', label: 'Playlists', icon: ListVideo },
 ];
 
@@ -1221,7 +1221,7 @@ export default function KaTubePage() {
           }}
         >
           <Users size={20} />
-          <span style={{ fontSize: '10px', fontWeight: 700 }}>Subs</span>
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>Following</span>
         </Link>
         <Link
           href="/katube/dashboard"

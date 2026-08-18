@@ -62,7 +62,7 @@ export default function SubscriptionsFeedPage() {
   }, []);
 
   return (
-    <KaTubeShell title="Subscriptions">
+    <KaTubeShell title="Following">
       {signedIn === false ? (
         <EmptyNote>
           Sign in to see new uploads from the creators you follow. <Link href="/login?next=/katube/subscriptions" style={{ color: '#f97316', fontWeight: 700 }}>Sign in</Link>
