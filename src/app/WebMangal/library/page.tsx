@@ -66,64 +66,59 @@ export default function LibraryPage() {
       if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
       setUser(u.user);
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', u.user.id)
-        .single();
-      if (hasCreatorAccess(profile?.role)) setIsCreator(true);
-      setIsDeveloper(isDeveloperRole(profile?.role));
+      // Perf fix — profile role and the follows list only depend on
+      // u.user.id, not on each other, so fetch them together.
+      const [profileRes, followsRes] = await Promise.all([
+        supabase.from('profiles').select('role').eq('id', u.user.id).single(),
+        supabase
+          .from('follows')
+          .select('created_at, series(id, title, synopsis, genre, language, cover_url, reading_mode, status)')
+          .eq('reader_id', u.user.id)
+          .order('created_at', { ascending: false }),
+      ]);
+      if (hasCreatorAccess(profileRes.data?.role)) setIsCreator(true);
+      setIsDeveloper(isDeveloperRole(profileRes.data?.role));
 
-      // Get all series this reader follows, with series details
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('created_at, series(id, title, synopsis, genre, language, cover_url, reading_mode, status)')
-        .eq('reader_id', u.user.id)
-        .order('created_at', { ascending: false });
-
+      const follows = followsRes.data;
       if (!follows || follows.length === 0) { setLoading(false); return; }
 
-      // For each followed series, fetch chapter count + latest chapter
-      const enriched = await Promise.all(
-        follows.map(async (f: FollowRow) => {
-          const s = Array.isArray(f.series) ? f.series[0] : f.series;
-          if (!s) return null;
+      const seriesIds = follows
+        .map((f: FollowRow) => (Array.isArray(f.series) ? f.series[0] : f.series)?.id)
+        .filter(Boolean) as string[];
 
-          // Bug fix — same gap as the series page: this fetched the latest
-          // chapter by chapter_number with no is_draft/scheduled_at filter,
-          // so a follower's "New" badge and read-through link could point at
-          // a chapter that isn't actually out yet, landing them on the
-          // reader's draft/scheduled wall instead of a chapter. This is a
-          // reader's own followed-series list, not a creator management
-          // view, so always filter to what's actually published.
-          const { data: chapters } = await supabase
-            .from('chapters')
-            .select('id, chapter_number, created_at')
-            .eq('series_id', s.id)
-            .eq('is_draft', false)
-            .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`)
-            .order('chapter_number', { ascending: false })
-            .limit(1);
+      // Perf fix — this used to fire 2 queries (latest chapter + count) per
+      // followed series, i.e. N+1: a library of 30 followed series meant 60
+      // round trips. One batched query for every series' published chapters
+      // at once, then compute latest/count client-side — same pattern
+      // already used on /WebMangal/bookmarks.
+      const { data: allChapters } = await supabase
+        .from('chapters')
+        .select('id, series_id, chapter_number, created_at')
+        .in('series_id', seriesIds)
+        .eq('is_draft', false)
+        .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`)
+        .order('chapter_number', { ascending: false });
 
-          const latest = chapters?.[0] ?? null;
+      const latestMap: Record<string, { id: string; chapter_number: number; created_at: string }> = {};
+      const countMap: Record<string, number> = {};
+      (allChapters ?? []).forEach((ch: { id: string; series_id: string; chapter_number: number; created_at: string }) => {
+        if (!latestMap[ch.series_id]) latestMap[ch.series_id] = ch;
+        countMap[ch.series_id] = (countMap[ch.series_id] ?? 0) + 1;
+      });
 
-          const { count } = await supabase
-            .from('chapters')
-            .select('id', { count: 'exact', head: true })
-            .eq('series_id', s.id)
-            .eq('is_draft', false)
-            .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`);
-
-          return {
-            ...s,
-            followed_at: f.created_at,
-            latest_chapter_number: latest?.chapter_number ?? null,
-            latest_chapter_id: latest?.id ?? null,
-            latest_chapter_at: latest?.created_at ?? null,
-            chapter_count: count ?? 0,
-          } as FollowedSeries;
-        })
-      );
+      const enriched = follows.map((f: FollowRow) => {
+        const s = Array.isArray(f.series) ? f.series[0] : f.series;
+        if (!s) return null;
+        const latest = latestMap[s.id] ?? null;
+        return {
+          ...s,
+          followed_at: f.created_at,
+          latest_chapter_number: latest?.chapter_number ?? null,
+          latest_chapter_id: latest?.id ?? null,
+          latest_chapter_at: latest?.created_at ?? null,
+          chapter_count: countMap[s.id] ?? 0,
+        } as FollowedSeries;
+      });
 
       setSeries(enriched.filter(Boolean) as FollowedSeries[]);
       setLoading(false);

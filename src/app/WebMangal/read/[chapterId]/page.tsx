@@ -280,6 +280,20 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // the tab regains focus. `silent` skips setLoading(true) so an in-progress
   // read isn't interrupted by the "Loading chapter..." screen reappearing.
   const loadChapter = async (silent = false) => {
+      // Perf fix — the manga pages query (the actual images the reader is
+      // here to see) only needs chapterId, which is already known — it
+      // doesn't need anything from the chapter row. It used to be fetched
+      // dead last, after the chapter row AND an unrelated chapter-nav-list
+      // query had both already resolved in sequence. Kicking it off here,
+      // in parallel with the chapter fetch, shaves a full round trip off
+      // the critical path of every single chapter view — this is the
+      // highest-traffic page in the app.
+      const pageRowsPromise = supabase
+        .from('pages')
+        .select('id, page_number, image_url')
+        .eq('chapter_id', chapterId)
+        .order('page_number', { ascending: true });
+
       const { data: chapter } = await supabase
         .from('chapters')
         .select('id, chapter_number, title, series_id, content, word_count, author_note_before, author_note_after, tags, is_draft, scheduled_at, series(id, title, reading_mode, content_type, reading_direction, creator_id, cover_url)')
@@ -377,12 +391,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         }
       }
 
-      const { data: pageRows } = await supabase
-        .from('pages')
-        .select('id, page_number, image_url')
-        .eq('chapter_id', chapterId)
-        .order('page_number', { ascending: true });
-
+      const { data: pageRows } = await pageRowsPromise;
       if (pageRows) setPages(pageRows);
       if (!silent) setLoading(false);
   };

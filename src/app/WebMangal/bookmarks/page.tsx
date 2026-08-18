@@ -97,20 +97,21 @@ export default function BookmarksPage() {
       setUserId(u.user.id);
       setUser(u.user);
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', u.user.id)
-        .single();
-      if (hasCreatorAccess(profile?.role)) setIsCreator(true);
-      setIsDeveloper(isDeveloperRole(profile?.role));
+      // Perf fix — profile role and the follows list only depend on
+      // u.user.id, not on each other, so they can run together instead of
+      // one after another.
+      const [profileRes, followsRes] = await Promise.all([
+        supabase.from('profiles').select('role').eq('id', u.user.id).single(),
+        supabase
+          .from('follows')
+          .select('created_at, series(id, title, synopsis, genre, cover_url, completion_status, content_type)')
+          .eq('reader_id', u.user.id)
+          .order('created_at', { ascending: false }),
+      ]);
+      if (hasCreatorAccess(profileRes.data?.role)) setIsCreator(true);
+      setIsDeveloper(isDeveloperRole(profileRes.data?.role));
 
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('created_at, series(id, title, synopsis, genre, cover_url, completion_status, content_type)')
-        .eq('reader_id', u.user.id)
-        .order('created_at', { ascending: false });
-
+      const follows = followsRes.data;
       if (!follows || follows.length === 0) { setLoading(false); return; }
 
       const seriesIds = follows.map((f: FollowRow) => {

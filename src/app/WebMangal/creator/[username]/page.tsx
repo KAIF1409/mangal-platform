@@ -115,11 +115,39 @@ export default function CreatorProfilePage() {
       }
       setCreator(creatorRow);
 
+      // Perf fix — these 4 used to run one after another (viewer auth →
+      // viewer role → creator's account_active → series list → writer-of-
+      // month RPC), each a full round trip, even though only creatorRow's
+      // user_id is a real dependency for any of them. Batching cuts this
+      // page's load from ~5 sequential round trips to ~2.
+      const [viewerRes, creatorProfileRes, seriesRes, writerOfMonthRes] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.from('profiles').select('account_active').eq('id', creatorRow.user_id).single(),
+        // Only published series — drafts stay private to the creator's own dashboard
+        supabase
+          .from('series')
+          .select('id, title, synopsis, genre, language, cover_url, reading_mode, views, completion_status')
+          .eq('creator_id', creatorRow.user_id)
+          .eq('status', 'published')
+          .order('created_at', { ascending: false }),
+        // Phase 3 "Unique for Mangal" (CONTEXT.md §0c) — is this creator the
+        // most recently finalized month's #1 writer? Same single-RPC-call,
+        // compare-to-this-profile pattern as the KaTube channel page's
+        // bestOwnRank check, just keyed on writer_id instead of a rank map
+        // since get_writer_of_the_month() only ever returns the #1 writer.
+        supabase.rpc('get_writer_of_the_month'),
+      ]);
+
+      setAccountActive(creatorProfileRes.data?.account_active ?? true);
+      setSeries(seriesRes.data || []);
+      const wom = (writerOfMonthRes.data ?? [])[0] as { writer_id: string } | undefined;
+      setIsWriterOfMonth(!!wom && wom.writer_id === creatorRow.user_id);
+      setLoading(false);
+
       // Check the viewer's own role — only developers see the Ban button —
-      // and this creator's current account_active status, so a developer
-      // visiting an already-banned profile sees that instead of a stale
-      // "Ban User" button.
-      const { data: viewer } = await supabase.auth.getUser();
+      // Not on the critical path for anything the page renders by default,
+      // so it runs after setLoading(false) instead of blocking on it.
+      const viewer = viewerRes.data;
       if (viewer.user) {
         const { data: viewerProfile } = await supabase
           .from('profiles')
@@ -128,34 +156,6 @@ export default function CreatorProfilePage() {
           .single();
         setIsDeveloper(isDeveloperRole(viewerProfile?.role));
       }
-
-      const { data: creatorProfile } = await supabase
-        .from('profiles')
-        .select('account_active')
-        .eq('id', creatorRow.user_id)
-        .single();
-      setAccountActive(creatorProfile?.account_active ?? true);
-
-      // Only published series — drafts stay private to the creator's own dashboard
-      const { data: seriesData } = await supabase
-        .from('series')
-        .select('id, title, synopsis, genre, language, cover_url, reading_mode, views, completion_status')
-        .eq('creator_id', creatorRow.user_id)
-        .eq('status', 'published')
-        .order('created_at', { ascending: false });
-
-      setSeries(seriesData || []);
-
-      // Phase 3 "Unique for Mangal" (CONTEXT.md §0c) — is this creator the
-      // most recently finalized month's #1 writer? Same single-RPC-call,
-      // compare-to-this-profile pattern as the KaTube channel page's
-      // bestOwnRank check, just keyed on writer_id instead of a rank map
-      // since get_writer_of_the_month() only ever returns the #1 writer.
-      const { data: writerOfMonth } = await supabase.rpc('get_writer_of_the_month');
-      const wom = (writerOfMonth ?? [])[0] as { writer_id: string } | undefined;
-      setIsWriterOfMonth(!!wom && wom.writer_id === creatorRow.user_id);
-
-      setLoading(false);
     };
     load();
   }, [username]);

@@ -5628,3 +5628,78 @@ outside the sandbox's allowed network egress) — unrelated to this change,
 same sandbox limitation noted in earlier sessions for Supabase-env-dependent
 checks. Committed and pushed directly to `main` per founder's instruction —
 no branch/PR.
+
+## §81 — WebMangal-wide load-time audit: fixed every remaining waterfall/N+1
+
+Founder asked for a sweep across all of WebMangal (not just the series page
+from §80) to find and fix every page that's slow to load. Audited every
+`page.tsx` under `WebMangal/` for sequential-await waterfalls and N+1 query
+loops. Found and fixed four more:
+
+**Manga reader (`read/[chapterId]/page.tsx`) — the highest-traffic page in
+the app.** The actual page images (what the reader is here to see) were
+fetched dead last — after the chapter row AND an unrelated chapter-nav-list
+query had both already resolved *in sequence*. The pages query only needs
+`chapterId`, which is known immediately, so it never needed to wait on
+either of those. Now fired at the very top of `loadChapter()`, in parallel
+with the chapter-row fetch, and only awaited at the end right before
+`setPages()`. Shaves a full round trip off the critical path of every single
+chapter view. (Draft/scheduled-gated views still fire the query and just
+don't consume the result — negligible extra load on a rare path, not worth
+complicating the common path to avoid.)
+
+**Creator profile (`creator/[username]/page.tsx`).** Was 5 sequential
+queries (creator row → viewer auth → viewer role → creator's
+account_active → series list → writer-of-month RPC) even though only the
+first genuinely gates the rest. Batched the 4 that only depend on
+`creatorRow.user_id` into one `Promise.all`; the viewer's own role/ban-button
+check now runs after `setLoading(false)` since it isn't on the critical path
+for anything the page renders by default.
+
+**Library (`library/page.tsx`) — was a real N+1.** For every followed
+series, fired 2 separate queries (latest chapter + chapter count) one after
+another — a library of 30 follows meant 60 round trips (parallelized across
+series via the outer `Promise.all`, but still 2 round trips deep per
+series). Replaced with one batched `.in('series_id', seriesIds)` query for
+every followed series' chapters at once, then computed latest/count
+client-side — same pattern already used on `/WebMangal/bookmarks`. Also
+parallelized the profile-role and follows-list queries at the top (they only
+share `u.user.id`, not each other's results).
+
+**Bookmarks (`bookmarks/page.tsx`).** Smaller version of the same fix —
+profile role and the follows list were sequential despite being independent;
+batched into one `Promise.all`.
+
+**Left unchanged, checked and found fine:** `home/page.tsx` (already fires
+its 4 independent fetches — profile+progress+recs chain, series list,
+trending, new-voices — without blocking each other); `history/page.tsx`
+(progress→chapter-count is a real dependency, already minimal — 2 queries);
+`tags/page.tsx`, `tags/[slug]/page.tsx`, `rankings/page.tsx` (1–2 queries,
+already minimal or a real dependency); `upload/page.tsx`'s sequential awaits
+are inside save/submit handlers (user-triggered mutations, not initial page
+load) except the edit-mode chapter loader, which is a genuine two-step
+dependency (need the chapter row before knowing whether to fetch novel text
+or manga pages) — left as-is.
+
+Flagged but deliberately **not** changed: `home/page.tsx`'s main series
+query (`select('*, chapters(count)')...order('created_at')`) has no
+`.limit()` — it loads every published series on the platform, unbounded,
+since genre/content-type/sort filtering and slicing (`featured`,
+`newArrivals`, etc.) all happen client-side over the full list. Fine at
+current scale but becomes the platform's real bottleneck as the catalog
+grows. Adding a limit would require rethinking the home page's client-side
+filter/sort into real pagination — a product decision, not a drop-in perf
+fix, so left as a flagged follow-up rather than silently changing what
+"browse all series" means on the homepage.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint .`: 0 errors, 42
+warnings — unchanged from the pre-existing baseline (confirmed via `git
+stash` comparison), no new warnings on any touched file. Committed and
+pushed directly to `main` per founder's instruction — no branch/PR. Repo had
+concurrent activity from another session while this was in flight (§68 fast-
+tap fix, a draft/chapters race fix, a comments-badge fix, a resume-in-chapter
+race fix all landed on `main` mid-session) — each was fetched and merged in
+before push; one real conflict (the draft/scheduled chapter-filter fix
+needed `canManageRef` set before `fetchChapters()` runs, which raced against
+this session's own batching — fixed by ordering `fetchChapters()` after the
+role check resolves, same principle applied again here for the reader page).
