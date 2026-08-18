@@ -5887,3 +5887,52 @@ against the 300 cap and this needs revisiting for real.
 
 **Verified:** `tsc --noEmit` clean, `eslint` 0 errors/warnings on the
 touched file. Pushed directly to `main` per founder's instruction.
+
+## §83 — Homepage: real server-side pagination (replaces the §82 cap)
+
+Founder didn't want to wait for the catalog to grow into the §82 300-series
+cap — asked for the real fix now. Rewrote the homepage's "All Series" browse
+grid from "fetch up to N series, filter/sort client-side" to genuine
+server-side pagination with a Load More button.
+
+**What changed:**
+- Genre, content type, the Desi Comics toggle, and sort (`latest`/`views`/
+  `az`) are now applied in the query itself — `.eq('genre', ...)`,
+  `.eq('content_type', ...)`, `.in('genre', DESI_GENRES)`,
+  `.order('views'|'title'|'created_at', ...)` — instead of filtering/sorting
+  a locally-held array. Fetched in pages of 24 via `.range()`; changing any
+  filter resets to page 1 and refetches; a "Load More" button at the bottom
+  of the grid fetches the next page and appends. Every matching series is
+  now reachable, not just whatever fell inside a fixed cap.
+- The exact-count on page 1 (`{ count: 'exact' }`) drives the "N series
+  total" label next to Featured — previously this was just
+  `series.length`, which is honest now that "series" isn't a
+  capped/partial local copy.
+- **New Arrivals, Staff Picks, and New Voices** used to be derived
+  client-side from the same single big `series` array the browse grid used
+  — which no longer exists as a monolithic fetch. Each is now its own small,
+  independent, already-bounded query (≤6 or ≤20 rows) with its own
+  `useEffect`, refetching only when the inputs it actually depends on change
+  (content type for the first two; newVoiceOrder + content type for the
+  third). None of them were ever affected by genre/desi/sort in the first
+  place (the "Featured"-family sections are hidden unless the browse view is
+  the plain unfiltered "All" view), so this is a pure refactor for them, no
+  behavior change.
+- Added a shared `attachChapterCounts()` helper (batched
+  `.in('series_id', ids)` chapters query → count map, same pattern used
+  everywhere else in the app) so every section — browse page, New Arrivals,
+  Staff Picks, New Voices — gets accurate published-only chapter-count
+  badges without each hand-rolling the same batching logic.
+- Featured/grid split logic is unchanged: on the plain "All" view (no genre
+  filter, Desi toggle off), the first 3 of the current page become the
+  Featured hero and the rest go in the grid below — same as before, just
+  now sourced from the paginated `browseSeries` state instead of a
+  client-filtered full list.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on the touched
+file: 0 errors, 0 warnings (fixed 3 `react-hooks/set-state-in-effect`
+lint errors on the new effects using the same `eslint-disable-line`
+pattern already used elsewhere in this file for the same category of
+reset-on-mount setState calls). Full-project `eslint .`: 0 errors, 42
+warnings — unchanged baseline. Pushed directly to `main` per founder's
+instruction.

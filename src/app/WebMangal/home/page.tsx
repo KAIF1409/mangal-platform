@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
@@ -31,6 +31,29 @@ interface Series {
 }
 
 type SortOption = 'latest' | 'views' | 'az';
+
+// Step 82 — Real pagination: shared helper to attach published-chapter
+// counts to a batch of series rows. One batched `.in('series_id', ids)`
+// query per call (bounded to whatever rows were passed in — never the
+// whole catalog), same pattern used everywhere else this count is needed
+// (series/library/bookmarks pages).
+async function attachChapterCounts(rows: Series[]): Promise<Series[]> {
+  if (rows.length === 0) return rows;
+  const ids = rows.map(r => r.id);
+  const { data: publishedChapters } = await supabase
+    .from('chapters')
+    .select('series_id')
+    .in('series_id', ids)
+    .eq('is_draft', false)
+    .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`);
+  const countMap: Record<string, number> = {};
+  (publishedChapters ?? []).forEach((ch: { series_id: string }) => {
+    countMap[ch.series_id] = (countMap[ch.series_id] ?? 0) + 1;
+  });
+  return rows.map(r => ({ ...r, chapter_count: countMap[r.id] ?? 0 }));
+}
+
+const BROWSE_PAGE_SIZE = 24;
 
 // Step 2 — Reading Progress: one resumable series for the "Continue Reading" row
 interface ContinueItem {
@@ -65,7 +88,17 @@ const DESI_GENRES = ['Mythology', 'Folk Tale', 'Desi Horror', 'Street Life', 'Sc
 export default function HomePage() {
   const router = useRouter();
   const { lang, setLang, t } = useUiLanguage();
-  const [series, setSeries] = useState<Series[]>([]);
+  // Step 82 — Real pagination: `browseSeries` is the incrementally-loaded,
+  // server-filtered/sorted "All Series" grid — genre/content-type/desi/sort
+  // are now applied in the query itself (`.eq()`/`.in()`/`.order()`), not
+  // client-side over a capped/unbounded local copy of the catalog. Resets
+  // and refetches page 1 whenever a filter changes; "Load More" fetches
+  // subsequent pages.
+  const [browseSeries, setBrowseSeries] = useState<Series[]>([]);
+  const [browseLoading, setBrowseLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [activeGenre, setActiveGenre] = useState('All');
   const [activeContentType, setActiveContentType] = useState<'all' | 'mangal' | 'novel'>('all');
@@ -75,7 +108,6 @@ export default function HomePage() {
   // can layer on top of either filter state.
   const [showDesiComics, setShowDesiComics] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('latest');
-  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [isCreator, setIsCreator] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
@@ -85,6 +117,9 @@ export default function HomePage() {
   const [trending, setTrending] = useState<Series[]>([]);
   // §27 item 6 — New Voices: ordered list of recently-joined creator user_ids
   const [newVoiceOrder, setNewVoiceOrder] = useState<string[]>([]);
+  const [newVoices, setNewVoices] = useState<Series[]>([]);
+  const [newArrivals, setNewArrivals] = useState<Series[]>([]);
+  const [staffPicks, setStaffPicks] = useState<Series[]>([]);
   const STAFF_PICK_TITLES: string[] = []; // developer-curated list — add exact series titles here
 
   // Step 27 — For You: personalized feed for logged-in readers based on
@@ -139,62 +174,6 @@ export default function HomePage() {
       }
     });
 
-    // Step 24 — chapter counts. Was a single embedded aggregate query
-    // (`chapters(count)`) with no is_draft/scheduled_at filter, so every
-    // SeriesCard's chapter badge on the homepage included draft and
-    // not-yet-live scheduled chapters in the count — same root bug already
-    // fixed on the series/library/bookmarks pages. Filtering an embedded
-    // count via PostgREST's dot-notation (`.eq('chapters.is_draft', false)`)
-    // is possible but isn't exercised anywhere else in this codebase and
-    // couldn't be verified against a live Supabase instance, so rather than
-    // guess on the homepage, this now uses the same batched-fetch-then-
-    // client-side-count pattern already proven in bookmarks/page.tsx:
-    // one query for all published chapters across every series, reduced
-    // into a series_id -> count map.
-    // Perf fix — this used to have no cap at all: `select('*')` over every
-    // published series on the platform, then (as of the chapter-count-badge
-    // fix) a second unbounded query for every published chapter across
-    // every one of those series just to build the count map. Both scale
-    // with the entire catalog's size, not with what the homepage actually
-    // shows (3 featured + a handful of 6-item rows + a filterable grid).
-    // Capped at the newest 300 published series — generous enough that
-    // genre/content-type filtering, sorting, and the "New Arrivals"/"Staff
-    // Picks" sections all keep working exactly as before at the platform's
-    // current and near-term scale, while bounding the worst case instead of
-    // growing unboundedly with the catalog. If/when the catalog outgrows
-    // this cap, the right fix is real server-side pagination for the browse
-    // grid (a bigger, filter-UX-affecting change) rather than raising this
-    // number indefinitely.
-    const HOME_SERIES_CAP = 300;
-    supabase
-      .from('series')
-      .select('*')
-      .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(HOME_SERIES_CAP)
-      .then(async ({ data }) => {
-        if (!data) { setLoading(false); return; }
-        const seriesIds = data.map((s: Series) => s.id);
-        const countMap: Record<string, number> = {};
-        if (seriesIds.length > 0) {
-          const { data: publishedChapters } = await supabase
-            .from('chapters')
-            .select('series_id')
-            .in('series_id', seriesIds)
-            .eq('is_draft', false)
-            .or(`scheduled_at.is.null,scheduled_at.lte.${new Date().toISOString()}`);
-          (publishedChapters ?? []).forEach((ch: { series_id: string }) => {
-            countMap[ch.series_id] = (countMap[ch.series_id] ?? 0) + 1;
-          });
-        }
-        const normalized = data.map((s: Series) => ({
-          ...s,
-          chapter_count: countMap[s.id] ?? 0,
-        }));
-        setSeries(normalized);
-        setLoading(false);
-      });
-
     // Step 9 — Trending This Week: top 6 series by view_events in the last 7 days,
     // then hydrate with full series rows (RPC only returns id + count)
     supabase.rpc('trending_series', { days_back: 7, result_limit: 6 }).then(async ({ data: trendingRows }) => {
@@ -216,55 +195,113 @@ export default function HomePage() {
     // §27 item 6 — New Voices: most recently-joined creators, by
     // creator_profiles.joined_at desc. Public-read (no RLS issue, same as
     // any other creator_profiles lookup used for display elsewhere).
-    // Capped at 20 candidates — `newVoices` above trims to the first 6 that
-    // actually have a published series.
+    // Capped at 20 candidates — the newVoices effect below trims to the
+    // first 6 that actually have a published series.
     supabase.from('creator_profiles').select('user_id, joined_at').order('joined_at', { ascending: false }).limit(20)
       .then(({ data }) => { if (data) setNewVoiceOrder(data.map(c => c.user_id)); });
   }, []);
 
-  const filtered = useMemo(() => {
-    let result = series;
-    if (activeGenre !== 'All') result = result.filter(s => s.genre === activeGenre);
-    if (activeContentType !== 'all') result = result.filter(s => s.content_type === activeContentType);
-    if (showDesiComics) result = result.filter(s => s.genre && DESI_GENRES.includes(s.genre));
+  // Step 9 — New Arrivals: latest 6 published series, filtered by content
+  // type server-side. Its own small dedicated query (not derived from the
+  // paginated browse list below) so it always shows the true latest 6
+  // regardless of what page/filter the browse grid is on.
+  useEffect(() => {
+    let cancelled = false;
+    let q = supabase.from('series').select('*').eq('status', 'published').order('created_at', { ascending: false }).limit(6);
+    if (activeContentType !== 'all') q = q.eq('content_type', activeContentType);
+    q.then(async ({ data }) => {
+      if (cancelled || !data) return;
+      setNewArrivals(await attachChapterCounts(data as Series[]));
+    });
+    return () => { cancelled = true; };
+  }, [activeContentType]);
 
-    // Step 24 — sort control. 'latest' relies on the query's own created_at
-    // ordering (already newest-first), so no extra sort needed for it.
-    if (sortBy === 'views') {
-      result = [...result].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
-    } else if (sortBy === 'az') {
-      result = [...result].sort((a, b) => a.title.localeCompare(b.title));
-    }
+  // Step 9 — Staff Picks: developer-curated, matched by exact title. Empty
+  // list = section hidden (skips the query entirely rather than firing one
+  // that can only ever return nothing).
+  useEffect(() => {
+    if (STAFF_PICK_TITLES.length === 0) { setStaffPicks([]); return; } // eslint-disable-line react-hooks/set-state-in-effect
+    let cancelled = false;
+    let q = supabase.from('series').select('*').eq('status', 'published').in('title', STAFF_PICK_TITLES).limit(6);
+    if (activeContentType !== 'all') q = q.eq('content_type', activeContentType);
+    q.then(async ({ data }) => {
+      if (cancelled || !data) return;
+      setStaffPicks(await attachChapterCounts(data as Series[]));
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- STAFF_PICK_TITLES is a local const, not state
+  }, [activeContentType]);
 
-    return result;
-  }, [activeGenre, activeContentType, showDesiComics, sortBy, series]);
-
-  const featured = filtered.slice(0, 3);
-  const rest = filtered.slice(3);
-
-  // Step 9 — New Arrivals: latest 6 published series (filtered by content type)
-  const newArrivals = (activeContentType === 'all' ? series : series.filter(s => s.content_type === activeContentType)).slice(0, 6);
-
-  // Step 9 — Staff Picks: developer-curated, matched by exact title. Empty list = section hidden.
-  const staffPicks = series.filter(s => STAFF_PICK_TITLES.includes(s.title) && (activeContentType === 'all' || s.content_type === activeContentType)).slice(0, 6);
-
-  // §27 item 6 — "New Voices": recently-joined creators, ordered by
-  // join date rather than views/popularity, so a brand-new creator gets
+  // §27 item 6 — "New Voices": recently-joined creators, ordered by join
+  // date rather than views/popularity, so a brand-new creator gets
   // guaranteed visibility instead of always losing to whoever's already
-  // biggest. One (their most recent published) series per creator, up to
-  // 6 creators. Zero new tables — `newVoiceOrder` (populated below from
-  // `creator_profiles.joined_at`) is the only extra fetch, everything
-  // else reuses the `series` state already loaded above.
-  const newVoices = useMemo(() => {
-    if (newVoiceOrder.length === 0) return [];
-    const byCreator = new Map<string, Series>();
-    for (const s of series) {
-      if (activeContentType !== 'all' && s.content_type !== activeContentType) continue;
-      if (!s.creator_id || byCreator.has(s.creator_id)) continue; // series is created_at desc, so first hit per creator = their latest
-      byCreator.set(s.creator_id, s);
-    }
-    return newVoiceOrder.map(id => byCreator.get(id)).filter((s): s is Series => !!s).slice(0, 6);
-  }, [series, newVoiceOrder, activeContentType]);
+  // biggest. Bounded to the ≤20 creator ids in newVoiceOrder via `.in()` —
+  // never scans the full catalog — then reduced to one (latest) series per
+  // creator, up to 6.
+  useEffect(() => {
+    if (newVoiceOrder.length === 0) { setNewVoices([]); return; } // eslint-disable-line react-hooks/set-state-in-effect
+    let cancelled = false;
+    let q = supabase.from('series').select('*').eq('status', 'published').in('creator_id', newVoiceOrder).order('created_at', { ascending: false });
+    if (activeContentType !== 'all') q = q.eq('content_type', activeContentType);
+    q.then(async ({ data }) => {
+      if (cancelled || !data) return;
+      const byCreator = new Map<string, Series>();
+      for (const s of data as Series[]) {
+        if (!s.creator_id || byCreator.has(s.creator_id)) continue; // query is created_at desc, so first hit per creator = their latest
+        byCreator.set(s.creator_id, s);
+      }
+      const ordered = newVoiceOrder.map(id => byCreator.get(id)).filter((s): s is Series => !!s).slice(0, 6);
+      setNewVoices(await attachChapterCounts(ordered));
+    });
+    return () => { cancelled = true; };
+  }, [newVoiceOrder, activeContentType]);
+
+  // Step 82 — Real pagination for the "All Series" browse grid. Genre,
+  // content type, the Desi Comics toggle, and sort are all applied
+  // server-side (`.eq()`/`.in()`/`.order()`), so — unlike the old client-side
+  // filter over a capped local copy — every matching series is reachable
+  // via "Load More", not just whatever happened to fall inside a fixed cap.
+  const fetchBrowsePage = async (page: number, reset: boolean) => {
+    if (reset) setBrowseLoading(true); else setLoadingMore(true);
+
+    let q = supabase.from('series').select('*', page === 0 ? { count: 'exact' } : undefined).eq('status', 'published');
+    if (activeGenre !== 'All') q = q.eq('genre', activeGenre);
+    if (activeContentType !== 'all') q = q.eq('content_type', activeContentType);
+    if (showDesiComics) q = q.in('genre', DESI_GENRES);
+    if (sortBy === 'views') q = q.order('views', { ascending: false });
+    else if (sortBy === 'az') q = q.order('title', { ascending: true });
+    else q = q.order('created_at', { ascending: false });
+    q = q.range(page * BROWSE_PAGE_SIZE, page * BROWSE_PAGE_SIZE + BROWSE_PAGE_SIZE - 1);
+
+    const { data, count } = await q;
+    const rows = await attachChapterCounts((data ?? []) as Series[]);
+
+    setBrowseSeries(prev => (reset ? rows : [...prev, ...rows]));
+    setHasMore(rows.length === BROWSE_PAGE_SIZE);
+    if (page === 0 && typeof count === 'number') setTotalCount(count);
+    setBrowseLoading(false);
+    setLoadingMore(false);
+  };
+
+  const [browsePage, setBrowsePage] = useState(0);
+  useEffect(() => {
+    setBrowsePage(0); // eslint-disable-line react-hooks/set-state-in-effect
+    fetchBrowsePage(0, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchBrowsePage closes over the filter state below, re-created every render on purpose
+  }, [activeGenre, activeContentType, showDesiComics, sortBy]);
+
+  const handleLoadMore = () => {
+    const next = browsePage + 1;
+    setBrowsePage(next);
+    fetchBrowsePage(next, false);
+  };
+
+  // Only carved into a separate "Featured" hero when browsing the
+  // unfiltered "All" view — a specific genre/desi filter shows every match
+  // directly in the grid instead, same behavior as before.
+  const isDefaultBrowse = activeGenre === 'All' && !showDesiComics;
+  const featured = isDefaultBrowse ? browseSeries.slice(0, 3) : [];
+  const gridItems = isDefaultBrowse ? browseSeries.slice(3) : browseSeries;
 
   const setContentType = (ct: 'all' | 'mangal' | 'novel') => {
     setActiveContentType(ct);
@@ -567,12 +604,12 @@ export default function HomePage() {
           ))}
         </div>
 
-        {loading ? (
+        {browseLoading ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><BookOpen size={32} strokeWidth={1.5} /></div>
             <div style={{ fontSize: '14px' }}>{t('loadingStories')}</div>
           </div>
-        ) : filtered.length === 0 && (activeGenre !== 'All' || showDesiComics) ? (
+        ) : browseSeries.length === 0 && (activeGenre !== 'All' || showDesiComics) ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><Search size={32} strokeWidth={1.5} /></div>
             <div style={{ fontSize: '14px' }}>{t('noSeriesInFilter')}</div>
@@ -659,7 +696,7 @@ export default function HomePage() {
                   <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
                     {t('featured')}
                   </h2>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{series.length} {t('seriesTotal')}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{totalCount ?? browseSeries.length} {t('seriesTotal')}</span>
                 </div>
                 {/* minmax(min(340px, 100%), 1fr) instead of minmax(340px, 1fr) —
                     plain minmax(340px, ...) can't shrink columns below 340px, so
@@ -711,10 +748,29 @@ export default function HomePage() {
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 200px))', gap: '16px' }}>
-                {(activeGenre !== 'All' || showDesiComics ? filtered : rest).map(s => (
+                {gridItems.map(s => (
                   <SeriesCard key={s.id} series={s} />
                 ))}
               </div>
+              {/* Step 82 — Load More: server-side pagination, one page
+                  (BROWSE_PAGE_SIZE) at a time, for the currently active
+                  genre/content-type/desi/sort filter. */}
+              {hasMore && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '28px' }}>
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    style={{
+                      padding: '10px 28px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                      background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 700,
+                      cursor: loadingMore ? 'default' : 'pointer', opacity: loadingMore ? 0.6 : 1,
+                      transition: 'opacity 0.15s',
+                    }}
+                  >
+                    {loadingMore ? t('loadingStories') : 'Load More'}
+                  </button>
+                </div>
+              )}
             </section>
           </>
         )}
