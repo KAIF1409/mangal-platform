@@ -6144,3 +6144,36 @@ next, in priority order over anything else in the backlog.
 **Founder confirmed this is the new top priority — build this before
 picking up any other backlog item**, superseding the §77 pointer at the
 top of this file.
+
+## §85 continued — Songs browse/discovery page + home nav entry point
+
+Picked up the "not done yet" item from the previous §85 commit (c6a4439):
+Songs had no discovery surface — only the direct `/songs/upload` and
+`/songs/[songId]` URLs, unreachable from anywhere in the UI.
+
+- **`/WebMangal/songs`** (new) — standalone browse/index page for all
+  published songs: search (debounced, server-side `ilike` on title), genre
+  filter (reuses the same GENRES list as the homepage, including the §23
+  Desi Comics additions), sort (Latest/Most Viewed/A–Z), server-side
+  pagination via `range()` + "Load More" (same `PAGE_SIZE`/pattern as the
+  homepage's §84 browse grid — one query per page, not an unbounded fetch).
+  Songwriter usernames and linked-series titles are batch-resolved per page
+  (`.in()` on `creator_profiles`/`series`) to avoid N+1, mirroring the
+  homepage's `attachChapterCounts` pattern. Uses the existing `SongCard`
+  as-is. Empty state links to `/songs/upload`.
+- **Home page nav** — added a "Songs" pill (purple, matches `SongCard`'s
+  accent) right after the Tube link, pointing at the new browse page.
+
+  Went with a standalone browse page rather than rewiring the home page's
+  `content_type` toggle/grid itself — that toggle and every query beneath
+  it (`browseSeries`, `trending`, `newArrivals`, etc.) is hardwired to the
+  `series` table (`content_type: 'mangal' | 'novel'`), and folding a third,
+  structurally different table (no `chapter_count`/`reading_mode`, block
+  count instead) into that in one pass was flagged as risky in the prior
+  session. This gives Songs real discoverability now without touching that
+  logic; folding `'song'` into the homepage toggle + library/bookmarks/
+  search is still open (see the "Not done yet" note on the c6a4439 commit).
+
+**Verified:** `tsc --noEmit` clean, `eslint` on both changed files 0
+errors / 0 warnings. Used `next/link`'s `Link` (not `<a>`) for the two new
+internal `/songs/upload` links per `@next/next/no-html-link-for-pages`.

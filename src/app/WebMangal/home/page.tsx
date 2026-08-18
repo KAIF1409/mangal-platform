@@ -10,7 +10,7 @@ import ThemeToggle from '../../components/shared/ThemeToggle';
 import SeriesCard from '../../components/webmangal/SeriesCard';
 import { formatViews } from '../../lib/format';
 import { hasCreatorAccess, isDeveloperRole } from '../../lib/auth/roles';
-import { Search, BookOpen, Sparkles, Eye, ScrollText, BookText, ArrowRight } from 'lucide-react';
+import { Search, BookOpen, Sparkles, Eye, ScrollText, BookText, ArrowRight, Music } from 'lucide-react';
 import { useUiLanguage, LANGUAGES } from '../../lib/i18n';
 import Link from 'next/link';
 
@@ -393,6 +393,20 @@ export default function HomePage() {
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
           ><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '18px', width: '18px', objectFit: 'contain' }} />Tube</a>
+          {/* §85 — Songs discovery entry point. Small nav pill, same shape as
+              Tube/Circle, purple accent to match SongCard's palette. Points
+              at the standalone /WebMangal/songs browse page rather than
+              rewiring the content-type toggle above (that's hardwired to
+              the series table — see CONTEXT.md §85). */}
+          <Link href="/WebMangal/songs" style={{
+            display: 'flex', alignItems: 'center', gap: '5px',
+            padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+            color: '#a78bfa', textDecoration: 'none', whiteSpace: 'nowrap',
+            transition: 'color 0.15s, background 0.15s',
+          }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          ><Music size={14} strokeWidth={2} />Songs</Link>
           <a href="/kalpana-circle" style={{
             display: 'flex', alignItems: 'center', gap: '5px',
             padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
