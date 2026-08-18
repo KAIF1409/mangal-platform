@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookOpen, ListPlus, Plus, Check, Trophy } from 'lucide-react';
+import { BookOpen, ListPlus, Plus, Check, Trophy, Home, Zap, PlusSquare, Users, UserCircle2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 // Shared card used by the new §28a pages (Subscriptions, Trending,
@@ -231,11 +231,38 @@ export function AddToPlaylistButton({ videoId, userId }: { videoId: string; user
 // full re-implementation of the home page's nav — just enough chrome to
 // orient the viewer and get back home, matching KaTube's dark-by-default
 // background/text colors (see katubeDarkVars in app/katube/page.tsx).
+//
+// Trending/Following/Playlists mobile pass: these routes previously had no
+// bottom tab bar at all on mobile, unlike /katube itself — leaving the
+// YouTube-app-style nav on the home page but dropping the user into a
+// dead-end on every other KaTube route. Same .katube-bottom-nav classes/
+// breakpoint as the home page's own bar (duplicated here in KaTubeShell's
+// own <style> tag since each route ships its own styles, no shared
+// stylesheet across pages) so it reads as the same persistent nav
+// everywhere. Home and Fast Tap both point at /katube — this shell has no
+// activeSidebar filter state to deep-link into (that lives on the home
+// page itself), so both just land you back on the main feed rather than
+// silently doing nothing.
 export function KaTubeShell({ title, backHref = '/katube', children }: { title: string; backHref?: string; children: React.ReactNode }) {
   return (
     <div style={{
       minHeight: '100vh', background: '#07070a', color: '#f9fafb',
     } as React.CSSProperties}>
+      <style>{`
+        .katube-shell-bottom-nav { display: none; }
+        .katube-shell-bottom-nav-spacer { display: none; }
+        @media (max-width: 768px) {
+          .katube-shell-bottom-nav {
+            display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 180;
+            background: rgba(7,7,10,0.97); backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+            justify-content: space-between;
+          }
+          .katube-shell-bottom-nav-spacer { display: block; height: 58px; }
+        }
+      `}</style>
+
       <div style={{
         position: 'sticky', top: 0, zIndex: 10, background: 'rgba(7,7,10,0.97)',
         borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '14px 20px',
@@ -247,6 +274,48 @@ export function KaTubeShell({ title, backHref = '/katube', children }: { title: 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 20px 60px' }}>
         {children}
       </div>
+      <div className="katube-shell-bottom-nav-spacer" aria-hidden="true" />
+
+      <nav className="katube-shell-bottom-nav" aria-label="KaTube mobile navigation">
+        <Link href="/katube" style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#9ca3af',
+        }}>
+          <Home size={20} />
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>Home</span>
+        </Link>
+        <Link href="/katube" style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#9ca3af',
+        }}>
+          <Zap size={20} />
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>Fast Tap</span>
+        </Link>
+        <Link href="/katube/upload" style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#9ca3af',
+        }}>
+          <span style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '30px', height: '30px', borderRadius: '8px', background: '#f97316', color: '#fff',
+          }}><PlusSquare size={17} strokeWidth={2.4} /></span>
+        </Link>
+        <Link href="/katube/subscriptions" style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+          flex: 1, padding: '6px 2px', textDecoration: 'none',
+          color: title === 'Following' ? '#f97316' : '#9ca3af',
+        }}>
+          <Users size={20} strokeWidth={title === 'Following' ? 2.4 : 2} />
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>Following</span>
+        </Link>
+        <Link href="/katube/dashboard" style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#9ca3af',
+        }}>
+          <UserCircle2 size={20} />
+          <span style={{ fontSize: '10px', fontWeight: 700 }}>You</span>
+        </Link>
+      </nav>
     </div>
   );
 }
