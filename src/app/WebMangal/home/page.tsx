@@ -392,7 +392,7 @@ export default function HomePage() {
           }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(37,99,235,0.10)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-          ><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '18px', width: '18px', objectFit: 'contain' }} />Tube</a>
+          ><Image src="/katube-logo.png" alt="KaTube" width={70} height={70} style={{ height: '18px', width: '18px', objectFit: 'contain' }} /></a>
           {/* §85 — Songs discovery entry point. Small nav pill, same shape as
               Tube/Circle, purple accent to match SongCard's palette. Points
               at the standalone /WebMangal/songs browse page rather than
@@ -415,7 +415,7 @@ export default function HomePage() {
           }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.12)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-          ><Image src="/kcircle-logo.png" alt="" width={70} height={70} style={{ height: '18px', width: '18px', objectFit: 'contain' }} />Circle</a>
+          ><Image src="/kcircle-logo.png" alt="K Circle" width={70} height={70} style={{ height: '18px', width: '18px', objectFit: 'contain' }} /></a>
         </div>
 
         {/* Right side */}

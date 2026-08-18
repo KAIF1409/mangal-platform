@@ -9,6 +9,7 @@ import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/shared/ProfileMenu';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
+import CrossProductLinks from '../components/shared/CrossProductLinks';
 import SharedSeriesCard from '../components/webmangal/SeriesCard';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
 import {
@@ -507,6 +508,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
           rightSlot={
             user ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <CrossProductLinks current="webmangal" />
                 {isCreator && (
                   <a href="/dashboard" style={{
                     padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
@@ -518,6 +520,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <CrossProductLinks current="webmangal" />
                 <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textDecoration: 'none' }}>Log in</a>
                 <a href={`/login?next=${encodeURIComponent(loginNext)}`} style={{
                   padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
@@ -626,6 +629,13 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                   style={{ padding: '12px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: '#f9fafb', textDecoration: 'none' }}
                 >{link.icon} {link.label}</a>
               ))}
+
+              <div style={{ height: '1px', background: '#1f1f2a', margin: '6px 4px' }} />
+
+              <div style={{ padding: '6px 14px 4px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>More MANGAL</span>
+                <CrossProductLinks current="webmangal" size={24} />
+              </div>
 
               <div style={{ height: '1px', background: '#1f1f2a', margin: '6px 4px' }} />
 

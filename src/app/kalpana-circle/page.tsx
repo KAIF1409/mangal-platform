@@ -8,6 +8,7 @@ import ThemeToggle from '../components/shared/ThemeToggle';
 import { useKCircleTheme, KC_DARK_VARS } from './theme';
 import NotificationBell from '../components/shared/NotificationBell';
 import { KCircleShellStyle, KCircleRail } from './components/Shell';
+import CrossProductLinks from '../components/shared/CrossProductLinks';
 import { supabase } from '../lib/supabase';
 import { setPostLoginRedirect } from '../lib/auth/authRedirect';
 import {
@@ -696,11 +697,10 @@ function KalpanaCircleInner() {
           <span style={{ fontWeight: 900, fontSize: '15px', color: '#7c3aed', letterSpacing: '-0.02em' }}>Circle</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          <Link href="/katube" className="kc-katube-badge" style={{
-            padding: '6px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 700,
-            color: '#2563eb', textDecoration: 'none', border: '1px solid rgba(37,99,235,0.35)',
-            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px',
-          }}><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '20px', width: '20px', objectFit: 'contain' }} /><span className="kc-katube-badge-text">Tube</span></Link>
+          {/* Logo-only, clickable links to the other two MANGAL products —
+              no text label (replaces the old text+icon "Tube" badge, which
+              only pointed at KaTube — see CrossProductLinks). */}
+          <CrossProductLinks current="kcircle" size={20} />
           <NotificationBell userId={userId} iconSize={18} />
           <ThemeToggle size={28} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
         </div>

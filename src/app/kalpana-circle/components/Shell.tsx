@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../../components/shared/ThemeToggle';
 import NotificationBell from '../../components/shared/NotificationBell';
+import CrossProductLinks from '../../components/shared/CrossProductLinks';
 import { Search, MessageCircle, Clapperboard, Megaphone, Bookmark, Trophy } from 'lucide-react';
 
 // ── K Circle desktop shell — shared across every K Circle page ──
@@ -159,10 +160,9 @@ export function KCircleRail({
         <NotificationBell userId={userId} iconSize={20} />
         <Link href={profileHref} title="Profile"><RailAvatar name={myUsername ?? 'you'} avatarUrl={myAvatarUrl} size={34} /></Link>
         <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
-        <Link href="/katube" title="KaTube" style={{
-          width: '38px', height: '38px', borderRadius: '11px', border: '1px solid rgba(37,99,235,0.35)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}><Image src="/katube-logo.png" alt="" width={70} height={70} style={{ height: '19px', width: '19px', objectFit: 'contain' }} /></Link>
+        {/* Logo-only links to the other two MANGAL products (replaces the
+            old single hardcoded KaTube-only link — see CrossProductLinks). */}
+        <CrossProductLinks current="kcircle" size={18} gap={6} direction="column" />
       </div>
     </aside>
   );

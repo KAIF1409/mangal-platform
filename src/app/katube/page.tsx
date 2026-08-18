@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from '../components/shared/ThemeToggle';
+import CrossProductLinks from '../components/shared/CrossProductLinks';
 import NotificationBell from './components/NotificationBell';
 import ContinueWatchingRow from './components/ContinueWatchingRow';
 import MangalIdeasRow from './components/MangalIdeasRow';
@@ -855,14 +856,10 @@ export default function KaTubePage() {
             <span className="katube-label-full">+ Create</span>
             <span className="katube-label-mobile">+</span>
           </Link>
-          <Link href="/kalpana-circle" style={{
-            padding: '6px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
-            color: '#7c3aed', textDecoration: 'none', border: '1px solid rgba(124,58,237,0.35)',
-            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px',
-          }}>
-            <Image src="/kcircle-logo.png" alt="" width={70} height={70} style={{ height: '22px', width: '22px', objectFit: 'contain' }} />
-            <span className="katube-label-full">Circle</span>
-          </Link>
+          {/* Logo-only, clickable links to the other two MANGAL products —
+              no text label (see CrossProductLinks). Replaces the old
+              text+icon "Circle" link, which only pointed at one product. */}
+          <CrossProductLinks current="katube" size={22} />
           <span className="katube-theme-toggle">
             <ThemeToggle size={30} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
           </span>
