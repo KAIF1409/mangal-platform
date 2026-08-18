@@ -6240,3 +6240,39 @@ this is the home-page-toggle half; `/search` is still open.
 **Verified:** `tsc --noEmit` clean; `eslint` on the changed file 0
 errors/0 warnings; `eslint src/app` project-wide quiet run clean — diff
 isolated to this one file, nothing else touched.
+
+## §85 continued (4) — Songs in search (final piece)
+
+Last of the two deferred items, done separately as instructed. `/search`
+and `/WebMangal` (browse) share one component (`View.tsx`) whose entire
+series-matching pipeline (`baseFiltered`/`overlayResults`/`results`/
+`tabCounts`) is `Series`-typed throughout — same reasoning as the home
+toggle: threading songs through that would mean widening every one of
+those to a union type across a large, actively-relied-on file.
+
+- **`View.tsx`** — added a parallel, independent songs path instead:
+  own state, own small bounded fetch (published songs, capped at 200,
+  **search route only** — gated on `mode === 'search'`, so the `/WebMangal`
+  browse route that shares this component is completely untouched), own
+  `fuzzyMatch`-based `songResults` computed alongside (not merged into)
+  the existing series `results`/`overlayResults`. Rendered as its own
+  "Songs (n)" section above the series results — shows independently of
+  whether series matched anything, so a song-only search still surfaces
+  results instead of hitting the series "no results, be the first to
+  create it!" empty state (fixed that condition to check `songResults`
+  too). Capped at 8 songs shown with a "See all songs →" link to the full
+  `/WebMangal/songs` browse/search page for anything beyond that.
+  Deliberately not wired into the mobile search overlay's live preview —
+  kept to the main results page only, to keep the surface area small.
+
+**§85 is now fully closed** — data model, upload/detail pages, browse
+page, home nav pill, follow/bookmark support, Library/Bookmarks sections,
+home content-type toggle, and search all ship. Any further Songs work
+(mobile overlay preview, richer sort/filter parity with series search,
+etc.) is new scope, not a "not done yet" carry-over.
+
+**Verified:** `tsc --noEmit` clean; `eslint` on the changed file 0
+errors/0 warnings; `eslint src/app` project-wide quiet run clean — diff
+isolated to `View.tsx`, and within that file every songs addition is
+gated on `mode === 'search'` so the shared browse route's behavior is
+byte-for-byte unchanged.

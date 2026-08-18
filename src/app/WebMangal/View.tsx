@@ -11,10 +11,11 @@ import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
 import CrossProductLinks from '../components/shared/CrossProductLinks';
 import SharedSeriesCard from '../components/webmangal/SeriesCard';
+import SongCard, { type SongCardData } from '../components/webmangal/SongCard';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
 import {
   Trophy, Bell, Bookmark, Wrench, X, Menu, Search, Sparkles, BookOpen,
-  BookText, Circle, ArrowLeft,
+  BookText, Circle, ArrowLeft, Music,
 } from 'lucide-react';
 
 // Same links shown in the desktop nav's centerSlot — reused by the mobile
@@ -108,6 +109,13 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
   const [series, setSeries] = useState<Series[]>([]);
   const [creatorUsernames, setCreatorUsernames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  // §85 continued (4) — Songs in search. Own state, own fetch, entirely
+  // independent of the series list/loading above so a slow or failed
+  // songs fetch can never affect the existing series search. Search-route
+  // only (see fetch effect below) — the browse route already has its own
+  // dedicated Songs entry point on the home page toggle.
+  const [songs, setSongs] = useState<(SongCardData & { creator_id: string })[]>([]);
+  const [songUsernames, setSongUsernames] = useState<Record<string, string>>({});
 
   const [genreFilter, setGenreFilter] = useState(searchParams.get('genre') ?? 'All');
   const [languageFilter, setLanguageFilter] = useState(searchParams.get('language') ?? 'All');
@@ -171,6 +179,42 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
       setLoading(false);
     });
   }, []);
+
+  // §85 continued (4) — Songs fetch, search route only. Small, bounded
+  // fetch (published songs only, capped) rather than the full unbounded
+  // catalog the series fetch above does — songs here are only ever used
+  // for the client-side fuzzy match preview below, not a paginated grid,
+  // so there's no need to mirror the series fetch's "everything" approach.
+  useEffect(() => {
+    if (mode !== 'search') return;
+    supabase
+      .from('songs')
+      .select('id, title, genre, cover_url, views, blocks, creator_id, linked_series_id')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(200)
+      .then(async ({ data }) => {
+        const rows = (data ?? []) as { id: string; title: string; genre: string | null; cover_url: string | null; views: number; blocks: unknown[]; creator_id: string; linked_series_id: string | null }[];
+        if (rows.length === 0) return;
+        const creatorIds = Array.from(new Set(rows.map(r => r.creator_id)));
+        const linkedSeriesIds = Array.from(new Set(rows.map(r => r.linked_series_id).filter(Boolean))) as string[];
+        const [usernameRes, seriesRes] = await Promise.all([
+          supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
+          linkedSeriesIds.length > 0
+            ? supabase.from('series').select('id, title').in('id', linkedSeriesIds)
+            : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+        ]);
+        const usernameMap = Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username]));
+        setSongUsernames(usernameMap);
+        const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
+        setSongs(rows.map(r => ({
+          id: r.id, title: r.title, genre: r.genre, cover_url: r.cover_url, views: r.views,
+          block_count: Array.isArray(r.blocks) ? r.blocks.length : 0,
+          linked_series_title: r.linked_series_id ? seriesTitleMap[r.linked_series_id] ?? null : null,
+          creator_id: r.creator_id,
+        })));
+      });
+  }, [mode]);
 
   // Keep the URL in sync (shareable/bookmarkable search), without a full page reload
   useEffect(() => {
@@ -263,6 +307,21 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
   };
 
   const q = query.trim().toLowerCase();
+
+  // §85 continued (4) — Songs matching, search route only. Same fuzzyMatch
+  // helper as series, checked against title/genre/songwriter username.
+  // Not wired into overlayResults/results/tabCounts above — those are all
+  // series-typed and threading songs through them would mean widening
+  // Series-shaped code paths to a union type across this whole file.
+  // Kept as its own parallel result set instead, rendered as an
+  // additional section (see RESULTS below).
+  const songResults = useMemo(() => {
+    if (mode !== 'search' || !q) return [];
+    return songs.filter(s => {
+      const username = (songUsernames[s.creator_id] ?? '').toLowerCase();
+      return fuzzyMatch(s.title, q) || fuzzyMatch(s.genre ?? '', q) || username.includes(q);
+    });
+  }, [mode, q, songs, songUsernames]);
 
   // The overlay's live "as you type" preview — always keyword-driven,
   // regardless of which route it was opened from.
@@ -934,6 +993,29 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
 
         <div style={{ marginBottom: '18px' }} />
 
+        {/* ── SONGS RESULTS (§85 continued (4), search route only) ──
+            Rendered independently of the series RESULTS block below —
+            shows whenever there's a keyword and matching songs, even if
+            series matched nothing (or the reverse), so a song-only or
+            series-only search both work correctly. */}
+        {mode === 'search' && q && songResults.length > 0 && (
+          <div style={{ marginBottom: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Music size={14} strokeWidth={2} color="#a78bfa" /> Songs ({songResults.length})
+              </h3>
+              <Link href="/WebMangal/songs" style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none' }}>
+                See all songs →
+              </Link>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 170px))', gap: '14px' }}>
+              {songResults.slice(0, 8).map(s => (
+                <SongCard key={s.id} song={s} creatorUsername={songUsernames[s.creator_id]} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── RESULTS ── */}
         {loading ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
@@ -950,6 +1032,11 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
             </div>
           </div>
         ) : results.length === 0 ? (
+          /* §85 continued (4) — if songs matched even though series didn't,
+             skip the series "no results" CTA entirely rather than showing
+             a misleading "Be the first to create it!" beneath a Songs
+             section that already has results. */
+          mode === 'search' && songResults.length > 0 ? null :
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Search size={32} /></div>
             <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
