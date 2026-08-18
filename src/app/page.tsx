@@ -165,6 +165,49 @@ export default function LandingPage() {
   const [tagCloud, setTagCloud] = useState<TagWithCount[]>([]);
   const mainRef = useRef<HTMLDivElement>(null);
 
+  // Auth state — the landing page previously never checked whether anyone
+  // was signed in, so it always showed "Log in" and never offered a way to
+  // sign out, even for a user who was very much logged in (they'd land back
+  // here after /login and see the exact same logged-out-looking nav, which
+  // read as "login didn't work"). Checked once on mount + kept in sync via
+  // onAuthStateChange so signing in/out anywhere else in the app (or in
+  // another tab) updates this nav without a manual refresh.
+  const [authChecked, setAuthChecked] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUserEmail(data.session?.user?.email ?? null);
+      setUserName((data.session?.user?.user_metadata?.full_name as string | undefined) ?? null);
+      setAuthChecked(true);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? null);
+      setUserName((session?.user?.user_metadata?.full_name as string | undefined) ?? null);
+      setAuthChecked(true);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) setProfileMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUserEmail(null);
+    setUserName(null);
+    setProfileMenuOpen(false);
+    window.location.href = '/';
+  };
+
   // Landing page defaults to dark, independent of the site-wide
   // light-default (founder's call — same local-override pattern as
   // KaTube, see CONTEXT.md §18). ThemeToggle's `syncGlobal={false}` keeps
@@ -455,13 +498,57 @@ export default function LandingPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <ThemeToggle size={32} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
-            <a href="/login?next=%2F" className="mangal-landing-login-link" data-cursor-hover="true" style={{
-              padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-              color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s',
-            }}
-              onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text-primary)'}
-              onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-secondary)'}
-            >Log in</a>
+            {authChecked && userEmail ? (
+              <div ref={profileMenuRef} style={{ position: 'relative' }} className="mangal-landing-login-link">
+                <button
+                  data-cursor-hover="true"
+                  onClick={() => setProfileMenuOpen(v => !v)}
+                  aria-label="Account menu"
+                  aria-expanded={profileMenuOpen}
+                  style={{
+                    width: '34px', height: '34px', borderRadius: '50%', border: 'none', cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #7f1d1d, #d97706)', color: '#fff',
+                    fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  {(userName || userEmail || '?').charAt(0).toUpperCase()}
+                </button>
+                {profileMenuOpen && (
+                  <div style={{
+                    position: 'absolute', top: '42px', right: 0, minWidth: '200px', zIndex: 50,
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '12px',
+                    padding: '8px', boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+                  }}>
+                    <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid var(--border-color)', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {userName || 'Signed in'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userEmail}</div>
+                    </div>
+                    <Link href="/WebMangal/home" data-cursor-hover="true" onClick={() => setProfileMenuOpen(false)} style={{
+                      display: 'block', padding: '9px 10px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                      color: 'var(--text-secondary)', textDecoration: 'none',
+                    }}>Go to MANGAL Home</Link>
+                    <button
+                      onClick={handleSignOut}
+                      data-cursor-hover="true"
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: '8px',
+                        fontSize: '13px', fontWeight: 700, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer',
+                      }}
+                    >Log Out</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <a href="/login?next=%2F" className="mangal-landing-login-link" data-cursor-hover="true" style={{
+                padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                color: 'var(--text-secondary)', textDecoration: 'none', transition: 'color 0.15s',
+              }}
+                onMouseEnter={e => (e.target as HTMLElement).style.color = 'var(--text-primary)'}
+                onMouseLeave={e => (e.target as HTMLElement).style.color = 'var(--text-secondary)'}
+              >Log in</a>
+            )}
             <button
               className="mangal-landing-hamburger"
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
@@ -499,7 +586,9 @@ export default function LandingPage() {
             { label: 'WebMangal', href: '/WebMangal', icon: '/webmangal-logo.png' },
             { label: 'Tube', href: '/katube', icon: '/katube-logo.png' },
             { label: 'Circle', href: '/kalpana-circle', icon: '/kcircle-logo.png' },
-            { label: 'Log in', href: '/login?next=%2F' },
+            ...(authChecked && userEmail
+              ? [{ label: 'Go to MANGAL Home', href: '/WebMangal/home' }]
+              : [{ label: 'Log in', href: '/login?next=%2F' }]),
           ].map(link => (
             <a key={link.label} href={link.href} onClick={() => setMobileMenuOpen(false)} style={{
               display: 'flex', alignItems: 'center', gap: '8px',
@@ -508,6 +597,16 @@ export default function LandingPage() {
               borderBottom: '1px solid var(--border-color)',
             }}>{link.icon && <Image src={link.icon} alt="" width={70} height={70} style={{ height: '20px', width: '20px', objectFit: 'contain' }} />}{link.label}</a>
           ))}
+          {authChecked && userEmail && (
+            <button
+              onClick={() => { setMobileMenuOpen(false); handleSignOut(); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left',
+                padding: '14px 20px', fontSize: '14px', fontWeight: 700,
+                color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer',
+              }}
+            >Log Out</button>
+          )}
         </div>
 
         {/* ── HERO ── */}
