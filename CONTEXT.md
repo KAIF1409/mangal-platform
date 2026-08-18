@@ -5887,3 +5887,85 @@ against the 300 cap and this needs revisiting for real.
 
 **Verified:** `tsc --noEmit` clean, `eslint` 0 errors/warnings on the
 touched file. Pushed directly to `main` per founder's instruction.
+
+## §83 — KaTube mobile-YouTube-parity backlog finished; Shorts -> Fast Tap and Subscriptions -> Following renames
+
+Closed out the mobile-parity backlog opened a couple sessions back (watch
+page, upload page, Fast Tap feed, Trending/Following/Playlists all had
+mobile gaps relative to the home page's existing responsive pass), plus two
+founder-requested renames along the way. Four commits, each individually
+`tsc --noEmit` clean and `eslint` 0-errors before being pushed straight to
+`main` (no branch/PR, per founder's instruction):
+
+1. **Watch page mobile** (`/katube/watch/[videoId]`) — sticky mini-player
+   (pins a small thumbnail+title bar to the bottom once the real player
+   scrolls out of view on mobile, long-form only; tap to scroll back up, X
+   to dismiss) + a swipeable bottom-sheet comments drawer (shared
+   `commentsBody` JSX used both inline on desktop and inside the mobile
+   sheet, so there's one source of truth instead of two copies that could
+   drift). Drawer closes via backdrop tap, X, or a real touch-driven
+   swipe-down.
+
+2. **Upload page mobile** (`/katube/upload`) — YouTube-Studio-style 3-step
+   wizard (Video -> Details -> Publish) behind the same `isMobileViewport`
+   resize-tracked pattern; desktop keeps the original flat single-scroll
+   form untouched. Step 1 gained a live thumbnail preview pulled from
+   YouTube's CDN once a valid link is detected (visible on desktop too).
+   `handleSubmit` got a one-line guard so Enter-to-submit from an earlier
+   step advances the wizard instead of firing the real upload.
+
+3. **"Shorts" -> "Fast Tap" rename**, sitewide, label-only — the feature
+   already went by "Fast Tap" in some places (home page's fast/slow toggle)
+   but was inconsistent elsewhere (bottom-tab label, badges, K Circle Watch
+   Together copy, dashboard boost/perks, homepage blurb). Routes
+   (`/katube/shorts/[shortId]`), DB columns (`is_short`), table/variable
+   names left untouched — renaming those risks breaking links/data for a
+   label-only ask, not worth it.
+
+   Also did real Fast Tap feed (`/katube/shorts/[shortId]`) mobile work
+   while in that file: double-tap-to-like with a heart-burst animation (a
+   transparent tap-capture overlay above the YouTube iframe, since a
+   cross-origin iframe swallows clicks and never bubbles them to the parent
+   DOM — a plain `onClick` on the wrapping div wouldn't have worked), plus
+   `env(safe-area-inset-*)` padding on the back button/icon rail/caption/
+   toast so none of them sit under a notch/Dynamic Island/home-indicator on
+   a real phone.
+
+4. **"Subscriptions"/"Subscribers" -> "Following"/"Followers" rename** —
+   founder's stated reason: makes it unambiguous this is an in-app follow
+   (same model as MANGAL's own series follows), not a YouTube-subscription-
+   adjacent sub-for-sub mechanic, which risks a ban given KaTube leans on
+   the YouTube API/embeds. Backend already used `creator_follows`/
+   `follower_id` per an earlier migration (noted in watch page comments:
+   `20260812120000_katube_subscriptions_to_follows_rename.sql`) — this
+   finished the UI-side rename that migration didn't touch. Route itself
+   (`/katube/subscriptions`) left as-is, same reasoning as the Fast Tap
+   rename.
+
+   Also fixed a real mobile gap surfaced while touching this: Trending,
+   Following, and Playlists (`/katube/playlists`, `/katube/playlists/
+   [playlistId]`) had **no bottom tab bar at all** on mobile, unlike the
+   home page — landing a mobile viewer on any of those three routes meant
+   losing the persistent nav entirely. All three already share one
+   component (`KaTubeShell` in `app/katube/components/VideoGridCard.tsx`),
+   so the bar only needed adding once: same `.katube-bottom-nav`
+   pattern/breakpoint as the home page, under a shell-scoped class name
+   (`.katube-shell-bottom-nav`, since each route ships its own `<style>`
+   tag — no shared stylesheet across pages to hook into). Home and Fast Tap
+   both point at `/katube` (this shell has no `activeSidebar` filter state
+   to deep-link into — that only lives on the home page — so both just
+   land the viewer back on the main feed).
+
+**Not done:** no further backlog items open from this sweep. Everything
+flagged two sessions back (watch/upload/Fast-Tap-feed/Trending-Following-
+Playlists mobile) is now closed.
+
+**Verified per-commit:** `tsc --noEmit` clean on every commit. `eslint`
+project-wide stayed at the pre-existing 0-errors baseline throughout (41
+warnings before this session's work; a concurrent unrelated commit from
+another session landed mid-way through — `Fast tap: fix slow/laggy loading
+while scrolling shorts feed` — bumping the warning count by one new
+pre-existing-pattern `<img>` line that isn't part of this work, rebased on
+top cleanly with no conflicts). `next build` fails in this sandbox only on
+the Google Fonts network fetch being blocked — unrelated to any of this,
+same sandbox limitation flagged in earlier entries.
