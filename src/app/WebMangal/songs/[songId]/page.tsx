@@ -15,7 +15,7 @@ import Footer from '../../../components/shared/Footer';
 import ProfileMenu from '../../../components/shared/ProfileMenu';
 import ReportButton from '../../../components/webmangal/ReportButton';
 import { hasCreatorAccess, isDeveloperRole } from '../../../lib/auth/roles';
-import { Music, ArrowLeft, BookOpen, MessageCircle } from 'lucide-react';
+import { Music, ArrowLeft, BookOpen, MessageCircle, Bell, BellOff } from 'lucide-react';
 
 interface SongBlock { block_type: string; label: string; content: string; }
 interface SongRow {
@@ -40,6 +40,8 @@ export default function SongDetailPage({ params }: { params: Promise<{ songId: s
   const [chapter, setChapter] = useState<ChapterInfo | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -50,6 +52,12 @@ export default function SongDetailPage({ params }: { params: Promise<{ songId: s
           .from('profiles').select('role').eq('id', u.user.id).maybeSingle();
         if (hasCreatorAccess(profile?.role)) setIsCreator(true);
         if (isDeveloperRole(profile?.role)) setIsDeveloper(true);
+
+        // §85 continued — song_follows: whether this reader already
+        // follows this song, for the Follow/Unfollow toggle below.
+        const { data: followRow } = await supabase
+          .from('song_follows').select('id').eq('reader_id', u.user.id).eq('song_id', songId).maybeSingle();
+        setIsFollowing(!!followRow);
       }
 
       const { data: s } = await supabase.from('songs').select('*').eq('id', songId).maybeSingle();
@@ -106,6 +114,19 @@ export default function SongDetailPage({ params }: { params: Promise<{ songId: s
 
   const isOwner = user?.id === song.creator_id;
 
+  const toggleFollow = async () => {
+    if (!user || followBusy) return;
+    setFollowBusy(true);
+    if (isFollowing) {
+      await supabase.from('song_follows').delete().eq('reader_id', user.id).eq('song_id', song.id);
+      setIsFollowing(false);
+    } else {
+      await supabase.from('song_follows').insert({ reader_id: user.id, song_id: song.id });
+      setIsFollowing(true);
+    }
+    setFollowBusy(false);
+  };
+
   return (
     <main style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
       <Navbar
@@ -143,8 +164,25 @@ export default function SongDetailPage({ params }: { params: Promise<{ songId: s
               {song.language && <> · {song.language}</>}
               {' · '}{song.views} views
             </p>
+            {!isOwner && user && (
+              <div style={{ marginTop: '10px' }}>
+                <button
+                  onClick={toggleFollow}
+                  disabled={followBusy}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '7px 16px', borderRadius: '8px', border: 'none', cursor: followBusy ? 'default' : 'pointer',
+                    fontSize: '12px', fontWeight: 700, opacity: followBusy ? 0.6 : 1,
+                    background: isFollowing ? 'var(--bg-input)' : 'linear-gradient(135deg, #7c3aed, #a78bfa)',
+                    color: isFollowing ? 'var(--text-secondary)' : '#fff',
+                  }}
+                >
+                  {isFollowing ? <><BellOff size={13} strokeWidth={2} /> Following</> : <><Bell size={13} strokeWidth={2} /> Follow Song</>}
+                </button>
+              </div>
+            )}
             {songwriterUsername && (
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '10px' }}>
                 <Link href={`/kalpana-circle/broadcast/${songwriterUsername}`} style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                   <MessageCircle size={12} /> Message songwriter
                 </Link>

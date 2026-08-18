@@ -13,8 +13,9 @@ import Link from 'next/link';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import {
   BookOpen, BookText, Trophy, Search, Bell, Wrench, Bookmark, Inbox,
-  ScrollText, Play, BellOff,
+  ScrollText, Play, BellOff, Music,
 } from 'lucide-react';
+import SongCard, { type SongCardData } from '../../components/webmangal/SongCard';
 // NOTE: "bookmarks" on MANGAL = followed series (follows table).
 // This page is an alias/friendlier entry point to the same data as /library.
 // No separate bookmarks table needed — follows IS the bookmark system.
@@ -76,6 +77,45 @@ export default function BookmarksPage() {
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [activeContentType, setActiveContentType] = useState<'all' | 'mangal' | 'novel'>('all');
   const [sortBy, setSortBy] = useState<BookmarkSortOption>('added');
+  // §85 continued — followed songs, same song_follows-backed section as
+  // /library (see that file for the query/mapping comment).
+  const [followedSongs, setFollowedSongs] = useState<(SongCardData & { creator_id: string })[]>([]);
+  const [songUsernames, setSongUsernames] = useState<Record<string, string>>({});
+  const [songsLoading, setSongsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadSongs = async (readerId: string) => {
+      const { data: followRows } = await supabase
+        .from('song_follows')
+        .select('created_at, songs(id, title, genre, cover_url, views, blocks, creator_id, linked_series_id)')
+        .eq('reader_id', readerId)
+        .order('created_at', { ascending: false });
+      const songs = (followRows ?? [])
+        .map(r => (Array.isArray(r.songs) ? r.songs[0] : r.songs))
+        .filter((s): s is NonNullable<typeof s> => !!s);
+      if (songs.length === 0) { setSongsLoading(false); return; }
+
+      const creatorIds = Array.from(new Set(songs.map(s => s.creator_id)));
+      const linkedSeriesIds = Array.from(new Set(songs.map(s => s.linked_series_id).filter(Boolean))) as string[];
+      const [usernameRes, seriesRes] = await Promise.all([
+        supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
+        linkedSeriesIds.length > 0
+          ? supabase.from('series').select('id, title').in('id', linkedSeriesIds)
+          : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+      ]);
+      setSongUsernames(Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username])));
+      const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
+
+      setFollowedSongs(songs.map(s => ({
+        id: s.id, title: s.title, genre: s.genre, cover_url: s.cover_url, views: s.views,
+        block_count: Array.isArray(s.blocks) ? s.blocks.length : 0,
+        linked_series_title: s.linked_series_id ? seriesTitleMap[s.linked_series_id] ?? null : null,
+        creator_id: s.creator_id,
+      })));
+      setSongsLoading(false);
+    };
+    supabase.auth.getUser().then(({ data }) => { if (data.user) loadSongs(data.user.id); else setSongsLoading(false); });
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem(CONTENT_TYPE_STORAGE_KEY);
@@ -310,12 +350,28 @@ export default function BookmarksPage() {
 
       {/* CONTENT */}
       <div className="mangal-bm-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '0 24px 80px' }}>
+        {/* §85 continued — Followed Songs, independent of the series
+            content-type filter/sort above (songs aren't part of that
+            mangal/novel toggle). Hidden while loading/empty. */}
+        {!songsLoading && followedSongs.length > 0 && (
+          <div style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--text-primary)' }}>
+              <Music size={15} strokeWidth={2} color="#a78bfa" /> Followed Songs
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 170px))', gap: '14px' }}>
+              {followedSongs.map(s => (
+                <SongCard key={s.id} song={s} creatorUsername={songUsernames[s.creator_id]} />
+              ))}
+            </div>
+          </div>
+        )}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
             <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Bookmark size={36} /></div>
             <div>Loading bookmarks...</div>
           </div>
         ) : series.length === 0 ? (
+          !songsLoading && followedSongs.length > 0 ? null : (
           <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}><Inbox size={48} /></div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>No bookmarks yet</p>
@@ -330,6 +386,7 @@ export default function BookmarksPage() {
               Browse Series
             </Link>
           </div>
+          )
         ) : filteredSeries.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 40px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>{activeContentType === 'novel' ? <BookText size={48} /> : <BookOpen size={48} />}</div>

@@ -6177,3 +6177,40 @@ Songs had no discovery surface — only the direct `/songs/upload` and
 **Verified:** `tsc --noEmit` clean, `eslint` on both changed files 0
 errors / 0 warnings. Used `next/link`'s `Link` (not `<a>`) for the two new
 internal `/songs/upload` links per `@next/next/no-html-link-for-pages`.
+
+## §85 continued (2) — Song follows + Library/Bookmarks integration
+
+Next slice of the still-open "Not done yet" list: Library and Bookmarks
+had no way to save a song at all. Turned out `follows` (the series-only
+bookmark/library table) isn't polymorphic — its FK is `series_id`
+specifically — so folding songs in meant a new table rather than a
+one-line addition, same shape of tradeoff as the home content-type toggle.
+
+- **New migration** `20260818130000_webmangal_song_follows.sql` —
+  `song_follows(reader_id, song_id, created_at)`, unique per reader/song
+  pair, RLS scoped to the owning reader (select/insert/delete), same
+  pattern as every other owner-scoped table in this schema.
+- **Song detail page** (`/songs/[songId]`) — Follow/Unfollow toggle button
+  next to the existing Message-songwriter/Report row. Hidden for the
+  song's own owner (can't follow your own song). Optimistic local toggle,
+  no extra fetch after mutating.
+- **`/WebMangal/library`** and **`/WebMangal/bookmarks`** — both gained a
+  "Followed Songs" section (own `SongCard` grid, own loading flag so a
+  slow songs query never blocks the existing series list from rendering).
+  Batch-resolves songwriter usernames + linked series titles per page load
+  (`.in()`, no N+1 — same pattern as the songs browse page from the
+  previous commit). Section is fully hidden when empty/loading so it never
+  leaves blank space; the pre-existing "your library/bookmarks is empty"
+  copy only shows when *both* the series list and the songs list are
+  empty, so a reader who's only followed songs doesn't see a contradictory
+  "empty" message.
+
+**Still open:** `/search` and the home page's `content_type` toggle still
+don't surface songs (search doesn't have an obvious "one more tab" slot
+without touching its shared `View.tsx`, and the home toggle is the same
+hardwired-to-series risk flagged twice already — still deferred).
+
+**Verified:** `tsc --noEmit` clean; `eslint` on every changed file (song
+detail page, library, bookmarks) 0 errors/0 warnings; `eslint src/app`
+project-wide quiet run (errors only) also clean, no regressions in
+untouched files.

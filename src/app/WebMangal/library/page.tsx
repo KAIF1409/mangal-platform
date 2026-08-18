@@ -11,7 +11,8 @@ import { hasCreatorAccess, isDeveloperRole } from '../../lib/auth/roles';
 import Link from 'next/link';
 
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
-import { Trophy, Search, Bookmark, Wrench, Bell, BookOpenText, Inbox, ScrollText, BellOff, type LucideIcon } from 'lucide-react';
+import { Trophy, Search, Bookmark, Wrench, Bell, BookOpenText, Inbox, ScrollText, BellOff, Music, type LucideIcon } from 'lucide-react';
+import SongCard, { type SongCardData } from '../../components/webmangal/SongCard';
 interface FollowedSeries {
   id: string;
   title: string;
@@ -59,6 +60,47 @@ export default function LibraryPage() {
   const [isCreator, setIsCreator] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [sortBy, setSortBy] = useState<LibrarySortOption>('recent');
+  // §85 continued — followed songs, separate from the series list above
+  // (song_follows is its own table, not part of `follows`/series content
+  // type). Own loading flag so a slow songs query never blocks the
+  // existing series library from rendering.
+  const [followedSongs, setFollowedSongs] = useState<(SongCardData & { creator_id: string })[]>([]);
+  const [songUsernames, setSongUsernames] = useState<Record<string, string>>({});
+  const [songsLoading, setSongsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadSongs = async (readerId: string) => {
+      const { data: followRows } = await supabase
+        .from('song_follows')
+        .select('created_at, songs(id, title, genre, cover_url, views, blocks, creator_id, linked_series_id)')
+        .eq('reader_id', readerId)
+        .order('created_at', { ascending: false });
+      const songs = (followRows ?? [])
+        .map(r => (Array.isArray(r.songs) ? r.songs[0] : r.songs))
+        .filter((s): s is NonNullable<typeof s> => !!s);
+      if (songs.length === 0) { setSongsLoading(false); return; }
+
+      const creatorIds = Array.from(new Set(songs.map(s => s.creator_id)));
+      const linkedSeriesIds = Array.from(new Set(songs.map(s => s.linked_series_id).filter(Boolean))) as string[];
+      const [usernameRes, seriesRes] = await Promise.all([
+        supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
+        linkedSeriesIds.length > 0
+          ? supabase.from('series').select('id, title').in('id', linkedSeriesIds)
+          : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+      ]);
+      setSongUsernames(Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username])));
+      const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
+
+      setFollowedSongs(songs.map(s => ({
+        id: s.id, title: s.title, genre: s.genre, cover_url: s.cover_url, views: s.views,
+        block_count: Array.isArray(s.blocks) ? s.blocks.length : 0,
+        linked_series_title: s.linked_series_id ? seriesTitleMap[s.linked_series_id] ?? null : null,
+        creator_id: s.creator_id,
+      })));
+      setSongsLoading(false);
+    };
+    supabase.auth.getUser().then(({ data }) => { if (data.user) loadSongs(data.user.id); else setSongsLoading(false); });
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -258,12 +300,28 @@ export default function LibraryPage() {
 
       {/* ── CONTENT ── */}
       <div className="mangal-lib-content" style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px 60px' }}>
+        {/* §85 continued — Followed Songs. Independent section above the
+            series list; hidden entirely while loading/empty so it never
+            pushes the series list down with blank space. */}
+        {!songsLoading && followedSongs.length > 0 && (
+          <div style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--text-primary)' }}>
+              <Music size={15} strokeWidth={2} color="#a78bfa" /> Followed Songs
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 170px))', gap: '14px' }}>
+              {followedSongs.map(s => (
+                <SongCard key={s.id} song={s} creatorUsername={songUsernames[s.creator_id]} />
+              ))}
+            </div>
+          </div>
+        )}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: 'var(--text-muted)' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}><BookOpenText size={32} strokeWidth={1.5} color="var(--text-muted)" /></div>
             <div>Loading your library...</div>
           </div>
         ) : series.length === 0 ? (
+          !songsLoading && followedSongs.length > 0 ? null : (
           <div style={{ textAlign: 'center', padding: '80px', background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}><Inbox size={48} strokeWidth={1.5} color="var(--text-tertiary)" /></div>
             <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Your library is empty</p>
@@ -272,6 +330,7 @@ export default function LibraryPage() {
               Browse Series
             </Link>
           </div>
+          )
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {sortedSeries.map(s => (
