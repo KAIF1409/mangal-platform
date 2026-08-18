@@ -5858,3 +5858,32 @@ core reading navigation, not the extra chrome in question.
 file: 0 errors (7 pre-existing warnings, same baseline). `next build`
 succeeds. Committed and pushed directly to `main` per founder's
 instruction — no branch/PR.
+
+## §82 — Homepage series fetch: capped the unbounded query flagged in §81
+
+Founder asked to fix the homepage's uncapped series query flagged in §81 as
+a "not changed" item — worth revisiting since a commit that landed on `main`
+mid-audit (the draft/scheduled chapter-count-badge fix) actually made it
+worse in the meantime: the homepage's series fetch went from one unbounded
+`select('*')` over every published series, to *two* unbounded queries — the
+second being every published chapter across every one of those series, just
+to build the chapter-count map. Both scale with the whole catalog, not with
+what the page actually renders.
+
+**Fix:** added `.limit(300)` (newest-first, matching the query's existing
+`order('created_at', { ascending: false })`) to the series query. Since the
+chapter-count query is `.in('series_id', seriesIds)` keyed off that same
+result, capping the series query caps both. 300 is deliberately generous —
+enough that genre/content-type filtering, sort, "New Arrivals", and "Staff
+Picks" all keep behaving exactly as before at the platform's current and
+near-term scale — this is a safety cap on worst-case growth, not real
+pagination.
+
+**Deliberately not done:** turning the browse grid into real server-side
+pagination. That would mean genre/content-type filters and sort only see
+one page of results at a time (correctness change, not just perf), which is
+a product/UX decision — raise if the catalog ever gets close to bumping
+against the 300 cap and this needs revisiting for real.
+
+**Verified:** `tsc --noEmit` clean, `eslint` 0 errors/warnings on the
+touched file. Pushed directly to `main` per founder's instruction.

@@ -151,11 +151,27 @@ export default function HomePage() {
     // client-side-count pattern already proven in bookmarks/page.tsx:
     // one query for all published chapters across every series, reduced
     // into a series_id -> count map.
+    // Perf fix — this used to have no cap at all: `select('*')` over every
+    // published series on the platform, then (as of the chapter-count-badge
+    // fix) a second unbounded query for every published chapter across
+    // every one of those series just to build the count map. Both scale
+    // with the entire catalog's size, not with what the homepage actually
+    // shows (3 featured + a handful of 6-item rows + a filterable grid).
+    // Capped at the newest 300 published series — generous enough that
+    // genre/content-type filtering, sorting, and the "New Arrivals"/"Staff
+    // Picks" sections all keep working exactly as before at the platform's
+    // current and near-term scale, while bounding the worst case instead of
+    // growing unboundedly with the catalog. If/when the catalog outgrows
+    // this cap, the right fix is real server-side pagination for the browse
+    // grid (a bigger, filter-UX-affecting change) rather than raising this
+    // number indefinitely.
+    const HOME_SERIES_CAP = 300;
     supabase
       .from('series')
       .select('*')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
+      .limit(HOME_SERIES_CAP)
       .then(async ({ data }) => {
         if (!data) { setLoading(false); return; }
         const seriesIds = data.map((s: Series) => s.id);
