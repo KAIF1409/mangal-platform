@@ -6782,3 +6782,40 @@ alongside the existing `onPointerUp`/`onPointerCancel` handlers — so
 `isSeekingRef` (which suppresses the polling interval while dragging)
 can't get stuck `true` and permanently freeze the bar if a drag ends
 in an unusual way.
+
+## §98 — KaTube Shorts: seek bar vanished a few seconds into playback, so it read as "not working"
+
+Founder follow-up to §96/§97 (same file, same seek bar). §97 fixed the
+bar's *range* (why the thumb pinned to the far right and looked
+frozen); this one was a separate defect that made the bar disappear
+entirely, which is what the founder was actually hitting on real
+devices — "the bar down there not working," wanting to hold it and
+drag right to go forward / left to go back, and have it otherwise
+glide with the video on its own.
+
+**Root cause:** the seek `<input type="range">` was only rendered
+while `showPlaybackControls` was `true`. `revealPlaybackControls`
+(called on tap/hold and on drag-start) always set a 3-second timer
+that flipped `showPlaybackControls` to `false` while the short kept
+playing uninterrupted — and once it flipped, the render swapped the
+range input out entirely for a plain, non-interactive `<div>` showing
+the short's title. Since a Short usually just plays continuously,
+this meant the bar was only ever present (and therefore only ever
+holdable/draggable) for about 3 seconds after each interaction, then
+vanished for as long as playback continued — the vast majority of
+actual watch time. The title it swapped to was also redundant: the
+short's title is already shown permanently in the bottom-left caption
+block, so the swap wasn't protecting a real second use of that screen
+space, it was just removing the only way to seek.
+
+**Fix:** the range input is now always mounted whenever a short is
+active — no more conditional swap to a title `<div>`. It keeps doing
+exactly what §96/§97 already built: tracks `playback.currentTime` via
+the 250ms poll when untouched (so it moves with the video on its
+own), and `startSeeking`/`seekTo`/`finishSeeking` handle
+holding+dragging in either direction, with `isSeekingRef` suppressing
+the poll only while a drag is actively in progress. The
+`showPlaybackControls` state itself is left in place (still flipped
+by the same interaction/timer code, in case a future session wants a
+different visual treatment tied to it) but nothing reads it for
+rendering now, so it can't hide the bar again by itself.

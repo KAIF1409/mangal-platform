@@ -104,7 +104,13 @@ export default function KaTubeShortsFeedPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [isFastForwarding, setIsFastForwarding] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [showPlaybackControls, setShowPlaybackControls] = useState(true);
+  // Bug fix (§98): this used to gate whether the seek bar or a static
+  // title <div> was rendered (see the always-mounted range input
+  // below) — kept as a setter-only flag since other effects still key
+  // off "was there a recent interaction" for unrelated bookkeeping
+  // (e.g. suppressing the controls-timer during an active drag), but
+  // nothing reads the boolean itself for rendering anymore.
+  const [, setShowPlaybackControls] = useState(true);
   const [playback, setPlayback] = useState({ currentTime: 0, duration: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -765,37 +771,50 @@ export default function KaTubeShortsFeedPage() {
 
                   {isActive && (
                     <div className="katube-short-progress">
-                      {showPlaybackControls ? (
-                        <input
-                          type="range"
-                          min="0"
-                          // Bug fix: falling back to `1` here (when
-                          // neither the poll nor the DB's duration_seconds
-                          // had resolved yet) made the slider's usable
-                          // range effectively 1 second wide — currentTime
-                          // ticking past that instantly pinned the thumb
-                          // to the far right, looking frozen/static
-                          // regardless of actual playback. 60s is a safe
-                          // upper bound for a Short; the real duration
-                          // (from onReady/polling above) overwrites this
-                          // on the very next render once known.
-                          max={playback.duration || shorts[idx].duration_seconds || 60}
-                          step="0.1"
-                          value={Math.min(playback.duration || shorts[idx].duration_seconds || 60, playback.currentTime)}
-                          onPointerDown={startSeeking}
-                          onPointerUp={finishSeeking}
-                          onPointerCancel={finishSeeking}
-                          onLostPointerCapture={finishSeeking}
-                          onInput={event => seekTo(Number((event.target as HTMLInputElement).value))}
-                          onChange={event => seekTo(Number(event.target.value))}
-                          aria-label="Seek through Short"
-                          style={{ display: 'block', width: '100%', accentColor: '#f97316', cursor: 'pointer', pointerEvents: 'auto' }}
-                        />
-                      ) : (
-                        <div aria-live="polite" style={{ color: '#fff', fontSize: '13px', fontWeight: 800, lineHeight: 1.35, textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>
-                          {short.title}
-                        </div>
-                      )}
+                      {/* Bug fix (§98): this used to swap the range input
+                          out for a static title <div> once
+                          showPlaybackControls went false — three seconds
+                          after any resumed playback (see
+                          revealPlaybackControls's setTimeout). The title
+                          it swapped to is also already shown permanently
+                          in the caption block below, so that branch added
+                          nothing except making the seek bar vanish and
+                          become completely undraggable for as long as the
+                          short kept playing uninterrupted, which is the
+                          vast majority of watch time — reading exactly
+                          like "the bar down there doesn't work." The
+                          range input is now always mounted so it can
+                          always be held/dragged (left = back, right =
+                          forward, via the existing startSeeking/seekTo/
+                          finishSeeking handlers below), and it keeps
+                          tracking playback on its own via the polling
+                          effect above whenever it isn't currently being
+                          dragged (isSeekingRef.current false). */}
+                      <input
+                        type="range"
+                        min="0"
+                        // Bug fix: falling back to `1` here (when
+                        // neither the poll nor the DB's duration_seconds
+                        // had resolved yet) made the slider's usable
+                        // range effectively 1 second wide — currentTime
+                        // ticking past that instantly pinned the thumb
+                        // to the far right, looking frozen/static
+                        // regardless of actual playback. 60s is a safe
+                        // upper bound for a Short; the real duration
+                        // (from onReady/polling above) overwrites this
+                        // on the very next render once known.
+                        max={playback.duration || shorts[idx].duration_seconds || 60}
+                        step="0.1"
+                        value={Math.min(playback.duration || shorts[idx].duration_seconds || 60, playback.currentTime)}
+                        onPointerDown={startSeeking}
+                        onPointerUp={finishSeeking}
+                        onPointerCancel={finishSeeking}
+                        onLostPointerCapture={finishSeeking}
+                        onInput={event => seekTo(Number((event.target as HTMLInputElement).value))}
+                        onChange={event => seekTo(Number(event.target.value))}
+                        aria-label="Seek through Short"
+                        style={{ display: 'block', width: '100%', accentColor: '#f97316', cursor: 'pointer', pointerEvents: 'auto' }}
+                      />
                     </div>
                   )}
 
