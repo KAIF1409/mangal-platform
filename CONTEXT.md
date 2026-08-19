@@ -6475,24 +6475,34 @@ of guessed at.
 
 **Root cause found (this session, live in prod):** error banner now shows
 `Missing env var(s) in this Worker: SUPABASE_SERVICE_ROLE_KEY` — confirmed
-via the fix above. `SUPABASE_SERVICE_ROLE_KEY` (and possibly other vars
-from `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`,
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`, `RAZORPAY_KEY_ID`,
-`RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `RESEND_API_KEY`,
-`YOUTUBE_API_KEY`, `COLD_STORAGE_ENCRYPTION_KEY`) were never carried over
-from Vercel to the `mangal-platform` Cloudflare Worker — Vercel and
-Cloudflare Workers env vars/secrets are separate systems, migrating
-platforms doesn't copy them. **Not fixable via code/git** — no Cloudflare
-API scope for setting Worker secrets is available to Claude via the MCP
-connector. Founder needs to add these manually: Cloudflare dashboard →
-Workers & Pages → `mangal-platform` → Settings → Variables and Secrets →
-add `SUPABASE_SERVICE_ROLE_KEY` as a **Secret** (not plain var) using the
-value from Supabase dashboard → Project Settings → API → `service_role`
-key, then check the other vars above are present too, then redeploy.
-Once that's done, `/admin/migrate-media` "Run migration" should work —
-if it still fails after the secret is added, whatever error the banner
-now shows is the real next lead (the error-surfacing fix from this
-session guarantees a specific message, not a bare 500, going forward).
+via the fix above. Founder confirmed the secret **is** already set
+correctly in the Cloudflare dashboard (`mangal-platform` → Settings →
+Variables and Secrets), ruling out the "never carried over from Vercel"
+theory. Actual cause: `process.env.SUPABASE_SERVICE_ROLE_KEY` reading as
+`undefined` at runtime even with the secret genuinely bound — Cloudflare's
+`process.env` auto-population from Worker bindings/secrets depends on the
+`nodejs_compat_populate_process_env` compat flag actually taking effect
+(meant to default on for `compatibility_date >= 2025-04-01`, ours is
+2026-08-01, but evidently wasn't reliably applying here in practice).
+**Fixed:** `migrate-media`'s `getSupabaseAdmin()` now reads
+`NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` straight off
+`getCloudflareContext().env` — the same binding-access approach `r2.ts`
+already uses successfully for `MEDIA_BUCKET` — falling back to
+`process.env` only outside a Worker context (local `next dev`). Also
+added `nodejs_compat_populate_process_env` explicitly to
+`wrangler.jsonc`'s `compatibility_flags` instead of relying on the
+implicit default.
+
+**Known follow-up, not yet fixed:** `notify-followers`, `delete-account`,
+`confirm-parent-consent`, `send-parent-consent`, `payments/webhook`, and
+`export-data` all read `SUPABASE_SERVICE_ROLE_KEY` (and in some cases
+`COLD_STORAGE_ENCRYPTION_KEY`) via plain `process.env`, the same pattern
+that was just proven broken in `migrate-media`. These routes likely carry
+the identical latent bug but haven't been exercised since the Cloudflare
+migration, so it hasn't surfaced yet. Worth doing the same
+`getCloudflareContext().env` swap in all of them proactively next
+session, rather than waiting for each to fail in production one at a
+time.
 
 Also noticed while debugging: `workers_list` via the Cloudflare MCP shows
 only **one** Worker on the account, still named `mangal-platform` (matches
