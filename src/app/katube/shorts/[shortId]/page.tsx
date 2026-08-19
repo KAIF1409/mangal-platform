@@ -252,6 +252,20 @@ export default function KaTubeShortsFeedPage() {
               if (index === activeIndexRef.current) {
                 if (muted) event.target.mute(); else event.target.unMute();
                 event.target.playVideo();
+                // Bug fix: playback.duration used to stay 0 until the
+                // 250ms polling interval (further below) happened to
+                // tick — and until then, both seekTo()'s early-return
+                // guard and the range input's `max` fallback treated
+                // duration as unknown, rendering the bar with an
+                // effectively 1-second range that looked pinned/static
+                // and made any drag attempted in that window a silent
+                // no-op. onReady already has a real duration available
+                // (YouTube resolves it before firing ready), so seed it
+                // immediately instead of waiting on the poll.
+                const readyDuration = event.target.getDuration();
+                if (Number.isFinite(readyDuration) && readyDuration > 0) {
+                  setPlayback(prev => ({ ...prev, duration: readyDuration }));
+                }
               }
             },
             onStateChange: (event: { data: number }) => {
@@ -494,7 +508,21 @@ export default function KaTubeShortsFeedPage() {
   }, [activeIndex, isPlaying, sendPlayerCommand, stopFastForward]);
 
   const seekTo = useCallback((time: number) => {
-    const duration = playback.duration || shorts[activeIndex]?.duration_seconds || 0;
+    // Bug fix: this used to trust only `playback.duration` (state, only
+    // set by the poll or onReady) and `shorts[...].duration_seconds`
+    // (DB metadata, frequently null — it's only captured at upload time
+    // if the moderation step happened to extract it), falling back to 0
+    // and silently doing nothing (`if (!duration) return`) if neither
+    // was populated yet. That made a drag attempted before the first
+    // successful poll a complete no-op — indistinguishable from the bar
+    // being broken. Now falls back a third way: read the live player's
+    // own getDuration() directly, which is normally available as soon
+    // as the player exists, well before the state catches up.
+    const liveDuration = playerRefs.current[activeIndex]?.getDuration();
+    const duration =
+      playback.duration ||
+      shorts[activeIndex]?.duration_seconds ||
+      (Number.isFinite(liveDuration) && liveDuration! > 0 ? liveDuration! : 0);
     if (!duration) return;
     // `false` avoids a network request while the thumb is being dragged;
     // callers set `true` once it is released, per YouTube's API guidance.
@@ -507,6 +535,13 @@ export default function KaTubeShortsFeedPage() {
     isSeekingRef.current = true;
     clearControlsTimer();
     setShowPlaybackControls(true);
+    // Explicit capture (rather than relying on the browser's implicit
+    // range-input capture, which isn't equally reliable across every
+    // mobile browser/WebView) — guarantees pointerup/lostpointercapture
+    // fires on this element even if the finger drifts outside its
+    // bounds mid-drag, so isSeekingRef always gets released and the
+    // bar can never get stuck "frozen" mid-poll-suppression.
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* not supported — implicit capture still applies */ }
   }, [clearControlsTimer]);
 
   const finishSeeking = useCallback((event: PointerEvent<HTMLInputElement>) => {
@@ -734,12 +769,23 @@ export default function KaTubeShortsFeedPage() {
                         <input
                           type="range"
                           min="0"
-                          max={playback.duration || shorts[idx].duration_seconds || 1}
+                          // Bug fix: falling back to `1` here (when
+                          // neither the poll nor the DB's duration_seconds
+                          // had resolved yet) made the slider's usable
+                          // range effectively 1 second wide — currentTime
+                          // ticking past that instantly pinned the thumb
+                          // to the far right, looking frozen/static
+                          // regardless of actual playback. 60s is a safe
+                          // upper bound for a Short; the real duration
+                          // (from onReady/polling above) overwrites this
+                          // on the very next render once known.
+                          max={playback.duration || shorts[idx].duration_seconds || 60}
                           step="0.1"
-                          value={Math.min(playback.duration || shorts[idx].duration_seconds || 1, playback.currentTime)}
+                          value={Math.min(playback.duration || shorts[idx].duration_seconds || 60, playback.currentTime)}
                           onPointerDown={startSeeking}
                           onPointerUp={finishSeeking}
                           onPointerCancel={finishSeeking}
+                          onLostPointerCapture={finishSeeking}
                           onInput={event => seekTo(Number((event.target as HTMLInputElement).value))}
                           onChange={event => seekTo(Number(event.target.value))}
                           aria-label="Seek through Short"

@@ -6735,3 +6735,50 @@ into a shared `isNearIndex()` helper used by both the render's mount
 check and the new cleanup effect — previously duplicated as inline
 magic numbers in one place, which is exactly how they could've drifted
 out of sync with each other in the first place.
+
+## §97 — KaTube Shorts: seek bar looked frozen/static
+
+Follow-up to §96 (same file). Founder reported the seek bar at the
+bottom of a Short doesn't move — screenshotted it circled in red.
+Traced to a real, verifiable code defect rather than a device/CSS
+issue: an existing comment on the player-creation effect even already
+said "...which is why the range stayed static" — a prior attempt at
+this exact bug that fixed the player-instance side (§7's original
+slider→player wiring) but not this part.
+
+**Root cause:** `playback.duration` starts at `0` and was only ever
+set by (a) the 250ms polling interval reading `player.getDuration()`,
+or (b) `shorts[activeIndex].duration_seconds` from the DB — which is
+frequently `null`, since it's only populated if the upload-time
+moderation step happened to extract it. Until one of those resolved:
+- `seekTo()` had `if (!duration) return;` — a silent no-op. Dragging
+  before the first successful poll tick did literally nothing.
+- The range input's `max` fell back to a hardcoded `1` (one second).
+  With `currentTime` ticking up immediately, the thumb would clamp to
+  the far right within the first second and *stay there* — visually
+  indistinguishable from "frozen," because the usable range was
+  effectively 1 second wide for as long as duration stayed unknown.
+
+**Fix (three layers, so no single source of missing duration can
+freeze the bar again):**
+1. `onReady` now seeds `playback.duration` immediately from
+   `event.target.getDuration()` — YouTube resolves this before firing
+   `onReady`, so this is available well before the poll's first tick.
+2. `seekTo()` no longer gives up when state hasn't caught up — it also
+   tries reading `playerRefs.current[activeIndex]?.getDuration()`
+   live as a third fallback before deciding duration is truly
+   unknown.
+3. The render's `max`/`value` fallback changed from `1` → `60`
+   (a safe upper bound for a Short) — even in the worst case where all
+   three duration sources are still unresolved, the bar has a sane
+   range instead of an effectively-zero one, and gets overwritten with
+   the real duration the instant any of the three sources resolves.
+
+Also hardened the drag lifecycle itself, defensively: `startSeeking`
+now calls `setPointerCapture` explicitly (rather than relying only on
+browsers' implicit range-input capture, which isn't uniformly reliable
+across every mobile WebView), and `onLostPointerCapture` was added
+alongside the existing `onPointerUp`/`onPointerCancel` handlers — so
+`isSeekingRef` (which suppresses the polling interval while dragging)
+can't get stuck `true` and permanently freeze the bar if a drag ends
+in an unusual way.
