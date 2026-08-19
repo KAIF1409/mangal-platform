@@ -41,6 +41,43 @@ interface Short {
 // re-muting every single clip.
 const MUTE_PREF_KEY = 'katube-shorts-muted';
 
+interface YouTubePlayer {
+  playVideo: () => void;
+  pauseVideo: () => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  setPlaybackRate: (rate: number) => void;
+  mute: () => void;
+  unMute: () => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  getIframe: () => HTMLIFrameElement;
+  destroy: () => void;
+}
+
+interface YouTubeApi {
+  Player: new (element: HTMLElement, options: Record<string, unknown>) => YouTubePlayer;
+  PlayerState: { PLAYING: number; PAUSED: number };
+}
+
+function getYouTubeWindow(): { YT?: YouTubeApi; onYouTubeIframeAPIReady?: () => void } {
+  return window as unknown as { YT?: YouTubeApi; onYouTubeIframeAPIReady?: () => void };
+}
+
+let youtubeApiPromise: Promise<void> | null = null;
+function loadYouTubeApi(): Promise<void> {
+  if (youtubeApiPromise) return youtubeApiPromise;
+  youtubeApiPromise = new Promise(resolve => {
+    const win = getYouTubeWindow();
+    if (win.YT?.Player) { resolve(); return; }
+    const previousReady = win.onYouTubeIframeAPIReady;
+    win.onYouTubeIframeAPIReady = () => { previousReady?.(); resolve(); };
+    const script = document.createElement('script');
+    script.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(script);
+  });
+  return youtubeApiPromise;
+}
+
 export default function KaTubeShortsFeedPage() {
   const params = useParams();
   const initialShortId = params?.shortId as string;
@@ -55,21 +92,48 @@ export default function KaTubeShortsFeedPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [isFastForwarding, setIsFastForwarding] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [showPlaybackControls, setShowPlaybackControls] = useState(true);
   const [playback, setPlayback] = useState({ currentTime: 0, duration: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
+  const playerContainerRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const playerRefs = useRef<Record<number, YouTubePlayer | null>>({});
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const holdPointerRef = useRef<{ id: number; x: number; y: number } | null>(null);
   const pressMovedRef = useRef(false);
   const fastForwardingRef = useRef(false);
   const lastActiveIndexRef = useRef<number | null>(null);
+  const activeIndexRef = useRef(0);
+  const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSeekingRef = useRef(false);
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  const clearControlsTimer = useCallback(() => {
+    if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+    controlsTimerRef.current = null;
+  }, []);
+
+  // Keep the controls on screen while the viewer is interacting, then replace
+  // them with KaTube's saved title after three seconds of uninterrupted play.
+  const revealPlaybackControls = useCallback(() => {
+    clearControlsTimer();
+    setShowPlaybackControls(true);
+    if (!isPlaying || isSeekingRef.current) return;
+    controlsTimerRef.current = setTimeout(() => setShowPlaybackControls(false), 3000);
+  }, [clearControlsTimer, isPlaying]);
 
   const sendPlayerCommand = useCallback((index: number, func: string, args: unknown[] = []) => {
-    iframeRefs.current[index]?.contentWindow?.postMessage(
-      JSON.stringify({ event: 'command', func, args }),
-      'https://www.youtube.com'
-    );
+    const player = playerRefs.current[index];
+    if (!player) return;
+    if (func === 'playVideo') player.playVideo();
+    if (func === 'pauseVideo') player.pauseVideo();
+    if (func === 'seekTo') player.seekTo(Number(args[0]) || 0, Boolean(args[1]));
+    if (func === 'setPlaybackRate') player.setPlaybackRate(Number(args[0]) || 1);
+    if (func === 'mute') player.mute();
+    if (func === 'unMute') player.unMute();
   }, []);
 
   // Keep several upcoming YouTube players mounted. Crucially, their embed URL
@@ -114,6 +178,65 @@ export default function KaTubeShortsFeedPage() {
       return next;
     });
   }, []);
+
+  // The previous slider only changed React state: no YT.Player instance was
+  // ever created, so its seek command had nowhere to go. Instantiate the
+  // official IFrame Player API for each nearby short and retain the API object
+  // for real-time reads and seek calls.
+  useEffect(() => {
+    if (shorts.length === 0) return;
+    let cancelled = false;
+
+    loadYouTubeApi().then(() => {
+      if (cancelled) return;
+      const api = getYouTubeWindow().YT;
+      if (!api) return;
+
+      Object.entries(playerContainerRefs.current).forEach(([key, element]) => {
+        const index = Number(key);
+        const short = shorts[index];
+        if (!element || !short) return;
+
+        const existing = playerRefs.current[index];
+        if (existing && document.contains(existing.getIframe())) return;
+        existing?.destroy();
+
+        playerRefs.current[index] = new api.Player(element, {
+          width: '100%', height: '100%', videoId: short.youtube_id,
+          playerVars: {
+            autoplay: 0, controls: 0, disablekb: 1, fs: 0, loop: 1,
+            playlist: short.youtube_id, playsinline: 1, rel: 0,
+            origin: window.location.origin,
+          },
+          events: {
+            onReady: (event: { target: YouTubePlayer }) => {
+              if (cancelled) return;
+              playerRefs.current[index] = event.target;
+              markLoaded(index);
+              if (index === activeIndexRef.current) {
+                if (muted) event.target.mute(); else event.target.unMute();
+                event.target.playVideo();
+              }
+            },
+            onStateChange: (event: { data: number }) => {
+              if (cancelled || index !== activeIndexRef.current) return;
+              const playing = event.data === api.PlayerState.PLAYING;
+              setIsPlaying(playing);
+              if (playing && !isSeekingRef.current) {
+                clearControlsTimer();
+                controlsTimerRef.current = setTimeout(() => setShowPlaybackControls(false), 3000);
+              } else if (!playing) {
+                clearControlsTimer();
+                setShowPlaybackControls(true);
+              }
+            },
+          },
+        });
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [activeIndex, clearControlsTimer, markLoaded, muted, shorts]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -185,7 +308,7 @@ export default function KaTubeShortsFeedPage() {
   // its src. That preserves the preloaded next clips during fast scrolling.
   useEffect(() => {
     const syncPlayers = () => {
-      Object.keys(iframeRefs.current).forEach(index => {
+      Object.keys(playerRefs.current).forEach(index => {
         if (Number(index) === activeIndex) {
           sendPlayerCommand(activeIndex, muted ? 'mute' : 'unMute');
           sendPlayerCommand(activeIndex, 'playVideo');
@@ -209,36 +332,25 @@ export default function KaTubeShortsFeedPage() {
     return () => clearTimeout(playTimer);
   }, [activeIndex, sendPlayerCommand, shorts]);
 
-  // The IFrame API reports its live playback values through postMessage. That
-  // lets KaTube render a real seek bar instead of a fake timed animation.
+  // Read the actual player clock. A native range input is therefore a true
+  // seek bar rather than a decorative timed animation.
   useEffect(() => {
-    const receivePlayerData = (event: MessageEvent) => {
-      if (event.origin !== 'https://www.youtube.com' || typeof event.data !== 'string') return;
-      try {
-        const data = JSON.parse(event.data) as { info?: { currentTime?: number; duration?: number; playerState?: number } };
-        const currentTime = data.info?.currentTime;
-        const duration = data.info?.duration;
-        if (typeof currentTime === 'number' || typeof duration === 'number') {
-          setPlayback(previous => ({
-            currentTime: typeof currentTime === 'number' ? currentTime : previous.currentTime,
-            duration: typeof duration === 'number' ? duration : previous.duration,
-          }));
-        }
-        if (typeof data.info?.playerState === 'number') setIsPlaying(data.info.playerState === 1);
-      } catch {
-        // Ignore unrelated YouTube iframe messages.
-      }
-    };
-    window.addEventListener('message', receivePlayerData);
     const interval = window.setInterval(() => {
-      sendPlayerCommand(activeIndex, 'getCurrentTime');
-      sendPlayerCommand(activeIndex, 'getDuration');
+      if (isSeekingRef.current) return;
+      const player = playerRefs.current[activeIndex];
+      if (!player) return;
+      const currentTime = player.getCurrentTime();
+      const duration = player.getDuration();
+      if (Number.isFinite(currentTime) && Number.isFinite(duration) && duration > 0) {
+        setPlayback({ currentTime, duration });
+      }
     }, 250);
     return () => {
-      window.removeEventListener('message', receivePlayerData);
       window.clearInterval(interval);
     };
-  }, [activeIndex, sendPlayerCommand]);
+  }, [activeIndex]);
+
+  useEffect(() => () => clearControlsTimer(), [clearControlsTimer]);
 
   const stopFastForward = useCallback(() => {
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
@@ -251,6 +363,7 @@ export default function KaTubeShortsFeedPage() {
 
   const beginFastForward = useCallback((event: PointerEvent<HTMLDivElement>) => {
     if (!event.isPrimary) return;
+    revealPlaybackControls();
     holdPointerRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
     pressMovedRef.current = false;
     holdTimerRef.current = setTimeout(() => {
@@ -258,7 +371,7 @@ export default function KaTubeShortsFeedPage() {
       fastForwardingRef.current = true;
       setIsFastForwarding(true);
     }, 300);
-  }, [activeIndex, sendPlayerCommand]);
+  }, [activeIndex, revealPlaybackControls, sendPlayerCommand]);
 
   const cancelFastForwardForScroll = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const start = holdPointerRef.current;
@@ -284,9 +397,25 @@ export default function KaTubeShortsFeedPage() {
   const seekTo = useCallback((time: number) => {
     const duration = playback.duration || shorts[activeIndex]?.duration_seconds || 0;
     if (!duration) return;
-    sendPlayerCommand(activeIndex, 'seekTo', [time, true]);
+    // `false` avoids a network request while the thumb is being dragged;
+    // callers set `true` once it is released, per YouTube's API guidance.
+    sendPlayerCommand(activeIndex, 'seekTo', [time, !isSeekingRef.current]);
     setPlayback(previous => ({ ...previous, duration, currentTime: time }));
   }, [activeIndex, playback.duration, sendPlayerCommand, shorts]);
+
+  const startSeeking = useCallback((event: PointerEvent<HTMLInputElement>) => {
+    event.stopPropagation();
+    isSeekingRef.current = true;
+    clearControlsTimer();
+    setShowPlaybackControls(true);
+  }, [clearControlsTimer]);
+
+  const finishSeeking = useCallback((event: PointerEvent<HTMLInputElement>) => {
+    event.stopPropagation();
+    isSeekingRef.current = false;
+    seekTo(Number(event.currentTarget.value));
+    revealPlaybackControls();
+  }, [revealPlaybackControls, seekTo]);
 
   return (
     <div style={{ height: '100vh', width: '100vw', background: '#000', position: 'relative', overflow: 'hidden' }}>
@@ -442,24 +571,21 @@ export default function KaTubeShortsFeedPage() {
                           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       )}
-                      <iframe
-                        ref={el => { iframeRefs.current[idx] = el; }}
-                        src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&disablekb=1&fs=0&enablejsapi=1&autoplay=0&mute=1&loop=1&playlist=${short.youtube_id}${typeof window === 'undefined' ? '' : `&origin=${encodeURIComponent(window.location.origin)}`}`}
-                        title={short.title}
-                        allow="accelerometer; autoplay; encrypted-media; gyroscope"
-                        onLoad={() => markLoaded(idx)}
+                      <div
+                        ref={el => { playerContainerRefs.current[idx] = el; }}
+                        aria-label={short.title}
                         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
                       />
                       {/* On phones, YouTube renders a title/channel strip at
                           the top of an embed. It can open youtube.com, so it
                           is intentionally covered; KaTube's own title below
                           remains the only title interaction. */}
-                      <div className="katube-youtube-title-shield" aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '136px', zIndex: 20, background: '#000', pointerEvents: 'auto' }} />
+                      <div className="katube-youtube-title-shield" aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '136px', zIndex: 20, background: 'transparent', pointerEvents: 'auto' }} />
                       {/* The original YouTube Short can itself contain a
                           left-bottom Share graphic. KaTube's Share action is
                           the one in the right rail, so hide this duplicate
                           source-player graphic without adding another action. */}
-                      <div className="katube-youtube-bottom-share-shield" aria-hidden="true" style={{ position: 'absolute', left: 0, bottom: 0, width: '128px', height: '108px', zIndex: 20, background: '#000', pointerEvents: 'auto' }} />
+                      <div className="katube-youtube-bottom-share-shield" aria-hidden="true" style={{ position: 'absolute', left: 0, bottom: 0, width: '128px', height: '108px', zIndex: 20, background: 'transparent', pointerEvents: 'auto' }} />
                       {isActive && (
                         <div
                           className="katube-short-gesture-layer"
@@ -502,18 +628,26 @@ export default function KaTubeShortsFeedPage() {
 
                   {isActive && (
                     <div className="katube-short-progress">
-                      <input
-                        type="range"
-                        min="0"
-                        max={playback.duration || shorts[idx].duration_seconds || 1}
-                        step="0.1"
-                        value={Math.min(playback.duration || shorts[idx].duration_seconds || 1, playback.currentTime)}
-                        onPointerDown={event => event.stopPropagation()}
-                        onInput={event => seekTo(Number((event.target as HTMLInputElement).value))}
-                        onChange={event => seekTo(Number(event.target.value))}
-                        aria-label="Seek through Short"
-                        style={{ display: 'block', width: '100%', accentColor: '#f97316', cursor: 'pointer', pointerEvents: 'auto' }}
-                      />
+                      {showPlaybackControls ? (
+                        <input
+                          type="range"
+                          min="0"
+                          max={playback.duration || shorts[idx].duration_seconds || 1}
+                          step="0.1"
+                          value={Math.min(playback.duration || shorts[idx].duration_seconds || 1, playback.currentTime)}
+                          onPointerDown={startSeeking}
+                          onPointerUp={finishSeeking}
+                          onPointerCancel={finishSeeking}
+                          onInput={event => seekTo(Number((event.target as HTMLInputElement).value))}
+                          onChange={event => seekTo(Number(event.target.value))}
+                          aria-label="Seek through Short"
+                          style={{ display: 'block', width: '100%', accentColor: '#f97316', cursor: 'pointer', pointerEvents: 'auto' }}
+                        />
+                      ) : (
+                        <div aria-live="polite" style={{ color: '#fff', fontSize: '13px', fontWeight: 800, lineHeight: 1.35, textShadow: '0 1px 5px rgba(0,0,0,0.9)' }}>
+                          {short.title}
+                        </div>
+                      )}
                     </div>
                   )}
 
