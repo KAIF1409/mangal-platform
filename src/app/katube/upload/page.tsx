@@ -199,6 +199,7 @@ export default function KaTubeUploadPage() {
         headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
         body: JSON.stringify({
           youtubeId, title: title.trim(), seriesId: seriesId || null,
+          description: description.trim(),
           isShort, category, aiTool, autoPostToCircle,
         }),
       });

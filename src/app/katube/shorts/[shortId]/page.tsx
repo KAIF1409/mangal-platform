@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
-import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users } from 'lucide-react';
+import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users, Home, Zap, Flame, PlusSquare, ExternalLink, X, Info, Play } from 'lucide-react';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
 
 // ── KaTube §7 — Fast Tap full-screen Shorts/Reels feed ──
@@ -30,6 +30,7 @@ interface Short {
   views: number;
   likes: number;
   creator: string;
+  description: string | null;
 }
 
 // Sound preference key — shared across every KaTube Shorts session so once
@@ -49,6 +50,7 @@ export default function KaTubeShortsFeedPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [watchTogetherOpen, setWatchTogetherOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
@@ -97,15 +99,6 @@ export default function KaTubeShortsFeedPage() {
     return () => added.forEach(l => l.remove());
   }, []);
 
-  // Double-tap-to-like (YouTube Shorts/Instagram Reels staple) — a big
-  // heart briefly bursts over whichever short was tapped. There's no real
-  // like backend yet for this feed (see the sidebar Like button's toast
-  // below), so this reuses the same "not built yet" toast rather than
-  // faking a persisted like — it's purely the gesture + animation.
-  // Defined below, after showToast (needs it as a dependency).
-  const [heartBurstIndex, setHeartBurstIndex] = useState<number | null>(null);
-  const lastTapRef = useRef<{ idx: number; time: number }>({ idx: -1, time: 0 });
-
   // Default is UNMUTED (sound on), matching the founder's ask — only falls
   // back to muted if the person explicitly muted on a previous short/visit.
   const [muted, setMuted] = useState<boolean>(() => {
@@ -129,7 +122,7 @@ export default function KaTubeShortsFeedPage() {
     (async () => {
       const { data: rows } = await supabase
         .from('videos')
-        .select('id, title, youtube_id, views, likes, creator_id')
+        .select('id, title, description, youtube_id, views, likes, creator_id')
         .eq('is_short', true)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -142,7 +135,7 @@ export default function KaTubeShortsFeedPage() {
       const creatorMap = new Map((creators || []).map(c => [c.user_id, c.username]));
 
       const list: Short[] = rows.map(r => ({
-        id: r.id, title: r.title, youtube_id: r.youtube_id,
+        id: r.id, title: r.title, description: r.description ?? null, youtube_id: r.youtube_id,
         views: r.views, likes: r.likes,
         creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
       }));
@@ -187,16 +180,6 @@ export default function KaTubeShortsFeedPage() {
     setTimeout(() => setToast(null), 1800);
   }, []);
 
-  const handleVideoTap = useCallback((idx: number) => {
-    const now = Date.now();
-    const isDoubleTap = lastTapRef.current.idx === idx && now - lastTapRef.current.time < 300;
-    lastTapRef.current = { idx, time: now };
-    if (!isDoubleTap) return;
-    setHeartBurstIndex(idx);
-    showToast('Like isn\u2019t built yet');
-    setTimeout(() => setHeartBurstIndex(v => (v === idx ? null : v)), 700);
-  }, [showToast]);
-
   // Sync audio on the active short: browsers only reliably allow autoplay
   // when it starts muted, so the iframe always loads with mute=1 in its src
   // (never remounted/restarted on toggle) — the real on/off happens here via
@@ -223,18 +206,45 @@ export default function KaTubeShortsFeedPage() {
           notch, Dynamic Island, or home-indicator gesture bar — real
           devices, not just the browser chrome this was tested in before. */}
       <style>{`
-        @keyframes katube-heart-burst {
-          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-          25% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
-          40% { transform: translate(-50%, -50%) scale(1); }
-          100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
-        }
         @keyframes katube-shorts-spin {
           to { transform: rotate(360deg); }
         }
+        .katube-shorts-sidebar { display: none; }
+        .katube-short-details {
+          position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 60;
+          max-width: 520px; margin: 0 auto; padding: 18px; box-sizing: border-box;
+          background: #18181d; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px;
+          box-shadow: 0 18px 48px rgba(0,0,0,0.45);
+        }
+        @media (min-width: 900px) {
+          .katube-shorts-sidebar {
+            display: flex; position: fixed; inset: 0 auto 0 0; z-index: 40; width: 232px;
+            flex-direction: column; padding: 22px 12px; box-sizing: border-box;
+            background: #0b0b0f; border-right: 1px solid rgba(255,255,255,0.12);
+          }
+          .katube-shorts-feed { margin-left: 232px; width: calc(100% - 232px) !important; }
+          .katube-shorts-back { left: 252px !important; }
+          .katube-short-details { left: auto; right: 24px; bottom: 24px; width: 320px; margin: 0; }
+        }
       `}</style>
 
-      <Link href="/katube" style={{
+      <aside className="katube-shorts-sidebar" aria-label="KaTube navigation">
+        <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', textDecoration: 'none', padding: '0 12px 24px', fontSize: '18px', fontWeight: 900 }}>
+          <Play size={20} fill="#f97316" color="#f97316" /> KaTube
+        </Link>
+        {[
+          { href: '/katube', label: 'Home', icon: Home },
+          { href: '/katube', label: 'Fast Tap', icon: Zap, active: true },
+          { href: '/katube/trending', label: 'Trending', icon: Flame },
+          { href: '/katube/subscriptions', label: 'Following', icon: Users },
+        ].map(item => {
+          const Icon = item.icon;
+          return <Link key={item.label} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '11px 12px', borderRadius: '7px', color: item.active ? '#fff' : '#a1a1aa', background: item.active ? 'rgba(249,115,22,0.18)' : 'transparent', textDecoration: 'none', fontSize: '14px', fontWeight: item.active ? 800 : 600 }}><Icon size={19} color={item.active ? '#f97316' : 'currentColor'} />{item.label}</Link>;
+        })}
+        <Link href="/katube/upload" style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px', borderRadius: '7px', background: '#f97316', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}><PlusSquare size={16} /> Upload</Link>
+      </aside>
+
+      <Link className="katube-shorts-back" href="/katube" style={{
         position: 'absolute', top: 'calc(16px + env(safe-area-inset-top))', left: 'calc(16px + env(safe-area-inset-left))', zIndex: 20,
         width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -253,6 +263,7 @@ export default function KaTubeShortsFeedPage() {
       ) : (
         <div
           ref={containerRef}
+          className="katube-shorts-feed"
           style={{
             height: '100%', width: '100%', overflowY: 'scroll',
             scrollSnapType: 'y mandatory', scrollBehavior: 'smooth',
@@ -299,7 +310,7 @@ export default function KaTubeShortsFeedPage() {
                       )}
                       <iframe
                         ref={el => { iframeRefs.current[idx] = el; }}
-                        src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&enablejsapi=1${isActive ? '&autoplay=1&mute=1' : ''}`}
+                        src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=1&enablejsapi=1${isActive ? '&autoplay=1&mute=1' : ''}`}
                         title={short.title}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
@@ -333,38 +344,17 @@ export default function KaTubeShortsFeedPage() {
                     </div>
                   )}
 
-                  {/* Transparent tap-capture overlay — a cross-origin
-                      YouTube iframe swallows click events (they never
-                      bubble to the parent DOM), so double-tap-to-like
-                      needs its own layer above the iframe/thumbnail to
-                      actually receive taps. controls=0 on the iframe means
-                      there's no native player UI underneath to preserve. */}
-                  <div
-                    onClick={() => handleVideoTap(idx)}
-                    style={{ position: 'absolute', inset: 0, zIndex: 3 }}
-                  />
-
-                  {heartBurstIndex === idx && (
-                    <div style={{
-                      position: 'absolute', top: '50%', left: '50%', zIndex: 6,
-                      transform: 'translate(-50%, -50%)', pointerEvents: 'none',
-                      animation: 'katube-heart-burst 0.7s ease-out forwards',
-                    }}>
-                      <Heart size={90} color="#fff" fill="#ef4444" stroke="#ef4444" />
-                    </div>
-                  )}
-
-                  {/* Bottom-left creator + caption */}
+                  {/* KaTube-owned metadata. The iframe above keeps YouTube's
+                      own player controls and branding available for playback. */}
                   <div style={{
-                    position: 'absolute', bottom: 0, left: 0, right: '70px',
-                    padding: '16px 60px calc(20px + env(safe-area-inset-bottom)) 16px',
+                    position: 'absolute', bottom: '58px', left: 0, right: '70px',
+                    padding: '16px 16px 12px',
                     background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)', zIndex: 5,
                   }}>
                     <div style={{ color: '#fff', fontWeight: 800, fontSize: '13.5px', marginBottom: '4px' }}>@{short.creator}</div>
-                    <div style={{
-                      color: 'rgba(255,255,255,0.9)', fontSize: '12.5px', lineHeight: 1.4,
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                    }}>{short.title}</div>
+                    <button onClick={() => { setActiveIndex(idx); setDetailsOpen(true); }} style={{ padding: 0, border: 0, background: 'transparent', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '12.5px', fontWeight: 700, lineHeight: 1.4 }}>
+                      {short.title} <Info size={13} style={{ verticalAlign: 'text-bottom' }} />
+                    </button>
                   </div>
 
                   {/* Right-edge overlay icons */}
@@ -425,6 +415,18 @@ export default function KaTubeShortsFeedPage() {
             );
           })}
         </div>
+      )}
+
+      {detailsOpen && shorts[activeIndex] && (
+        <section className="katube-short-details" aria-label="Fast Tap details">
+          <button onClick={() => setDetailsOpen(false)} aria-label="Close details" title="Close details" style={{ position: 'absolute', top: '12px', right: '12px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 0, color: '#fff', cursor: 'pointer' }}><X size={18} /></button>
+          <div style={{ color: '#f97316', fontSize: '11px', fontWeight: 800, marginBottom: '7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>KaTube Fast Tap</div>
+          <h1 style={{ margin: '0 34px 10px 0', color: '#fff', fontSize: '17px', lineHeight: 1.35 }}>{shorts[activeIndex].title}</h1>
+          <p style={{ margin: '0 0 16px', color: '#d4d4d8', fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{shorts[activeIndex].description || 'No description from this creator yet.'}</p>
+          <a href={`https://www.youtube.com/watch?v=${shorts[activeIndex].youtube_id}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fff', background: '#ef4444', borderRadius: '6px', padding: '9px 12px', textDecoration: 'none', fontSize: '12px', fontWeight: 800 }}>
+            Watch on YouTube <ExternalLink size={14} />
+          </a>
+        </section>
       )}
 
       {shorts[activeIndex] && (

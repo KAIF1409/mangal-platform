@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   let body: {
     youtubeId?: string; title?: string; seriesId?: string | null;
-    isShort?: boolean; category?: string; aiTool?: string; autoPostToCircle?: boolean;
+    description?: string; isShort?: boolean; category?: string; aiTool?: string; autoPostToCircle?: boolean;
   };
   try {
     body = await req.json();
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { youtubeId, title, seriesId, isShort, category, aiTool, autoPostToCircle } = body;
+  const { youtubeId, title, seriesId, description, isShort, category, aiTool, autoPostToCircle } = body;
   if (!youtubeId || !title?.trim()) {
     return NextResponse.json({ error: 'Missing video link or title.' }, { status: 400 });
   }
@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
       creator_id: auth.userId,
       series_id: seriesId || null,
       title: title.trim(),
+      description: description?.trim() || null,
       youtube_id: youtubeId,
       is_short: !!isShort,
       category: category || 'Trailers',
