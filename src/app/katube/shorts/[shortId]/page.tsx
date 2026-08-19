@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
-import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users, Home, Zap, Flame, PlusSquare, ExternalLink, X, Info, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users, Home, Zap, Flame, PlusSquare, X, Info, Play } from 'lucide-react';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
 
 // ── KaTube §7 — Fast Tap full-screen Shorts/Reels feed ──
@@ -55,25 +55,9 @@ export default function KaTubeShortsFeedPage() {
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
 
-  // ── Perf fix: "Fast tap takes very long to load while scrolling" ──
-  // Two things were actually going on, neither of them a fake/artificial
-  // delay — both are now fixed:
-  // 1. The preload window was only active ± 1, so a normal-speed swipe
-  //    (which lands 1-2 shorts further than the previous "near" set)
-  //    regularly arrived at a short whose iframe hadn't started loading
-  //    yet at all — a real load, not a slow one, just one that hadn't been
-  //    kicked off in time. Widened to active-1 .. active+2 (bias toward the
-  //    scroll-forward direction, since that's the overwhelmingly common
-  //    swipe direction in a Reels/Shorts-style feed) so the next couple of
-  //    shorts are already warm by the time a normal swipe reaches them.
-  // 2. There was no loading indicator at all — a still-loading short just
-  //    showed a blank black frame, which reads as "stuck"/"very slow" even
-  //    when it's actually only a second away. Added a real spinner keyed
-  //    off the iframe's own load event (not a timer), so it only appears
-  //    when a short is genuinely still loading (e.g. weak network) and
-  //    disappears the instant the player is actually ready — on a good
-  //    connection the preloaded short is normally already marked loaded
-  //    before the user scrolls to it, so the spinner never shows at all.
+  // Keep several upcoming YouTube players mounted. Crucially, their embed URL
+  // never changes when they become active; changing it would discard the warm
+  // player and make every swipe fetch the same short a second time.
   const [loadedIdx, setLoadedIdx] = useState<Set<number>>(new Set());
   const markLoaded = useCallback((idx: number) => {
     setLoadedIdx(prev => (prev.has(idx) ? prev : new Set(prev).add(idx)));
@@ -180,22 +164,24 @@ export default function KaTubeShortsFeedPage() {
     setTimeout(() => setToast(null), 1800);
   }, []);
 
-  // Sync audio on the active short: browsers only reliably allow autoplay
-  // when it starts muted, so the iframe always loads with mute=1 in its src
-  // (never remounted/restarted on toggle) — the real on/off happens here via
-  // the YouTube Player postMessage API. Resent a few times shortly after a
-  // short becomes active since the embedded player needs a moment to finish
-  // loading before it'll accept commands.
+  // A warm iframe is driven through YouTube's player API instead of replacing
+  // its src. That preserves the preloaded next clips during fast scrolling.
   useEffect(() => {
-    const frame = iframeRefs.current[activeIndex];
-    if (!frame) return;
-    const send = () => {
-      frame.contentWindow?.postMessage(
-        JSON.stringify({ event: 'command', func: muted ? 'mute' : 'unMute', args: [] }),
-        '*'
-      );
+    const send = (frame: HTMLIFrameElement, func: string) => {
+      frame.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args: [] }), 'https://www.youtube.com');
     };
-    const timers = [0, 300, 800, 1500].map(delay => setTimeout(send, delay));
+    const syncPlayers = () => {
+      Object.entries(iframeRefs.current).forEach(([index, frame]) => {
+        if (!frame) return;
+        if (Number(index) === activeIndex) {
+          send(frame, muted ? 'mute' : 'unMute');
+          send(frame, 'playVideo');
+        } else {
+          send(frame, 'pauseVideo');
+        }
+      });
+    };
+    const timers = [0, 250, 800, 1500].map(delay => setTimeout(syncPlayers, delay));
     return () => timers.forEach(clearTimeout);
   }, [activeIndex, muted, shorts.length]);
 
@@ -216,6 +202,11 @@ export default function KaTubeShortsFeedPage() {
           background: #18181d; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px;
           box-shadow: 0 18px 48px rgba(0,0,0,0.45);
         }
+        .katube-shorts-feed { overscroll-behavior-y: contain; touch-action: pan-y; }
+        .katube-short-frame { width: min(100%, calc(100dvh * 9 / 16)); height: 100%; }
+        .katube-short-caption { bottom: calc(76px + env(safe-area-inset-bottom)); right: 88px; }
+        .katube-short-actions { bottom: calc(16px + env(safe-area-inset-bottom)); }
+        .katube-youtube-title-shield { display: block; }
         @media (min-width: 900px) {
           .katube-shorts-sidebar {
             display: flex; position: fixed; inset: 0 auto 0 0; z-index: 40; width: 232px;
@@ -225,6 +216,8 @@ export default function KaTubeShortsFeedPage() {
           .katube-shorts-feed { margin-left: 232px; width: calc(100% - 232px) !important; }
           .katube-shorts-back { left: 252px !important; }
           .katube-short-details { left: auto; right: 24px; bottom: 24px; width: 320px; margin: 0; }
+          .katube-short-frame { max-width: 480px; }
+          .katube-youtube-title-shield { display: none; }
         }
       `}</style>
 
@@ -265,19 +258,15 @@ export default function KaTubeShortsFeedPage() {
           ref={containerRef}
           className="katube-shorts-feed"
           style={{
-            height: '100%', width: '100%', overflowY: 'scroll',
+            height: '100%', width: '100%', overflowY: 'auto',
             scrollSnapType: 'y mandatory', scrollBehavior: 'smooth',
           }}
         >
           {shorts.map((short, idx) => {
-            // Windowing: mount the iframe for the active short, the one
-            // just behind it, and the two ahead of it. Biased forward
-            // (2 ahead vs 1 behind) since a Shorts-style feed is scrolled
-            // forward far more often than backward — this is what actually
-            // keeps the *next* short warm before a normal-speed swipe
-            // reaches it, instead of only ever preloading after arrival.
+            // The active player and four forward players are kept warm, so a
+            // fast multi-swipe still reaches an iframe that has begun loading.
             const distanceFromActive = idx - activeIndex;
-            const isNear = distanceFromActive >= -1 && distanceFromActive <= 2;
+            const isNear = distanceFromActive >= -1 && distanceFromActive <= 4;
             const isActive = idx === activeIndex;
             const isBuffering = isActive && !loadedIdx.has(idx);
             return (
@@ -292,7 +281,8 @@ export default function KaTubeShortsFeedPage() {
                 }}
               >
                 <div
-                  style={{ position: 'relative', height: '100%', maxWidth: '480px', width: '100%', aspectRatio: '9/16', margin: '0 auto' }}
+                  className="katube-short-frame"
+                  style={{ position: 'relative', aspectRatio: '9/16', margin: '0 auto' }}
                 >
                   {isNear ? (
                     <>
@@ -310,13 +300,17 @@ export default function KaTubeShortsFeedPage() {
                       )}
                       <iframe
                         ref={el => { iframeRefs.current[idx] = el; }}
-                        src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=1&enablejsapi=1${isActive ? '&autoplay=1&mute=1' : ''}`}
+                        src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&disablekb=1&fs=0&enablejsapi=1&autoplay=0&mute=1`}
                         title={short.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
+                        allow="accelerometer; autoplay; encrypted-media; gyroscope"
                         onLoad={() => markLoaded(idx)}
                         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
                       />
+                      {/* On phones, YouTube renders a title/channel strip at
+                          the top of an embed. It can open youtube.com, so it
+                          is intentionally covered; KaTube's own title below
+                          remains the only title interaction. */}
+                      <div className="katube-youtube-title-shield" aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '136px', zIndex: 4 }} />
                     </>
                   ) : (
                     <img
@@ -346,8 +340,8 @@ export default function KaTubeShortsFeedPage() {
 
                   {/* KaTube-owned metadata. The iframe above keeps YouTube's
                       own player controls and branding available for playback. */}
-                  <div style={{
-                    position: 'absolute', bottom: '58px', left: 0, right: '70px',
+                  <div className="katube-short-caption" style={{
+                    position: 'absolute', left: 0,
                     padding: '16px 16px 12px',
                     background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)', zIndex: 5,
                   }}>
@@ -358,8 +352,8 @@ export default function KaTubeShortsFeedPage() {
                   </div>
 
                   {/* Right-edge overlay icons */}
-                  <div style={{
-                    position: 'absolute', bottom: 'calc(20px + env(safe-area-inset-bottom))', right: 'calc(10px + env(safe-area-inset-right))', zIndex: 5,
+                  <div className="katube-short-actions" style={{
+                    position: 'absolute', right: 'calc(10px + env(safe-area-inset-right))', zIndex: 5,
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
                   }}>
                     <button
@@ -423,9 +417,6 @@ export default function KaTubeShortsFeedPage() {
           <div style={{ color: '#f97316', fontSize: '11px', fontWeight: 800, marginBottom: '7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>KaTube Fast Tap</div>
           <h1 style={{ margin: '0 34px 10px 0', color: '#fff', fontSize: '17px', lineHeight: 1.35 }}>{shorts[activeIndex].title}</h1>
           <p style={{ margin: '0 0 16px', color: '#d4d4d8', fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{shorts[activeIndex].description || 'No description from this creator yet.'}</p>
-          <a href={`https://www.youtube.com/watch?v=${shorts[activeIndex].youtube_id}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fff', background: '#ef4444', borderRadius: '6px', padding: '9px 12px', textDecoration: 'none', fontSize: '12px', fontWeight: 800 }}>
-            Watch on YouTube <ExternalLink size={14} />
-          </a>
         </section>
       )}
 
