@@ -6,13 +6,20 @@
 
 ---
 
-> **⭐ CURRENT TOP PRIORITY (per founder, this session):** §85 (bottom of
-> this file) — WebMangal "Songs" category: new content type for lyrics
-> linked to a manga/novel series or chapter, auto K Circle collab group
-> with the original creator, future KaTube integration. Plan is fully
-> spec'd out — build this before picking up any other backlog item,
-> including the §77 item below (now superseded as top priority, but still
-> open and worth doing after §85).
+> **⭐ CURRENT TOP PRIORITY (per founder, latest session):** §90 (bottom of
+> this file) — R2 media migration. §85 (WebMangal "Songs") is now fully
+> closed (data model through search integration all shipped). The app has
+> since moved off Vercel onto Cloudflare Workers (§86–§89: OpenNext config,
+> bundle-size fix, Workers-AI-based NSFW check, Worker renamed to `mangal`),
+> and all media upload/read/delete now goes through R2 instead of Supabase
+> Storage (§90 parts 1–3). **Still open from §90:** run the
+> `/api/admin/migrate-media` backlog-migration route repeatedly (post-deploy)
+> until `hasMore: false`, to finish moving pre-existing files off the old
+> Supabase buckets — only then is it safe to clean those buckets up. Also
+> still open: verify the `@cf/llava-hf/llava-1.5-7b-hf` Workers AI model ID
+> against the live Cloudflare dashboard (flagged in §88, unresolved since no
+> network access to Cloudflare's API from the build sandbox). The §77 item
+> below is still open too, further behind in the queue now.
 
 ## 0. 🔴 HIGHEST PRIORITY — "Unique for Mangal" (build this before anything else)
 
@@ -6276,3 +6283,173 @@ errors/0 warnings; `eslint src/app` project-wide quiet run clean — diff
 isolated to `View.tsx`, and within that file every songs addition is
 gated on `mode === 'search'` so the shared browse route's behavior is
 byte-for-byte unchanged.
+
+## Landing page — logged-in nav state fix, richer copy, cross-product nav, logo ordering/gradient
+
+Small run of landing-page and cross-product polish items, done as a batch:
+
+- **Logged-in nav bug**: the public landing page nav never checked auth
+  session at all, so a signed-in user still saw "Log in" with no way to
+  sign out. Added a session check; when signed in, nav shows an
+  avatar+dropdown (Go to Home / Log Out) on both desktop nav and mobile menu.
+- **Landing copy**: richer feature/about/door section copy; fixed the About
+  section crowding on mobile.
+- **Cross-product nav** (new shared `CrossProductLinks` component): every
+  product now links out to the other two, logo-only (no text labels).
+  WebMangal had zero cross-links before this — added to desktop nav and,
+  to avoid mobile top-bar overlap, to the mobile hamburger menu as a "More
+  MANGAL" row. WebMangal/home, KaTube, and Kalpana Circle all previously had
+  partial/text-labeled links; normalized all three to logo-only, linking to
+  both other products.
+- **Official MANGAL logo**: fixed orange-green gradient ring sitewide
+  (theme-independent, no longer shifts with dark/light mode), and made the
+  logo clickable on the Terms page.
+- **Logo order fix**: per founder's ordering, each product's own logo should
+  lead its nav, with the official MANGAL logo trailing at the end of the
+  row/scroll/rail — not the other way around. Fixed on KaTube (watch +
+  upload nav) and K Circle (mobile header + desktop rail). Homepage nav/
+  footer and the shared Navbar/Footer are unaffected — those are the
+  company's own surfaces, where MANGAL-logo-first is correct as-is.
+
+**Verified:** `tsc --noEmit` clean, `eslint` 0 errors on all changed files
+(same pre-existing warnings only, nothing new).
+
+## §86 — Fix Cloudflare Workers deploy — missing OpenNext config
+
+Deployed Worker (`mangal-platform.mangal-indiaplatform.workers.dev`) was
+serving the default OpenNext placeholder ("Hello World") instead of the
+actual app. Root cause: `package.json` already had `@opennextjs/cloudflare`
++ `wrangler` as deploy tooling, but the repo was missing the two files the
+adapter actually needs to build/wire the Worker:
+
+- `open-next.config.ts` (`defineCloudflareConfig()`) — without this,
+  `opennextjs-cloudflare build` has no build target.
+- `wrangler.jsonc` — name matched to the existing Worker
+  (`mangal-platform`), `main` → `.open-next/worker.js`, `nodejs_compat`
+  flag, assets binding → `.open-next/assets`.
+
+Also gitignored `.open-next/` and `.wrangler/` (build output, shouldn't be
+committed), and fixed a stale `package-lock.json` dependency-section
+mismatch for wrangler.
+
+**Manual step (not fixable via repo, flagged for Kaif):** in the Cloudflare
+dashboard, under the Worker's Build settings, Build command should be
+`npx opennextjs-cloudflare build` and Deploy command `npx wrangler deploy`
+(or run `npm run deploy` locally) — Cloudflare's Git integration doesn't
+auto-detect this for OpenNext projects.
+
+**Verified:** `opennextjs-cloudflare build` runs locally and reaches the
+underlying `next build` step correctly (only local failure is the sandboxed
+Google Fonts network fetch, unrelated). `tsc --noEmit` clean.
+
+## §87 — Fix Worker bundle size limit — strip Node-native deps incompatible with Workers
+
+Deploy failed: `[code: 10027] Worker exceeded the 3 MiB size limit`. Root
+cause: `nsfwCheck.ts` (server-side NSFW thumbnail classifier, KaTube upload
+flow) pulled in `@tensorflow/tfjs` + `nsfwjs` + `sharp`. Beyond the size
+hit, `sharp` is a native binary (`libvips`) — Workers' V8 isolate has no
+native-addon support, so it couldn't have run there even had it fit. Worked
+fine on Vercel (Node.js serverless supports native deps); hard
+incompatibility on Workers.
+
+- `nsfwCheck.ts`: `checkThumbnailNsfw()` now always returns `null` (skip).
+  Matches the function's existing "fail open, never block upload" design —
+  uploads still go through the existing manual admin review queue; this
+  only drops the automatic pre-flag step. Documented a Workers-native path
+  back (Cloudflare Workers AI image classification, or an external
+  moderation API over `fetch()`) for later.
+- Removed `@tensorflow/tfjs`, `@tensorflow/tfjs-backend-cpu`, `nsfwjs` from
+  `package.json` (only consumer was `nsfwCheck.ts`).
+- `next.config.ts`: `images.unoptimized = true` — Next's default
+  `/_next/image` optimizer also uses `sharp` internally and would have
+  broken at runtime on Workers even though it didn't block the build.
+  Supabase storage CDN handles image delivery/caching regardless.
+
+**Verified:** `tsc --noEmit` clean. `node_modules` dropped 32 packages.
+
+## §88 — Re-enable NSFW thumbnail check using Cloudflare Workers AI
+
+Replaces the §87 always-skip stub. Runs in the same Worker isolate as the
+app itself — no bundle-size cost, no native-binary incompatibility (the two
+problems that broke the old NSFWJS+tfjs+sharp stack on Workers).
+
+- Added `ai` binding (`AI`) to `wrangler.jsonc`.
+- `checkThumbnailNsfw()` now calls Workers AI with a vision-language model
+  (`@cf/llava-hf/llava-1.5-7b-hf`), asking a direct yes/no moderation
+  question, since Workers AI's catalog doesn't have a purpose-built NSFW
+  classifier the way NSFWJS did.
+- Fail-open design preserved from the original: missing binding, fetch
+  failure, or model error all return `null` (skip, non-blocking) — manual
+  admin review stays the backstop either way.
+
+**Flagged for Kaif to verify post-deploy:** the model ID
+`@cf/llava-hf/llava-1.5-7b-hf` was the best-known one at the time but
+wasn't checked against the live Cloudflare dashboard (no network access to
+Cloudflare's API from the build environment). If it's been renamed/removed,
+only `MODEL_ID` in `nsfwCheck.ts` needs to change — rest of the flow is
+model-agnostic.
+
+**Verified:** `tsc --noEmit` clean, `eslint` clean.
+
+## §89 — Shorten Worker name for a cleaner URL
+
+`mangal-platform` → `mangal` (shorter deployed Worker/URL).
+
+## §90 — R2 media migration (parts 1–3): move all media off Supabase Storage onto Cloudflare R2
+
+Three-part migration off Supabase Storage buckets (`manga-pages`,
+`kcircle-media`) onto an R2 bucket, since the app now runs on Cloudflare
+Workers.
+
+**Part 1 — bucket wired, upload/read/delete routes live, first call sites switched:**
+- `wrangler.jsonc`: added `r2_buckets` binding (`MEDIA_BUCKET` → `mangal-media`).
+- New: `lib/media/r2.ts` (server-only binding accessor + folder allowlist),
+  `api/upload-media`, `api/delete-media`, `api/media/[...path]` (serves R2
+  objects, replaces Supabase public storage URLs).
+- New: `lib/media/uploadClient.ts` — client helper used by upload call sites.
+- Switched over: WebMangal upload page (cover + both chapter page upload
+  spots), `EditSeriesModal` cover upload, `ManagePagesModal` page delete,
+  `series/[seriesId]` chapter/series delete (both spots), K Circle
+  group-channel message image upload.
+
+**Part 2 — last 4 K Circle call sites switched:**
+- `kalpana-circle/page.tsx` (post-composer images + story upload),
+  `chat/page.tsx` (message attachment), `settings/page.tsx` (avatar) now all
+  go through `uploadMediaFile()` → `/api/upload-media` → R2. This was the
+  last of the 9 upload call sites — every Supabase `storage.from()`/
+  `getPublicUrl()` call in the app is now gone (verified via grep; only
+  explanatory comments in the new API routes still mention the old pattern
+  by name).
+
+**Part 3 — one-time backlog migration route:**
+- `api/admin/migrate-media`: developer-only, batch-limited (default 25, max
+  100 per call) route that copies pre-existing files out of the old
+  Supabase Storage buckets into R2 and rewrites the referencing DB column to
+  the new `/api/media/<key>` URL. Runs inside the deployed Worker (not a
+  local script), since `MEDIA_BUCKET` only resolves there — pulls each file
+  over its still-live Supabase public URL, writes it to R2 at
+  `<bucket>/<path>` (same prefix convention as new uploads), then updates
+  the row. Idempotent (skips rows already pointing at `/api/media/`, skips
+  R2 keys that already exist) — safe to call repeatedly until the
+  response's `hasMore` is `false`.
+- Covers every url column found in the codebase: `series.cover_url`,
+  `pages.image_url`, `creator_profiles.avatar_url`,
+  `kcircle_posts.image_url` + `image_urls` (array, per-element),
+  `kcircle_stories.image_url`, `kcircle_channel_messages.image_url`,
+  `kcircle_messages.attachment_url`.
+- Usage once deployed:
+  ```
+  curl -X POST https://<worker-domain>/api/admin/migrate-media \
+    -H "Authorization: Bearer <developer-account session token>" \
+    -H "Content-Type: application/json" -d '{"batchSize": 25}'
+  ```
+  Repeat until `"hasMore": false`. Old Supabase files are left in place
+  (not deleted) — safe to clean up manually once every row is confirmed
+  migrated.
+
+**Still open:** Part 3's migration route needs to actually be run
+post-deploy (repeatedly, until `hasMore: false`) before the old Supabase
+buckets can be cleaned up. Also carries forward §88's flagged item: verify
+the Workers AI model ID against the live dashboard.
+
+**Verified:** `tsc --noEmit` and `eslint` clean on all three parts.
