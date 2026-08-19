@@ -23,7 +23,7 @@
 //     -H "Content-Type: application/json" -d '{"batchSize": 25}'
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '../../../lib/auth/authedServerClient';
 import { isDeveloperRole } from '../../../lib/auth/roles';
 import { getMediaBucket } from '../../../lib/media/r2';
@@ -45,8 +45,8 @@ import { getMediaBucket } from '../../../lib/media/r2';
 // own try/catch could ever run, producing a bare unhandled 500 with no
 // message. Calling this from inside handleMigrate's try block turns that
 // into a normal JSON error response instead.
-let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
-function getSupabaseAdmin() {
+let _supabaseAdmin: SupabaseClient | null = null;
+function getSupabaseAdmin(): SupabaseClient {
   if (!_supabaseAdmin) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
