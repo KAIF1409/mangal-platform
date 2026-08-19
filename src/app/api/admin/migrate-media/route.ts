@@ -39,10 +39,26 @@ import { getMediaBucket } from '../../../lib/media/r2';
 // underlying series/pages rows still pointed at the old Supabase URLs.
 // The developer-role check right below is what stands in for auth here
 // (same reasoning as the webhook/service routes) — never remove it.
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Built lazily (not at module scope) and cached — if SUPABASE_SERVICE_ROLE_KEY
+// isn't resolvable in this Worker's env, createClient() throws immediately;
+// at module scope that throw used to happen at import time, before POST's
+// own try/catch could ever run, producing a bare unhandled 500 with no
+// message. Calling this from inside handleMigrate's try block turns that
+// into a normal JSON error response instead.
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+function getSupabaseAdmin() {
+  if (!_supabaseAdmin) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      throw new Error(
+        `Missing env var(s) in this Worker: ${!url ? 'NEXT_PUBLIC_SUPABASE_URL ' : ''}${!key ? 'SUPABASE_SERVICE_ROLE_KEY' : ''}`.trim()
+      );
+    }
+    _supabaseAdmin = createClient(url, key);
+  }
+  return _supabaseAdmin;
+}
 
 interface MigrateResult {
   table: string;
@@ -75,29 +91,56 @@ function isAlreadyMigrated(url: string | null | undefined): boolean {
 // MEDIA_FOLDERS already uses for new uploads (manga-pages/..., kcircle-media/...),
 // so old and new files end up living side by side in the same layout.
 async function migrateOneUrl(url: string): Promise<{ newUrl: string } | { error: string }> {
-  const parsed = parseSupabaseStorageUrl(url);
-  if (!parsed) return { error: 'Not a recognized Supabase storage URL — left untouched.' };
+  // Everything below can throw (missing R2 binding, network errors on
+  // fetch/put, malformed keys, etc.) — this route used to let any of that
+  // bubble up as an unhandled exception, which crashed the *entire* batch
+  // with a bare 500 and no detail. Caught here so one bad row becomes a
+  // per-row failure entry instead of taking down the whole request.
+  try {
+    const parsed = parseSupabaseStorageUrl(url);
+    if (!parsed) return { error: 'Not a recognized Supabase storage URL — left untouched.' };
 
-  const key = `${parsed.bucket}/${parsed.path}`;
+    const key = `${parsed.bucket}/${parsed.path}`;
 
-  const bucket = getMediaBucket();
-  const existing = await bucket.get(key);
-  if (existing) return { newUrl: `/api/media/${key}` }; // already copied in a prior batch
+    const bucket = getMediaBucket();
+    const existing = await bucket.get(key);
+    if (existing) return { newUrl: `/api/media/${key}` }; // already copied in a prior batch
 
-  const fileRes = await fetch(url);
-  if (!fileRes.ok) return { error: `Source fetch failed: ${fileRes.status}` };
+    const fileRes = await fetch(url);
+    if (!fileRes.ok) return { error: `Source fetch failed: ${fileRes.status}` };
 
-  const contentType = fileRes.headers.get('content-type') || 'application/octet-stream';
-  const bytes = await fileRes.arrayBuffer();
-  await bucket.put(key, bytes, { httpMetadata: { contentType } });
+    const contentType = fileRes.headers.get('content-type') || 'application/octet-stream';
+    const bytes = await fileRes.arrayBuffer();
+    await bucket.put(key, bytes, { httpMetadata: { contentType } });
 
-  return { newUrl: `/api/media/${key}` };
+    return { newUrl: `/api/media/${key}` };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handleMigrate(req);
+  } catch (e) {
+    // Last-resort catch: anything thrown above this (bad env var, missing
+    // R2 binding at module scope, Supabase client construction, etc.) used
+    // to surface as a bare unhandled 500 with no body — the admin UI would
+    // just show "Request failed: 500" with zero clue why. Returning JSON
+    // here means the real error message reaches the UI's error banner.
+    console.error('[migrate-media] unhandled error:', e);
+    return NextResponse.json(
+      { error: e instanceof Error ? `${e.name}: ${e.message}` : String(e) },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleMigrate(req: NextRequest) {
   const auth = await requireUser(req);
   if (!auth) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
+  const supabaseAdmin = getSupabaseAdmin();
   const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', auth.userId).single();
   if (!isDeveloperRole(profile?.role)) {
     return NextResponse.json({ error: 'Developer access only.' }, { status: 403 });
