@@ -6473,6 +6473,27 @@ the (now-visible) real error says — that tells us the actual root cause
 (binding, env var, or something else) so it can be fixed for real instead
 of guessed at.
 
+**Root cause found (this session, live in prod):** error banner now shows
+`Missing env var(s) in this Worker: SUPABASE_SERVICE_ROLE_KEY` — confirmed
+via the fix above. `SUPABASE_SERVICE_ROLE_KEY` (and possibly other vars
+from `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`, `RAZORPAY_KEY_ID`,
+`RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `RESEND_API_KEY`,
+`YOUTUBE_API_KEY`, `COLD_STORAGE_ENCRYPTION_KEY`) were never carried over
+from Vercel to the `mangal-platform` Cloudflare Worker — Vercel and
+Cloudflare Workers env vars/secrets are separate systems, migrating
+platforms doesn't copy them. **Not fixable via code/git** — no Cloudflare
+API scope for setting Worker secrets is available to Claude via the MCP
+connector. Founder needs to add these manually: Cloudflare dashboard →
+Workers & Pages → `mangal-platform` → Settings → Variables and Secrets →
+add `SUPABASE_SERVICE_ROLE_KEY` as a **Secret** (not plain var) using the
+value from Supabase dashboard → Project Settings → API → `service_role`
+key, then check the other vars above are present too, then redeploy.
+Once that's done, `/admin/migrate-media` "Run migration" should work —
+if it still fails after the secret is added, whatever error the banner
+now shows is the real next lead (the error-surfacing fix from this
+session guarantees a specific message, not a bare 500, going forward).
+
 Also noticed while debugging: `workers_list` via the Cloudflare MCP shows
 only **one** Worker on the account, still named `mangal-platform` (matches
 the admin URL in the screenshot, `mangal-platform.mangak.workers.dev`) —
