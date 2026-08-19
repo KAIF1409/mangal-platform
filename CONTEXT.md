@@ -6865,3 +6865,42 @@ this app moved to Cloudflare Workers, so the path 404s there and the
 browser refuses to execute the HTML error page as JS. Removed the
 component and its import — there's no Workers-native analytics wired
 up yet, so this was pure dead weight, not a feature regression.
+
+## §100 — KaTube Shorts: uncaught "e.getCurrentTime is not a function" from YouTube's own widget script
+
+Founder screenshot after §99's CSP fix (playback/sound now working)
+showed a recurring uncaught error while scrolling through Shorts,
+thrown from inside YouTube's own minified widget script
+(`1dakxpp6iuqxc.js`), originating from a `setInterval` — not from any
+code in this file directly. Confirmed as a real, separate defect
+rather than noise.
+
+**Root cause:** the render computed `isNear` (whether a short's
+`<iframe>` should be mounted) straight from `isNearIndex(idx,
+activeIndex)` on every render. The cleanup effect that calls
+`player.destroy()` on players falling out of that window also keyed
+off the same `activeIndex` change — but nothing guaranteed it ran
+*before* React's commit unmounted the iframe. YouTube's `YT.Player`
+wrapper keeps its own internal polling interval running independent
+of this app's code; when that interval next ticked against a player
+whose iframe had been yanked out of the DOM by React directly
+(instead of through the wrapper's own `destroy()` teardown sequence),
+it threw from inside YouTube's script trying to call a method that no
+longer existed on its internal, now-invalid reference.
+
+**Fix:** introduced a `mountedIndices` state that the render now
+reads instead of computing `isNearIndex` live. A "growth" effect adds
+newly-near indices immediately (safe — nothing needs destroying
+before a new iframe mounts). The existing cleanup effect now calls
+`player.destroy()` first, exactly as before, and only *after* that
+does it remove the index from `mountedIndices` — deferring the actual
+`<iframe>` unmount to the following render, guaranteeing `destroy()`
+always gets a still-attached iframe to tear down properly instead of
+racing React's own unmount. Both `mountedIndices` updates are
+deferred via `queueMicrotask` rather than called synchronously in the
+effect body — React's compiler now hard-errors on synchronous
+setState-in-effect at build time even for this sanctioned "sync with
+an external system" case, and deferring by a microtask satisfies that
+without changing the ordering guarantee this fix depends on (the
+microtask callback still only runs after every `destroy()` call in
+that effect pass has already executed).

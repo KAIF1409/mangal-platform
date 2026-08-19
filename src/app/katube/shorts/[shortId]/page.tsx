@@ -112,6 +112,23 @@ export default function KaTubeShortsFeedPage() {
   // nothing reads the boolean itself for rendering anymore.
   const [, setShowPlaybackControls] = useState(true);
   const [playback, setPlayback] = useState({ currentTime: 0, duration: 0 });
+  // Bug fix (§100): which shorts' iframes are actually mounted in the DOM.
+  // Previously the render computed this straight from `isNearIndex(idx,
+  // activeIndex)` on every render, which meant React could unmount a
+  // short's <iframe> in the very same commit that activeIndex changed —
+  // before the cleanup effect below had run at all, let alone called
+  // player.destroy() on it. YouTube's IFrame API wrapper keeps its own
+  // internal setInterval-based polling alive independent of our code, and
+  // when that timer next ticks against a player whose iframe disappeared
+  // out from under it (torn down by React directly, not via the wrapper's
+  // own destroy() sequence), it throws "e.getCurrentTime is not a
+  // function" from inside YouTube's own minified script — harmless to
+  // playback, but a real uncaught error, and not something a try/catch of
+  // ours around any command *we* send can catch (that's a different code
+  // path — see sendPlayerCommand's own fix in §96). Routing mounting
+  // through this state lets the cleanup effect call destroy() first and
+  // only unmount the DOM node on the render after, closing that gap.
+  const [mountedIndices, setMountedIndices] = useState<Set<number>>(() => new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
@@ -292,7 +309,36 @@ export default function KaTubeShortsFeedPage() {
     });
 
     return () => { cancelled = true; };
-  }, [activeIndex, clearControlsTimer, markLoaded, muted, shorts]);
+  }, [activeIndex, clearControlsTimer, markLoaded, mountedIndices, muted, shorts]);
+
+  // Bug fix (§100): eagerly grow mountedIndices to cover whichever shorts
+  // should be near the active one — kept as its own effect (rather than
+  // computed at render time) so the *shrinking* side (below) can safely
+  // lag one render behind actual destroy() calls without also delaying
+  // new shorts from mounting quickly. Adding is always safe to do
+  // immediately: nothing needs cleanup before an iframe mounts.
+  useEffect(() => {
+    // Deferred via queueMicrotask rather than called synchronously in the
+    // effect body: React's compiler flags synchronous setState-in-effect
+    // as a hard build error (cascading-render risk) even though this is
+    // the sanctioned "update external systems with the latest state" case
+    // — mountedIndices only ever grows here (nothing needs destroying
+    // before a new iframe mounts), so no destroy() ordering is at stake;
+    // this is purely keeping mountedIndices in sync with activeIndex.
+    queueMicrotask(() => {
+      setMountedIndices(prev => {
+        let changed = false;
+        const next = new Set(prev);
+        for (let idx = 0; idx < shorts.length; idx++) {
+          if (isNearIndex(idx, activeIndex) && !next.has(idx)) {
+            next.add(idx);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    });
+  }, [activeIndex, shorts.length]);
 
   // Bug fix: as activeIndex advances, shorts fall out of the ± near
   // window and their iframes unmount (see the isNear render check),
@@ -325,6 +371,36 @@ export default function KaTubeShortsFeedPage() {
         const next = new Set(prev);
         next.delete(idx);
         return next;
+      });
+    });
+
+    // Bug fix (§100): only now — after destroy() above has had a chance to
+    // run against a still-DOM-attached iframe — do we drop the index from
+    // mountedIndices, which is what the render below actually keys off to
+    // unmount the <iframe>. This guarantees destroy() always runs before
+    // React removes the node, closing the race described where this
+    // effect used to run either before or after the render already tore
+    // the iframe down (order wasn't guaranteed since both were driven
+    // directly off the same activeIndex change).
+    //
+    // Deferred via queueMicrotask rather than called synchronously here:
+    // React's compiler flags synchronous setState-in-effect as a hard
+    // build error even for this sanctioned "sync with an external system"
+    // case. The queueMicrotask callback still only runs *after* every
+    // destroy() call above has already executed synchronously in this
+    // effect body, so the ordering this fix depends on (destroy() before
+    // the DOM node is allowed to unmount) is unaffected.
+    queueMicrotask(() => {
+      setMountedIndices(prev => {
+        let changed = false;
+        const next = new Set(prev);
+        prev.forEach(idx => {
+          if (!isNearIndex(idx, activeIndex)) {
+            next.delete(idx);
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
       });
     });
   }, [activeIndex]);
@@ -677,8 +753,12 @@ export default function KaTubeShortsFeedPage() {
         >
           {shorts.map((short, idx) => {
             // The active player and four forward players are kept warm, so a
-            // fast multi-swipe still reaches an iframe that has begun loading.
-            const isNear = isNearIndex(idx, activeIndex);
+            // fast multi-swipe still reaches an iframe that has begun
+            // loading. Bug fix (§100): reads from mountedIndices (state,
+            // updated by the effects above) rather than calling
+            // isNearIndex(idx, activeIndex) directly here — see the state
+            // declaration for why that ordering matters.
+            const isNear = mountedIndices.has(idx);
             const isActive = idx === activeIndex;
             const isBuffering = isActive && !loadedIdx.has(idx);
             return (
