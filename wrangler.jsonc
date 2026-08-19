@@ -8,7 +8,16 @@
   "name": "mangal",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-01",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    // Explicit even though it's the default for compatibility_date >=
+    // 2025-04-01 (ours is 2026-08-01) — added after §90 follow-up found
+    // process.env.SUPABASE_SERVICE_ROLE_KEY reading as undefined at
+    // runtime in migrate-media despite the secret being set correctly in
+    // the dashboard. Being explicit removes any doubt about whether the
+    // default was actually taking effect for this Worker.
+    "nodejs_compat_populate_process_env"
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

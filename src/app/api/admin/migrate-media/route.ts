@@ -24,6 +24,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { requireUser } from '../../../lib/auth/authedServerClient';
 import { isDeveloperRole } from '../../../lib/auth/roles';
 import { getMediaBucket } from '../../../lib/media/r2';
@@ -48,8 +49,24 @@ import { getMediaBucket } from '../../../lib/media/r2';
 let _supabaseAdmin: SupabaseClient | null = null;
 function getSupabaseAdmin(): SupabaseClient {
   if (!_supabaseAdmin) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Prefer reading straight off the Cloudflare binding (same approach
+    // r2.ts already uses successfully for MEDIA_BUCKET) over process.env.
+    // Found via live debugging: process.env.SUPABASE_SERVICE_ROLE_KEY read
+    // as undefined here even with the secret correctly set in the
+    // Cloudflare dashboard — process.env auto-population from bindings
+    // depends on the nodejs_compat_populate_process_env compat flag
+    // actually being in effect for this Worker, which wasn't reliable in
+    // practice. getCloudflareContext().env reads the binding directly, no
+    // dependency on that flag.
+    let cfEnv: Record<string, string | undefined> = {};
+    try {
+      cfEnv = (getCloudflareContext().env ?? {}) as Record<string, string | undefined>;
+    } catch {
+      // Not running in a Worker context (e.g. local `next dev`) — fall
+      // through to process.env below.
+    }
+    const url = cfEnv.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = cfEnv.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) {
       throw new Error(
         `Missing env var(s) in this Worker: ${!url ? 'NEXT_PUBLIC_SUPABASE_URL ' : ''}${!key ? 'SUPABASE_SERVICE_ROLE_KEY' : ''}`.trim()
