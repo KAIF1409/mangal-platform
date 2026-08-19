@@ -31,6 +31,8 @@ interface Short {
   likes: number;
   creator: string;
   description: string | null;
+  duration_seconds: number | null;
+  created_at: string;
 }
 
 // Sound preference key — shared across every KaTube Shorts session so once
@@ -52,12 +54,16 @@ export default function KaTubeShortsFeedPage() {
   const [watchTogetherOpen, setWatchTogetherOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [isFastForwarding, setIsFastForwarding] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [playback, setPlayback] = useState({ currentTime: 0, duration: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const holdPointerRef = useRef<{ id: number; x: number; y: number } | null>(null);
+  const pressMovedRef = useRef(false);
+  const fastForwardingRef = useRef(false);
+  const lastActiveIndexRef = useRef<number | null>(null);
 
   const sendPlayerCommand = useCallback((index: number, func: string, args: unknown[] = []) => {
     iframeRefs.current[index]?.contentWindow?.postMessage(
@@ -117,7 +123,7 @@ export default function KaTubeShortsFeedPage() {
     (async () => {
       const { data: rows } = await supabase
         .from('videos')
-        .select('id, title, description, youtube_id, views, likes, creator_id')
+        .select('id, title, description, youtube_id, views, likes, creator_id, duration_seconds, created_at')
         .eq('is_short', true)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -131,7 +137,7 @@ export default function KaTubeShortsFeedPage() {
 
       const list: Short[] = rows.map(r => ({
         id: r.id, title: r.title, description: r.description ?? null, youtube_id: r.youtube_id,
-        views: r.views, likes: r.likes,
+        views: r.views, likes: r.likes, duration_seconds: r.duration_seconds ?? null, created_at: r.created_at,
         creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
       }));
       setShorts(list);
@@ -192,13 +198,24 @@ export default function KaTubeShortsFeedPage() {
     return () => timers.forEach(clearTimeout);
   }, [activeIndex, muted, sendPlayerCommand, shorts.length]);
 
+  // A Shorts feed starts a clip fresh whenever it comes back into view. This
+  // prevents a previously watched, still-mounted iframe from resuming midway.
+  useEffect(() => {
+    if (lastActiveIndexRef.current === activeIndex) return;
+    lastActiveIndexRef.current = activeIndex;
+    setPlayback({ currentTime: 0, duration: shorts[activeIndex]?.duration_seconds ?? 0 });
+    sendPlayerCommand(activeIndex, 'seekTo', [0, true]);
+    const playTimer = setTimeout(() => sendPlayerCommand(activeIndex, 'playVideo'), 150);
+    return () => clearTimeout(playTimer);
+  }, [activeIndex, sendPlayerCommand, shorts]);
+
   // The IFrame API reports its live playback values through postMessage. That
   // lets KaTube render a real seek bar instead of a fake timed animation.
   useEffect(() => {
     const receivePlayerData = (event: MessageEvent) => {
       if (event.origin !== 'https://www.youtube.com' || typeof event.data !== 'string') return;
       try {
-        const data = JSON.parse(event.data) as { info?: { currentTime?: number; duration?: number } };
+        const data = JSON.parse(event.data) as { info?: { currentTime?: number; duration?: number; playerState?: number } };
         const currentTime = data.info?.currentTime;
         const duration = data.info?.duration;
         if (typeof currentTime === 'number' || typeof duration === 'number') {
@@ -207,6 +224,7 @@ export default function KaTubeShortsFeedPage() {
             duration: typeof duration === 'number' ? duration : previous.duration,
           }));
         }
+        if (typeof data.info?.playerState === 'number') setIsPlaying(data.info.playerState === 1);
       } catch {
         // Ignore unrelated YouTube iframe messages.
       }
@@ -225,17 +243,19 @@ export default function KaTubeShortsFeedPage() {
   const stopFastForward = useCallback(() => {
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
     holdTimerRef.current = null;
-    holdPointerRef.current = null;
-    if (!isFastForwarding) return;
+    if (!fastForwardingRef.current) return;
     sendPlayerCommand(activeIndex, 'setPlaybackRate', [1]);
+    fastForwardingRef.current = false;
     setIsFastForwarding(false);
-  }, [activeIndex, isFastForwarding, sendPlayerCommand]);
+  }, [activeIndex, sendPlayerCommand]);
 
   const beginFastForward = useCallback((event: PointerEvent<HTMLDivElement>) => {
     if (!event.isPrimary) return;
     holdPointerRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    pressMovedRef.current = false;
     holdTimerRef.current = setTimeout(() => {
       sendPlayerCommand(activeIndex, 'setPlaybackRate', [2]);
+      fastForwardingRef.current = true;
       setIsFastForwarding(true);
     }, 300);
   }, [activeIndex, sendPlayerCommand]);
@@ -243,15 +263,30 @@ export default function KaTubeShortsFeedPage() {
   const cancelFastForwardForScroll = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const start = holdPointerRef.current;
     if (!start || start.id !== event.pointerId) return;
-    if (Math.abs(event.clientX - start.x) > 10 || Math.abs(event.clientY - start.y) > 10) stopFastForward();
+    if (Math.abs(event.clientX - start.x) > 10 || Math.abs(event.clientY - start.y) > 10) {
+      pressMovedRef.current = true;
+      stopFastForward();
+    }
   }, [stopFastForward]);
 
-  const seekTo = useCallback((value: number) => {
-    if (!playback.duration) return;
-    const time = (value / 100) * playback.duration;
+  const finishShortPress = useCallback(() => {
+    const wasFastForwarding = fastForwardingRef.current;
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = null;
+    stopFastForward();
+    holdPointerRef.current = null;
+    if (!wasFastForwarding && !pressMovedRef.current) {
+      sendPlayerCommand(activeIndex, isPlaying ? 'pauseVideo' : 'playVideo');
+      setIsPlaying(previous => !previous);
+    }
+  }, [activeIndex, isPlaying, sendPlayerCommand, stopFastForward]);
+
+  const seekTo = useCallback((time: number) => {
+    const duration = playback.duration || shorts[activeIndex]?.duration_seconds || 0;
+    if (!duration) return;
     sendPlayerCommand(activeIndex, 'seekTo', [time, true]);
-    setPlayback(previous => ({ ...previous, currentTime: time }));
-  }, [activeIndex, playback.duration, sendPlayerCommand]);
+    setPlayback(previous => ({ ...previous, duration, currentTime: time }));
+  }, [activeIndex, playback.duration, sendPlayerCommand, shorts]);
 
   return (
     <div style={{ height: '100vh', width: '100vw', background: '#000', position: 'relative', overflow: 'hidden' }}>
@@ -270,6 +305,9 @@ export default function KaTubeShortsFeedPage() {
           background: #18181d; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px;
           box-shadow: 0 18px 48px rgba(0,0,0,0.45);
         }
+        .katube-short-details-handle { width: 42px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.4); margin: -5px auto 16px; }
+        .katube-short-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
+        .katube-short-stat { padding: 12px 6px; border-radius: 12px; text-align: center; background: rgba(249,115,22,0.16); color: #fff; }
         .katube-shorts-feed { overscroll-behavior-y: contain; touch-action: pan-y; }
         .katube-shorts-mobile-chrome { display: flex; position: fixed; left: 0; right: 0; z-index: 50; background: #000; box-sizing: border-box; }
         .katube-shorts-mobile-header { top: 0; height: calc(92px + env(safe-area-inset-top)); padding: calc(12px + env(safe-area-inset-top)) 16px 12px; align-items: center; justify-content: space-between; }
@@ -300,6 +338,9 @@ export default function KaTubeShortsFeedPage() {
           .katube-short-actions { left: calc(100% + 18px); right: auto !important; bottom: 88px; }
           .katube-short-progress { bottom: 8px; }
           .katube-short-gesture-layer { inset: 136px 0 18px; }
+        }
+        @media (max-width: 899px) {
+          .katube-short-details { left: 0; right: 0; bottom: 0; width: 100%; max-width: none; min-height: 48dvh; max-height: 68dvh; margin: 0; padding: 20px 24px calc(24px + env(safe-area-inset-bottom)); overflow-y: auto; border-radius: 22px 22px 0 0; border-left: 0; border-right: 0; border-bottom: 0; }
         }
       `}</style>
 
@@ -424,9 +465,9 @@ export default function KaTubeShortsFeedPage() {
                           className="katube-short-gesture-layer"
                           onPointerDown={beginFastForward}
                           onPointerMove={cancelFastForwardForScroll}
-                          onPointerUp={stopFastForward}
-                          onPointerCancel={stopFastForward}
-                          onPointerLeave={stopFastForward}
+                          onPointerUp={finishShortPress}
+                          onPointerCancel={() => { pressMovedRef.current = true; holdPointerRef.current = null; stopFastForward(); }}
+                          onPointerLeave={() => { pressMovedRef.current = true; stopFastForward(); }}
                           aria-label="Press and hold for 2x speed"
                         />
                       )}
@@ -459,17 +500,19 @@ export default function KaTubeShortsFeedPage() {
 
                   {isActive && isFastForwarding && <div className="katube-short-speed-indicator">2×</div>}
 
-                  {isActive && playback.duration > 0 && (
+                  {isActive && (
                     <div className="katube-short-progress">
                       <input
                         type="range"
                         min="0"
-                        max="100"
+                        max={playback.duration || shorts[idx].duration_seconds || 1}
                         step="0.1"
-                        value={Math.min(100, (playback.currentTime / playback.duration) * 100)}
+                        value={Math.min(playback.duration || shorts[idx].duration_seconds || 1, playback.currentTime)}
+                        onPointerDown={event => event.stopPropagation()}
+                        onInput={event => seekTo(Number((event.target as HTMLInputElement).value))}
                         onChange={event => seekTo(Number(event.target.value))}
                         aria-label="Seek through Short"
-                        style={{ display: 'block', width: '100%', accentColor: '#f97316', cursor: 'pointer' }}
+                        style={{ display: 'block', width: '100%', accentColor: '#f97316', cursor: 'pointer', pointerEvents: 'auto' }}
                       />
                     </div>
                   )}
@@ -551,10 +594,15 @@ export default function KaTubeShortsFeedPage() {
 
       {detailsOpen && shorts[activeIndex] && (
         <section className="katube-short-details" aria-label="Fast Tap details">
+          <div className="katube-short-details-handle" aria-hidden="true" />
           <button onClick={() => setDetailsOpen(false)} aria-label="Close details" title="Close details" style={{ position: 'absolute', top: '12px', right: '12px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 0, color: '#fff', cursor: 'pointer' }}><X size={18} /></button>
-          <div style={{ color: '#f97316', fontSize: '11px', fontWeight: 800, marginBottom: '7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>KaTube Fast Tap</div>
-          <h1 style={{ margin: '0 34px 10px 0', color: '#fff', fontSize: '17px', lineHeight: 1.35 }}>{shorts[activeIndex].title}</h1>
-          <p style={{ margin: '0 0 16px', color: '#d4d4d8', fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{shorts[activeIndex].description || 'No description from this creator yet.'}</p>
+          <h1 style={{ margin: '0 34px 18px 0', color: '#fff', fontSize: '24px', lineHeight: 1.2 }}>Description</h1>
+          <p style={{ margin: '0', color: '#fff', fontSize: '16px', fontWeight: 700, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{shorts[activeIndex].description || shorts[activeIndex].title}</p>
+          <div className="katube-short-stats">
+            <div className="katube-short-stat"><strong style={{ display: 'block', fontSize: '18px' }}>{shorts[activeIndex].likes.toLocaleString()}</strong><span style={{ color: '#d4d4d8', fontSize: '12px' }}>Likes</span></div>
+            <div className="katube-short-stat"><strong style={{ display: 'block', fontSize: '18px' }}>{shorts[activeIndex].views.toLocaleString()}</strong><span style={{ color: '#d4d4d8', fontSize: '12px' }}>Views</span></div>
+            <div className="katube-short-stat"><strong style={{ display: 'block', fontSize: '16px' }}>{new Date(shorts[activeIndex].created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</strong><span style={{ color: '#d4d4d8', fontSize: '12px' }}>{new Date(shorts[activeIndex].created_at).getFullYear()}</span></div>
+          </div>
           <a href={`https://www.youtube.com/watch?v=${shorts[activeIndex].youtube_id}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fff', background: '#ef4444', borderRadius: '6px', padding: '9px 12px', textDecoration: 'none', fontSize: '12px', fontWeight: 800 }}>
             Watch on YouTube <ExternalLink size={14} />
           </a>
