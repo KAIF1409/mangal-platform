@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   // payment to captured.
   const { data: row, error: rowError } = await auth.supabase
     .from('payments')
-    .select('id, status')
+    .select('id, status, purpose')
     .eq('razorpay_order_id', razorpay_order_id)
     .eq('user_id', auth.userId)
     .maybeSingle();
@@ -63,6 +63,17 @@ export async function POST(req: NextRequest) {
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  // §95 — remove_ads is a one-time flag flip on `profiles`, applied here
+  // (the client-facing verify path) same as the webhook does below for
+  // defense in depth — whichever fires first wins, the other is a no-op
+  // since the row is already `captured` by then in the webhook's case,
+  // or this update is simply idempotent (`ads_removed = true` twice is
+  // harmless). Never trust `purpose` from the client — it's read from
+  // the DB row here, not from the request body.
+  if (row.purpose === 'remove_ads') {
+    await auth.supabase.from('profiles').update({ ads_removed: true }).eq('id', auth.userId);
   }
 
   return NextResponse.json({ verified: true });

@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  const { error } = await supabaseAdmin
+  const { data: updatedRow, error } = await supabaseAdmin
     .from('payments')
     .update({
       status: nextStatus,
@@ -71,12 +71,22 @@ export async function POST(req: NextRequest) {
       ...(payment.bank ? { bank: payment.bank } : {}),
       ...(payment.vpa ? { vpa: payment.vpa } : {}),
     })
-    .eq('razorpay_order_id', payment.order_id);
+    .eq('razorpay_order_id', payment.order_id)
+    .select('user_id, purpose')
+    .maybeSingle();
 
   if (error) {
     // Return 500 so Razorpay retries the webhook — a DB hiccup shouldn't
     // silently drop a real payment event.
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // §95 — same flag-flip as /api/payments/verify, kept here too since
+  // this webhook is the only guaranteed callback if the user closes the
+  // tab before Checkout's client-side handler fires. Idempotent, so it's
+  // harmless if both paths run for the same payment.
+  if (nextStatus === 'captured' && updatedRow?.purpose === 'remove_ads' && updatedRow.user_id) {
+    await supabaseAdmin.from('profiles').update({ ads_removed: true }).eq('id', updatedRow.user_id);
   }
 
   return NextResponse.json({ received: true });

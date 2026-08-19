@@ -6648,3 +6648,47 @@ Until then both buttons render as disabled "coming soon" — same pattern
 
 Next: remove-ads unlock (§95), reusing this same order/verify flow with
 `purpose: 'remove_ads'` and a new `profiles.ads_removed` flag.
+
+## §95 — Remove Ads (₹99 lifetime unlock): payment infra + flag, no ad slots yet
+
+Second payment feature after §94's Tip Jar. Important scope note: a
+search of the codebase before starting this confirmed **no ads exist
+anywhere on the platform yet** — no ad-slot component, no AdSense, no
+placement. Per the founder's explicit instruction, this section builds
+the paid unlock (payment flow + `profiles.ads_removed` flag) now, and
+actual ad placements + the `if (!ads_removed) showAd()` checks are
+deferred to whenever ads are actually added.
+
+**What shipped:**
+- `supabase/migrations/20260819200000_profiles_ads_removed.sql` — adds
+  `profiles.ads_removed boolean not null default false`. Boolean (not a
+  timestamp) since this is a one-time lifetime unlock, not a
+  subscription — the founder fixed the price at ₹99 flat.
+- `/api/payments/verify` and `/api/payments/webhook` both updated: when
+  a captured payment's `purpose` (read from the DB row, never trusted
+  from the client) is `'remove_ads'`, the user's `profiles.ads_removed`
+  is set to `true`. Both paths do this (not just one) — the webhook is
+  the only guaranteed callback if someone closes the tab mid-checkout
+  before Razorpay's client-side success handler fires; the verify-route
+  version covers the normal case faster. Both are idempotent, so no risk
+  from both firing.
+- `src/app/settings/page.tsx` — new "Remove Ads" section: shows a ✓
+  confirmation if already purchased, otherwise a "Remove Ads — ₹99"
+  button that reuses the same create-order → Razorpay Checkout → verify
+  flow as the Tip Jar (§94), with `purpose: 'remove_ads'` and no
+  `purposeRefId` (this isn't tied to a specific creator). Same
+  `NEXT_PUBLIC_RAZORPAY_KEY_ID`-gated "coming soon" state as everywhere
+  else in this payments layer until a real Razorpay account exists.
+
+**Explicitly not done here (tracked for later, not forgotten):**
+- No ad component/slot exists to actually check `ads_removed` against —
+  this ships the unlock mechanism ahead of the thing being unlocked.
+- No PayPal rail for this one (unlike the Tip Jar) — ₹99 lifetime access
+  is India-first pricing; if global "remove ads" pricing is wanted later
+  this needs its own USD price point, not a reused ₹99→$ conversion.
+
+Both §94 and §95 now share the same two blockers before either payment
+button actually accepts money: a real Razorpay account (+
+`NEXT_PUBLIC_RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/
+`RAZORPAY_WEBHOOK_SECRET`) and, for the Tip Jar's PayPal rail, a real
+PayPal account (+ `NEXT_PUBLIC_PAYPAL_ME_USERNAME`).

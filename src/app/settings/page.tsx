@@ -15,7 +15,8 @@ import { supabase } from '../lib/supabase';
 import { CONSENT_VERSION } from '../lib/compliance/dpdp';
 import { useUiLanguage, LANGUAGES } from '../lib/i18n';
 import Link from 'next/link';
-import { Flame, User } from 'lucide-react';
+import { Flame, User, Coffee } from 'lucide-react';
+import { getRazorpayPublicKey, openRazorpayCheckout } from '../lib/payments/razorpayClient';
 
 const PLATFORM_NAME = 'MANGAL';
 
@@ -51,6 +52,87 @@ export default function SettingsPage() {
     };
     loadGender();
   }, []);
+
+  const [adsRemoved, setAdsRemoved] = useState(false);
+  const [adsRemovedLoaded, setAdsRemovedLoaded] = useState(false);
+  const [removeAdsState, setRemoveAdsState] = useState<'idle' | 'processing' | 'error'>('idle');
+  const [removeAdsError, setRemoveAdsError] = useState('');
+
+  useEffect(() => {
+    const loadAdsRemoved = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) { setAdsRemovedLoaded(true); return; }
+      const { data } = await supabase
+        .from('profiles')
+        .select('ads_removed')
+        .eq('id', userData.user.id)
+        .single();
+      setAdsRemoved(!!data?.ads_removed);
+      setAdsRemovedLoaded(true);
+    };
+    loadAdsRemoved();
+  }, []);
+
+  // §95 — one-time ₹99 unlock, same create-order/verify pair the Tip Jar
+  // (§94) uses, just with purpose='remove_ads' instead of 'tip'. The
+  // actual `profiles.ads_removed = true` flip happens server-side in
+  // /api/payments/verify (and the webhook, as a fallback) — never here.
+  const handleRemoveAds = async () => {
+    setRemoveAdsState('processing');
+    setRemoveAdsError('');
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session?.session?.access_token;
+      if (!token) {
+        setRemoveAdsError('Please log in first.');
+        setRemoveAdsState('error');
+        return;
+      }
+
+      const res = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amountPaise: 9900, purpose: 'remove_ads' }),
+      });
+      const orderData = await res.json();
+      if (!res.ok) {
+        setRemoveAdsError(orderData.error ?? 'Could not start payment.');
+        setRemoveAdsState('error');
+        return;
+      }
+
+      const opened = await openRazorpayCheckout({
+        orderId: orderData.orderId,
+        amountPaise: orderData.amountPaise,
+        description: 'Remove Ads — lifetime',
+        prefillEmail: session?.session?.user?.email ?? undefined,
+        onSuccess: async (response) => {
+          const verifyRes = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(response),
+          });
+          const verifyData = await verifyRes.json();
+          if (verifyRes.ok && verifyData.verified) {
+            setAdsRemoved(true);
+            setRemoveAdsState('idle');
+          } else {
+            setRemoveAdsError(verifyData.error ?? 'Payment could not be verified.');
+            setRemoveAdsState('error');
+          }
+        },
+        onDismiss: () => setRemoveAdsState((s) => (s === 'processing' ? 'idle' : s)),
+      });
+
+      if (!opened.ok) {
+        setRemoveAdsError(opened.error);
+        setRemoveAdsState('error');
+      }
+    } catch {
+      setRemoveAdsError('Something went wrong. Please try again.');
+      setRemoveAdsState('error');
+    }
+  };
 
   const handleSetGender = async (value: Gender) => {
     setGenderSaving(true);
@@ -269,6 +351,49 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Remove Ads — §95, one-time ₹99 unlock (payment infra only for
+            now; no ad slots exist on the platform yet — see CONTEXT.md).
+            Same visibility rule as the rest of this page: nothing here
+            claims to work until it actually does. */}
+        <div className={sectionCardClass} style={sectionCard}>
+          <h2 style={sectionTitle}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Coffee size={16} strokeWidth={2} /> Remove Ads</span></h2>
+          {adsRemoved ? (
+            <p style={{ ...bodyText, marginBottom: 0, color: '#059669', fontWeight: 700 }}>
+              ✓ You&apos;ve unlocked ad-free — thank you for supporting MANGAL.
+            </p>
+          ) : (
+            <>
+              <p style={bodyText}>
+                One-time ₹99 payment, lifetime — no subscription. (Nothing on MANGAL
+                shows ads yet — this just unlocks your ad-free status ahead of time.)
+              </p>
+              <button
+                onClick={handleRemoveAds}
+                disabled={!adsRemovedLoaded || removeAdsState === 'processing' || !getRazorpayPublicKey()}
+                style={{
+                  ...buttonBase,
+                  background: getRazorpayPublicKey() ? 'rgba(217,119,6,0.1)' : 'var(--bg-input)',
+                  border: getRazorpayPublicKey() ? '1px solid rgba(217,119,6,0.3)' : '1px solid var(--border-color)',
+                  color: getRazorpayPublicKey() ? '#d97706' : 'var(--text-faint)',
+                  opacity: removeAdsState === 'processing' ? 0.6 : 1,
+                  cursor: getRazorpayPublicKey() ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {removeAdsState === 'processing'
+                  ? 'Processing...'
+                  : getRazorpayPublicKey()
+                    ? 'Remove Ads — ₹99'
+                    : 'Remove Ads — coming soon'}
+              </button>
+              {removeAdsState === 'error' && (
+                <p style={{ ...bodyText, color: '#ef4444', marginTop: '10px', marginBottom: 0 }}>
+                  {removeAdsError}
+                </p>
+              )}
+            </>
+          )}
         </div>
 
         {/* Download My Data */}
