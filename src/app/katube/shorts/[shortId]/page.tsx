@@ -207,6 +207,7 @@ export default function KaTubeShortsFeedPage() {
         .katube-short-caption { bottom: calc(76px + env(safe-area-inset-bottom)); right: 88px; }
         .katube-short-actions { bottom: calc(16px + env(safe-area-inset-bottom)); }
         .katube-youtube-title-shield { display: block; }
+        .katube-youtube-bottom-share-shield { display: block; }
         @media (min-width: 900px) {
           .katube-shorts-sidebar {
             display: flex; position: fixed; inset: 0 auto 0 0; z-index: 40; width: 232px;
@@ -309,7 +310,12 @@ export default function KaTubeShortsFeedPage() {
                           the top of an embed. It can open youtube.com, so it
                           is intentionally covered; KaTube's own title below
                           remains the only title interaction. */}
-                      <div className="katube-youtube-title-shield" aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '136px', zIndex: 4, background: '#000' }} />
+                      <div className="katube-youtube-title-shield" aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '136px', zIndex: 20, background: '#000', pointerEvents: 'auto' }} />
+                      {/* The original YouTube Short can itself contain a
+                          left-bottom Share graphic. KaTube's Share action is
+                          the one in the right rail, so hide this duplicate
+                          source-player graphic without adding another action. */}
+                      <div className="katube-youtube-bottom-share-shield" aria-hidden="true" style={{ position: 'absolute', left: 0, bottom: 0, width: '128px', height: '108px', zIndex: 20, background: '#000', pointerEvents: 'auto' }} />
                     </>
                   ) : (
                     <img
