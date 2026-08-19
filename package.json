@@ -14,18 +14,14 @@
     "@opennextjs/cloudflare": "^1.20.2",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
-    "@tensorflow/tfjs": "^4.22.0",
-    "@tensorflow/tfjs-backend-cpu": "^4.22.0",
     "@vercel/analytics": "^2.0.1",
     "framer-motion": "^13.1.0",
     "gsap": "^3.15.0",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
-    "nsfwjs": "^4.3.0",
     "razorpay": "^2.9.8",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "sharp": "^0.35.3",
     "wrangler": "^4.86.0"
   },
   "devDependencies": {

@@ -59,6 +59,12 @@ const nextConfig: NextConfig = {
         pathname: "/storage/v1/object/public/**",
       },
     ],
+    // §87: Next's default /_next/image optimizer uses `sharp` (a native
+    // binary) under the hood — Cloudflare Workers' V8 isolate has no
+    // native addon support, so it can't run there. Serving images
+    // unoptimized (as-is from Supabase storage) avoids a runtime crash;
+    // Supabase's own storage CDN already handles caching/delivery.
+    unoptimized: true,
   },
 
   async headers() {
