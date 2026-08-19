@@ -55,7 +55,7 @@ interface YouTubePlayer {
 }
 
 interface YouTubeApi {
-  Player: new (element: HTMLElement, options: Record<string, unknown>) => YouTubePlayer;
+  Player: new (element: HTMLElement | string, options: Record<string, unknown>) => YouTubePlayer;
   PlayerState: { PLAYING: number; PAUSED: number };
 }
 
