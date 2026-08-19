@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
-import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users, Home, Zap, Flame, PlusSquare, ExternalLink, X, Info, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users, Home, Zap, Flame, PlusSquare, ExternalLink, X, Info, Play, Search, MoreVertical, UserCircle } from 'lucide-react';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
 
 // ── KaTube §7 — Fast Tap full-screen Shorts/Reels feed ──
@@ -271,9 +271,13 @@ export default function KaTubeShortsFeedPage() {
           box-shadow: 0 18px 48px rgba(0,0,0,0.45);
         }
         .katube-shorts-feed { overscroll-behavior-y: contain; touch-action: pan-y; }
-        .katube-short-frame { width: min(100%, calc(100dvh * 9 / 16)); height: 100%; }
-        .katube-short-caption { bottom: calc(76px + env(safe-area-inset-bottom)); right: 88px; }
-        .katube-short-actions { bottom: calc(16px + env(safe-area-inset-bottom)); }
+        .katube-shorts-mobile-chrome { display: flex; position: fixed; left: 0; right: 0; z-index: 50; background: #000; box-sizing: border-box; }
+        .katube-shorts-mobile-header { top: 0; height: calc(92px + env(safe-area-inset-top)); padding: calc(12px + env(safe-area-inset-top)) 16px 12px; align-items: center; justify-content: space-between; }
+        .katube-shorts-mobile-tabs { bottom: 0; height: calc(68px + env(safe-area-inset-bottom)); padding: 8px 18px calc(8px + env(safe-area-inset-bottom)); align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); }
+        .katube-shorts-back { display: none !important; }
+        .katube-short-frame { width: min(100%, calc((100dvh - 192px) * 9 / 16)); height: calc(100% - 192px); margin: calc(92px + env(safe-area-inset-top)) auto calc(100px + env(safe-area-inset-bottom)); }
+        .katube-short-caption { top: 100%; bottom: auto; right: 0; padding: 13px 14px 0; background: #000; }
+        .katube-short-actions { bottom: 54px; }
         .katube-short-caption, .katube-short-actions { z-index: 30 !important; }
         .katube-short-progress { position: absolute; left: 14px; right: 14px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 31; }
         .katube-short-gesture-layer { position: absolute; inset: 136px 0 108px; z-index: 10; touch-action: pan-y; }
@@ -281,15 +285,17 @@ export default function KaTubeShortsFeedPage() {
         .katube-youtube-title-shield { display: block; }
         .katube-youtube-bottom-share-shield { display: block; }
         @media (min-width: 900px) {
+          .katube-shorts-mobile-chrome { display: none; }
           .katube-shorts-sidebar {
             display: flex; position: fixed; inset: 0 auto 0 0; z-index: 40; width: 232px;
             flex-direction: column; padding: 22px 12px; box-sizing: border-box;
             background: #0b0b0f; border-right: 1px solid rgba(255,255,255,0.12);
           }
           .katube-shorts-feed { margin-left: 232px; width: calc(100% - 232px) !important; }
+          .katube-shorts-back { display: flex !important; }
           .katube-shorts-back { left: 252px !important; }
           .katube-short-details { left: auto; right: 24px; bottom: 24px; width: 320px; margin: 0; }
-          .katube-short-frame { max-width: 480px; height: calc(100% - 108px); }
+          .katube-short-frame { max-width: 480px; height: calc(100% - 108px); margin: 0 auto; }
           .katube-short-caption { top: 100%; bottom: auto; left: 0; right: 0; padding: 14px 0 0 !important; background: #000 !important; }
           .katube-short-actions { left: calc(100% + 18px); right: auto !important; bottom: 88px; }
           .katube-short-progress { bottom: 8px; }
@@ -312,6 +318,27 @@ export default function KaTubeShortsFeedPage() {
         })}
         <Link href="/katube/upload" style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px', borderRadius: '7px', background: '#f97316', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}><PlusSquare size={16} /> Upload</Link>
       </aside>
+
+      <header className="katube-shorts-mobile-chrome katube-shorts-mobile-header">
+        <strong style={{ color: '#fff', fontSize: '24px', letterSpacing: '-0.04em' }}>Fast Tap</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '18px', color: '#fff' }}>
+          <button onClick={toggleMuted} aria-label={muted ? 'Unmute' : 'Mute'} style={{ padding: 0, border: 0, background: 'transparent', color: 'inherit' }}>{muted ? <VolumeX size={25} /> : <Volume2 size={25} />}</button>
+          <Search size={27} />
+          <MoreVertical size={27} />
+        </div>
+      </header>
+
+      <nav className="katube-shorts-mobile-chrome katube-shorts-mobile-tabs" aria-label="KaTube mobile navigation">
+        {[
+          { href: '/katube', label: 'Home', icon: Home },
+          { href: '/katube', label: 'Fast Tap', icon: Zap },
+          { href: '/katube/upload', label: 'Create', icon: PlusSquare },
+          { href: '/katube/subscriptions', label: 'Following', icon: Users },
+        ].map(item => {
+          const Icon = item.icon;
+          return <Link key={item.label} href={item.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: item.label === 'Fast Tap' ? '#f97316' : '#fff', textDecoration: 'none', fontSize: '10px', fontWeight: 700 }}><Icon size={22} fill={item.label === 'Fast Tap' ? '#f97316' : 'none'} />{item.label}</Link>;
+        })}
+      </nav>
 
       <Link className="katube-shorts-back" href="/katube" style={{
         position: 'absolute', top: 'calc(16px + env(safe-area-inset-top))', left: 'calc(16px + env(safe-area-inset-left))', zIndex: 20,
@@ -454,7 +481,9 @@ export default function KaTubeShortsFeedPage() {
                     padding: '16px 16px 12px',
                     background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)', zIndex: 5,
                   }}>
-                    <div style={{ color: '#fff', fontWeight: 800, fontSize: '13.5px', marginBottom: '4px' }}>@{short.creator}</div>
+                    <Link href={`/katube/channel/${encodeURIComponent(short.creator)}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fff', fontWeight: 800, fontSize: '13.5px', marginBottom: '5px', textDecoration: 'none' }}>
+                      <UserCircle size={22} /> @{short.creator}
+                    </Link>
                     <button onClick={() => { setActiveIndex(idx); setDetailsOpen(true); }} style={{ padding: 0, border: 0, background: 'transparent', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '12.5px', fontWeight: 700, lineHeight: 1.4 }}>
                       {short.title} <Info size={13} style={{ verticalAlign: 'text-bottom' }} />
                     </button>
