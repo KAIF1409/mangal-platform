@@ -299,7 +299,7 @@ export default function KaTubeShortsFeedPage() {
                       )}
                       <iframe
                         ref={el => { iframeRefs.current[idx] = el; }}
-                        src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&disablekb=1&fs=0&enablejsapi=1&autoplay=0&mute=1`}
+                        src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&disablekb=1&fs=0&enablejsapi=1&autoplay=0&mute=1&loop=1&playlist=${short.youtube_id}`}
                         title={short.title}
                         allow="accelerometer; autoplay; encrypted-media; gyroscope"
                         onLoad={() => markLoaded(idx)}
