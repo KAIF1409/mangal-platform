@@ -23,9 +23,26 @@
 //     -H "Content-Type: application/json" -d '{"batchSize": 25}'
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { requireUser } from '../../../lib/auth/authedServerClient';
 import { isDeveloperRole } from '../../../lib/auth/roles';
 import { getMediaBucket } from '../../../lib/media/r2';
+
+// Reads/writes in this route use the service-role client, not the caller's
+// session-scoped one — most rows being migrated (series covers, pages,
+// other creators' avatars/posts) are owned by other users, and RLS UPDATE
+// policies on tables like `series`/`pages` only allow the row's own
+// creator to write (no developer-role bypass exists for UPDATE, only for
+// DELETE on `series`). Using the caller's client meant the R2 copy would
+// silently succeed while the DB write was filtered out to 0 rows by RLS —
+// found in production after a real run reported "18 succeeded" but the
+// underlying series/pages rows still pointed at the old Supabase URLs.
+// The developer-role check right below is what stands in for auth here
+// (same reasoning as the webhook/service routes) — never remove it.
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 interface MigrateResult {
   table: string;
@@ -81,7 +98,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireUser(req);
   if (!auth) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-  const { data: profile } = await auth.supabase.from('profiles').select('role').eq('id', auth.userId).single();
+  const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', auth.userId).single();
   if (!isDeveloperRole(profile?.role)) {
     return NextResponse.json({ error: 'Developer access only.' }, { status: 403 });
   }
@@ -126,7 +143,7 @@ export async function POST(req: NextRequest) {
       // element still pointing at Supabase (can't index into an array
       // column with `not ilike` in a single filter), migrate just the
       // unmigrated elements, write the whole array back.
-      const { data: rows } = await auth.supabase
+      const { data: rows } = await supabaseAdmin
         .from(job.table)
         .select(`${job.idColumn}, ${job.urlColumn}`)
         .not(job.urlColumn, 'is', null)
@@ -154,13 +171,13 @@ export async function POST(req: NextRequest) {
           }
         }
         if (!rowFailed) {
-          await auth.supabase.from(job.table).update({ [job.urlColumn]: newUrls }).eq(job.idColumn, row[job.idColumn]);
+          await supabaseAdmin.from(job.table).update({ [job.urlColumn]: newUrls }).eq(job.idColumn, row[job.idColumn]);
         }
       }
       continue;
     }
 
-    const { data: rows } = await auth.supabase
+    const { data: rows } = await supabaseAdmin
       .from(job.table)
       .select(`${job.idColumn}, ${job.urlColumn}`)
       .not(job.urlColumn, 'is', null)
@@ -180,7 +197,7 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const { error: updateError } = await auth.supabase
+      const { error: updateError } = await supabaseAdmin
         .from(job.table)
         .update({ [job.urlColumn]: outcome.newUrl })
         .eq(job.idColumn, row[job.idColumn]);
