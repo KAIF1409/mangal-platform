@@ -10,6 +10,13 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // §88: Workers AI binding — used by checkThumbnailNsfw() for the KaTube
+  // upload NSFW check. Free-tier Workers AI has a daily neuron quota; no
+  // extra setup needed beyond this binding, Cloudflare provisions it
+  // automatically for the account.
+  "ai": {
+    "binding": "AI"
+  },
   "observability": {
     "enabled": true
   }
