@@ -7,8 +7,9 @@ import Image from 'next/image';
 import { supabase } from '../../../lib/supabase';
 import { isDeveloperRole } from '../../../lib/auth/roles';
 import Link from 'next/link';
-import { Search, ArrowLeft, Flame, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText, PenLine } from 'lucide-react';
+import { Search, ArrowLeft, Flame, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText, PenLine, Coffee } from 'lucide-react';
 import VerifiedBadge from '../../../components/shared/VerifiedBadge';
+import TipJarModal from '../../../components/shared/TipJarModal';
 
 interface Series {
   id: string;
@@ -74,6 +75,8 @@ export default function CreatorProfilePage() {
   // requires the offending content to still exist to report against. This
   // lets a developer act straight from the creator's public profile.
   const [isDeveloper, setIsDeveloper] = useState(false);
+  const [viewerUserId, setViewerUserId] = useState<string | null>(null);
+  const [showTipJar, setShowTipJar] = useState(false);
   const [accountActive, setAccountActive] = useState(true);
   const [banConfirm, setBanConfirm] = useState(false);
   const [banning, setBanning] = useState(false);
@@ -149,6 +152,7 @@ export default function CreatorProfilePage() {
       // so it runs after setLoading(false) instead of blocking on it.
       const viewer = viewerRes.data;
       if (viewer.user) {
+        setViewerUserId(viewer.user.id);
         const { data: viewerProfile } = await supabase
           .from('profiles')
           .select('role')
@@ -321,6 +325,18 @@ export default function CreatorProfilePage() {
               }}>
                 <Megaphone size={12} strokeWidth={2} /> Updates
               </Link>
+              {viewerUserId && viewerUserId !== creator.user_id && (
+                <button
+                  onClick={() => setShowTipJar(true)}
+                  style={{
+                    fontSize: '11.5px', fontWeight: 700, color: '#fff', border: 'none', cursor: 'pointer',
+                    padding: '6px 12px', borderRadius: '8px', background: 'var(--accent)',
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  }}
+                >
+                  <Coffee size={12} strokeWidth={2} /> Tip
+                </button>
+              )}
               {isDeveloper && accountActive && (
                 banConfirm ? (
                   <div style={{ display: 'inline-flex', gap: '6px' }}>
@@ -386,6 +402,14 @@ export default function CreatorProfilePage() {
       </div>
 
       <Footer />
+
+      {showTipJar && (
+        <TipJarModal
+          recipientUserId={creator.user_id}
+          recipientLabel={`@${creator.username}`}
+          onClose={() => setShowTipJar(false)}
+        />
+      )}
     </div>
   );
 }

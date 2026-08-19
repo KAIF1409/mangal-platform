@@ -6598,3 +6598,53 @@ that lets it actually shrink and scroll internally instead of overflowing
 its container.
 
 **Verified:** `tsc --noEmit` and `eslint` clean.
+
+## §94 — Tip Jar ("Buy Me a Coffee"): first live payment feature
+
+The founder asked for real payment methods on the platform — tip jar,
+remove-ads unlock, referral. This section covers the first one, built on
+top of the §48/§49 Razorpay infra that had sat unconnected since then.
+
+**What shipped:**
+- `src/app/lib/payments/razorpayClient.ts` — browser-side helper that
+  loads Razorpay's Checkout.js once and opens it for a given order.
+  Reads the publishable `NEXT_PUBLIC_RAZORPAY_KEY_ID` (safe to expose
+  client-side, unlike the secret key already used server-side in
+  `razorpay.ts`). Returns a clean "not configured" result rather than
+  throwing when that env var is unset.
+- `src/app/components/shared/TipJarModal.tsx` — the actual tip UI. Two
+  independent rails:
+  - **India (Razorpay):** ₹49/₹99/₹199 presets → calls the existing
+    `/api/payments/create-order` (purpose: `'tip'`, `purposeRefId`: the
+    recipient creator's `user_id`) → opens Razorpay Checkout → on
+    success, POSTs to the existing `/api/payments/verify`. This is a
+    real, DB-tracked payment once a Razorpay account exists — no new
+    backend code needed, §48/§49 already covered it. PhonePe/Google
+    Pay/Paytm are **not** separate integrations — they're UPI apps, and
+    Razorpay's UPI intent flow surfaces whichever ones are installed on
+    the payer's phone automatically.
+  - **Outside India (PayPal):** a plain `paypal.me/<username>/<amount>`
+    link with $2/$5/$10 presets, opens in a new tab. Deliberately not a
+    PayPal API integration — that needs a PayPal Business account +
+    REST credentials the founder doesn't have yet, and paypal.me needs
+    nothing but the account username. Known limitation: PayPal tips
+    aren't recorded in the `payments` table (no webhook), so it won't
+    show up in any in-app history — acceptable for a v1 tip button, but
+    worth remembering if "total tips received" is ever built.
+- Wired into `src/app/WebMangal/creator/[username]/page.tsx`: a "Tip"
+  button next to the existing "Updates" link in the creator header,
+  visible only when a logged-in viewer is looking at someone else's
+  profile (hidden for logged-out visitors and for creators viewing their
+  own page).
+
+**Still not live — two env vars needed before either rail actually
+works:**
+- `NEXT_PUBLIC_RAZORPAY_KEY_ID` (+ the already-referenced
+  `RAZORPAY_KEY_SECRET`/`RAZORPAY_WEBHOOK_SECRET` from §48) once a
+  Razorpay account exists.
+- `NEXT_PUBLIC_PAYPAL_ME_USERNAME` once a PayPal account exists.
+Until then both buttons render as disabled "coming soon" — same pattern
+`PaymentMethodPicker.tsx` already used, nothing fakes readiness.
+
+Next: remove-ads unlock (§95), reusing this same order/verify flow with
+`purpose: 'remove_ads'` and a new `profiles.ads_removed` flag.
