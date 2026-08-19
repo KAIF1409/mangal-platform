@@ -1,8 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // Must match the Worker name Cloudflare already created
-  // (mangal-platform.mangal-indiaplatform.workers.dev)
-  "name": "mangal-platform",
+  // §89: Renamed from "mangal-platform" to "mangal" for a shorter URL.
+  // NOTE: renaming this creates a NEW Worker on Cloudflare's side (it
+  // doesn't rename the old one) — the old "mangal-platform" Worker will
+  // still exist in the dashboard and needs to be deleted manually if
+  // you don't want it hanging around.
+  "name": "mangal",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
