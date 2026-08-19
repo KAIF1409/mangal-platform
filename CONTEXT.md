@@ -6552,3 +6552,24 @@ From this deploy onward it should survive future pushes.
 `delete-account`, `confirm-parent-consent`, `send-parent-consent`,
 `payments/webhook`, `export-data` — not yet fixed, still worth doing
 proactively.
+
+## §92 — Reader pages loading slow: R2 media route had no edge caching
+
+Reported: chapter/page images loading very slowly, especially in Incognito
+(no prior browser cache). Root cause: `/api/media/[...path]` had a strong
+browser `Cache-Control` header, but that only helps a given visitor's
+*own* browser on repeat visits — Cloudflare does not automatically cache
+Worker responses at the edge the way it does static assets, so every
+reader's first view of every page was a full R2 round-trip through the
+Worker, every time, for every visitor.
+
+**Fixed:** route now checks Cloudflare's Cache API (`caches.default`)
+first; on a miss it fetches from R2 as before, then stores the response
+in the edge cache via `ctx.waitUntil(cache.put(...))` (non-blocking, via
+`getCloudflareContext().ctx`). Since every object key is immutable
+(fresh random key per upload — see upload-media/route.ts), this is safe
+with no invalidation concerns. Wrapped in try/catch so a missing
+Cloudflare context (e.g. local `next dev`) degrades to "just serve from
+R2, don't edge-cache" instead of breaking the route.
+
+**Verified:** `tsc --noEmit` and `eslint` clean.
