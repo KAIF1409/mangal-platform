@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ConsentBanner from "./components/shared/ConsentBanner";
 import ProductVisitTracker from "./components/shared/ProductVisitTracker";
-import { Analytics } from "@vercel/analytics/react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -81,10 +80,20 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
+        {/* Bug fix: @vercel/analytics's <Analytics /> only works when the
+            app is actually served by Vercel's edge — it injects a request
+            for /_vercel/insights/script.js, a path Vercel's platform
+            rewrites to the real analytics script. Per CONTEXT.md §89 this
+            app moved off Vercel onto Cloudflare Workers, so that path
+            doesn't exist here: the request 404s (with an HTML/text
+            response), the browser's strict MIME-type check then refuses
+            to execute it as JS, and both show up as console errors on
+            every single page load. Removed rather than fixed in place —
+            there's no Workers-native replacement wired up yet, so this is
+            pure dead weight until one is added. */}
         <ProductVisitTracker />
         {children}
         <ConsentBanner />
-        <Analytics />
       </body>
     </html>
   );

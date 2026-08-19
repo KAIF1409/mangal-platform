@@ -6819,3 +6819,49 @@ the poll only while a drag is actively in progress. The
 by the same interaction/timer code, in case a future session wants a
 different visual treatment tied to it) but nothing reads it for
 rendering now, so it can't hide the bar again by itself.
+
+## §99 — KaTube Shorts: CSP was silently blocking the real YouTube player, breaking sound + seek
+
+Founder sent a screen recording plus a browser console screenshot
+showing the actual root cause behind the still-flaky Shorts playback
+(seek bar + audio muted by default despite the §90-era "default
+unmuted" requirement). The console showed: `Refused to load the
+script 'https://www.youtube.com/iframe_api' ... violates ... CSP
+directive: "script-src 'self' 'unsafe-inline'
+https://va.vercel-scripts.com"`.
+
+**Root cause:** `next.config.ts`'s CSP `script-src` never included
+`https://www.youtube.com`. `frame-src` did (so the embed iframes
+themselves loaded fine), but the *player API script* the shorts page
+loads via `loadYouTubeApi()` (`<script
+src="https://www.youtube.com/iframe_api">`) was being blocked by the
+browser on every page load. That meant `YT.Player` never got
+constructed for any Short, ever — which explains two symptoms at
+once that looked unrelated:
+- The player-creation effect's `onReady` callback (§90/§96/§97's
+  home for seeding `playback.duration` and calling `unMute()` per the
+  saved sound preference) never ran, so every Short stayed stuck on
+  the iframe URL's hardcoded `mute=1` regardless of the
+  `katube-shorts-muted` preference — the "audio ka sound mute
+  hogaya" the founder reported.
+- The 250ms poll (`player.getCurrentTime()`/`getDuration()`) and
+  live-duration fallback in `seekTo()` both require an actual player
+  object from `playerRefs`, which was always empty — so real seeking
+  and duration tracking silently never worked, on top of §98's
+  visibility fix.
+
+**Fix:** added `https://www.youtube.com` to `script-src` (the
+widget script the iframe_api script pulls in is served from that
+same origin, so one addition covers both). No other CSP directive
+needed to change — `frame-src` and `img-src` already covered the
+iframe embed and thumbnails.
+
+**Also cleaned up while in the console output:** a `_vercel/insights/
+script.js` 404 + blocked-MIME-type error firing on literally every
+page load, from a leftover `<Analytics />` (`@vercel/analytics`) in
+`layout.tsx`. That component only works when actually served by
+Vercel's edge, which rewrites that path to the real script; per §89
+this app moved to Cloudflare Workers, so the path 404s there and the
+browser refuses to execute the HTML error page as JS. Removed the
+component and its import — there's no Workers-native analytics wired
+up yet, so this was pure dead weight, not a feature regression.
