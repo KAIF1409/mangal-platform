@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
+import { uploadMediaFile, MEDIA_FOLDERS } from '../../../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import ThemeToggle from '../../../components/shared/ThemeToggle';
 import { useKCircleTheme } from '../../theme';
@@ -188,12 +189,14 @@ export default function GroupChannelsPage() {
 
     let imageUrl: string | null = null;
     if (file) {
-      const ext = file.name.split('.').pop();
-      // eslint-disable-next-line react-hooks/purity -- Date.now() used inside an event handler (onClick), not during render; same pattern as ../../chat/page.tsx sendMessage
-      const path = `messages/${userId}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
-      if (upErr) { setPosting(false); setAttachError(`Upload failed: ${upErr.message}`); return; }
-      imageUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
+      try {
+        const { url } = await uploadMediaFile(file, MEDIA_FOLDERS.kcircleMedia);
+        imageUrl = url;
+      } catch (upErr) {
+        setPosting(false);
+        setAttachError(`Upload failed: ${upErr instanceof Error ? upErr.message : 'failed'}`);
+        return;
+      }
     }
 
     const { error } = await supabase.from('kcircle_channel_messages').insert({

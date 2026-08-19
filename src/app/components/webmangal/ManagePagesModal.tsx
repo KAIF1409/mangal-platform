@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
+import { deleteMediaFiles } from '../../lib/media/uploadClient';
 import { Save, X, Check, ArrowLeft, ArrowRight, Trash2, Inbox, AlertTriangle } from 'lucide-react';
 
 interface PageRow {
@@ -122,14 +123,14 @@ export default function ManagePagesModal({
     setDeletingId(page.id);
     setError('');
 
-    // Extract storage path from public URL — everything after /manga-pages/
+    // Extract the R2 key from the served URL — everything after /api/media/
     try {
       const urlObj = new URL(page.image_url);
       const storagePath = decodeURIComponent(
-        urlObj.pathname.split('/manga-pages/')[1] || ''
+        urlObj.pathname.split('/api/media/')[1] || ''
       );
       if (storagePath) {
-        await supabase.storage.from('manga-pages').remove([storagePath]);
+        await deleteMediaFiles([storagePath]);
       }
     } catch {
       // Storage removal failed or path parse failed — continue to DB delete

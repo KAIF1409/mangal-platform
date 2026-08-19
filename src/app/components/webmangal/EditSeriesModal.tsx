@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { checkImageBatchQuality } from '../../lib/media/imageQuality';
+import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { Pencil, X, Camera, Lock, ScrollText, BookOpen, ArrowLeft, ArrowRight, Save } from 'lucide-react';
 
 // Step 23 — Genre Expansion (Desi Categories): added Folk Tale, Desi Horror,
@@ -135,16 +136,14 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
     // Only touches storage if a new file was actually picked — same path
     // convention as the original upload flow (covers/{userId}-{timestamp}.{ext}).
     if (coverFile) {
-      const ext = coverFile.name.split('.').pop();
-      const path = `covers/${userId}-${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('manga-pages')
-        .upload(path, coverFile, { upsert: true });
-
-      if (uploadError) { setError(`Cover upload: ${uploadError.message}`); setSaving(false); return; }
-
-      const { data: urlData } = supabase.storage.from('manga-pages').getPublicUrl(path);
-      coverUrl = urlData.publicUrl;
+      try {
+        const { url } = await uploadMediaFile(coverFile, MEDIA_FOLDERS.seriesCovers);
+        coverUrl = url;
+      } catch (uploadError) {
+        setError(`Cover upload: ${uploadError instanceof Error ? uploadError.message : 'failed'}`);
+        setSaving(false);
+        return;
+      }
     }
 
     const updates = {

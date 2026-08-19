@@ -10,6 +10,7 @@ import ReportButton from '../../../components/webmangal/ReportButton';
 import ShareButton from '../../../components/webmangal/ShareButton';
 import { canManageSeries, isDeveloperRole } from '../../../lib/auth/roles';
 import { estimateReadTime } from '../../../lib/novelEditor';
+import { deleteMediaFiles } from '../../../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import Link from 'next/link';
 import ThemeToggle from '../../../components/shared/ThemeToggle';
@@ -671,14 +672,14 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
     if (pageRows && pageRows.length > 0) {
       const paths = pageRows
         .map(p => {
-          // image_url is a public URL like .../object/public/manga-pages/<path>
-          const marker = '/manga-pages/';
+          // image_url is served via /api/media/<key> — extract the R2 key
+          const marker = '/api/media/';
           const idx = p.image_url.indexOf(marker);
           return idx === -1 ? null : p.image_url.slice(idx + marker.length);
         })
         .filter((p): p is string => !!p);
       if (paths.length > 0) {
-        await supabase.storage.from('manga-pages').remove(paths);
+        await deleteMediaFiles(paths);
       }
       await supabase.from('pages').delete().eq('chapter_id', chapterId);
     }
@@ -715,13 +716,13 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         if (pageRows && pageRows.length > 0) {
           const paths = pageRows
             .map(p => {
-              const marker = '/manga-pages/';
+              const marker = '/api/media/';
               const idx = p.image_url.indexOf(marker);
               return idx === -1 ? null : p.image_url.slice(idx + marker.length);
             })
             .filter((p): p is string => !!p);
           if (paths.length > 0) {
-            await supabase.storage.from('manga-pages').remove(paths);
+            await deleteMediaFiles(paths);
           }
           await supabase.from('pages').delete().eq('chapter_id', ch.id);
         }

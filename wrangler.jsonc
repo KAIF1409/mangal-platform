@@ -20,6 +20,19 @@
   "ai": {
     "binding": "AI"
   },
+  // R2 — object storage for series covers, chapter pages, K Circle
+  // avatars/attachments, and stories. Bucket created manually in the
+  // Cloudflare Dashboard (R2 requires a card on file even on the free
+  // tier — not creatable via the account API token the MCP connector
+  // uses). Public Access is left Disabled on the bucket itself; files are
+  // served through our own /api/media/[...path] route instead so nothing
+  // needs to be public-by-default.
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "mangal-media"
+    }
+  ],
   "observability": {
     "enabled": true
   }

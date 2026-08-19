@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { checkImageBatchQuality } from '../../lib/media/imageQuality';
+import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { suggestTags } from '../../lib/tagSuggest';
 import {
@@ -321,16 +322,14 @@ function UploadFlow() {
 
     // Upload cover image first, if provided
     if (coverFile) {
-      const ext = coverFile.name.split('.').pop();
-      const path = `covers/${userId}-${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('manga-pages')
-        .upload(path, coverFile, { upsert: true });
-
-      if (uploadError) { setError(`Cover upload: ${uploadError.message}`); setLoading(false); return; }
-
-      const { data: urlData } = supabase.storage.from('manga-pages').getPublicUrl(path);
-      coverUrl = urlData.publicUrl;
+      try {
+        const { url } = await uploadMediaFile(coverFile, MEDIA_FOLDERS.seriesCovers);
+        coverUrl = url;
+      } catch (uploadError) {
+        setError(`Cover upload: ${uploadError instanceof Error ? uploadError.message : 'failed'}`);
+        setLoading(false);
+        return;
+      }
     }
 
     const seriesPayload = {
@@ -547,20 +546,20 @@ function UploadFlow() {
         if (item.kind !== 'new') continue; // existing pages already handled above
 
         // New page — upload the file, then insert its row at this exact position.
-        const ext = item.file.name.split('.').pop();
-        const path = `${seriesId}/${editChapterId}/page-${newPageNumber}-${Date.now()}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('manga-pages')
-          .upload(path, item.file, { upsert: true });
-        if (uploadError) { setError(`Page ${newPageNumber}: ${uploadError.message}`); setLoading(false); return; }
-
-        const { data: urlData } = supabase.storage.from('manga-pages').getPublicUrl(path);
+        let pageUrl: string;
+        try {
+          const { url } = await uploadMediaFile(item.file, MEDIA_FOLDERS.chapterPages);
+          pageUrl = url;
+        } catch (uploadError) {
+          setError(`Page ${newPageNumber}: ${uploadError instanceof Error ? uploadError.message : 'failed'}`);
+          setLoading(false);
+          return;
+        }
 
         const { error: pageError } = await supabase.from('pages').insert({
           chapter_id: editChapterId,
           page_number: newPageNumber,
-          image_url: urlData.publicUrl,
+          image_url: pageUrl,
         });
         if (pageError) { setError(`Page ${newPageNumber} save: ${pageError.message}`); setLoading(false); return; }
       }
@@ -603,21 +602,20 @@ function UploadFlow() {
     for (let i = 0; i < pages.length; i++) {
       const item = pages[i];
       if (item.kind !== 'new') continue; // defensive — never true in create mode
-      const ext = item.file.name.split('.').pop();
-      const path = `${seriesId}/${chapter.id}/page-${i + 1}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('manga-pages')
-        .upload(path, item.file, { upsert: true });
-
-      if (uploadError) { setError(`Page ${i + 1}: ${uploadError.message}`); setLoading(false); return; }
-
-      const { data: urlData } = supabase.storage.from('manga-pages').getPublicUrl(path);
+      let pageUrl: string;
+      try {
+        const { url } = await uploadMediaFile(item.file, MEDIA_FOLDERS.chapterPages);
+        pageUrl = url;
+      } catch (uploadError) {
+        setError(`Page ${i + 1}: ${uploadError instanceof Error ? uploadError.message : 'failed'}`);
+        setLoading(false);
+        return;
+      }
 
       const { error: pageError } = await supabase.from('pages').insert({
         chapter_id: chapter.id,
         page_number: i + 1,
-        image_url: urlData.publicUrl,
+        image_url: pageUrl,
       });
 
       if (pageError) { setError(`Page ${i + 1} save: ${pageError.message}`); setLoading(false); return; }
