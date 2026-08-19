@@ -14,7 +14,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = "https://mangal-platform.vercel.app";
+// Bug fix: this pointed at a Vercel domain (mangal-platform.vercel.app)
+// that hasn't served this app since §89 moved everything to Cloudflare
+// Workers. metadataBase feeds every relative OG/Twitter image URL and
+// the canonical `url` below, so every shared link's preview card (and
+// any relative-URL resolution Next does off metadataBase) was quietly
+// pointing at a domain that's no longer live. Now matches the real
+// Workers domain.
+const siteUrl = "https://mangal-platform.mangak.workers.dev";
 const siteDescription = "Read and publish India's best manga, comics and web novels — one account, both content types, 0% platform cut for creators.";
 
 export const metadata: Metadata = {

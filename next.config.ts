@@ -13,20 +13,13 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      // BUG FIX: script-src previously only allowed 'self' and Vercel's
-      // analytics script. KaTube Shorts loads the real YouTube IFrame
-      // Player API (`https://www.youtube.com/iframe_api`, which in turn
-      // loads its widget script from the same www.youtube.com origin) so
-      // it can drive playback/seek/mute through a proper `YT.Player`
-      // object instead of guessing via raw postMessage. With that origin
-      // missing here, the browser refused to load the script entirely
-      // ("Refused to load the script ... violates CSP directive
-      // script-src") — so no player was ever created for any Short: the
-      // seek bar had nothing to sync against, and the initial unmute
-      // (which only runs inside the player's onReady callback) never
-      // fired, leaving every Short stuck on the iframe URL's hardcoded
-      // `mute=1` regardless of the saved sound preference.
-      "script-src 'self' 'unsafe-inline' https://www.youtube.com https://va.vercel-scripts.com",
+      // Bug fix / cleanup: this app runs entirely on Cloudflare Workers
+      // now (§89) — nothing is served by or calls out to Vercel anymore.
+      // The va.vercel-scripts.com / vitals.vercel-insights.com allowances
+      // were leftovers from before that move (and from the now-removed
+      // <Analytics /> component, see layout.tsx) — dropped since they no
+      // longer correspond to anything this app actually loads.
+      "script-src 'self' 'unsafe-inline' https://www.youtube.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.supabase.co https://img.youtube.com https://i.ytimg.com",
       "font-src 'self' data:",
@@ -39,7 +32,7 @@ const securityHeaders = [
       // page couldn't load"). Every other product page that doesn't open a
       // Realtime socket was unaffected, which is why only Kalpana Circle
       // broke. Adding the wss:// scheme explicitly fixes it.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
       "frame-ancestors 'none'",
       "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
       "base-uri 'self'",
