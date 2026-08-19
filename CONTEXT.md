@@ -6453,3 +6453,37 @@ buckets can be cleaned up. Also carries forward §88's flagged item: verify
 the Workers AI model ID against the live dashboard.
 
 **Verified:** `tsc --noEmit` and `eslint` clean on all three parts.
+
+**Part 3 follow-up — fix bare 500 with no error detail:** `/admin/migrate-media`
+page's "Run migration" button was returning `Request failed: 500` with zero
+detail on first click. Root cause: the route had no error handling past the
+initial `req.json()` parse — any exception (R2 binding hiccup, network
+failure on the Supabase-URL `fetch()`, missing env var, etc.) bubbled up
+unhandled, so the client's `res.json()` on the error path got a non-JSON
+body and fell back to the generic status-only message, hiding the actual
+cause. Fixed: `migrateOneUrl()` now catches internally and returns
+`{error}` like a normal per-row failure; the whole `POST` handler is
+wrapped in try/catch returning `NextResponse.json({error})` on any
+unhandled failure; `supabaseAdmin` client is now built lazily inside that
+try block (`getSupabaseAdmin()`) instead of at module scope, so a missing
+`NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` in this Worker's env
+surfaces as a clear message instead of a silent import-time throw.
+**Still need:** click "Run migration" again post-deploy and read whatever
+the (now-visible) real error says — that tells us the actual root cause
+(binding, env var, or something else) so it can be fixed for real instead
+of guessed at.
+
+Also noticed while debugging: `workers_list` via the Cloudflare MCP shows
+only **one** Worker on the account, still named `mangal-platform` (matches
+the admin URL in the screenshot, `mangal-platform.mangak.workers.dev`) —
+the §89 rename to `mangal` in `wrangler.jsonc` never actually produced a
+second Worker on Cloudflare's side. Likely explanation: this project's
+Cloudflare "Workers Builds" (git-connected CI) pins the deployed Worker's
+identity to whatever it was when the GitHub repo was first connected, and
+doesn't re-target based on `wrangler.jsonc`'s `name` field on later
+deploys — only a plain local `wrangler deploy` (or a dashboard rename)
+would actually create/rename the Worker. Not blocking (the worker *is*
+receiving new deploys — its last-modified timestamp lines up with the
+latest commit), but the shorter `mangal.*.workers.dev` URL §89 intended
+doesn't exist yet. Flagged for Kaif, not fixed automatically since it may
+need a dashboard-side rename rather than a code change.
