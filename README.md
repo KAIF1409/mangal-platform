@@ -1,6 +1,6 @@
 # MANGAL
 
-**Live app:** [(https://mangal-platform.mangak.workers.dev/)]([https://mangal-platform.vercel.app](https://mangal-platform.mangak.workers.dev/))
+**Live app:** [mangal-platform.mangak.workers.dev](https://mangal-platform.mangak.workers.dev/)
 
 MANGAL is an Indian platform built for people who love manga, comics, web
 novels, and anime — a place to read, watch, and hang out with a community that
