@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import NotificationBell from '../../components/shared/NotificationBell';
 import ThemeToggle from '../../components/shared/ThemeToggle';
@@ -392,12 +393,16 @@ function KCircleChatPageInner() {
     let attachmentUrl: string | null = null;
     let attachmentType: string | null = null;
     if (file) {
-      const ext = file.name.split('.').pop();
-      const path = `messages/${userId}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
-      if (upErr) { setSending(false); setDraft(text); setAttachError(`Upload failed: ${upErr.message}`); return; }
-      attachmentUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
-      attachmentType = 'image';
+      try {
+        const { url } = await uploadMediaFile(file, MEDIA_FOLDERS.kcircleMedia);
+        attachmentUrl = url;
+        attachmentType = 'image';
+      } catch (upErr) {
+        setSending(false);
+        setDraft(text);
+        setAttachError(`Upload failed: ${upErr instanceof Error ? upErr.message : 'failed'}`);
+        return;
+      }
     }
 
     // No local append and no loadMessages() call here anymore — the

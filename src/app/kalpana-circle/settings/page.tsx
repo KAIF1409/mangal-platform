@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import ThemeToggle from '../../components/shared/ThemeToggle';
 import { useKCircleTheme } from '../theme';
@@ -81,14 +82,12 @@ export default function KCircleSettingsPage() {
     setUploading(true);
     setError('');
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `avatars/${userId}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
-      if (upErr) { setError(`Photo upload failed: ${upErr.message}`); setUploading(false); return; }
-      const publicUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
+      const { url: publicUrl } = await uploadMediaFile(file, MEDIA_FOLDERS.kcircleMedia);
       const { error: updErr } = await supabase.from('creator_profiles').update({ avatar_url: publicUrl }).eq('user_id', userId);
       if (updErr) { setError(`Couldn't save photo: ${updErr.message}`); setUploading(false); return; }
       setAvatarUrl(publicUrl);
+    } catch (upErr) {
+      setError(`Photo upload failed: ${upErr instanceof Error ? upErr.message : 'failed'}`);
     } finally {
       setUploading(false);
     }

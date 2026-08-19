@@ -11,6 +11,7 @@ import NotificationBell from '../components/shared/NotificationBell';
 import { KCircleShellStyle, KCircleRail } from './components/Shell';
 import CrossProductLinks from '../components/shared/CrossProductLinks';
 import { supabase } from '../lib/supabase';
+import { uploadMediaFile, MEDIA_FOLDERS } from '../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../lib/auth/authRedirect';
 import {
   Search, Home, MessageCircle, Clapperboard, Megaphone, Bookmark,
@@ -368,11 +369,14 @@ function KalpanaCircleInner() {
 
     const imageUrls: string[] = [];
     for (const file of composerImages) {
-      const ext = file.name.split('.').pop();
-      const path = `posts/${userId}-${Date.now()}-${imageUrls.length}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
-      if (upErr) { setPostError(`Upload failed: ${upErr.message}`); setPosting(false); return; }
-      imageUrls.push(supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl);
+      try {
+        const { url } = await uploadMediaFile(file, MEDIA_FOLDERS.kcircleMedia);
+        imageUrls.push(url);
+      } catch (upErr) {
+        setPostError(`Upload failed: ${upErr instanceof Error ? upErr.message : 'failed'}`);
+        setPosting(false);
+        return;
+      }
     }
 
     const { error, data: newPost } = await supabase.from('kcircle_posts').insert({
@@ -532,11 +536,15 @@ function KalpanaCircleInner() {
     if (!pendingStoryFile || !userId) return;
     setPostingStory(true);
     const file = pendingStoryFile;
-    const ext = file.name.split('.').pop();
-    const path = `stories/${userId}-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from('kcircle-media').upload(path, file, { upsert: true });
-    if (upErr) { setPostingStory(false); setPendingStoryFile(null); return; }
-    const imageUrl = supabase.storage.from('kcircle-media').getPublicUrl(path).data.publicUrl;
+    let imageUrl: string;
+    try {
+      const { url } = await uploadMediaFile(file, MEDIA_FOLDERS.kcircleMedia);
+      imageUrl = url;
+    } catch {
+      setPostingStory(false);
+      setPendingStoryFile(null);
+      return;
+    }
     await supabase.from('kcircle_stories').insert({ author_id: userId, image_url: imageUrl, close_friends_only: closeFriendsOnly });
     setPendingStoryFile(null);
     setPostingStory(false);
