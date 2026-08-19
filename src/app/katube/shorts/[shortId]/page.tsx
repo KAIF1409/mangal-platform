@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
-import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users, Home, Zap, Flame, PlusSquare, X, Info, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users, Home, Zap, Flame, PlusSquare, ExternalLink, X, Info, Play } from 'lucide-react';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
 
 // ── KaTube §7 — Fast Tap full-screen Shorts/Reels feed ──
@@ -217,7 +217,6 @@ export default function KaTubeShortsFeedPage() {
           .katube-shorts-back { left: 252px !important; }
           .katube-short-details { left: auto; right: 24px; bottom: 24px; width: 320px; margin: 0; }
           .katube-short-frame { max-width: 480px; }
-          .katube-youtube-title-shield { display: none; }
         }
       `}</style>
 
@@ -310,7 +309,7 @@ export default function KaTubeShortsFeedPage() {
                           the top of an embed. It can open youtube.com, so it
                           is intentionally covered; KaTube's own title below
                           remains the only title interaction. */}
-                      <div className="katube-youtube-title-shield" aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '136px', zIndex: 4 }} />
+                      <div className="katube-youtube-title-shield" aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '136px', zIndex: 4, background: '#000' }} />
                     </>
                   ) : (
                     <img
@@ -417,6 +416,9 @@ export default function KaTubeShortsFeedPage() {
           <div style={{ color: '#f97316', fontSize: '11px', fontWeight: 800, marginBottom: '7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>KaTube Fast Tap</div>
           <h1 style={{ margin: '0 34px 10px 0', color: '#fff', fontSize: '17px', lineHeight: 1.35 }}>{shorts[activeIndex].title}</h1>
           <p style={{ margin: '0 0 16px', color: '#d4d4d8', fontSize: '13px', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{shorts[activeIndex].description || 'No description from this creator yet.'}</p>
+          <a href={`https://www.youtube.com/watch?v=${shorts[activeIndex].youtube_id}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fff', background: '#ef4444', borderRadius: '6px', padding: '9px 12px', textDecoration: 'none', fontSize: '12px', fontWeight: 800 }}>
+            Watch on YouTube <ExternalLink size={14} />
+          </a>
         </section>
       )}
 
