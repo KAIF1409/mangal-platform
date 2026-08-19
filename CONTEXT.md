@@ -6692,3 +6692,46 @@ button actually accepts money: a real Razorpay account (+
 `NEXT_PUBLIC_RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/
 `RAZORPAY_WEBHOOK_SECRET`) and, for the Tip Jar's PayPal rail, a real
 PayPal account (+ `NEXT_PUBLIC_PAYPAL_ME_USERNAME`).
+
+## §96 — KaTube Shorts: fixed deep-link falling back to wrong video + zombie player leak
+
+Two real bugs found by reading `src/app/katube/shorts/[shortId]/page.tsx`
+directly (verified independently, not just taken on the founder's word):
+
+**1. Deep-linking to an older short silently opened the wrong one.**
+The feed only ever fetched the 50 most recent shorts
+(`.order('created_at', ...).limit(50)`). Opening a short older than
+that window made `list.findIndex(s => s.id === initialShortId)` return
+`-1`, and `Math.max(0, -1)` quietly fell back to index `0` — the
+newest short, not the one the link pointed at, with nothing to
+indicate anything had gone wrong. Fixed by checking whether the
+requested short is present in the fetched 50; if not, fetching that
+one row individually and splicing it into the front of the list before
+computing `startIdx`, so any existing, non-deleted short now opens
+correctly regardless of how old it is.
+
+**2. Player instances for scrolled-away shorts were never cleaned up.**
+Only shorts within `NEAR_WINDOW_BACK..NEAR_WINDOW_FORWARD` of the
+active index keep a mounted `<iframe>` (see the render's `isNear`
+check) — but the matching `YT.Player` object in `playerRefs` stayed
+there forever once created, for the whole session. `syncPlayers`
+iterated *every* key in `playerRefs` on each active-index change,
+including these "zombies" whose iframe was long gone from the DOM.
+Calling a method on one can throw (it's posting into a contentWindow
+that no longer exists), and since `sendPlayerCommand` wasn't
+try/catch-wrapped, one bad zombie could abort the rest of that pass's
+play/pause/mute commands for genuinely live neighbors — visible as
+playback control getting flakier the more someone scrolled. Fixed two
+ways: (a) a new cleanup effect that runs on `activeIndex` change,
+`destroy()`s and deletes any player/iframe ref that's fallen outside
+the near window (and clears its `loadedIdx` entry so the thumbnail
+placeholder correctly reappears if that short is scrolled back into
+view later), and (b) `sendPlayerCommand` now wraps its player-method
+calls in try/catch so a still-undiscovered edge case can't cascade into
+breaking commands meant for other players.
+
+Extracted the near-window math (`idx - activeIndex` between -1 and +4)
+into a shared `isNearIndex()` helper used by both the render's mount
+check and the new cleanup effect — previously duplicated as inline
+magic numbers in one place, which is exactly how they could've drifted
+out of sync with each other in the first place.

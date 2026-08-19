@@ -8,6 +8,18 @@ import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users, Home, Zap, Flame, PlusSquare, ExternalLink, X, Info, Play, Search, MoreVertical, UserCircle } from 'lucide-react';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
 
+// Which shorts stay mounted around the active one — the active short plus
+// one short back and four forward, so fast multi-swipes still land on an
+// iframe that's already begun loading. Shared as constants (rather than
+// duplicated magic numbers in the render window check and the player
+// cleanup effect below) so the two can never silently drift apart.
+const NEAR_WINDOW_BACK = -1;
+const NEAR_WINDOW_FORWARD = 4;
+function isNearIndex(idx: number, activeIdx: number): boolean {
+  const distance = idx - activeIdx;
+  return distance >= NEAR_WINDOW_BACK && distance <= NEAR_WINDOW_FORWARD;
+}
+
 // ── KaTube §7 — Fast Tap full-screen Shorts/Reels feed ──
 // Full-screen vertical snap-scroll feed for is_short=true videos, replacing
 // the old "click a Fast Tap card -> normal watch page" behavior. Matches
@@ -128,12 +140,29 @@ export default function KaTubeShortsFeedPage() {
   const sendPlayerCommand = useCallback((index: number, func: string, args: unknown[] = []) => {
     const player = playerRefs.current[index];
     if (player) {
-      if (func === 'playVideo') player.playVideo();
-      if (func === 'pauseVideo') player.pauseVideo();
-      if (func === 'seekTo') player.seekTo(Number(args[0]) || 0, Boolean(args[1]));
-      if (func === 'setPlaybackRate') player.setPlaybackRate(Number(args[0]) || 1);
-      if (func === 'mute') player.mute();
-      if (func === 'unMute') player.unMute();
+      // Bug fix: a player whose iframe has scrolled out of the mounted
+      // window (see isNearIndex/cleanup effect below) used to linger in
+      // playerRefs indefinitely and still get commands sent to it every
+      // time syncPlayers ran. Calling a method on a YT.Player instance
+      // whose iframe has already been removed from the DOM can throw
+      // (it postMessages into a contentWindow that no longer exists) —
+      // an uncaught throw here used to abort the rest of that
+      // Object.keys(...).forEach(...) pass in syncPlayers, silently
+      // dropping the play/pause/mute command meant for a still-live
+      // neighbor. Wrapping in try/catch keeps one stale player from
+      // breaking playback control for every other one.
+      try {
+        if (func === 'playVideo') player.playVideo();
+        if (func === 'pauseVideo') player.pauseVideo();
+        if (func === 'seekTo') player.seekTo(Number(args[0]) || 0, Boolean(args[1]));
+        if (func === 'setPlaybackRate') player.setPlaybackRate(Number(args[0]) || 1);
+        if (func === 'mute') player.mute();
+        if (func === 'unMute') player.unMute();
+      } catch {
+        // Player's iframe is gone (see cleanup effect) — drop the stale
+        // reference so future syncPlayers passes don't try it again.
+        delete playerRefs.current[index];
+      }
       return;
     }
 
@@ -245,6 +274,41 @@ export default function KaTubeShortsFeedPage() {
     return () => { cancelled = true; };
   }, [activeIndex, clearControlsTimer, markLoaded, muted, shorts]);
 
+  // Bug fix: as activeIndex advances, shorts fall out of the ± near
+  // window and their iframes unmount (see the isNear render check),
+  // but nothing was ever destroying the matching YT.Player instances
+  // in playerRefs — they piled up as "zombies" (a live JS object
+  // pointing at an iframe no longer in the DOM) for the entire session.
+  // syncPlayers below iterates every key in playerRefs on each active-
+  // short change, so the longer someone scrolled, the more zombie
+  // players it called methods on, each a chance to throw and (before
+  // the try/catch added to sendPlayerCommand above) derail that pass's
+  // remaining play/pause/mute commands. This effect actually destroys
+  // and forgets a player once its short leaves the mounted window, and
+  // clears its loadedIdx entry so the thumbnail placeholder reappears
+  // if the same short is scrolled back into view later (a re-created
+  // iframe fires onLoad again, but loadedIdx would otherwise still
+  // claim it was already loaded from before).
+  useEffect(() => {
+    Object.keys(playerRefs.current).forEach(key => {
+      const idx = Number(key);
+      if (isNearIndex(idx, activeIndex)) return;
+
+      const player = playerRefs.current[idx];
+      if (player) {
+        try { player.destroy(); } catch { /* iframe already gone — nothing to clean up on the object itself */ }
+      }
+      delete playerRefs.current[idx];
+      delete iframeRefs.current[idx];
+      setLoadedIdx(prev => {
+        if (!prev.has(idx)) return prev;
+        const next = new Set(prev);
+        next.delete(idx);
+        return next;
+      });
+    });
+  }, [activeIndex]);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
   }, []);
@@ -260,18 +324,46 @@ export default function KaTubeShortsFeedPage() {
 
       if (!rows || rows.length === 0) { setLoading(false); return; }
 
-      const creatorIds = [...new Set(rows.map(r => r.creator_id))];
+      // Bug fix: this feed only fetches the 50 most-recent shorts, but a
+      // deep link (e.g. shared from a creator's page, or opened from an
+      // older KaTube video) can point at a short that has since aged out
+      // of that window. findIndex on the 50-row list would then return
+      // -1, and Math.max(0, -1) silently fell back to index 0 — showing
+      // whatever short happens to be newest, not the one the link
+      // actually asked for, with no error or indication anything was
+      // wrong. If the requested short isn't in the fetched window, fetch
+      // it individually and splice it in at the front so it's always
+      // reachable by direct link regardless of the main feed's age.
+      const rowsIncludeTarget = !initialShortId || rows.some(r => r.id === initialShortId);
+      let allRows = rows;
+      if (!rowsIncludeTarget) {
+        const { data: targetRow } = await supabase
+          .from('videos')
+          .select('id, title, description, youtube_id, views, likes, creator_id, duration_seconds, created_at')
+          .eq('id', initialShortId)
+          .eq('is_short', true)
+          .maybeSingle();
+        if (targetRow) {
+          allRows = [targetRow, ...rows];
+        }
+      }
+
+      const creatorIds = [...new Set(allRows.map(r => r.creator_id))];
       const { data: creators } = await supabase
         .from('creator_profiles').select('user_id, username').in('user_id', creatorIds);
       const creatorMap = new Map((creators || []).map(c => [c.user_id, c.username]));
 
-      const list: Short[] = rows.map(r => ({
+      const list: Short[] = allRows.map(r => ({
         id: r.id, title: r.title, description: r.description ?? null, youtube_id: r.youtube_id,
         views: r.views, likes: r.likes, duration_seconds: r.duration_seconds ?? null, created_at: r.created_at,
         creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
       }));
       setShorts(list);
 
+      // No more silent fallback to index 0 for a genuinely missing/
+      // deleted short id — that case (targetRow also came back null
+      // above) still starts at the top of the feed, same as before, but
+      // every case where the short does exist now resolves correctly.
       const startIdx = Math.max(0, list.findIndex(s => s.id === initialShortId));
       setActiveIndex(startIdx);
       setLoading(false);
@@ -545,8 +637,7 @@ export default function KaTubeShortsFeedPage() {
           {shorts.map((short, idx) => {
             // The active player and four forward players are kept warm, so a
             // fast multi-swipe still reaches an iframe that has begun loading.
-            const distanceFromActive = idx - activeIndex;
-            const isNear = distanceFromActive >= -1 && distanceFromActive <= 4;
+            const isNear = isNearIndex(idx, activeIndex);
             const isActive = idx === activeIndex;
             const isBuffering = isActive && !loadedIdx.has(idx);
             return (
