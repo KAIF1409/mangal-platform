@@ -660,7 +660,15 @@ export default function KaTubePage() {
   const katubeVars = isLight ? katubeLightVars : katubeDarkVars;
 
   return (
-    <div data-theme={isLight ? 'light' : 'dark'} style={{ ...katubeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
+    <div data-theme={isLight ? 'light' : 'dark'} style={{ ...katubeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'clip' }}>
+      {/* overflowX: 'clip' not 'hidden' — same reasoning as globals.css:
+          setting only overflow-x forces the browser to compute overflow-y
+          as 'auto', which makes this page-root div a scroll container in
+          its own right. That breaks the sidebar's `position: sticky`
+          below (it starts tracking scroll on this div instead of the real
+          page/viewport), so it drifts/disappears instead of staying
+          pinned like YouTube's sidebar. `clip` blocks the same horizontal
+          overflow without flipping overflow-y's computed value. */}
 
       {/* ── Mobile compatibility (Aug 2026 fix) ──
           All of the responsive behavior below (nav padding/gap, hiding the
