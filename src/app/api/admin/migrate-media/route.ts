@@ -49,27 +49,34 @@ import { getMediaBucket } from '../../../lib/media/r2';
 let _supabaseAdmin: SupabaseClient | null = null;
 function getSupabaseAdmin(): SupabaseClient {
   if (!_supabaseAdmin) {
-    // Prefer reading straight off the Cloudflare binding (same approach
-    // r2.ts already uses successfully for MEDIA_BUCKET) over process.env.
-    // Found via live debugging: process.env.SUPABASE_SERVICE_ROLE_KEY read
-    // as undefined here even with the secret correctly set in the
-    // Cloudflare dashboard — process.env auto-population from bindings
-    // depends on the nodejs_compat_populate_process_env compat flag
-    // actually being in effect for this Worker, which wasn't reliable in
-    // practice. getCloudflareContext().env reads the binding directly, no
-    // dependency on that flag.
-    let cfEnv: Record<string, string | undefined> = {};
+    // §90 follow-up, round 2: the previous fix moved to
+    // getCloudflareContext().env on the theory that dashboard-set
+    // vars/secrets weren't reaching process.env — but per OpenNext's own
+    // docs (opennext.js.org/cloudflare/howtos/env-vars), dashboard
+    // "Runtime variables" (including Secrets) are meant to be read via
+    // process.env specifically, NOT getCloudflareContext().env (that's
+    // for real bindings like R2/KV/D1/AI, which is why r2.ts's approach
+    // works fine for MEDIA_BUCKET but doesn't generalize to secrets).
+    // So this reverts to process.env as primary. Since we've now been
+    // wrong twice guessing at *why* it's empty, this also dumps the
+    // visible key *names* (never values) from both sources into the
+    // thrown error so the real state is visible instead of guessed at
+    // again — delete this diagnostic once the real cause is confirmed.
+    let cfEnvKeys: string[] = [];
     try {
-      cfEnv = (getCloudflareContext().env ?? {}) as Record<string, string | undefined>;
-    } catch {
-      // Not running in a Worker context (e.g. local `next dev`) — fall
-      // through to process.env below.
+      cfEnvKeys = Object.keys(getCloudflareContext().env ?? {});
+    } catch (e) {
+      cfEnvKeys = [`<getCloudflareContext threw: ${e instanceof Error ? e.message : String(e)}>`];
     }
-    const url = cfEnv.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = cfEnv.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const processEnvKeys = Object.keys(process.env ?? {});
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) {
       throw new Error(
-        `Missing env var(s) in this Worker: ${!url ? 'NEXT_PUBLIC_SUPABASE_URL ' : ''}${!key ? 'SUPABASE_SERVICE_ROLE_KEY' : ''}`.trim()
+        `Missing env var(s) in this Worker: ${!url ? 'NEXT_PUBLIC_SUPABASE_URL ' : ''}${!key ? 'SUPABASE_SERVICE_ROLE_KEY' : ''}`.trim() +
+        ` | process.env keys seen (${processEnvKeys.length}): [${processEnvKeys.join(', ')}]` +
+        ` | getCloudflareContext().env keys seen (${cfEnvKeys.length}): [${cfEnvKeys.join(', ')}]`
       );
     }
     _supabaseAdmin = createClient(url, key);
