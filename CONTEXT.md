@@ -6573,3 +6573,28 @@ Cloudflare context (e.g. local `next dev`) degrades to "just serve from
 R2, don't edge-cache" instead of breaking the route.
 
 **Verified:** `tsc --noEmit` and `eslint` clean.
+
+## §93 — KaTube "Watch Together" room chat panel getting cut off
+
+Reported: the side chat panel on the Watch Together room page
+(`/katube/watch/[videoId]/room/[roomId]`) looked "half cut" and got worse
+when scrolling — on both mobile and desktop.
+
+**Root cause:** classic nested-flexbox bug. The messages list had
+`flex: 1, overflowY: 'auto'` to scroll internally inside the chat box's
+`maxHeight: 560px`, but a flex child's default `min-height` is `auto`
+(not `0`), so instead of shrinking and scrolling, it kept growing to fit
+all messages and pushed past the box's `maxHeight`. The outer box had no
+`overflow` set (defaults to visible), so that overflow content leaked out
+past the rounded border rather than being clipped or scrolled — looking
+like the panel was cut in half once enough messages/height built up.
+
+**Fixed:** outer chat box now has `overflow: 'hidden'` and an explicit
+`height: '560px'` (capped at `maxHeight: '70vh'` so it still shrinks
+sensibly on short mobile viewports) instead of relying on flex-stretch to
+match the video column's height. The messages list now has `minHeight: 0`
+alongside its existing `flex: 1, overflowY: 'auto'` — the standard fix
+that lets it actually shrink and scroll internally instead of overflowing
+its container.
+
+**Verified:** `tsc --noEmit` and `eslint` clean.

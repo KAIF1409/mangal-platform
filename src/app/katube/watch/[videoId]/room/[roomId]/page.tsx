@@ -394,14 +394,30 @@ export default function WatchRoomPage() {
           </div>
         </div>
 
+        {/* Room chat — fixed-height panel with its own internal scroll.
+            Bug fix: the messages list below has `flex: 1, overflowY: 'auto'`,
+            but a flex child's default `min-height` is `auto`, not `0` — so
+            instead of shrinking and scrolling internally, it was growing to
+            fit all messages and pushing past this box's `maxHeight`. Since
+            this box had no `overflow` set (defaults to visible), that extra
+            content just leaked out past the rounded border instead of being
+            clipped or scrolled — looking like the panel was "cut in half"
+            once enough messages/height built up, on both mobile (stacked
+            below the video) and desktop (beside it). Fixed with
+            `overflow: 'hidden'` here + `minHeight: 0` on the messages list,
+            which is the standard fix for nested flex + overflow-auto. Also
+            gave it an explicit `height` (not just `maxHeight`) so it's a
+            consistent, predictable box instead of stretch-matching the
+            video column's height, which varied by content above it. */}
         <div style={{
           flex: '1 1 300px', minWidth: '280px', display: 'flex', flexDirection: 'column',
-          border: '1px solid var(--border-color)', borderRadius: '12px', background: 'var(--bg-card)', maxHeight: '560px',
+          border: '1px solid var(--border-color)', borderRadius: '12px', background: 'var(--bg-card)',
+          height: '560px', maxHeight: '70vh', overflow: 'hidden',
         }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-color)', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-color)', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             <MessageCircle size={14} /> Room chat
           </div>
-          <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {messages.map(m => (
               <div key={m.id} style={{ fontSize: '12.5px' }}>
                 <span style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>{m.senderName}: </span>
@@ -410,7 +426,7 @@ export default function WatchRoomPage() {
             ))}
             {messages.length === 0 && <p style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Say hi 👋</p>}
           </div>
-          <div style={{ padding: '10px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+          <div style={{ padding: '10px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '8px', flexShrink: 0 }}>
             <input
               value={draft}
               onChange={e => setDraft(e.target.value)}
