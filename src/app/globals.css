@@ -75,7 +75,13 @@ body {
   margin: 0;
   padding: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  /* overflow-x: clip (not hidden) — setting only overflow-x makes browsers
+     force overflow-y to `auto`, turning <body> into its own scroll
+     container. That breaks position: sticky everywhere in the app
+     (e.g. the KaTube sidebar), since sticky needs the nearest scrolling
+     ancestor to be the real viewport, not body. `clip` still prevents
+     horizontal overflow without touching overflow-y's computed value. */
+  overflow-x: clip;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
