@@ -6518,3 +6518,37 @@ receiving new deploys — its last-modified timestamp lines up with the
 latest commit), but the shorter `mangal.*.workers.dev` URL §89 intended
 doesn't exist yet. Flagged for Kaif, not fixed automatically since it may
 need a dashboard-side rename rather than a code change.
+
+## §91 — Real root cause of §90's SUPABASE_SERVICE_ROLE_KEY "missing" bug: keep_vars
+
+Same error resurfaced after the §90 follow-up fix (getCloudflareContext().env
+swap) — confirmed the secret genuinely never reaches the Worker at all,
+neither via `process.env` nor `getCloudflareContext().env` (which only shows
+`AI`, `MEDIA_BUCKET`, `ASSETS` — exactly the three bindings declared in
+`wrangler.jsonc`, nothing dashboard-only).
+
+**Actual root cause:** this project deploys via Cloudflare's git-integrated
+"Workers Builds", which runs `wrangler deploy` on every push to main. Per
+Cloudflare's own docs, plain `wrangler deploy` overrides/wipes any
+dashboard-set Variables/Secrets that aren't declared in the Wrangler config,
+unless `keep_vars: true` is set. So every single push to main was silently
+wiping `SUPABASE_SERVICE_ROLE_KEY` (and would silently wipe any other
+dashboard-only secret) right after Kaif re-added it in the dashboard —
+explains why it looked "set correctly" in the dashboard but was never
+actually visible at runtime.
+
+**Fixed:** added `"keep_vars": true` to `wrangler.jsonc`.
+
+**Action needed post-deploy (not code):** because the secret was being wiped
+on every prior deploy, it may currently be gone from the live Worker. Once
+this deploy goes out, go to Cloudflare dashboard → Worker `mangal-platform`
+(the actually-deployed one, see §90's note on the name mismatch) → Settings
+→ Variables and Secrets → re-add `SUPABASE_SERVICE_ROLE_KEY` one more time.
+From this deploy onward it should survive future pushes.
+
+**Also carries forward from §90:** the same latent bug (routes reading
+`SUPABASE_SERVICE_ROLE_KEY`/`COLD_STORAGE_ENCRYPTION_KEY` via plain
+`process.env` instead of `getCloudflareContext().env`) in `notify-followers`,
+`delete-account`, `confirm-parent-consent`, `send-parent-consent`,
+`payments/webhook`, `export-data` — not yet fixed, still worth doing
+proactively.

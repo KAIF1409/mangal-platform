@@ -8,6 +8,19 @@
   "name": "mangal",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-01",
+  // §90 follow-up (this session): root cause of SUPABASE_SERVICE_ROLE_KEY
+  // reading as missing at runtime, even though the secret WAS set correctly
+  // in the Cloudflare dashboard. This project deploys via git-integrated
+  // "Workers Builds", which runs `wrangler deploy` on every push. Per
+  // Cloudflare docs, Wrangler overrides/wipes dashboard-set env vars and
+  // secrets on every deploy unless `keep_vars` is explicitly set — so every
+  // push to main was silently wiping the dashboard secret, and neither
+  // process.env nor getCloudflareContext().env ever saw it (confirmed:
+  // getCloudflareContext().env only showed AI, MEDIA_BUCKET, ASSETS — the
+  // three bindings actually declared below — nothing dashboard-only
+  // survived). This flag stops Wrangler from touching dashboard-managed
+  // vars/secrets on deploy.
+  "keep_vars": true,
   "compatibility_flags": [
     "nodejs_compat",
     // Explicit even though it's the default for compatibility_date >=
