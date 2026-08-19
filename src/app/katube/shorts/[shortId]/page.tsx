@@ -96,7 +96,7 @@ export default function KaTubeShortsFeedPage() {
   const [playback, setPlayback] = useState({ currentTime: 0, duration: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const playerContainerRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const iframeRefs = useRef<Record<number, HTMLIFrameElement | null>>({});
   const playerRefs = useRef<Record<number, YouTubePlayer | null>>({});
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const holdPointerRef = useRef<{ id: number; x: number; y: number } | null>(null);
@@ -192,7 +192,7 @@ export default function KaTubeShortsFeedPage() {
       const api = getYouTubeWindow().YT;
       if (!api) return;
 
-      Object.entries(playerContainerRefs.current).forEach(([key, element]) => {
+      Object.entries(iframeRefs.current).forEach(([key, element]) => {
         const index = Number(key);
         const short = shorts[index];
         if (!element || !short) return;
@@ -201,13 +201,11 @@ export default function KaTubeShortsFeedPage() {
         if (existing && document.contains(existing.getIframe())) return;
         existing?.destroy();
 
+        // Pass the iframe that is already on screen to YT.Player. This keeps
+        // the embed stable in React's DOM while exposing the real seek/time
+        // API; replacing a React-owned host <div> left the previous player
+        // instance disconnected, which is why the range stayed static.
         playerRefs.current[index] = new api.Player(element, {
-          width: '100%', height: '100%', videoId: short.youtube_id,
-          playerVars: {
-            autoplay: 0, controls: 0, disablekb: 1, fs: 0, loop: 1,
-            playlist: short.youtube_id, playsinline: 1, rel: 0,
-            origin: window.location.origin,
-          },
           events: {
             onReady: (event: { target: YouTubePlayer }) => {
               if (cancelled) return;
@@ -571,9 +569,12 @@ export default function KaTubeShortsFeedPage() {
                           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       )}
-                      <div
-                        ref={el => { playerContainerRefs.current[idx] = el; }}
-                        aria-label={short.title}
+                      <iframe
+                        ref={el => { iframeRefs.current[idx] = el; }}
+                        src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&disablekb=1&fs=0&enablejsapi=1&autoplay=0&mute=1&loop=1&playlist=${short.youtube_id}${typeof window === 'undefined' ? '' : `&origin=${encodeURIComponent(window.location.origin)}`}`}
+                        title={short.title}
+                        allow="accelerometer; autoplay; encrypted-media; gyroscope"
+                        onLoad={() => markLoaded(idx)}
                         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
                       />
                       {/* On phones, YouTube renders a title/channel strip at
