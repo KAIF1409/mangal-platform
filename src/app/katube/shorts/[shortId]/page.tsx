@@ -127,13 +127,22 @@ export default function KaTubeShortsFeedPage() {
 
   const sendPlayerCommand = useCallback((index: number, func: string, args: unknown[] = []) => {
     const player = playerRefs.current[index];
-    if (!player) return;
-    if (func === 'playVideo') player.playVideo();
-    if (func === 'pauseVideo') player.pauseVideo();
-    if (func === 'seekTo') player.seekTo(Number(args[0]) || 0, Boolean(args[1]));
-    if (func === 'setPlaybackRate') player.setPlaybackRate(Number(args[0]) || 1);
-    if (func === 'mute') player.mute();
-    if (func === 'unMute') player.unMute();
+    if (player) {
+      if (func === 'playVideo') player.playVideo();
+      if (func === 'pauseVideo') player.pauseVideo();
+      if (func === 'seekTo') player.seekTo(Number(args[0]) || 0, Boolean(args[1]));
+      if (func === 'setPlaybackRate') player.setPlaybackRate(Number(args[0]) || 1);
+      if (func === 'mute') player.mute();
+      if (func === 'unMute') player.unMute();
+      return;
+    }
+
+    // The API normally reaches ready state first. Retaining this fallback
+    // keeps clicks and drags functional even while that API is loading.
+    iframeRefs.current[index]?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'command', func, args }),
+      'https://www.youtube.com'
+    );
   }, []);
 
   // Keep several upcoming YouTube players mounted. Crucially, their embed URL
@@ -205,7 +214,7 @@ export default function KaTubeShortsFeedPage() {
         // the embed stable in React's DOM while exposing the real seek/time
         // API; replacing a React-owned host <div> left the previous player
         // instance disconnected, which is why the range stayed static.
-        playerRefs.current[index] = new api.Player(element, {
+        playerRefs.current[index] = new api.Player(element.id, {
           events: {
             onReady: (event: { target: YouTubePlayer }) => {
               if (cancelled) return;
@@ -571,6 +580,7 @@ export default function KaTubeShortsFeedPage() {
                       )}
                       <iframe
                         ref={el => { iframeRefs.current[idx] = el; }}
+                        id={`katube-short-player-${short.id}`}
                         src={`https://www.youtube.com/embed/${short.youtube_id}?rel=0&playsinline=1&controls=0&disablekb=1&fs=0&enablejsapi=1&autoplay=0&mute=1&loop=1&playlist=${short.youtube_id}${typeof window === 'undefined' ? '' : `&origin=${encodeURIComponent(window.location.origin)}`}`}
                         title={short.title}
                         allow="accelerometer; autoplay; encrypted-media; gyroscope"
