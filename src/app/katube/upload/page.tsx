@@ -75,6 +75,7 @@ export default function KaTubeUploadPage() {
 
   const [youtubeLink, setYoutubeLink] = useState('');
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [seriesId, setSeriesId] = useState('');
   const [isShort, setIsShort] = useState(false);
   const [category, setCategory] = useState('Trailers');
@@ -387,6 +388,22 @@ export default function KaTubeUploadPage() {
                 border: '1px solid var(--border-color)', background: 'var(--bg-card)',
                 color: 'var(--text-primary)', fontSize: '13.5px', marginBottom: '20px',
                 boxSizing: 'border-box',
+              }}
+            />
+
+            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
+              Description <span style={{ fontWeight: 500, color: 'var(--text-tertiary)' }}>(optional)</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Add a description for the KaTube Fast Tap details panel"
+              rows={3}
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: '10px',
+                border: '1px solid var(--border-color)', background: 'var(--bg-card)',
+                color: 'var(--text-primary)', fontSize: '13.5px', marginBottom: '20px',
+                boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit',
               }}
             />
 
