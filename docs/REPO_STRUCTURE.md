@@ -64,7 +64,7 @@ than kept flat once a folder passes ~10-15 files — which `lib/` and
 WebMangal, KaTube, and Kalpana Circle. Moving them in one shot with no way
 to run a full `next build` in this environment (Google Fonts fetch fails
 in the sandbox — noted in `CONTEXT.md`) is how you silently break the live
-Vercel deploy. Doing it in verifiable phases instead:
+Cloudflare Workers deploy. Doing it in verifiable phases instead:
 
 - **Phase A (done in this pass):** additive only, nothing moved —
   `.env.example`, CI workflow (`tsc --noEmit` + `eslint` on every push/PR

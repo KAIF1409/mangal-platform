@@ -121,6 +121,16 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the pre-commit checks, and
 [`docs/REPO_STRUCTURE.md`](docs/REPO_STRUCTURE.md) for how the codebase is
 organized.
 
+## Deployment
+
+Hosted on **Cloudflare Workers** (via [OpenNext](https://opennext.js.org/cloudflare)),
+not Vercel.
+
+```bash
+npm run preview   # opennextjs-cloudflare build + local preview
+npm run deploy     # opennextjs-cloudflare build + deploy to Cloudflare
+```
+
 ## Who built it
 
 Built solo — design, backend, and frontend all handled by one person —
