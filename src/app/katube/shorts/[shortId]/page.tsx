@@ -191,6 +191,21 @@ export default function KaTubeShortsFeedPage() {
 
     // The API normally reaches ready state first. Retaining this fallback
     // keeps clicks and drags functional even while that API is loading.
+    // Bug fix (§102): this used to fire unconditionally the moment there
+    // was no `player` yet, including in the brief window right after an
+    // iframe mounts but before it has actually navigated to a
+    // youtube.com document. A cross-frame postMessage() with an explicit
+    // targetOrigin only succeeds once the recipient window's real origin
+    // matches that origin — while the iframe is still on its initial
+    // blank document, it doesn't, so every one of these came back as a
+    // browser-logged "target origin ... does not match the recipient
+    // window's origin" warning. Gating on loadedIdxRef (mirroring
+    // loadedIdx, set by the iframe's own onLoad) means we only attempt
+    // this fallback once the iframe has actually loaded something —
+    // before that, there's nothing productive to send anyway, so
+    // dropping the command silently is strictly better than sending one
+    // guaranteed to be rejected.
+    if (!loadedIdxRef.current.has(index)) return;
     iframeRefs.current[index]?.contentWindow?.postMessage(
       JSON.stringify({ event: 'command', func, args }),
       'https://www.youtube.com'
@@ -201,8 +216,19 @@ export default function KaTubeShortsFeedPage() {
   // never changes when they become active; changing it would discard the warm
   // player and make every swipe fetch the same short a second time.
   const [loadedIdx, setLoadedIdx] = useState<Set<number>>(new Set());
+  // Bug fix (§102): ref mirror of loadedIdx so sendPlayerCommand (memoized
+  // with a stable, empty dependency array — it's called from hot paths
+  // like drag handlers and shouldn't be recreated every time a short
+  // finishes loading) can read the current loaded set without needing to
+  // close over the state value directly.
+  const loadedIdxRef = useRef<Set<number>>(new Set());
   const markLoaded = useCallback((idx: number) => {
-    setLoadedIdx(prev => (prev.has(idx) ? prev : new Set(prev).add(idx)));
+    setLoadedIdx(prev => {
+      if (prev.has(idx)) return prev;
+      const next = new Set(prev).add(idx);
+      loadedIdxRef.current = next;
+      return next;
+    });
   }, []);
 
   // Preconnect to YouTube's embed + thumbnail hosts so the very first

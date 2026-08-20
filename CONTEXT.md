@@ -6940,3 +6940,37 @@ the thumbnail underneath it. Fixed by giving the thumbnail an
 explicit `z-index` above the iframe's default stacking, so it
 actually covers the iframe (not just sits earlier in the DOM) until
 it's removed once `loadedIdx` has the index.
+
+## §102 — KaTube Shorts console triage: postMessage origin-mismatch warnings fixed, rest was browser extensions / ad blocker
+
+Founder sent a console screenshot with "6 errors, 4 warnings" and
+asked to fix "the console." Went through all of it individually
+rather than assuming it was all this app's bugs — most of it wasn't:
+
+- **4 warnings, `Failed to execute 'postMessage' on 'DOMWindow'...`**
+  — real, from this app. `sendPlayerCommand`'s fallback path (used
+  before a real `YT.Player` exists yet) was firing the instant there
+  was no player object, including in the brief window right after an
+  iframe mounts but before it has actually navigated to a
+  youtube.com document — a postMessage with an explicit targetOrigin
+  only succeeds once the recipient's real origin matches, so every
+  one of these was guaranteed to fail and get logged. Fixed by
+  gating the fallback on the iframe having already fired its own
+  `onLoad` (mirrored into a `loadedIdxRef` so the memoized
+  `sendPlayerCommand` callback doesn't need `loadedIdx` in its
+  dependency array) — before that point there's nothing productive
+  to send anyway, so the command is now just silently dropped instead
+  of sent-and-rejected.
+- **2 errors, `Uncaught ReferenceError: debounce is not defined` at
+  `isolated.js:457`** — not from this app. `isolated.js` is a content
+  script naming pattern from a browser extension running in an
+  "isolated world" (visible in the founder's tab strip — several
+  extension icons), not a file this codebase produces or serves.
+- **4 errors, blocked `GET` requests to `googleads.g.doubleclick.net`
+  / `static.doubleclick.net`** (`net::ERR_BLOCKED_BY_CLIENT`) — not a
+  bug at all: `ERR_BLOCKED_BY_CLIENT` specifically means the
+  founder's own ad blocker intercepted the request client-side before
+  it left the browser. These come from YouTube's embedded player
+  itself (ad-related calls are normal for any YouTube embed) and
+  disappear entirely with the ad blocker off; nothing in this
+  codebase requests those hosts.
