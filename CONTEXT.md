@@ -7151,3 +7151,51 @@ reference's channel-row + Join-button pattern.
 
 **Verified:** `tsc --noEmit` clean, `eslint` clean (same 2 pre-existing
 `<img>` warnings).
+
+## §108 — KaTube home: mobile drawer swipe-to-close + scroll-lock, decluttered overlap
+
+Founder sent two screen recordings: the mobile hamburger drawer on
+`/katube` not responding to swipe gestures (only tap-outside worked)
+and the background page scrolling behind it while open, plus a
+general "everything overlaps" complaint about the home page with a
+recorded YouTube-app session as the layout-language reference
+(theme/colors explicitly to stay as-is — KaTube's existing dark +
+orange).
+
+**Fixed (SidebarNav / KaTubePage in `app/katube/page.tsx`):**
+- Swipe-to-close on the drawer `<aside>` — touch handlers follow the
+  finger via `transform: translateX()` during a leftward drag,
+  commit-close past a 70px threshold, spring back open otherwise.
+  Same drag pattern as the Watch Together panel / K Circle share
+  sheet elsewhere in this app.
+- Body scroll lock (`overflow: hidden`) for the duration
+  `mobileDrawerOpen` is true — background page was visibly scrolling
+  behind the drawer/backdrop in the recording.
+- Sticky top nav pinned to its own GPU layer (`transform:
+  translateZ(0)` + `will-change: transform`) — the "overlap" visible
+  during a fast scroll was `position: sticky` + `backdrop-filter:
+  blur()` compositing lag on Android Chrome, the filter-pill row
+  poking out from under the nav for a frame before its blur repaint
+  caught up.
+- Removed a permanent dev-only placeholder note ("Subscribe, like,
+  and comment aren't built yet — that's the next step") that
+  rendered unconditionally on every load below the real content —
+  an internal engineering note that had leaked into production UI.
+- Small top padding added above the filter-pill row so it doesn't
+  sit flush against the hero text.
+
+**Not done yet:** a full structural redesign of the home feed to
+mirror the YouTube-app reference recording's section rhythm (Shorts
+shelf / Mix card / etc) — this pass scoped to the concrete,
+reproducible bugs shown in the KaTube recording itself per founder's
+"stop what I was doing, fix this" ask; layout-level redesign is the
+logical next pass.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on this
+file: 0 errors (same 3 pre-existing `<img>` LCP warnings, unrelated).
+`next build` currently fails in this sandbox on an unrelated missing
+`@opennextjs/cloudflare` install (declared in `package.json`, not
+present in `node_modules` here) — pre-existing gap from the
+in-progress Cloudflare/OpenNext migration, not caused by this change.
+Committed and pushed directly to `main` per founder's instruction —
+no branch/PR.
