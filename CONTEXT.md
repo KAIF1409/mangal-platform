@@ -7227,3 +7227,44 @@ structural gaps vs the reference.
 
 Verified: tsc --noEmit clean project-wide. eslint: 0 errors, same
 3 pre-existing <img> warnings. Pushed directly to main.
+
+## §110 — KaTube long-form watch page: desktop layout redesign (reference-matched, player+sidebar+recommended-grid)
+
+Founder shared a screenshot of a real YouTube desktop watch layout
+(player + right sidebar with title/description/channel row/action row/
+comments, full-width recommended grid below) and asked for the same
+layout on the long-form desktop watch page. Note: a parallel session
+had already reworked this page's channel-row/action-bar content
+(commit 3061f63 — avatar, "Join" button, split identity/action rows)
+before this pass started; that content is reused as-is here, just
+relocated into the new sidebar column rather than rebuilt.
+
+**What changed** (`app/katube/watch/[videoId]/page.tsx`):
+- Old layout: player + ALL info (title/meta/channel-row/actions/Review
+  Hub/comments) stacked in one wide left column; a narrow "Up next"
+  vertical list as the right column.
+- New layout, long-form only (`!video.isShort` — Shorts keep the
+  original single-column layout completely untouched): player (+
+  Autoplay toggle) alone on the left; title, a new expandable
+  description block ("…more"/"Show less" — `videos.description` wasn't
+  even being fetched on this page before), the existing channel-row +
+  action-icon row, Review Hub, and comments now live in a right sidebar
+  beside the player. Below both, a full-width **Recommended** grid
+  (reused `VideoGridCard`, same card component as Home/Trending/
+  Subscriptions) replaced the old narrow vertical list.
+- `related_videos` RPC mapping extended to also carry `created_at` and a
+  batched `series_id → title` lookup (same batching pattern as
+  commenter/creator username lookups elsewhere) so recommended cards can
+  show `basedOn` chips and real relative dates like every other grid
+  card in the app.
+- No separate mobile-specific branch needed: the existing flex-wrap
+  container naturally stacks player → sidebar → recommended-grid in DOM
+  order on narrow viewports, same effective stacking as before.
+- Removed the now-dead `.mangal-watch-upnext` CSS rule (targeted the old
+  narrow sidebar class, no longer used).
+
+**Verified:** `tsc --noEmit` clean, `eslint` clean (1 pre-existing
+`<img>` LCP warning only). Pulled + merged twice mid-session against two
+rounds of concurrent commits from another active session on this repo
+(home-page mobile redesign, then a DB security-hardening pass) — neither
+touched this file, both merged with zero conflicts.

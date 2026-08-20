@@ -9,7 +9,8 @@ import MangalLogo from '../../../components/shared/MangalLogo';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import { Users, ThumbsUp, BookOpen, Star, ArrowLeft, Share2, MessageCircle, X, ChevronUp } from 'lucide-react';
-import { AddToPlaylistButton } from '../../components/VideoGridCard';
+import { AddToPlaylistButton, timeAgo } from '../../components/VideoGridCard';
+import VideoGridCard from '../../components/VideoGridCard';
 import KaTubePlayer from '../../components/KaTubePlayer';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
 
@@ -21,9 +22,11 @@ import KatubeShareSheet from '../../components/KatubeShareSheet';
 interface WatchVideo {
   id: string;
   title: string;
+  description: string | null;
   youtube_id: string;
   views: number;
   likes: number;
+  created_at: string;
   creator: string;
   creatorId: string;
   creatorUsername: string | null;
@@ -66,35 +69,20 @@ interface RecommendedVideo {
   title: string;
   youtube_id: string;
   views: number;
+  created_at: string;
   creator: string;
+  basedOn: string | null;
 }
 
 function RecommendedCard({ video }: { video: RecommendedVideo }) {
   return (
-    <Link href={`/katube/watch/${video.id}`} style={{
-      display: 'flex', gap: '10px', textDecoration: 'none', padding: '6px',
-      borderRadius: '10px', transition: 'background 0.15s',
-    }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-card)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-    >
-      <div style={{ position: 'relative', width: '150px', flexShrink: 0, aspectRatio: '16/9', borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`https://img.youtube.com/vi/${video.youtube_id}/hqdefault.jpg`}
-          alt={video.title}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{
-          fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: '4px',
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        }}>{video.title}</div>
-        <div style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>{video.creator}</div>
-        <div style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>{video.views.toLocaleString()} views</div>
-      </div>
-    </Link>
+    <VideoGridCard
+      video={{
+        id: video.id, title: video.title, youtube_id: video.youtube_id,
+        views: video.views, created_at: video.created_at, creator: video.creator,
+        basedOn: video.basedOn,
+      }}
+    />
   );
 }
 
@@ -123,6 +111,10 @@ export default function KaTubeWatchPage() {
   const [commentsDrawerOpen, setCommentsDrawerOpen] = useState(false);
   const drawerDragStartY = useRef<number | null>(null);
   const [drawerDragOffset, setDrawerDragOffset] = useState(0);
+
+  // Desktop layout — sidebar description "…more"/"Show less" expand
+  // toggle, matching the reference layout (long-form desktop only).
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobileViewport(window.innerWidth <= 768);
@@ -204,7 +196,7 @@ export default function KaTubeWatchPage() {
     (async () => {
       const { data: row } = await supabase
         .from('videos')
-        .select('id, title, youtube_id, views, likes, creator_id, series_id, is_short')
+        .select('id, title, description, youtube_id, views, likes, created_at, creator_id, series_id, is_short')
         .eq('id', videoId)
         .single();
 
@@ -224,9 +216,11 @@ export default function KaTubeWatchPage() {
       setVideo({
         id: row.id,
         title: row.title,
+        description: row.description ?? null,
         youtube_id: row.youtube_id,
         views: row.views,
         likes: row.likes,
+        created_at: row.created_at,
         creator: creatorRes.data?.username || 'MANGAL Creator',
         creatorId: row.creator_id,
         creatorUsername: creatorRes.data?.username || null,
@@ -248,12 +242,19 @@ export default function KaTubeWatchPage() {
         });
         if (relatedRows && relatedRows.length > 0) {
           const relCreatorIds = [...new Set(relatedRows.map((r: { creator_id: string }) => r.creator_id))];
-          const { data: relCreators } = await supabase
-            .from('creator_profiles').select('user_id, username').in('user_id', relCreatorIds);
-          const relCreatorMap = new Map((relCreators || []).map(c => [c.user_id, c.username]));
-          setRecommended(relatedRows.map((r: { id: string; title: string; youtube_id: string; views: number; creator_id: string }) => ({
-            id: r.id, title: r.title, youtube_id: r.youtube_id, views: r.views,
+          const relSeriesIds = [...new Set(relatedRows.map((r: { series_id: string | null }) => r.series_id).filter(Boolean))] as string[];
+          const [relCreatorsRes, relSeriesRes] = await Promise.all([
+            supabase.from('creator_profiles').select('user_id, username').in('user_id', relCreatorIds),
+            relSeriesIds.length > 0
+              ? supabase.from('series').select('id, title').in('id', relSeriesIds)
+              : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+          ]);
+          const relCreatorMap = new Map((relCreatorsRes.data || []).map(c => [c.user_id, c.username]));
+          const relSeriesMap = new Map((relSeriesRes.data || []).map(s => [s.id, s.title]));
+          setRecommended(relatedRows.map((r: { id: string; title: string; youtube_id: string; views: number; creator_id: string; created_at: string; series_id: string | null }) => ({
+            id: r.id, title: r.title, youtube_id: r.youtube_id, views: r.views, created_at: r.created_at,
             creator: relCreatorMap.get(r.creator_id) || 'MANGAL Creator',
+            basedOn: r.series_id ? relSeriesMap.get(r.series_id) || null : null,
           })));
         }
       }
@@ -650,7 +651,6 @@ export default function KaTubeWatchPage() {
         @media (max-width: 768px) {
           .mangal-watch-comments-trigger { display: flex !important; }
           .mangal-watch-comments-inline { display: none !important; }
-          .mangal-watch-upnext { padding: 0 4px; }
         }
         @media (max-width: 480px) {
           .mangal-watch-channel-actions { gap: 10px !important; }
@@ -701,7 +701,13 @@ export default function KaTubeWatchPage() {
           </div>
         ) : (
           <>
-            {/* Left column — player + info */}
+            {/* Player column — for long-form (!video.isShort) this is now
+                JUST the player + autoplay toggle; title/description/
+                channel-row/actions/comments moved into the sidebar column
+                below, matching the reference desktop layout the founder
+                shared (player+sidebar side by side, full-width recommended
+                grid underneath). Shorts keep the original single-column
+                layout completely unchanged. */}
             <div style={{ flex: video.isShort ? undefined : '1 1 640px', minWidth: 0, width: video.isShort ? '100%' : undefined }}>
               {/* Player */}
               <div ref={playerWrapRef} style={{
@@ -768,7 +774,6 @@ export default function KaTubeWatchPage() {
                 </div>
               )}
 
-
               {video && (
                 <>
                   <KatubeShareSheet
@@ -787,123 +792,284 @@ export default function KaTubeWatchPage() {
                 </>
               )}
 
-              {/* Title + meta — moved above the channel/action rows, YouTube
-                  watch-page order (title, then views, then who-posted-it +
-                  the action bar). */}
-              <h1 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 900, margin: '18px 0 6px', letterSpacing: '-0.02em' }}>
-                {video.title}
-              </h1>
-              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
-                <span>{video.views.toLocaleString()} views</span>
-                {video.basedOn && (
-                  <>
-                    <span>·</span>
-                    <Link href={video.seriesId ? `/WebMangal/series/${video.seriesId}` : '#'} style={{
-                      fontSize: '11.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
-                      background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
-                      padding: '4px 11px', borderRadius: '20px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '5px',
-                    }}>
-                      <BookOpen size={13} /> Based on {video.basedOn}
-                    </Link>
-                  </>
-                )}
-              </div>
-
-              {/* Channel row (avatar + name + subscribers + Follow) on the
-                  left, action-icon row (Like, Share, Watch with Friends,
-                  Save, mobile Comments) on the right — same row on desktop,
-                  wraps to two rows on narrow screens. */}
-              <div className="mangal-watch-channel-actions" style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                flexWrap: 'wrap', gap: '12px', paddingBottom: '16px', marginBottom: '4px',
-                borderBottom: '1px solid var(--border-color)',
-              }}>
-                {/* Channel identity */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                  <Link
-                    href={video.creatorUsername ? `/katube/channel/${video.creatorUsername}` : '#'}
-                    style={{ flexShrink: 0, display: 'flex' }}
-                  >
-                    {video.creatorAvatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={video.creatorAvatar}
-                        alt={video.creator}
-                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', background: 'var(--bg-card)' }}
-                      />
-                    ) : (
-                      <div style={{
-                        width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-card)',
-                        border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '15px', fontWeight: 800, color: '#f97316', flexShrink: 0,
-                      }}>
-                        {video.creator.trim().charAt(0).toUpperCase() || 'M'}
-                      </div>
-                    )}
-                  </Link>
-                  <div style={{ minWidth: 0 }}>
-                    {video.creatorUsername ? (
-                      <Link href={`/katube/channel/${video.creatorUsername}`} style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', textDecoration: 'none', display: 'block' }}>
-                        {video.creator}
-                      </Link>
-                    ) : (
-                      <span style={{ fontWeight: 700, fontSize: '14px', display: 'block' }}>{video.creator}</span>
-                    )}
-                    {followerCount > 0 && (
-                      <span style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>
-                        {followerCount.toLocaleString()} subscriber{followerCount === 1 ? '' : 's'}
-                      </span>
+              {/* ── Shorts: everything below the player stays in this same
+                  single column, unchanged. ── */}
+              {video.isShort && (
+                <>
+                  <h1 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 900, margin: '18px 0 6px', letterSpacing: '-0.02em' }}>
+                    {video.title}
+                  </h1>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+                    <span>{video.views.toLocaleString()} views</span>
+                    {video.basedOn && (
+                      <>
+                        <span>·</span>
+                        <Link href={video.seriesId ? `/WebMangal/series/${video.seriesId}` : '#'} style={{
+                          fontSize: '11.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
+                          background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
+                          padding: '4px 11px', borderRadius: '20px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '5px',
+                        }}>
+                          <BookOpen size={13} /> Based on {video.basedOn}
+                        </Link>
+                      </>
                     )}
                   </div>
-                  {userId !== video.creatorId && (
-                    <button
-                      onClick={handleFollow}
-                      disabled={followBusy}
-                      style={{
-                        fontSize: '12.5px', fontWeight: 800,
-                        color: following ? 'var(--text-secondary)' : '#fff',
-                        background: following ? 'var(--bg-card)' : '#f97316',
-                        border: following ? '1px solid var(--border-color)' : '1px solid #f97316',
-                        borderRadius: '20px', padding: '8px 16px', cursor: followBusy ? 'default' : 'pointer',
-                        opacity: followBusy ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0,
-                      }}
-                    >
-                      {following ? 'Following' : 'Join'}
-                    </button>
+
+                  <div className="mangal-watch-channel-actions" style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    flexWrap: 'wrap', gap: '12px', paddingBottom: '16px', marginBottom: '4px',
+                    borderBottom: '1px solid var(--border-color)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                      <Link
+                        href={video.creatorUsername ? `/katube/channel/${video.creatorUsername}` : '#'}
+                        style={{ flexShrink: 0, display: 'flex' }}
+                      >
+                        {video.creatorAvatar ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={video.creatorAvatar}
+                            alt={video.creator}
+                            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', background: 'var(--bg-card)' }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-card)',
+                            border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '15px', fontWeight: 800, color: '#f97316', flexShrink: 0,
+                          }}>
+                            {video.creator.trim().charAt(0).toUpperCase() || 'M'}
+                          </div>
+                        )}
+                      </Link>
+                      <div style={{ minWidth: 0 }}>
+                        {video.creatorUsername ? (
+                          <Link href={`/katube/channel/${video.creatorUsername}`} style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', textDecoration: 'none', display: 'block' }}>
+                            {video.creator}
+                          </Link>
+                        ) : (
+                          <span style={{ fontWeight: 700, fontSize: '14px', display: 'block' }}>{video.creator}</span>
+                        )}
+                        {followerCount > 0 && (
+                          <span style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>
+                            {followerCount.toLocaleString()} subscriber{followerCount === 1 ? '' : 's'}
+                          </span>
+                        )}
+                      </div>
+                      {userId !== video.creatorId && (
+                        <button
+                          onClick={handleFollow}
+                          disabled={followBusy}
+                          style={{
+                            fontSize: '12.5px', fontWeight: 800,
+                            color: following ? 'var(--text-secondary)' : '#fff',
+                            background: following ? 'var(--bg-card)' : '#f97316',
+                            border: following ? '1px solid var(--border-color)' : '1px solid #f97316',
+                            borderRadius: '20px', padding: '8px 16px', cursor: followBusy ? 'default' : 'pointer',
+                            opacity: followBusy ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0,
+                          }}
+                        >
+                          {following ? 'Following' : 'Join'}
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={handleLike}
+                        disabled={likeBusy}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          fontSize: '13px', fontWeight: 700,
+                          color: liked ? '#f97316' : 'var(--text-secondary)',
+                          background: liked ? 'rgba(249,115,22,0.10)' : 'var(--bg-card)',
+                          border: liked ? '1px solid rgba(249,115,22,0.28)' : '1px solid var(--border-color)',
+                          borderRadius: '20px', padding: '9px 14px', cursor: likeBusy ? 'default' : 'pointer',
+                          opacity: likeBusy ? 0.6 : 1,
+                        }}
+                      >
+                        <ThumbsUp size={15} fill={liked ? '#f97316' : 'none'} /> {video.likes.toLocaleString()}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname); return; }
+                          setShareOpen(true);
+                        }}
+                        style={{
+                          fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
+                          background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px',
+                          padding: '9px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                        }}
+                      >
+                        <Share2 size={15} /> Share
+                      </button>
+                      {userId && <AddToPlaylistButton videoId={video.id} userId={userId} />}
+                      <button
+                        onClick={() => { setDrawerDragOffset(0); setCommentsDrawerOpen(true); }}
+                        className="mangal-watch-comments-trigger"
+                        style={{
+                          display: 'none', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
+                          background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px',
+                          padding: '9px 16px', cursor: 'pointer', alignItems: 'center', gap: '8px',
+                        }}
+                      >
+                        <MessageCircle size={15} /> {comments.length > 0 ? comments.length.toLocaleString() : ''} Comments
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mangal-watch-comments-inline" style={{ marginTop: '8px' }}>
+                    {commentsBody}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* ── Sidebar column — long-form desktop only, matching the
+                reference layout: title, views/date + expandable description,
+                channel row + action icons (unchanged from the identical
+                block used for Shorts above), Review Hub, then comments —
+                all stacked beside the player. On narrow viewports this
+                column wraps below the player naturally (the parent already
+                has flexWrap set), so mobile still gets a sensible
+                single-column stack without a separate mobile-specific
+                branch. ── */}
+            {!video.isShort && (
+              <div style={{ flex: '1 1 380px', maxWidth: '460px', minWidth: '300px' }}>
+                <h1 style={{ fontSize: 'clamp(17px, 2.4vw, 21px)', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
+                  {video.title}
+                </h1>
+
+                {/* Views/date + expandable description — reference's
+                    "3,3 Mio. Aufrufe · vor 10 Monaten" + "...mehr" pattern.
+                    `video.description` wasn't fetched/rendered anywhere on
+                    this page before this change. */}
+                <div style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px',
+                  padding: '10px 12px', marginBottom: '14px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: video.description ? '4px' : 0 }}>
+                    <span>{video.views.toLocaleString()} views · {timeAgo(video.created_at)}</span>
+                    {video.basedOn && (
+                      <Link href={video.seriesId ? `/WebMangal/series/${video.seriesId}` : '#'} style={{
+                        fontSize: '11px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
+                        background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
+                        padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px',
+                      }}>
+                        <BookOpen size={12} /> Based on {video.basedOn}
+                      </Link>
+                    )}
+                  </div>
+                  {video.description && (
+                    <>
+                      <div style={{
+                        fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                        ...(showFullDescription ? {} : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }),
+                      }}>
+                        {video.description}
+                      </div>
+                      <button
+                        onClick={() => setShowFullDescription(v => !v)}
+                        style={{ marginTop: '4px', background: 'none', border: 'none', padding: 0, color: 'var(--text-primary)', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                      >
+                        {showFullDescription ? 'Show less' : '…more'}
+                      </button>
+                    </>
                   )}
                 </div>
 
-                {/* Action icons */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={handleLike}
-                    disabled={likeBusy}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      fontSize: '13px', fontWeight: 700,
-                      color: liked ? '#f97316' : 'var(--text-secondary)',
-                      background: liked ? 'rgba(249,115,22,0.10)' : 'var(--bg-card)',
-                      border: liked ? '1px solid rgba(249,115,22,0.28)' : '1px solid var(--border-color)',
-                      borderRadius: '20px', padding: '9px 14px', cursor: likeBusy ? 'default' : 'pointer',
-                      opacity: likeBusy ? 0.6 : 1,
-                    }}
-                  >
-                    <ThumbsUp size={15} fill={liked ? '#f97316' : 'none'} /> {video.likes.toLocaleString()}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname); return; }
-                      setShareOpen(true);
-                    }}
-                    style={{
-                      fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
-                      background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px',
-                      padding: '9px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                    }}
-                  >
-                    <Share2 size={15} /> Share
-                  </button>
-                  {!video.isShort && (
+                {/* Channel row + action icons — same content/behavior as
+                    the Shorts block above (avatar, name, followers, Join,
+                    Like/Share/Watch with Friends/Save/mobile-Comments),
+                    just laid out in this sidebar column instead. */}
+                <div className="mangal-watch-channel-actions" style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  flexWrap: 'wrap', gap: '12px', paddingBottom: '16px', marginBottom: '4px',
+                  borderBottom: '1px solid var(--border-color)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    <Link
+                      href={video.creatorUsername ? `/katube/channel/${video.creatorUsername}` : '#'}
+                      style={{ flexShrink: 0, display: 'flex' }}
+                    >
+                      {video.creatorAvatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={video.creatorAvatar}
+                          alt={video.creator}
+                          style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', background: 'var(--bg-card)' }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-card)',
+                          border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '15px', fontWeight: 800, color: '#f97316', flexShrink: 0,
+                        }}>
+                          {video.creator.trim().charAt(0).toUpperCase() || 'M'}
+                        </div>
+                      )}
+                    </Link>
+                    <div style={{ minWidth: 0 }}>
+                      {video.creatorUsername ? (
+                        <Link href={`/katube/channel/${video.creatorUsername}`} style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', textDecoration: 'none', display: 'block' }}>
+                          {video.creator}
+                        </Link>
+                      ) : (
+                        <span style={{ fontWeight: 700, fontSize: '14px', display: 'block' }}>{video.creator}</span>
+                      )}
+                      {followerCount > 0 && (
+                        <span style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>
+                          {followerCount.toLocaleString()} subscriber{followerCount === 1 ? '' : 's'}
+                        </span>
+                      )}
+                    </div>
+                    {userId !== video.creatorId && (
+                      <button
+                        onClick={handleFollow}
+                        disabled={followBusy}
+                        style={{
+                          fontSize: '12.5px', fontWeight: 800,
+                          color: following ? 'var(--text-secondary)' : '#fff',
+                          background: following ? 'var(--bg-card)' : '#f97316',
+                          border: following ? '1px solid var(--border-color)' : '1px solid #f97316',
+                          borderRadius: '20px', padding: '8px 16px', cursor: followBusy ? 'default' : 'pointer',
+                          opacity: followBusy ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0,
+                        }}
+                      >
+                        {following ? 'Following' : 'Join'}
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={handleLike}
+                      disabled={likeBusy}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        fontSize: '13px', fontWeight: 700,
+                        color: liked ? '#f97316' : 'var(--text-secondary)',
+                        background: liked ? 'rgba(249,115,22,0.10)' : 'var(--bg-card)',
+                        border: liked ? '1px solid rgba(249,115,22,0.28)' : '1px solid var(--border-color)',
+                        borderRadius: '20px', padding: '9px 14px', cursor: likeBusy ? 'default' : 'pointer',
+                        opacity: likeBusy ? 0.6 : 1,
+                      }}
+                    >
+                      <ThumbsUp size={15} fill={liked ? '#f97316' : 'none'} /> {video.likes.toLocaleString()}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname); return; }
+                        setShareOpen(true);
+                      }}
+                      style={{
+                        fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
+                        background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px',
+                        padding: '9px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                      }}
+                    >
+                      <Share2 size={15} /> Share
+                    </button>
                     <button
                       onClick={() => {
                         if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname); return; }
@@ -917,134 +1083,136 @@ export default function KaTubeWatchPage() {
                     >
                       <Users size={15} /> Watch with Friends
                     </button>
-                  )}
-                  {userId && <AddToPlaylistButton videoId={video.id} userId={userId} />}
-                  {/* Comments-drawer trigger — mobile only (CSS-gated below).
-                      Desktop reads comments inline further down the page, so
-                      this pill stays hidden there. */}
-                  <button
-                    onClick={() => { setDrawerDragOffset(0); setCommentsDrawerOpen(true); }}
-                    className="mangal-watch-comments-trigger"
-                    style={{
-                      display: 'none', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
-                      background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px',
-                      padding: '9px 16px', cursor: 'pointer', alignItems: 'center', gap: '8px',
-                    }}
-                  >
-                    <MessageCircle size={15} /> {comments.length > 0 ? comments.length.toLocaleString() : ''} Comments
-                  </button>
+                    {userId && <AddToPlaylistButton videoId={video.id} userId={userId} />}
+                    <button
+                      onClick={() => { setDrawerDragOffset(0); setCommentsDrawerOpen(true); }}
+                      className="mangal-watch-comments-trigger"
+                      style={{
+                        display: 'none', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)',
+                        background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px',
+                        padding: '9px 16px', cursor: 'pointer', alignItems: 'center', gap: '8px',
+                      }}
+                    >
+                      <MessageCircle size={15} /> {comments.length > 0 ? comments.length.toLocaleString() : ''} Comments
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Review Hub — Step 27, accuracy-to-source rating */}
-              {video.seriesId && (
-                <div style={{
-                  marginTop: '8px', marginBottom: '20px', padding: '16px',
-                  borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-card)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
-                    <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <BookOpen size={14} /> Review Hub — accuracy to source
-                    </h2>
-                    {accuracyReviews.length > 0 && (
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <Star size={12} fill="#f97316" stroke="none" /> {(accuracyReviews.reduce((s, r) => s + r.stars, 0) / accuracyReviews.length).toFixed(1)} avg
-                        {' · '}{accuracyReviews.length.toLocaleString()} {accuracyReviews.length === 1 ? 'review' : 'reviews'}
-                      </span>
-                    )}
-                  </div>
-
-                  <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 12px' }}>
-                    How well does this adaptation match {video.basedOn ? `“${video.basedOn}”` : 'the source novel'}?
-                  </p>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
-                    {[1, 2, 3, 4, 5].map(n => (
-                      <button
-                        key={n}
-                        onClick={() => userId ? setMyStars(n) : (setPostLoginRedirect(window.location.pathname), window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname))}
-                        onMouseEnter={() => setHoverStars(n)}
-                        onMouseLeave={() => setHoverStars(0)}
-                        aria-label={`${n} star${n > 1 ? 's' : ''}`}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
-                          display: 'flex', lineHeight: 1,
-                          color: (hoverStars || myStars) >= n ? '#f97316' : 'var(--border-color)',
-                        }}
-                      ><Star size={22} fill={(hoverStars || myStars) >= n ? '#f97316' : 'none'} /></button>
-                    ))}
-                  </div>
-
-                  {myStars > 0 && (
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '4px' }}>
-                      <input
-                        value={myReviewText}
-                        onChange={e => setMyReviewText(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' && !accuracyBusy) handleAccuracySubmit(); }}
-                        placeholder="Optional: what did the adaptation get right or wrong?"
-                        disabled={accuracyBusy}
-                        style={{
-                          flex: 1, minWidth: 0, padding: '9px 14px', borderRadius: '20px',
-                          border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
-                          color: 'var(--text-primary)', fontSize: '12.5px', outline: 'none',
-                        }}
-                      />
-                      <button
-                        onClick={handleAccuracySubmit}
-                        disabled={accuracyBusy}
-                        style={{
-                          fontSize: '12px', fontWeight: 700, color: '#fff', background: '#f97316',
-                          border: 'none', borderRadius: '20px', padding: '0 16px', cursor: 'pointer',
-                          opacity: accuracyBusy ? 0.5 : 1, flexShrink: 0,
-                        }}
-                      >
-                        {accuracyReviews.some(r => r.reviewer_id === userId) ? 'Update' : 'Submit'}
-                      </button>
+                {/* Review Hub — Step 27, accuracy-to-source rating */}
+                {video.seriesId && (
+                  <div style={{
+                    marginTop: '8px', marginBottom: '20px', padding: '16px',
+                    borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-card)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                      <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <BookOpen size={14} /> Review Hub — accuracy to source
+                      </h2>
+                      {accuracyReviews.length > 0 && (
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Star size={12} fill="#f97316" stroke="none" /> {(accuracyReviews.reduce((s, r) => s + r.stars, 0) / accuracyReviews.length).toFixed(1)} avg
+                          {' · '}{accuracyReviews.length.toLocaleString()} {accuracyReviews.length === 1 ? 'review' : 'reviews'}
+                        </span>
+                      )}
                     </div>
-                  )}
 
-                  {!accuracyLoading && accuracyReviews.filter(r => r.review_text).length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
-                      {accuracyReviews.filter(r => r.review_text).map(r => (
-                        <div key={r.id}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.reviewerName}</span>
-                            <span style={{ fontSize: '11px', color: '#f97316', display: 'inline-flex', gap: '1px' }}>
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} size={11} fill={i < r.stars ? '#f97316' : 'none'} stroke={i < r.stars ? 'none' : '#f97316'} />
-                              ))}
-                            </span>
-                          </div>
-                          <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, wordBreak: 'break-word' }}>
-                            {r.review_text}
-                          </p>
-                        </div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 12px' }}>
+                      How well does this adaptation match {video.basedOn ? `“${video.basedOn}”` : 'the source novel'}?
+                    </p>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px' }}>
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <button
+                          key={n}
+                          onClick={() => userId ? setMyStars(n) : (setPostLoginRedirect(window.location.pathname), window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname))}
+                          onMouseEnter={() => setHoverStars(n)}
+                          onMouseLeave={() => setHoverStars(0)}
+                          aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                            display: 'flex', lineHeight: 1,
+                            color: (hoverStars || myStars) >= n ? '#f97316' : 'var(--border-color)',
+                          }}
+                        ><Star size={22} fill={(hoverStars || myStars) >= n ? '#f97316' : 'none'} /></button>
                       ))}
                     </div>
-                  )}
+
+                    {myStars > 0 && (
+                      <div style={{ display: 'flex', gap: '10px', marginBottom: '4px' }}>
+                        <input
+                          value={myReviewText}
+                          onChange={e => setMyReviewText(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter' && !accuracyBusy) handleAccuracySubmit(); }}
+                          placeholder="Optional: what did the adaptation get right or wrong?"
+                          disabled={accuracyBusy}
+                          style={{
+                            flex: 1, minWidth: 0, padding: '9px 14px', borderRadius: '20px',
+                            border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
+                            color: 'var(--text-primary)', fontSize: '12.5px', outline: 'none',
+                          }}
+                        />
+                        <button
+                          onClick={handleAccuracySubmit}
+                          disabled={accuracyBusy}
+                          style={{
+                            fontSize: '12px', fontWeight: 700, color: '#fff', background: '#f97316',
+                            border: 'none', borderRadius: '20px', padding: '0 16px', cursor: 'pointer',
+                            opacity: accuracyBusy ? 0.5 : 1, flexShrink: 0,
+                          }}
+                        >
+                          {accuracyReviews.some(r => r.reviewer_id === userId) ? 'Update' : 'Submit'}
+                        </button>
+                      </div>
+                    )}
+
+                    {!accuracyLoading && accuracyReviews.filter(r => r.review_text).length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                        {accuracyReviews.filter(r => r.review_text).map(r => (
+                          <div key={r.id}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.reviewerName}</span>
+                              <span style={{ fontSize: '11px', color: '#f97316', display: 'inline-flex', gap: '1px' }}>
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Star key={i} size={11} fill={i < r.stars ? '#f97316' : 'none'} stroke={i < r.stars ? 'none' : '#f97316'} />
+                                ))}
+                              </span>
+                            </div>
+                            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, wordBreak: 'break-word' }}>
+                              {r.review_text}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Comments — inline on desktop; hidden here on mobile
+                    (CSS above) in favor of the drawer triggered by the pill
+                    button in the action row above. */}
+                <div className="mangal-watch-comments-inline" style={{ marginTop: '8px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                  {commentsBody}
                 </div>
-              )}
-
-              {/* Comments — inline on desktop; hidden here on mobile
-                  (CSS above) in favor of the drawer triggered by the pill
-                  button near Share/Watch with Friends. */}
-              <div className="mangal-watch-comments-inline" style={{ marginTop: '8px' }}>
-                {commentsBody}
               </div>
-            </div>
+            )}
 
-            {/* Right column — tag-based recommendations, long-form videos only */}
+            {/* Recommended — full-width grid below player+sidebar, matching
+                the reference layout's 4-across grid under the fold (instead
+                of the old narrow vertical "Up next" list squeezed into a
+                sidebar). Reuses the same VideoGridCard used on Home/
+                Trending/Subscriptions so a recommended card looks identical
+                everywhere in KaTube. */}
             {!video.isShort && (
-              <div className="mangal-watch-upnext" style={{ flex: '1 1 320px', maxWidth: '400px', minWidth: '280px' }}>
-                <h2 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-secondary)', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                  Up next
+              <div style={{ flex: '1 1 100%', marginTop: '18px' }}>
+                <h2 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 14px' }}>
+                  Recommended
                 </h2>
                 {recommended.length === 0 ? (
                   <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', padding: '6px' }}>
                     No related videos yet — recommendations improve as more videos and series tags get added.
                   </p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '18px' }}>
                     {recommended.map(r => <RecommendedCard key={r.id} video={r} />)}
                   </div>
                 )}
