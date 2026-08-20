@@ -7069,3 +7069,58 @@ native play button supplied the missing gesture, which is why that
 - `isPlaying` now defaults to `false` instead of `true` (see §104's
   entry above), so even during any remaining startup gap, our own
   opaque cover is what's showing — never YouTube's native chrome.
+
+## §106 — KaTube Fast Tap: real ranking algorithm (DONE)
+
+**Founder-reported gap:** Fast Tap (the Shorts feed,
+`app/katube/shorts/[shortId]/page.tsx`) had no algorithm at all —
+the feed query was a plain `.order('created_at', { ascending: false
+}).limit(50)`, i.e. every viewer saw the identical 50 newest shorts
+in the identical reverse-chronological order every time. Researched
+how YouTube Shorts/Instagram Reels-style feeds actually rank (recency
++ engagement decay, engagement RATE not just raw counts, personalized
+follow/watch-history signals, creator diversity so the same creator
+never plays twice in a row) and built the closest honest equivalent
+out of signals this schema already has — no fabricated engagement
+data, no new tables.
+
+**New `app/katube/lib/shortsRanking.ts`:**
+- `freshnessDecayedScore()` — reuses the exact same "hot" formula
+  already shipped on the Trending page (`trendingScore` in
+  `app/katube/trending/page.tsx`) for consistency across KaTube's
+  ranked surfaces: `(views + likes*3) / (ageHours+2)^1.3`.
+- `engagementRate()` — likes-per-view, confidence-scaled by view count
+  (ramps to full trust by ~25 views) so a 1-view/1-like short can't
+  outrank a short with thousands of real engagements on a fluke.
+- Followed-creator boost (×1.6) for signed-in viewers, via
+  `creator_follows` — falls away entirely when signed out rather than
+  faking personalization with no data.
+- Session "already seen" de-prioritization (×0.35, not a hard
+  exclude) via `markShortSeen()`/`sessionStorage` — a short scrolled
+  past this session sinks instead of replaying at the top on reload.
+- Greedy creator-diversity re-ordering pass after scoring — walks the
+  ranked list and, for each slot, picks the best-scored remaining
+  short whose creator hasn't appeared in the last `diversityWindow`
+  (default 3) picks; falls back to the best remaining short if every
+  candidate would violate the window, so diversity never shortens the
+  feed.
+
+**Wired into the shorts page:**
+- Pool widened from `limit(50)` to `limit(150)` so there's real
+  material for the algorithm to work with (still one cheap indexed
+  query).
+- Viewer's `creator_follows` fetched inline in the same effect (not
+  read from the separate `userId` state, since the two effects have
+  no guaranteed ordering — ranking needs follows on the very first
+  pass).
+- `rankShorts()` replaces the raw `.order()` result before `setShorts`.
+  A direct-link target short (`initialShortId`) isn't force-pinned to
+  the front — `startIdx` finds it by id wherever the algorithm ranked
+  it, so a shared link still always opens on the right short.
+- `markShortSeen()` called on the short being scrolled AWAY from
+  (existing `lastActiveIndexRef` change-detection effect), not the
+  newly active one — arriving isn't the same as having watched past it.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on both
+touched/new files: 0 errors (same 2 pre-existing `<img>` LCP warnings
+already documented in this file, unrelated to this change).

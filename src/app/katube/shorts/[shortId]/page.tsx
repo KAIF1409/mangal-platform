@@ -7,6 +7,7 @@ import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import { Heart, MessageCircle, Share2, VolumeX, Volume2, ArrowLeft, Users, Home, Zap, Flame, PlusSquare, ExternalLink, X, Info, Play, Search, MoreVertical, UserCircle } from 'lucide-react';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
+import { rankShorts, markShortSeen } from '../../lib/shortsRanking';
 
 // Which shorts stay mounted around the active one — the active short plus
 // one short back and four forward, so fast multi-swipes still land on an
@@ -42,6 +43,7 @@ interface Short {
   views: number;
   likes: number;
   creator: string;
+  creator_id: string;
   description: string | null;
   duration_seconds: number | null;
   created_at: string;
@@ -62,6 +64,7 @@ interface YouTubePlayer {
   unMute: () => void;
   getCurrentTime: () => number;
   getDuration: () => number;
+  getPlayerState: () => number;
   getIframe: () => HTMLIFrameElement;
   destroy: () => void;
 }
@@ -508,12 +511,18 @@ export default function KaTubeShortsFeedPage() {
 
   useEffect(() => {
     (async () => {
+      // Bug fix / feature: this used to be a plain `.limit(50)` reverse-
+      // chronological query with no ranking pass at all — every viewer
+      // saw the identical 50 newest shorts in the identical order. Pool
+      // widened to 150 so there's real material for the ranking algorithm
+      // (app/katube/lib/shortsRanking.ts) below to actually work with —
+      // still one cheap indexed query, not a meaningfully heavier fetch.
       const { data: rows } = await supabase
         .from('videos')
         .select('id, title, description, youtube_id, views, likes, creator_id, duration_seconds, created_at')
         .eq('is_short', true)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(150);
 
       if (!rows || rows.length === 0) { setLoading(false); return; }
 
@@ -546,18 +555,45 @@ export default function KaTubeShortsFeedPage() {
         .from('creator_profiles').select('user_id, username').in('user_id', creatorIds);
       const creatorMap = new Map((creators || []).map(c => [c.user_id, c.username]));
 
-      const list: Short[] = allRows.map(r => ({
+      // Fetched directly here (not read from the `userId` state set by the
+      // separate auth effect above) since the two effects have no
+      // guaranteed ordering — the feed ranking below needs the viewer's
+      // follows available on this very first pass, not on a possible
+      // second render after `userId` happens to resolve.
+      const { data: authData } = await supabase.auth.getUser();
+      const viewerId = authData.user?.id ?? null;
+      let followedCreatorIds: Set<string> | undefined;
+      if (viewerId) {
+        const { data: follows } = await supabase
+          .from('creator_follows').select('creator_id').eq('follower_id', viewerId);
+        followedCreatorIds = new Set((follows || []).map(f => f.creator_id));
+      }
+
+      const unranked: Short[] = allRows.map(r => ({
         id: r.id, title: r.title, description: r.description ?? null, youtube_id: r.youtube_id,
         views: r.views, likes: r.likes, duration_seconds: r.duration_seconds ?? null, created_at: r.created_at,
-        creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
+        creator: creatorMap.get(r.creator_id) || 'MANGAL Creator', creator_id: r.creator_id,
       }));
+
+      // KaTube Fast Tap ranking pass — see app/katube/lib/shortsRanking.ts
+      // for the full signal breakdown (freshness-decayed engagement,
+      // engagement rate, followed-creator boost, session "already seen"
+      // de-prioritization, creator-diversity re-ordering). A direct-link
+      // target short (initialShortId) is exempt from re-ordering relative
+      // to itself — it isn't moved to the front, the algorithm just ranks
+      // around it — since `startIdx` below finds it by id wherever it
+      // lands, so a shared link always opens on the intended short
+      // regardless of where the algorithm would otherwise rank it.
+      const list = rankShorts(unranked, { followedCreatorIds });
       setShorts(list);
 
       // No more silent fallback to index 0 for a genuinely missing/
       // deleted short id — that case (targetRow also came back null
       // above) still starts at the top of the feed, same as before, but
       // every case where the short does exist now resolves correctly.
-      const startIdx = Math.max(0, list.findIndex(s => s.id === initialShortId));
+      const startIdx = initialShortId
+        ? Math.max(0, list.findIndex(s => s.id === initialShortId))
+        : 0;
       setActiveIndex(startIdx);
       setLoading(false);
     })();
@@ -617,6 +653,16 @@ export default function KaTubeShortsFeedPage() {
   // prevents a previously watched, still-mounted iframe from resuming midway.
   useEffect(() => {
     if (lastActiveIndexRef.current === activeIndex) return;
+    // Ranking feature: the short being scrolled away FROM counts as
+    // "seen this session" — feeds it into shortsRanking's de-
+    // prioritization so a reload of Fast Tap doesn't just replay the
+    // same clips at the top again. Only the previous short (not the new
+    // active one) is marked — arriving at a short isn't the same as
+    // having actually scrolled past it.
+    if (lastActiveIndexRef.current !== null) {
+      const previousShort = shorts[lastActiveIndexRef.current];
+      if (previousShort) markShortSeen(previousShort.id);
+    }
     lastActiveIndexRef.current = activeIndex;
     setPlayback({ currentTime: 0, duration: shorts[activeIndex]?.duration_seconds ?? 0 });
     sendPlayerCommand(activeIndex, 'seekTo', [0, true]);
