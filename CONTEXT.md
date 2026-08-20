@@ -7199,3 +7199,31 @@ present in `node_modules` here) — pre-existing gap from the
 in-progress Cloudflare/OpenNext migration, not caused by this change.
 Committed and pushed directly to `main` per founder's instruction —
 no branch/PR.
+
+## §109 — KaTube home: mobile redesign toward YouTube-app reference
+
+Continuation of §108. Founder's reference recording (YouTube mobile
+web) goes straight from the nav into a horizontal chip row, then
+Shorts, then the feed — no hero block, and every filter control
+lives in one scrollable strip. Theme/colors untouched (still
+KaTube's existing dark + #f97316 orange).
+
+- Hero ("AI-Anime, Made by MANGAL Creators" + paragraph) hidden on
+  mobile only (.katube-hero, display:none under 768px) — was
+  pushing all real content down the fold and contributing to the
+  "everything overlaps" complaint on the smallest screens. Kept on
+  desktop.
+- "Filters" (duration/upload-date) toggle, previously its own
+  full-width row under the Popular/New/Rankings/Categories/Tools
+  chips, folded into that same horizontal scroll strip as its last
+  item — matches the reference's single scrollable filter row.
+  Same state/behavior, just relocated; removed the now-dead
+  duplicate block.
+
+Not done: Shorts-shelf/Mix-card visual treatment beyond what
+already existed (Fast Tap already matches this reasonably well) —
+scoped this pass to hero + filter-row layout, the two clearest
+structural gaps vs the reference.
+
+Verified: tsc --noEmit clean project-wide. eslint: 0 errors, same
+3 pre-existing <img> warnings. Pushed directly to main.
