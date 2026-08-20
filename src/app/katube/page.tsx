@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type TouchEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -224,6 +224,44 @@ function SidebarNav({
   // are now two independent, breakpoint-agnostic booleans (both default
   // to the same value on server and client, so there's nothing to
   // mismatch) — CSS decides which one actually matters at a given width.
+  // Swipe-to-close: drag the open drawer toward its hidden edge (left) to
+  // dismiss it, matching the standard mobile-drawer gesture (same pattern
+  // as the Watch Together room panel and K Circle share sheet elsewhere in
+  // this app). Only active while `mobileOpen` — desktop's persistent
+  // sidebar never attaches these listeners. Tracks raw touch delta and
+  // follows the finger 1:1 via a transform override during the drag itself
+  // (translateX below its own CSS transition — see the ref-callback), then
+  // snaps closed past a 70px threshold or open again if released short of
+  // it, instead of committing to whichever direction the gesture ended in.
+  const touchStartX = useRef<number | null>(null);
+  const touchDeltaX = useRef(0);
+  const asideRef = useRef<HTMLElement | null>(null);
+
+  const handleTouchStart = (e: TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchDeltaX.current = 0;
+    if (asideRef.current) asideRef.current.style.transition = 'none';
+  };
+  const handleTouchMove = (e: TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    touchDeltaX.current = dx;
+    // Only follow leftward drags (closing direction) — a rightward drag
+    // while already fully open has nowhere further to go.
+    if (asideRef.current && dx < 0) {
+      asideRef.current.style.transform = `translateX(${dx}px)`;
+    }
+  };
+  const handleTouchEnd = () => {
+    if (asideRef.current) {
+      asideRef.current.style.transition = '';
+      asideRef.current.style.transform = '';
+    }
+    if (touchDeltaX.current < -70) onClose();
+    touchStartX.current = null;
+    touchDeltaX.current = 0;
+  };
+
   return (
     <>
       {/* Tap-to-close backdrop — CSS-only hidden above 768px, so this is
@@ -234,6 +272,10 @@ function SidebarNav({
         className={`katube-backdrop${mobileOpen ? ' katube-backdrop--open' : ''}`}
       />
       <aside
+        ref={asideRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         className={`katube-sidebar${!desktopOpen ? ' katube-sidebar--desktop-closed' : ''}${mobileOpen ? ' katube-sidebar--mobile-open' : ''}`}
       >
         <nav style={{ width: '240px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '18px', flex: 1, overflowY: 'auto' }}>
@@ -568,6 +610,21 @@ export default function KaTubePage() {
     })();
   }, []);
 
+  // Mobile drawer: lock background scroll while it's open. Previously the
+  // drawer/backdrop were just an overlay on top of the normal page — the
+  // page itself never stopped scrolling underneath, so a finger-drag that
+  // landed on the backdrop (or even the drawer's own empty space) scrolled
+  // the home feed behind it instead of just closing/doing nothing, which
+  // read as "the panel isn't really its own layer." `overflow: hidden` on
+  // the body is the standard fix; restored the instant the drawer closes
+  // (including unmount) so this never leaks into normal browsing.
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, [mobileDrawerOpen]);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -875,6 +932,14 @@ export default function KaTubePage() {
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         height: '64px', display: 'flex', alignItems: 'center',
+        // Forces the sticky nav onto its own GPU compositing layer.
+        // Without this, `position: sticky` + `backdrop-filter: blur()`
+        // together can lag a frame or two behind a fast fling on Android
+        // Chrome — the nav's paint catches up late, so for an instant the
+        // content scrolling underneath (the filter-pill row, right below
+        // it) visibly pokes out from behind/through it before the nav
+        // "wins" and covers it again. Reads as the pills and nav overlapping.
+        transform: 'translateZ(0)', willChange: 'transform',
       }}>
         <div className="katube-nav-left" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, minWidth: 0 }}>
           <button
@@ -1016,7 +1081,7 @@ export default function KaTubePage() {
           pill sub-row (GENRE_PILLS / TOOL_PILLS) that filter Slow tap by
           `category` / `ai_tool` instead of re-sorting. */}
       <div style={{
-        display: 'flex', gap: '8px', overflowX: 'auto', padding: '0 20px 8px',
+        display: 'flex', gap: '8px', overflowX: 'auto', padding: '4px 20px 8px',
         maxWidth: '1200px', margin: '0 auto',
       }}>
         {FILTER_PILLS.map((c, i) => (
@@ -1238,14 +1303,6 @@ export default function KaTubePage() {
           </p>
         </div>
       )}
-
-      {/* Placeholder note (engagement actions still pending) */}
-      <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
-        <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-          The video grid and Fast Tap row above are live Supabase data with a working watch page and upload
-          flow. Subscribe, like, and comment aren&apos;t built yet — that&apos;s the next step.
-        </p>
-      </div>
 
       {/* Reserves space at the bottom of the scrollable content on mobile so
           the fixed bottom tab bar never overlaps the last row of cards or
