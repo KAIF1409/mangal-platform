@@ -319,12 +319,29 @@ export default function KaTubeShortsFeedPage() {
             },
             onStateChange: (event: { data: number }) => {
               if (cancelled || index !== activeIndexRef.current) return;
-              const playing = event.data === api.PlayerState.PLAYING;
-              setIsPlaying(playing);
-              if (playing && !isSeekingRef.current) {
-                clearControlsTimer();
-                controlsTimerRef.current = setTimeout(() => setShowPlaybackControls(false), 3000);
-              } else if (!playing) {
+              // Bug fix (§103): this used to derive isPlaying from
+              // `event.data === PLAYING`, treating every *other* state as
+              // "not playing" — including BUFFERING (3), which YouTube
+              // fires routinely during completely normal playback (network
+              // blips, quality switches, and — since these are looped via
+              // `loop=1&playlist=...` — the brief re-buffer right around
+              // the loop point). Each of those BUFFERING events flipped
+              // isPlaying to false, which (since §101) pops our own
+              // pause-cover overlay up over the video even though playback
+              // itself never actually stopped — exactly "pause button
+              // dikh raha hai, video is not actually paused." isPlaying
+              // should only reflect a real, user-facing paused state now:
+              // it's set on PLAYING and PAUSED, and left alone (whatever
+              // it last was) for every other transient state.
+              const state = event.data;
+              if (state === api.PlayerState.PLAYING) {
+                setIsPlaying(true);
+                if (!isSeekingRef.current) {
+                  clearControlsTimer();
+                  controlsTimerRef.current = setTimeout(() => setShowPlaybackControls(false), 3000);
+                }
+              } else if (state === api.PlayerState.PAUSED) {
+                setIsPlaying(false);
                 clearControlsTimer();
                 setShowPlaybackControls(true);
               }

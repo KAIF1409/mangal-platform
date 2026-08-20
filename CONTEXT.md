@@ -6974,3 +6974,29 @@ rather than assuming it was all this app's bugs — most of it wasn't:
   itself (ad-related calls are normal for any YouTube embed) and
   disappear entirely with the ad blocker off; nothing in this
   codebase requests those hosts.
+
+## §103 — KaTube Shorts: our own §101 pause-cover overlay was popping up during normal playback
+
+Regression from §101's fix for YouTube's native pause-branding
+overlay. Founder screenshot: the pause icon overlay was visible while
+the video's own seek bar showed it partway through and still visually
+progressing — "pause button dikh raha hai, video is not actually
+paused."
+
+**Root cause:** `onStateChange` derived `isPlaying` from `event.data
+=== PlayerState.PLAYING`, treating *every other* YouTube player state
+as "not playing" — including `BUFFERING` (3), which YouTube fires
+routinely during completely normal playback (network blips, quality
+switches, and — since these are looped via `loop=1&playlist=...` —
+the brief re-buffer right around the loop point each time a short
+finishes and restarts). Every one of those flipped `isPlaying` to
+`false`, which — since §101 added the pause-cover overlay keyed
+directly off `!isPlaying` — popped the overlay up over the video even
+though playback itself never actually stopped.
+
+**Fix:** `isPlaying` now only changes on the two states that actually
+represent a real, user-facing play/pause transition — `PLAYING` sets
+it `true`, `PAUSED` sets it `false` — and is left untouched for every
+other transient state (`BUFFERING`, `UNSTARTED`, `CUED`, `ENDED`),
+same as before those events fired but without misreading them as a
+pause.
