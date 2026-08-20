@@ -848,6 +848,12 @@ export default function KaTubePage() {
             flex-shrink: 0;
           }
 
+          /* Hero block hidden on mobile — see the comment on .katube-hero's
+             JSX above (§109: home redesign toward the founder's YouTube-app
+             reference, which starts straight at the chip row, no hero). */
+          .katube-hero { display: none; }
+
+
           /* ── Bottom tab bar — YouTube-app style (Home / Shorts / Create /
              Subscriptions / You). Only below 768px; desktop keeps the
              sidebar as the primary nav and has no bottom bar. A spacer div
@@ -1059,8 +1065,15 @@ export default function KaTubePage() {
 
         <div style={{ flex: 1, minWidth: 0 }}>
 
-      {/* ── HERO STRIP ── */}
-      <div style={{
+      {/* ── HERO STRIP ──
+          Mobile: hidden entirely (see .katube-hero rule below) — the
+          YouTube-app reference the founder pointed to goes straight from
+          the nav into the chip row with no hero block at all, and this
+          section was one of the two things (along with the drawer bugs
+          fixed in §108) contributing to the "everything overlaps/cluttered"
+          complaint by pushing all real content further down the fold.
+          Desktop keeps it — there's room, and it's useful context there. */}
+      <div className="katube-hero" style={{
         padding: '36px 20px 24px', textAlign: 'center',
         background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgba(249,115,22,0.10) 0%, transparent 70%)',
       }}>
@@ -1073,13 +1086,17 @@ export default function KaTubePage() {
         </p>
       </div>
 
-      {/* Filter row — Popular / New / Rankings / Categories / Tools,
-          matching the founder's DramaBox/YouTube reference: sits right
-          under the hero, above Fast tap — not buried between the two
-          content sections. Popular = views desc, New = created_at desc,
-          Rankings = likes desc. Categories/Tools each reveal their own
-          pill sub-row (GENRE_PILLS / TOOL_PILLS) that filter Slow tap by
-          `category` / `ai_tool` instead of re-sorting. */}
+      {/* Filter row — Popular / New / Rankings / Categories / Tools, plus
+          the "Filters" (duration/upload-date) toggle folded into the same
+          horizontal scroll strip as its last item. Matches the founder's
+          YouTube-app reference exactly: one single scrollable chip row
+          holding every filter control, not a chip row followed by a
+          separate full-width "Filters" line underneath it (which is what
+          this looked like before, and read as an extra overlapping row).
+          Popular = views desc, New = created_at desc, Rankings = likes
+          desc. Categories/Tools each reveal their own pill sub-row
+          (GENRE_PILLS / TOOL_PILLS) that filter Slow tap by `category` /
+          `ai_tool` instead of re-sorting. */}
       <div style={{
         display: 'flex', gap: '8px', overflowX: 'auto', padding: '4px 20px 8px',
         maxWidth: '1200px', margin: '0 auto',
@@ -1096,6 +1113,18 @@ export default function KaTubePage() {
               cursor: 'pointer', whiteSpace: 'nowrap',
             }}>{c}</span>
         ))}
+        <span
+          onClick={() => setShowMoreFilters(v => !v)}
+          style={{
+            flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700,
+            padding: '7px 16px', borderRadius: '20px', cursor: 'pointer',
+            background: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
+            color: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? '#f97316' : 'var(--text-secondary)',
+            border: '1px solid var(--border-color)', whiteSpace: 'nowrap',
+          }}
+        >
+          Filters {(activeDurationBucket > 0 || activeUploadDateBucket > 0) && `(${[activeDurationBucket > 0, activeUploadDateBucket > 0].filter(Boolean).length})`}
+        </span>
       </div>
 
       {activeFilter === 3 && (
@@ -1138,25 +1167,6 @@ export default function KaTubePage() {
         </div>
       )}
 
-      {/* §28a — duration + upload date filters, "Better search + filters".
-          Kept as a collapsible panel behind a toggle chip rather than
-          always-visible pill rows (like Categories/Tools get), since these
-          two axes apply on top of whichever tab is active and would
-          otherwise add a permanent 2 extra rows to every view. */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
-        <span
-          onClick={() => setShowMoreFilters(v => !v)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 700,
-            padding: '6px 14px', borderRadius: '20px', cursor: 'pointer',
-            background: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? 'rgba(249,115,22,0.12)' : 'transparent',
-            color: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? '#f97316' : 'var(--text-tertiary)',
-            border: '1px solid var(--border-color)',
-          }}
-        >
-          Filters {(activeDurationBucket > 0 || activeUploadDateBucket > 0) && `(${[activeDurationBucket > 0, activeUploadDateBucket > 0].filter(Boolean).length})`}
-        </span>
-      </div>
       {showMoreFilters && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
