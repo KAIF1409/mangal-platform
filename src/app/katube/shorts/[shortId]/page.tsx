@@ -341,6 +341,28 @@ export default function KaTubeShortsFeedPage() {
         if (existing && document.contains(existing.getIframe())) return;
         existing?.destroy();
 
+        // Bug fix (§108): this whole effect re-runs on every activeIndex/
+        // mountedIndices/muted change (i.e. on basically every scroll),
+        // each run getting its own fresh `cancelled` closure. A short
+        // already playing hits the `document.contains(...)` check above
+        // and is correctly skipped — its YT.Player and event callbacks
+        // were built in an *earlier* run. But `onReady`/`onStateChange`
+        // below used to check that same-run `cancelled` on every single
+        // call, for as long as the player lived — and this effect's own
+        // cleanup (bottom of the function) sets that earlier run's
+        // `cancelled` to true the moment the effect re-runs, which
+        // (thanks to scrolling) is almost immediately. From then on
+        // `onStateChange` silently returned on every PLAYING event, so
+        // `isPlaying` never flipped true again: our opaque pause-cover
+        // (isActive && !isPlaying, a few hundred lines down) stayed up
+        // forever with its Play icon showing, even though the underlying
+        // player kept genuinely playing — audio audible, picture black.
+        // `cancelled` is only meaningful right here, guarding against
+        // constructing a *new* player after this run's cleanup already
+        // fired; it must not gate the long-lived callbacks of a player
+        // that's already alive and still correctly mounted.
+        if (cancelled) return;
+
         // Pass the iframe that is already on screen to YT.Player. This keeps
         // the embed stable in React's DOM while exposing the real seek/time
         // API; replacing a React-owned host <div> left the previous player
@@ -348,7 +370,6 @@ export default function KaTubeShortsFeedPage() {
         playerRefs.current[index] = new api.Player(element.id, {
           events: {
             onReady: (event: { target: YouTubePlayer }) => {
-              if (cancelled) return;
               playerRefs.current[index] = event.target;
               markLoaded(index);
               if (index === activeIndexRef.current) {
@@ -377,7 +398,7 @@ export default function KaTubeShortsFeedPage() {
               }
             },
             onStateChange: (event: { data: number }) => {
-              if (cancelled || index !== activeIndexRef.current) return;
+              if (index !== activeIndexRef.current) return;
               // Bug fix (§103): this used to derive isPlaying from
               // `event.data === PLAYING`, treating every *other* state as
               // "not playing" — including BUFFERING (3), which YouTube
@@ -841,7 +862,7 @@ export default function KaTubeShortsFeedPage() {
         .katube-shorts-mobile-header { top: 0; height: calc(92px + env(safe-area-inset-top)); padding: calc(12px + env(safe-area-inset-top)) 16px 12px; align-items: center; justify-content: space-between; }
         .katube-shorts-mobile-tabs { bottom: 0; height: calc(68px + env(safe-area-inset-bottom)); padding: 8px 18px calc(8px + env(safe-area-inset-bottom)); align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); }
         .katube-shorts-back { display: none !important; }
-        .katube-short-frame { width: min(100%, calc((100dvh - 192px) * 9 / 16)); height: calc(100% - 192px); margin: calc(92px + env(safe-area-inset-top)) auto calc(100px + env(safe-area-inset-bottom)); }
+        .katube-short-frame { width: min(100%, calc((100dvh - 208px) * 9 / 16)); height: calc(100% - 208px); margin: calc(92px + env(safe-area-inset-top)) auto calc(116px + env(safe-area-inset-bottom)); }
         .katube-short-caption { top: 100%; bottom: auto; right: 0; padding: 13px 14px 0; background: #000; }
         .katube-short-actions { bottom: 54px; }
         .katube-short-caption, .katube-short-actions { z-index: 30 !important; }
@@ -903,8 +924,15 @@ export default function KaTubeShortsFeedPage() {
 
       <header className="katube-shorts-mobile-chrome katube-shorts-mobile-header">
         <strong style={{ color: '#fff', fontSize: '24px', letterSpacing: '-0.04em' }}>Fast Tap</strong>
+        {/* Bug fix (§110): this used to also render a mute/unmute button
+            right here, duplicating the "Sound"/"Muted" toggle already in
+            the right-edge action rail lower down (see katube-short-actions
+            below) — two separate controls for the same on/off state, one
+            up top and one down by the video, which is exactly what read as
+            confusing/overlapping. The action rail's toggle is the one that
+            actually sits next to the video it controls, so it's the one
+            that stays. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '18px', color: '#fff' }}>
-          <button onClick={toggleMuted} aria-label={muted ? 'Unmute' : 'Mute'} style={{ padding: 0, border: 0, background: 'transparent', color: 'inherit' }}>{muted ? <VolumeX size={25} /> : <Volume2 size={25} />}</button>
           <Search size={27} />
           <MoreVertical size={27} />
         </div>
@@ -1191,7 +1219,21 @@ export default function KaTubeShortsFeedPage() {
                         </button>
                       )}
                     </div>
-                    <button onClick={() => { setActiveIndex(idx); setDetailsOpen(true); }} style={{ padding: 0, border: 0, background: 'transparent', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '12.5px', fontWeight: 700, lineHeight: 1.4 }}>
+                    {/* Bug fix (§109): unclamped, this could grow to as
+                        many lines as a long title needed. The frame's
+                        mobile bottom margin (katube-short-frame) reserves
+                        a fixed height for this whole caption block, so a
+                        long title pushed the block taller than that
+                        reserved space — spilling down behind the fixed
+                        bottom tab bar (lower z-index) instead of sitting
+                        cleanly above it, which read as the caption/Join
+                        row being "overlapped." Clamping to 2 lines keeps
+                        the block's height bounded and predictable. */}
+                    <button onClick={() => { setActiveIndex(idx); setDetailsOpen(true); }} style={{
+                      padding: 0, border: 0, background: 'transparent', color: '#fff', cursor: 'pointer',
+                      textAlign: 'left', fontSize: '12.5px', fontWeight: 700, lineHeight: 1.4,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>
                       {short.title} <Info size={13} style={{ verticalAlign: 'text-bottom' }} />
                     </button>
                   </div>
