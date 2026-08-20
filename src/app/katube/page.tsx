@@ -59,6 +59,7 @@ interface RealVideo {
   ai_tool: string;
   creator: string;
   creatorId: string;
+  creatorAvatar: string | null;
   basedOn: string | null;
   durationSeconds: number | null;
 }
@@ -111,6 +112,20 @@ const FAST_TAP_COLLAPSED_COUNT = 6;
 // Relative-time helper for the video card meta line ("creator · time ago"),
 // matching the founder's YouTube-template reference. Falls back to a plain
 // date once older than a week so it doesn't produce "52 weeks ago".
+// Formats duration_seconds into YouTube-style "M:SS" / "H:MM:SS" for the
+// thumbnail time badge (mobile home-feed redesign, reference: YouTube
+// mobile app card). Returns null when duration is unknown so the badge
+// simply doesn't render rather than showing "0:00".
+function formatDuration(totalSeconds: number | null): string | null {
+  if (totalSeconds == null || totalSeconds <= 0) return null;
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
+  const mm = h > 0 ? String(m).padStart(2, '0') : String(m);
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
 function timeAgo(dateStr: string): string {
   const diffMs = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diffMs / 60000);
@@ -385,8 +400,10 @@ function RealShortCard({ short }: { short: RealShort }) {
 function RealVideoCard({ video, winnerRank }: { video: RealVideo; winnerRank?: number }) {
   const [hover, setHover] = useState(false);
   const router = useRouter();
+  const duration = formatDuration(video.durationSeconds);
   return (
     <div
+      className="mangal-katube-video-card"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={() => router.push(`/katube/watch/${video.id}`)}
@@ -398,7 +415,7 @@ function RealVideoCard({ video, winnerRank }: { video: RealVideo; winnerRank?: n
         boxShadow: hover ? '0 12px 28px rgba(249,115,22,0.20)' : 'none',
       }}
     >
-      <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000' }}>
+      <div className="mangal-katube-video-thumb" style={{ position: 'relative', aspectRatio: '16/9', background: '#000' }}>
         <img
           src={`https://img.youtube.com/vi/${video.youtube_id}/hqdefault.jpg`}
           alt={video.title}
@@ -416,36 +433,66 @@ function RealVideoCard({ video, winnerRank }: { video: RealVideo; winnerRank?: n
             }}>▶️</div>
           </div>
         )}
+        {duration && (
+          <div style={{
+            position: 'absolute', bottom: '6px', right: '6px',
+            background: 'rgba(0,0,0,0.8)', color: '#fff', fontSize: '11px', fontWeight: 700,
+            padding: '2px 5px', borderRadius: '4px', letterSpacing: '0.01em',
+          }}>{duration}</div>
+        )}
         {winnerRank && (
-          <div style={{ position: 'absolute', bottom: '8px', right: '8px' }}>
+          <div style={{ position: 'absolute', bottom: '8px', left: '8px' }}>
             <MangalWeekBadge rank={winnerRank} />
           </div>
         )}
       </div>
-      <div style={{ padding: '12px 14px' }}>
-        <div style={{
-          fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)',
-          lineHeight: 1.35, marginBottom: '6px',
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        }}>{video.title}</div>
-        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-          {video.creator} · {timeAgo(video.created_at)}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-          {video.basedOn && (
-            <Link
-              href="#"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                fontSize: '10.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
-                background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
-                padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
-                display: 'inline-flex', alignItems: 'center', gap: '4px',
-              }}>
-              <BookOpen size={11} /> {video.basedOn}
-            </Link>
+      <div className="mangal-katube-video-info" style={{ padding: '12px 14px', display: 'flex', gap: '10px' }}>
+        {/* Avatar — hidden on desktop (existing card style has no avatar
+            slot there), shown mobile-only via CSS below to match the
+            YouTube-app home-feed card reference. */}
+        <div className="mangal-katube-video-avatar" style={{ display: 'none', flexShrink: 0 }}>
+          {video.creatorAvatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={video.creatorAvatar}
+              alt={video.creator}
+              style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+            />
+          ) : (
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-primary)',
+              border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '13px', fontWeight: 800, color: '#f97316',
+            }}>{video.creator.trim().charAt(0).toUpperCase() || 'M'}</div>
           )}
-          <span style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>{video.views} views</span>
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{
+            fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)',
+            lineHeight: 1.35, marginBottom: '6px',
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>{video.title}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+            {video.creator} · {video.views} views · {timeAgo(video.created_at)}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+            {video.basedOn && (
+              <Link
+                href="#"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  fontSize: '10.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
+                  background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
+                  padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                }}>
+                <BookOpen size={11} /> {video.basedOn}
+              </Link>
+            )}
+            {/* Desktop-only views line (mobile folds views into the meta
+                line above, next to the avatar, matching the reference). */}
+            <span className="mangal-katube-video-views-desktop" style={{ fontSize: '11.5px', color: 'var(--text-tertiary)' }}>{video.views} views</span>
+          </div>
         </div>
       </div>
     </div>
@@ -548,10 +595,11 @@ export default function KaTubePage() {
       const seriesIds = [...new Set(rows.map(r => r.series_id).filter(Boolean))];
 
       const [creatorsRes, seriesRes] = await Promise.all([
-        supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
+        supabase.from('creator_profiles').select('user_id, username, avatar_url').in('user_id', creatorIds),
         seriesIds.length ? supabase.from('series').select('id, title').in('id', seriesIds) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
       ]);
       const creatorMap = new Map((creatorsRes.data || []).map(c => [c.user_id, c.username]));
+      const creatorAvatarMap = new Map((creatorsRes.data || []).map(c => [c.user_id, c.avatar_url]));
       const seriesMap = new Map((seriesRes.data || []).map(s => [s.id, s.title]));
 
       setVideos(rows.map(r => ({
@@ -565,6 +613,7 @@ export default function KaTubePage() {
         ai_tool: r.ai_tool,
         creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
         creatorId: r.creator_id,
+        creatorAvatar: creatorAvatarMap.get(r.creator_id) || null,
         basedOn: r.series_id ? (seriesMap.get(r.series_id) || null) : null,
         durationSeconds: r.duration_seconds ?? null,
       })));
@@ -780,6 +829,38 @@ export default function KaTubePage() {
           .katube-sidebar.katube-sidebar--mobile-open {
             transform: translateX(0);
             box-shadow: 4px 0 24px rgba(0,0,0,0.35);
+          }
+
+          /* ── Mobile home-feed redesign (YouTube-app reference) ──
+             Mobile-only: turns the card-grid used on desktop into a
+             single-column, edge-to-edge feed — full-width thumbnail, small
+             circular creator avatar next to the title/meta line, and a
+             divider between cards instead of a bordered/rounded card.
+             Desktop keeps its existing rounded card-grid untouched; no new
+             colors introduced, still var(--bg-card)/var(--border-color)/
+             the existing #f97316 accent used throughout this page. */
+          .mangal-katube-video-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+          }
+          .mangal-katube-video-card {
+            border-radius: 0 !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-top: none !important;
+            border-bottom: 1px solid var(--border-color) !important;
+          }
+          .mangal-katube-video-thumb {
+            border-radius: 0 !important;
+          }
+          .mangal-katube-video-avatar {
+            display: block !important;
+          }
+          .mangal-katube-video-views-desktop {
+            display: none !important;
           }
         }
       `}</style>
@@ -1077,7 +1158,7 @@ export default function KaTubePage() {
       {activeSidebar === 'home' && newVoices.length > 0 && (
         <div style={{ maxWidth: '1200px', margin: '0 auto 28px', padding: '0 20px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 14px', letterSpacing: '-0.02em' }}>New Voices</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+          <div className="mangal-katube-video-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
             {newVoices.map(v => <RealVideoCard key={v.id} video={v} winnerRank={weeklyWinnerRanks.get(v.id)} />)}
           </div>
         </div>
@@ -1139,7 +1220,7 @@ export default function KaTubePage() {
               </p>
             </div>
           ) : (
-            <div style={{
+            <div className="mangal-katube-video-grid" style={{
               padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto',
               display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px',
             }}>
