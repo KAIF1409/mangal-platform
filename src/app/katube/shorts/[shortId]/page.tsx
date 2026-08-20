@@ -782,12 +782,30 @@ export default function KaTubeShortsFeedPage() {
                           player actually reports loaded — covers the gap
                           between mount and first frame so it never reads
                           as a blank black screen while genuinely waiting
-                          on a slow network. */}
+                          on a slow network.
+                          Bug fix (§101): "underneath" was true in z-order
+                          intent but not in practice — neither this <img>
+                          nor the <iframe> below it had an explicit
+                          z-index, so with both position:absolute and
+                          the iframe coming later in the DOM, the iframe
+                          painted on top of the thumbnail the instant it
+                          mounted (plain DOM-order stacking), regardless
+                          of whether it had actually loaded anything
+                          visible yet. For however long the iframe's
+                          document was blank/loading, that showed as a
+                          flat black rectangle instead of the thumbnail
+                          underneath it — exactly the "black screen on
+                          load" the founder reported on both phone and
+                          desktop. Giving the thumbnail a real z-index
+                          above the iframe's default stacking makes it
+                          actually cover the iframe, not just sit
+                          earlier in the DOM, until markLoaded removes
+                          it. */}
                       {!loadedIdx.has(idx) && (
                         <img
                           src={`https://img.youtube.com/vi/${short.youtube_id}/hqdefault.jpg`}
                           alt={short.title}
-                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 2 }}
                         />
                       )}
                       <iframe
@@ -809,6 +827,45 @@ export default function KaTubeShortsFeedPage() {
                           the one in the right rail, so hide this duplicate
                           source-player graphic without adding another action. */}
                       <div className="katube-youtube-bottom-share-shield" aria-hidden="true" style={{ position: 'absolute', left: 0, bottom: 0, width: '128px', height: '108px', zIndex: 20, background: 'transparent', pointerEvents: 'auto' }} />
+                      {/* Bug fix (§101): YouTube's embedded player shows its
+                          own branded overlay — title, channel name, native
+                          prev/play/next buttons, its own progress bar, and
+                          a "YouTube" logo — whenever playback is paused via
+                          the API, regardless of the controls=0 URL param.
+                          This is a long-standing, undocumented behavior of
+                          the IFrame Player with no URL parameter that turns
+                          it off, and it was bleeding straight through on
+                          top of KaTube's own UI every time a short was
+                          paused (visible clashing with our own title/
+                          caption text and duplicating our own seek bar and
+                          Share action with YouTube's native equivalents).
+                          Since that overlay is rendered *inside* the
+                          cross-origin iframe's own document, it can't be
+                          targeted or hidden with CSS from here — the only
+                          way to keep it off-screen is to cover the iframe
+                          entirely with an opaque layer of our own whenever
+                          paused, with our own pause icon standing in for
+                          the (also YouTube-branded) one it would otherwise
+                          show. */}
+                      {isActive && !isPlaying && (
+                        <div
+                          aria-hidden="true"
+                          style={{
+                            position: 'absolute', inset: 0, zIndex: 15,
+                            background: 'rgba(0,0,0,0.55)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            pointerEvents: 'none',
+                          }}
+                        >
+                          <div style={{
+                            width: '64px', height: '64px', borderRadius: '50%',
+                            background: 'rgba(0,0,0,0.4)', border: '1.5px solid rgba(255,255,255,0.7)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <Play size={26} color="#fff" fill="#fff" style={{ marginLeft: '3px' }} />
+                          </div>
+                        </div>
+                      )}
                       {isActive && (
                         <div
                           className="katube-short-gesture-layer"

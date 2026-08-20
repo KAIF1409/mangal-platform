@@ -6904,3 +6904,39 @@ an external system" case, and deferring by a microtask satisfies that
 without changing the ordering guarantee this fix depends on (the
 microtask callback still only runs after every `destroy()` call in
 that effect pass has already executed).
+
+## §101 — KaTube Shorts: YouTube's own branded pause overlay bleeding through + black screen while loading
+
+Founder sent two phone screenshots: one showing YouTube's own title,
+channel name ("ViralEditor"), native prev/play/next buttons, its own
+orange progress bar, and a "YouTube" logo all overlapping KaTube's UI
+(read as "phone compatibility not correct"); and a separate report
+that scrolling to the next short shows a plain black screen instead
+of that short's thumbnail while it loads, risking people scrolling
+away before it's ready.
+
+**Bug 1 — native branding overlay:** YouTube's embedded player shows
+this exact overlay whenever playback is paused via the JS/postMessage
+API, regardless of the `controls=0` URL param — a long-standing,
+undocumented IFrame Player behavior with no URL parameter that
+disables it. Because it's rendered inside the cross-origin iframe's
+own document, it can't be targeted or hidden with CSS from this page
+at all. Fixed by covering the iframe with an opaque overlay of our
+own (with our own centered pause icon) whenever `isActive &&
+!isPlaying`, so YouTube's native overlay never becomes visible in the
+first place — trading the frozen-frame preview on pause for a plain
+dark scrim, which is the standard trade-off other YouTube-embed-based
+shorts/reels clones make for exactly this reason.
+
+**Bug 2 — black screen while loading:** the loading thumbnail
+`<img>` and the `<iframe>` were both `position: absolute` with no
+explicit `z-index`, so despite the thumbnail being intended to sit
+"underneath" the iframe until `markLoaded` fires, plain DOM-order
+stacking meant the iframe — later in the DOM — painted over the
+thumbnail the instant it mounted, regardless of whether it had
+actually rendered anything visible yet. For as long as the iframe's
+document was blank, that showed as a flat black rectangle instead of
+the thumbnail underneath it. Fixed by giving the thumbnail an
+explicit `z-index` above the iframe's default stacking, so it
+actually covers the iframe (not just sits earlier in the DOM) until
+it's removed once `loadedIdx` has the index.
