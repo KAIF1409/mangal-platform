@@ -31,7 +31,13 @@ export async function sendParentConsentEmail(
     return { ok: false, error: 'Email service not configured' };
   }
 
-  const confirmUrl = `${appUrl}/parent-consent/${consentToken}`;
+  // Points straight at the server-side confirm route (GET, one click = one
+  // deliberate confirm action, then redirects to /parent-consent-result).
+  // Previously pointed at a client page that tried to update `profiles`
+  // directly with the anon key — that only ever worked because of an
+  // overly-permissive "by token" RLS policy which has since been removed,
+  // so that page was dead code sitting on a stale, unsafe pattern.
+  const confirmUrl = `${appUrl}/api/confirm-parent-consent?token=${consentToken}`;
 
   const html = `
 <!DOCTYPE html>

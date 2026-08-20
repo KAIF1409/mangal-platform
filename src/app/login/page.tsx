@@ -537,25 +537,31 @@ export default function AuthPage() {
       return;
     }
     const newUserId = signUpData.user?.id;
-    if (newUserId) {
-      const parentConsentToken = minorDetected ? crypto.randomUUID() : null;
-      await supabase
-        .from('profiles')
-        .update({
-          date_of_birth: dateOfBirth,
-          parent_email: minorDetected ? parentEmail : null,
-          parent_consent_status: minorDetected ? 'pending' : 'not_required',
-          parent_consent_token: parentConsentToken,
-          parent_consent_sent_at: minorDetected ? new Date().toISOString() : null,
-          account_active: !minorDetected,
-        })
-        .eq('id', newUserId);
-      if (minorDetected && parentConsentToken) {
-        await fetch('/api/send-parent-consent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ parentEmail, consentToken: parentConsentToken }),
-        });
+    // account_active / parent_consent_* / date_of_birth for this step are
+    // now set entirely server-side by /api/send-parent-consent — it re-
+    // derives minor status from the DOB itself and generates the consent
+    // token, rather than trusting anything computed in this client. See
+    // that route for why: the profile trigger locks these columns to
+    // service_role now, so a direct client update here would just be
+    // silently reverted anyway.
+    const accessToken = signUpData.session?.access_token
+      ?? (await supabase.auth.getSession()).data.session?.access_token;
+    if (newUserId && accessToken) {
+      const res = await fetch('/api/send-parent-consent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ dateOfBirth, parentEmail: minorDetected ? parentEmail : undefined }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? 'Could not complete signup. Please try again.');
+        setLoading(false);
+        return;
+      }
+      if (minorDetected) {
         setLoading(false);
         setMode('pending');
         return;
@@ -651,21 +657,26 @@ export default function AuthPage() {
     setLoading(true);
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) { setLoading(false); return; }
-    const token = minorDetected ? crypto.randomUUID() : null;
-    await supabase.from('profiles').update({
-      date_of_birth: dateOfBirth,
-      parent_email: minorDetected ? parentEmail : null,
-      parent_consent_status: minorDetected ? 'pending' : 'not_required',
-      parent_consent_token: token,
-      parent_consent_sent_at: minorDetected ? new Date().toISOString() : null,
-      account_active: !minorDetected,
-    }).eq('id', u.user.id);
-    if (minorDetected && token) {
-      await fetch('/api/send-parent-consent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ parentEmail, consentToken: token }),
-      });
+    // Same reasoning as handleRegister above: server derives minor status
+    // from dateOfBirth itself and owns account_active / parent_consent_*.
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) { setLoading(false); return; }
+    const res = await fetch('/api/send-parent-consent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ dateOfBirth, parentEmail: minorDetected ? parentEmail : undefined }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setDobError(body.error ?? 'Could not save date of birth. Please try again.');
+      setLoading(false);
+      return;
+    }
+    if (minorDetected) {
       setLoading(false); setMode('pending'); return;
     }
     setLoading(false); setMode('role');

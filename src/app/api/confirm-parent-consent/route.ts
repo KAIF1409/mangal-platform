@@ -63,6 +63,10 @@ export async function GET(req: NextRequest) {
       parent_consent_status: 'confirmed',
       // Clear the token so it can't be replayed after use.
       parent_consent_token: null,
+      // This was previously missing entirely — confirming consent never
+      // actually activated the account, so the whole flow was a dead end
+      // even when a parent did click through correctly.
+      account_active: true,
     })
     .eq('id', profile.id)
     .eq('parent_consent_status', 'pending'); // belt-and-suspenders against race conditions

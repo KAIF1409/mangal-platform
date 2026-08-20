@@ -1,89 +1,131 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendParentConsentEmail } from '@/app/lib/email';
 
 // Service-role client — server-only, NEVER expose this key to the client.
-// This is the only place allowed to write parent_consent_status now that
-// the anon "by token" RLS policies on `profiles` have been dropped.
+// This is the only place (along with confirm-parent-consent) allowed to
+// write account_active / parent_consent_* now that those columns are
+// locked to service_role by the protect_profile_privileged_columns trigger.
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// How long a consent link stays valid after the email was sent (in ms).
-// Adjust to match whatever window you already promise parents.
-const CONSENT_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// Loose but real email check — good enough to reject typos/garbage before
+// we spend a Resend send on it. Not meant to be RFC-perfect.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get('token');
+function isPlausibleDob(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+  return d.getTime() < Date.now(); // not in the future
+}
 
-  if (!token || typeof token !== 'string' || token.length < 16) {
-    return redirectToResult(req, 'invalid');
+// This route is the single place that decides date_of_birth, account_active,
+// and the parent-consent columns for a freshly-onboarding user. It used to
+// be split across client-side `supabase.from('profiles').update(...)` calls
+// (in login/page.tsx) that raced against — and were meant to be blocked by —
+// the privileged-columns trigger. Centralizing here means:
+//   - minor/adult status is decided from the DOB the server received, never
+//     trusted from a client-supplied boolean
+//   - account_active can only ever become true through server code
+//   - the parent-consent token is generated server-side, never accepted
+//     from the client
+export async function POST(req: NextRequest) {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  // 1. Look up the profile by EXACT token match — this is the check the
-  // old RLS policy was missing entirely.
-  const { data: profile, error: lookupError } = await supabaseAdmin
-    .from('profiles')
-    .select('id, parent_consent_status, parent_consent_email_sent_at')
-    .eq('parent_consent_token', token)
-    .maybeSingle();
+  const { dateOfBirth, parentEmail } = (body ?? {}) as {
+    dateOfBirth?: unknown;
+    parentEmail?: unknown;
+  };
 
-  if (lookupError) {
-    console.error('[confirm-parent-consent] lookup failed:', lookupError);
-    return redirectToResult(req, 'error');
+  if (!isPlausibleDob(dateOfBirth)) {
+    return NextResponse.json({ error: 'Missing or invalid dateOfBirth.' }, { status: 400 });
   }
 
-  // Don't reveal whether the token exists, was already used, etc. —
-  // generic "invalid" response for any non-confirmable state.
-  if (!profile) {
-    return redirectToResult(req, 'invalid');
+  // Authenticate the caller from their own session token — this route acts
+  // on "the currently signed-in user", never on an id passed in the body.
+  const authHeader = req.headers.get('authorization') ?? '';
+  const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!accessToken) {
+    return NextResponse.json({ error: 'Missing Authorization header.' }, { status: 401 });
   }
 
-  if (profile.parent_consent_status !== 'pending') {
-    // Already confirmed (or rejected/expired) — treat as already-handled,
-    // not an error, so a parent re-clicking an old email link gets a sane message.
-    return redirectToResult(
-      req,
-      profile.parent_consent_status === 'confirmed' ? 'already_confirmed' : 'invalid'
-    );
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
+  if (userError || !userData?.user) {
+    return NextResponse.json({ error: 'Invalid or expired session.' }, { status: 401 });
   }
+  const userId = userData.user.id;
 
-  // 2. Optional expiry check based on when the consent email was sent.
-  if (profile.parent_consent_email_sent_at) {
-    const sentAt = new Date(profile.parent_consent_email_sent_at).getTime();
-    if (Date.now() - sentAt > CONSENT_TOKEN_TTL_MS) {
-      return redirectToResult(req, 'expired');
+  // Recompute minor status from the DOB ourselves — never trust a client
+  // "minorDetected" flag, since that's exactly the kind of value a
+  // malicious client would flip to skip the consent flow.
+  const eighteenYearsAgo = new Date();
+  eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
+  const dob = new Date(dateOfBirth);
+  const isMinor = dob.getTime() > eighteenYearsAgo.getTime();
+
+  if (isMinor) {
+    if (typeof parentEmail !== 'string' || !EMAIL_RE.test(parentEmail)) {
+      return NextResponse.json(
+        { error: "A valid parent/guardian email is required for accounts under 18." },
+        { status: 400 }
+      );
     }
+
+    const consentToken = crypto.randomUUID();
+
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({
+        date_of_birth: dateOfBirth,
+        parent_email: parentEmail,
+        parent_consent_status: 'pending',
+        parent_consent_token: consentToken,
+        parent_consent_email_sent_at: new Date().toISOString(),
+        account_active: false,
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('[send-parent-consent] profile update failed:', updateError);
+      return NextResponse.json({ error: 'Could not update profile.' }, { status: 500 });
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(req.url).origin;
+    const emailResult = await sendParentConsentEmail(parentEmail, consentToken, appUrl);
+    if (!emailResult.ok) {
+      // Profile is already saved as pending — the user can be re-sent the
+      // email later. Don't fail the whole request just because Resend had
+      // an issue; that's a delivery problem, not a data problem.
+      console.error('[send-parent-consent] email send failed:', emailResult.error);
+    }
+
+    return NextResponse.json({ ok: true, minorDetected: true, emailSent: emailResult.ok });
   }
 
-  // 3. Token verified, status was pending, not expired — confirm it.
+  // Adult — activate immediately, no consent flow needed.
   const { error: updateError } = await supabaseAdmin
     .from('profiles')
     .update({
-      parent_consent_status: 'confirmed',
-      // Clear the token so it can't be replayed after use.
+      date_of_birth: dateOfBirth,
+      parent_email: null,
+      parent_consent_status: 'not_required',
       parent_consent_token: null,
+      account_active: true,
     })
-    .eq('id', profile.id)
-    .eq('parent_consent_status', 'pending'); // belt-and-suspenders against race conditions
+    .eq('id', userId);
 
   if (updateError) {
-    console.error('[confirm-parent-consent] update failed:', updateError);
-    return redirectToResult(req, 'error');
+    console.error('[send-parent-consent] profile update failed:', updateError);
+    return NextResponse.json({ error: 'Could not update profile.' }, { status: 500 });
   }
 
-  return redirectToResult(req, 'success');
-}
-
-function redirectToResult(
-  req: NextRequest,
-  result: 'success' | 'already_confirmed' | 'invalid' | 'expired' | 'error'
-) {
-  // Use NEXT_PUBLIC_APP_URL as the base rather than req.url — more reliable
-  // behind a proxy/load balancer where the request host header can be wrong.
-  // Adjust the path to wherever you want parents to land after clicking the link.
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? req.url;
-  const url = new URL('/parent-consent-result', base);
-  url.searchParams.set('result', result);
-  return NextResponse.redirect(url);
+  return NextResponse.json({ ok: true, minorDetected: false });
 }
