@@ -7030,3 +7030,42 @@ supposed to hide. Two compounding bugs, both fixed:
    they were all still perfectly legible in the screenshot despite
    the overlay technically being active. Changed to a solid, fully
    opaque background so nothing underneath can show through at all.
+
+## §105 — KaTube Shorts: autoplay wasn't reliably starting at all, which is why the native chrome kept showing
+
+Founder screenshot (still showing YouTube's channel avatar/name,
+native prev/pause/next, progress bar, logo — same category as §104,
+even after that fix) plus an explicit ask: shorts should start
+playing the instant one is opened, with no tap on the (already
+supposed to be hidden) play button required. Traced both back to one
+cause.
+
+**Root cause:** `onReady` always called `unMute()` (default sound
+preference) immediately before `playVideo()`. Browsers don't quietly
+downgrade an autoplay request that asks to start *unmuted* into a
+muted one when there's been no user gesture on the page yet — they
+refuse the `play()` call outright. Since this is Incognito (zero
+Media Engagement history) and nothing on this page had produced a
+user gesture yet by the time `onReady` fired, every one of these
+calls was being silently rejected. The player stayed stuck exactly
+on YouTube's native idle/cued chrome — which is also why §104's
+pause-cover fix didn't visibly help: `isPlaying` defaulted to `true`
+(optimistic), so the cover never activated during this stuck window,
+and even once fixed to default `false`, the actual underlying problem
+— playback never starting at all — remained. Tapping the (leaking)
+native play button supplied the missing gesture, which is why that
+"worked."
+
+**Fix, two parts:**
+- `onReady` and the `syncPlayers` retry loop now always start a short
+  **muted** regardless of the sound preference, until a real gesture
+  has happened anywhere on the page (`hasGesturedRef`, set from a
+  one-time `pointerdown` listener) — muted autoplay is unconditionally
+  allowed, so this guarantees playback actually starts without
+  needing a tap. The moment that first gesture fires, the currently
+  active player is unmuted immediately if the sound preference calls
+  for it, rather than waiting on the next `activeIndex`/`muted`
+  change to pick it up.
+- `isPlaying` now defaults to `false` instead of `true` (see §104's
+  entry above), so even during any remaining startup gap, our own
+  opaque cover is what's showing — never YouTube's native chrome.

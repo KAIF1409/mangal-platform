@@ -103,7 +103,18 @@ export default function KaTubeShortsFeedPage() {
   const [watchTogetherOpen, setWatchTogetherOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [isFastForwarding, setIsFastForwarding] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(true);
+  // Bug fix (§105): this defaulted to `true`, which is optimistic — it
+  // assumes a short is already playing the instant it becomes active,
+  // before YouTube has confirmed anything. Our own pause-cover overlay
+  // (§101/§104) is keyed off `!isPlaying`, so with an optimistic `true`
+  // default it never activated during the real startup window (iframe
+  // loaded, but onReady/playVideo/onStateChange(PLAYING) hadn't actually
+  // fired yet) — leaving YouTube's native "cued/idle" chrome (title,
+  // channel, native controls, logo) fully exposed for however long that
+  // took, which is exactly what kept showing up in screenshots. `false`
+  // means the cover is up by default and only drops once onStateChange
+  // actually confirms PLAYING.
+  const [isPlaying, setIsPlaying] = useState(false);
   // Bug fix (§98): this used to gate whether the seek bar or a static
   // title <div> was rendered (see the always-mounted range input
   // below) — kept as a setter-only flag since other effects still key
@@ -266,6 +277,43 @@ export default function KaTubeShortsFeedPage() {
     });
   }, []);
 
+  // Bug fix (§105): browsers don't just silently mute an autoplay request
+  // that asks to start unmuted without a prior user gesture on the page —
+  // they refuse the whole play() call outright, leaving the player stuck
+  // on YouTube's native "cued" chrome (title/channel/native controls/
+  // logo, all still fully visible since nothing ever reached a real
+  // PLAYING state for our own pause-cover to key off) until something
+  // gives the browser a genuine gesture — which was exactly what tapping
+  // the (leaking) native play button did. Combined with the default sound
+  // preference being unmuted, this meant a fresh visit (no Media
+  // Engagement history — especially true in Incognito, no history at
+  // all) would silently fail to autoplay at all, every time.
+  // hasGesturedRef flips true on the first real pointerdown anywhere on
+  // this page; until then, playback always starts muted regardless of
+  // the sound preference (which browsers do allow without a gesture), so
+  // shorts actually autoplay. Once a gesture has happened, the very next
+  // sync pass unmutes the active player if the preference calls for it.
+  const hasGesturedRef = useRef(false);
+  const mutedRef = useRef(muted);
+  useEffect(() => { mutedRef.current = muted; }, [muted]);
+  useEffect(() => {
+    const markGestured = () => {
+      if (hasGesturedRef.current) return;
+      hasGesturedRef.current = true;
+      // Bug fix (§105): the syncPlayers retry loop below only re-runs on
+      // an activeIndex/muted state change, neither of which happens just
+      // because a gesture occurred — so without this, a short that was
+      // already playing muted (because it autoplayed before any gesture)
+      // would stay muted indefinitely even with the sound preference on,
+      // until the person happened to change short or hit the mute
+      // button themselves. Unmute the currently active player right here
+      // instead, the moment we know a real gesture has actually happened.
+      if (!mutedRef.current) sendPlayerCommand(activeIndexRef.current, 'unMute');
+    };
+    window.addEventListener('pointerdown', markGestured, { once: true, capture: true });
+    return () => window.removeEventListener('pointerdown', markGestured, true);
+  }, [sendPlayerCommand]);
+
   // The previous slider only changed React state: no YT.Player instance was
   // ever created, so its seek command had nowhere to go. Instantiate the
   // official IFrame Player API for each nearby short and retain the API object
@@ -299,7 +347,13 @@ export default function KaTubeShortsFeedPage() {
               playerRefs.current[index] = event.target;
               markLoaded(index);
               if (index === activeIndexRef.current) {
-                if (muted) event.target.mute(); else event.target.unMute();
+                // Bug fix (§105): always start muted here, regardless of
+                // the sound preference — see hasGesturedRef above for why.
+                // If the preference is unmuted and a gesture has already
+                // happened by the time this fires, unmute immediately;
+                // otherwise syncPlayers picks it up right after the first
+                // gesture.
+                if (muted || !hasGesturedRef.current) event.target.mute(); else event.target.unMute();
                 event.target.playVideo();
                 // Bug fix: playback.duration used to stay 0 until the
                 // 250ms polling interval (further below) happened to
