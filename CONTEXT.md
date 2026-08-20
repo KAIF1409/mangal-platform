@@ -7124,3 +7124,30 @@ data, no new tables.
 **Verified:** `tsc --noEmit` clean project-wide. `eslint` on both
 touched/new files: 0 errors (same 2 pre-existing `<img>` LCP warnings
 already documented in this file, unrelated to this change).
+
+## §107 — KaTube Fast Tap: "Join" (follow) button on the caption block
+
+Founder shared a reference mobile Shorts-style UI (right-edge action rail
++ bottom-left channel row with a Subscribe/Join pill) and asked for the
+same template on Fast Tap, using "Join" instead of "Subscribe".
+
+**What shipped:** the bottom-left caption block's creator row
+(`@creator` link) now sits in a flex row with a **Join / Joined** pill
+button on the right, matching the reference layout. Same underlying
+mechanism as the rest of KaTube's "Follow" button (`creator_follows`
+insert/delete, `creator_id`+`follower_id`) — this page just uses the
+label "Join" per the founder's explicit ask, not a new feature/table.
+Optimistic toggle with rollback on failure (same pattern as the
+follow buttons on the watch page/channel page). Hidden on your own
+uploads (`userId === short.creator_id`). Signed-out tap redirects to
+`/login?next=...` same as the other action buttons on this page.
+
+**Not done:** did not add a fake dislike counter or "boost" icon from
+the reference image — those aren't real features in this app (no
+dislike/boost data anywhere), so faking counts for visual parity would
+be misleading. Kept the existing real action set (Like/Comment/Share/
+Together/Mute) and only changed the caption-row layout to match the
+reference's channel-row + Join-button pattern.
+
+**Verified:** `tsc --noEmit` clean, `eslint` clean (same 2 pre-existing
+`<img>` warnings).

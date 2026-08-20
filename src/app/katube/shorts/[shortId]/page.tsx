@@ -102,6 +102,8 @@ export default function KaTubeShortsFeedPage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [followedCreatorIds, setFollowedCreatorIds] = useState<Set<string>>(new Set());
+  const [joinBusyId, setJoinBusyId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [watchTogetherOpen, setWatchTogetherOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -567,6 +569,7 @@ export default function KaTubeShortsFeedPage() {
         const { data: follows } = await supabase
           .from('creator_follows').select('creator_id').eq('follower_id', viewerId);
         followedCreatorIds = new Set((follows || []).map(f => f.creator_id));
+        setFollowedCreatorIds(followedCreatorIds);
       }
 
       const unranked: Short[] = allRows.map(r => ({
@@ -631,6 +634,43 @@ export default function KaTubeShortsFeedPage() {
     setToast(msg);
     setTimeout(() => setToast(null), 1800);
   }, []);
+
+  // "Join" — this page's wording for the same creator_follows toggle the
+  // rest of KaTube calls "Follow" (watch page, channel page). Founder
+  // asked for "Join" specifically here, matching a reference UI's
+  // Subscribe/Join button — same underlying table/action, just this
+  // page's label. Optimistic toggle with rollback on failure, same
+  // pattern already used for follow/like buttons elsewhere in the app.
+  const toggleJoin = useCallback((creatorId: string) => {
+    if (!userId) {
+      setPostLoginRedirect(window.location.pathname);
+      window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+    if (joinBusyId === creatorId) return; // double-tap guard
+    const alreadyJoined = followedCreatorIds.has(creatorId);
+    setJoinBusyId(creatorId);
+    setFollowedCreatorIds(prev => {
+      const next = new Set(prev);
+      if (alreadyJoined) next.delete(creatorId); else next.add(creatorId);
+      return next;
+    });
+    (async () => {
+      const { error } = alreadyJoined
+        ? await supabase.from('creator_follows').delete().eq('creator_id', creatorId).eq('follower_id', userId)
+        : await supabase.from('creator_follows').insert({ creator_id: creatorId, follower_id: userId });
+      if (error) {
+        // Roll back the optimistic update on failure.
+        setFollowedCreatorIds(prev => {
+          const next = new Set(prev);
+          if (alreadyJoined) next.add(creatorId); else next.delete(creatorId);
+          return next;
+        });
+        showToast('Something went wrong, try again');
+      }
+      setJoinBusyId(null);
+    })();
+  }, [userId, joinBusyId, followedCreatorIds, showToast]);
 
   // A warm iframe is driven through YouTube's player API instead of replacing
   // its src. That preserves the preloaded next clips during fast scrolling.
@@ -1130,9 +1170,27 @@ export default function KaTubeShortsFeedPage() {
                     padding: '16px 16px 12px',
                     background: 'linear-gradient(to top, rgba(0,0,0,0.75), transparent)', zIndex: 5,
                   }}>
-                    <Link href={`/katube/channel/${encodeURIComponent(short.creator)}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fff', fontWeight: 800, fontSize: '13.5px', marginBottom: '5px', textDecoration: 'none' }}>
-                      <UserCircle size={22} /> @{short.creator}
-                    </Link>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '6px' }}>
+                      <Link href={`/katube/channel/${encodeURIComponent(short.creator)}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#fff', fontWeight: 800, fontSize: '13.5px', textDecoration: 'none', minWidth: 0 }}>
+                        <UserCircle size={22} style={{ flexShrink: 0 }} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>@{short.creator}</span>
+                      </Link>
+                      {userId !== short.creator_id && (
+                        <button
+                          onClick={() => toggleJoin(short.creator_id)}
+                          disabled={joinBusyId === short.creator_id}
+                          style={{
+                            flexShrink: 0, padding: '5px 14px', borderRadius: '999px', fontSize: '11.5px', fontWeight: 800,
+                            cursor: 'pointer', whiteSpace: 'nowrap',
+                            background: followedCreatorIds.has(short.creator_id) ? 'transparent' : '#22c55e',
+                            color: followedCreatorIds.has(short.creator_id) ? '#22c55e' : '#06120a',
+                            border: followedCreatorIds.has(short.creator_id) ? '1.5px solid #22c55e' : 'none',
+                            opacity: joinBusyId === short.creator_id ? 0.6 : 1,
+                          }}
+                        >
+                          {followedCreatorIds.has(short.creator_id) ? 'Joined' : 'Join'}
+                        </button>
+                      )}
+                    </div>
                     <button onClick={() => { setActiveIndex(idx); setDetailsOpen(true); }} style={{ padding: 0, border: 0, background: 'transparent', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '12.5px', fontWeight: 700, lineHeight: 1.4 }}>
                       {short.title} <Info size={13} style={{ verticalAlign: 'text-bottom' }} />
                     </button>
