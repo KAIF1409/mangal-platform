@@ -7000,3 +7000,33 @@ it `true`, `PAUSED` sets it `false` — and is left untouched for every
 other transient state (`BUFFERING`, `UNSTARTED`, `CUED`, `ENDED`),
 same as before those events fired but without misreading them as a
 pause.
+
+## §104 — KaTube Shorts: YouTube's native overlay was still bleeding through despite §101
+
+Founder screenshot after §103: YouTube's own title, channel name,
+native prev/pause/next buttons, its own progress bar, and logo were
+all still clearly visible over the video — the exact thing §101 was
+supposed to hide. Two compounding bugs, both fixed:
+
+1. **The gesture layer didn't cover the whole frame.** It carved out
+   a 136px top strip and a 108px (18px on the desktop breakpoint)
+   bottom strip that it left completely uncovered, on the assumption
+   that KaTube's own top/bottom UI needed the room. It didn't — the
+   top-title-shield and bottom-share-shield already sit at z-index 20
+   (above the gesture layer's z-index 10) and handle their own bands
+   regardless of what the gesture layer covers underneath them. All
+   those gaps did was let taps that landed there fall straight
+   through to the raw cross-origin iframe instead of being caught by
+   our own pointer handlers — and the bottom-share-shield only ever
+   covered the *left* 128px of its band, leaving the right side (where
+   YouTube's own logo/progress bar tend to render) open the whole
+   time. Any tap reaching the iframe directly can trigger YouTube's
+   native OSD. Now the gesture layer covers the full frame (`inset:
+   0`), so every tap is handled by our own code first, before it can
+   ever reach the iframe.
+2. **The §101 cover-on-pause overlay was only 55% opaque**
+   (`rgba(0,0,0,0.55)`) — enough to dim a video frame, nowhere near
+   enough to hide bright white text, icons, and a logo, which is why
+   they were all still perfectly legible in the screenshot despite
+   the overlay technically being active. Changed to a solid, fully
+   opaque background so nothing underneath can show through at all.

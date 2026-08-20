@@ -706,7 +706,20 @@ export default function KaTubeShortsFeedPage() {
         .katube-short-actions { bottom: 54px; }
         .katube-short-caption, .katube-short-actions { z-index: 30 !important; }
         .katube-short-progress { position: absolute; left: 14px; right: 14px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 31; }
-        .katube-short-gesture-layer { position: absolute; inset: 136px 0 108px; z-index: 10; touch-action: pan-y; }
+        /* Bug fix (§104): this used to carve out a 136px top strip and a
+           108px bottom strip that the gesture layer didn't cover. Our
+           own top-title-shield and bottom-share-shield (both z-index 20,
+           above this layer's z-index 10) already handle their own bands
+           regardless of what this layer covers — so those gaps did
+           nothing but let raw taps fall through to the underlying
+           cross-origin iframe instead of this layer's pointer handlers
+           (the share shield only covers the left 128px of the bottom
+           band, leaving its right side open). Any tap reaching the raw
+           iframe directly can make YouTube show its own native OSD/
+           branding overlay — the controls/title/logo bleed-through kept
+           showing up in screenshots. Covering the full frame means every
+           tap is always handled by our own code first. */
+        .katube-short-gesture-layer { position: absolute; inset: 0; z-index: 10; touch-action: pan-y; }
         .katube-short-speed-indicator { position: absolute; top: 50%; left: 50%; z-index: 32; transform: translate(-50%, -50%); padding: 10px 14px; border-radius: 999px; background: rgba(0,0,0,0.76); color: #fff; font-size: 14px; font-weight: 800; pointer-events: none; }
         .katube-youtube-title-shield { display: block; }
         .katube-youtube-bottom-share-shield { display: block; }
@@ -725,7 +738,7 @@ export default function KaTubeShortsFeedPage() {
           .katube-short-caption { top: 100%; bottom: auto; left: 0; right: 0; padding: 14px 0 0 !important; background: #000 !important; }
           .katube-short-actions { left: calc(100% + 18px); right: auto !important; bottom: 88px; }
           .katube-short-progress { bottom: 8px; }
-          .katube-short-gesture-layer { inset: 136px 0 18px; }
+          .katube-short-gesture-layer { inset: 0; }
         }
         @media (max-width: 899px) {
           .katube-short-details { left: 0; right: 0; bottom: 0; width: 100%; max-width: none; min-height: 48dvh; max-height: 68dvh; margin: 0; padding: 20px 24px calc(24px + env(safe-area-inset-bottom)); overflow-y: auto; border-radius: 22px 22px 0 0; border-left: 0; border-right: 0; border-bottom: 0; }
@@ -889,13 +902,25 @@ export default function KaTubeShortsFeedPage() {
                           entirely with an opaque layer of our own whenever
                           paused, with our own pause icon standing in for
                           the (also YouTube-branded) one it would otherwise
-                          show. */}
+                          show.
+                          Bug fix (§104): that cover was only 55% opaque
+                          (`rgba(0,0,0,0.55)`), which dims a video frame but
+                          does very little to hide bright white text/icons/
+                          logo — so YouTube's title, controls, and branding
+                          were all still clearly legible right through it,
+                          which is exactly what the founder's follow-up
+                          screenshot showed. Raised to a solid, fully
+                          opaque background so nothing underneath can show
+                          through at all; paired with the gesture-layer fix
+                          just above (so most taps never even reach the raw
+                          iframe to trigger that overlay in the first
+                          place). */}
                       {isActive && !isPlaying && (
                         <div
                           aria-hidden="true"
                           style={{
                             position: 'absolute', inset: 0, zIndex: 15,
-                            background: 'rgba(0,0,0,0.55)',
+                            background: '#000',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             pointerEvents: 'none',
                           }}
