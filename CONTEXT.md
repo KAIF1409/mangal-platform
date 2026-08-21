@@ -7449,3 +7449,246 @@ by a concurrent security commit (6887c7e, PII lockdown) that landed on
 out as unrelated to this change. Pulled + merged once against 4
 concurrent commits (security hardening, comment ranking, Vercel→
 Cloudflare cleanup) with zero conflicts.
+
+## §114 — MANGAL Studio: PLAN ONLY (no code yet — founder explicitly asked to research + plan + log here first)
+
+### Founder's request, verbatim intent
+Rebuild the current ad-hoc `/katube/dashboard` "creator profile" page into
+a proper, YouTube-Studio-quality analytics product, named **MANGAL
+Studio**, living in its own new top-level folder. Research real YouTube
+Studio channel analytics first. Build the same caliber of experience for
+**all three MANGAL content products** — KaTube, K Circle
+(`kalpana-circle`), WebMangal — inside that one "Mangal Studio" folder.
+Redesign the metrics/logic specifically to fit KaTube's two content
+types (long-form videos vs. Fast Tap/Shorts), matching what YouTube
+Studio actually tracks differently for Shorts vs. long-form. Add a
+switcher inside Studio so a creator can flip between platforms (KaTube ↔
+K Circle ↔ WebMangal) without leaving Studio. Explicit instruction: do
+the research, write the plan, log request + plan here in CONTEXT.md —
+**do not start implementing until that's done and reviewed.**
+
+### YouTube Studio channel analytics — feature research
+(From general knowledge as of training cutoff — this session has no live
+web access to youtube.com/studio to verify current UI, flagging that
+up front. Structure below is the well-established, long-stable shape of
+YT Studio and is very unlikely to have changed in ways that matter here.)
+
+- **Dashboard (home):** recent-video snapshot cards, channel analytics
+  summary (views/watch-time/subscribers over a rolling window), "what's
+  new" panel, comments needing a reply.
+- **Content tab:** every upload (Videos / Shorts / Live tabs) as a
+  sortable table — thumbnail, title, visibility/status, upload date,
+  views, comments, likes (as a %).
+- **Analytics tab**, itself split into sub-tabs:
+  - **Overview** — Views, Watch time (hours), Subscribers net change,
+    (Revenue if monetized), trend graph over a selectable date range,
+    top videos in the period, realtime card (views in last 48h / 60min).
+  - **Reach** — impressions, click-through rate, traffic-source
+    breakdown (YouTube search, suggested videos, external, Shorts feed,
+    browse features, playlists, notifications, etc.), unique viewers.
+  - **Engagement** — watch time, average view duration, **audience
+    retention curve** (a graph of % of viewers still watching at each
+    point in the video — the single most YouTube-specific metric),
+    top end-screen/card performance, top playlists.
+  - **Audience** — returning vs. new viewers, subscriber vs.
+    non-subscriber view split, when-your-viewers-are-online heatmap, age/
+    gender demographics, geography (views by country/region), other
+    channels your audience watches.
+  - **Shorts-specific panel** — YouTube tracks these separately from
+    long-form because viewer behavior is different: Views, average %
+    viewed for the Short, Likes/Comments/Shares, engagement rate,
+    subscribers gained from Shorts specifically, Shorts-feed reach.
+  - **Research** — what viewers are searching for that your channel
+    could serve (not relevant here, no cross-channel search corpus).
+  - **Revenue** (monetized channels only) — not applicable to KaTube;
+    no ad-monetization model exists on this platform.
+- **Comments tab:** central moderation queue across every video, held-
+  for-review, top comments.
+
+### What's REAL in this codebase today vs. what YT-Studio-style metrics
+would need — audited against the actual schema/RLS, not assumed
+
+**Already real and available right now (Tier 1 — buildable immediately,
+zero new tables, zero RLS changes):**
+- KaTube: `videos.views`, `videos.likes`, `video_comments`,
+  `comment_likes`, `creator_follows` (has `created_at`, so "followers
+  gained this period" is a real bucketed query), per-video
+  `duration_seconds`/`is_short`/`series_id`/`category`/`ai_tool`. KaTube
+  dashboard (§28b, current `/katube/dashboard`) already ships a real
+  "Video performance" bar-ranked-by-views block — this is a genuine Tier
+  1 feature already live, just not in Studio's shape/quality yet.
+- WebMangal: **already far more advanced than either other product** —
+  `/dashboard/page.tsx` (the general MANGAL dashboard) already has a
+  full real-data creator-analytics block: `view_events` table
+  (`series_id`, `country_code`, `created_at` — logged server-side via
+  `/api/log-view` reading Vercel's edge geo header, **no raw IP ever
+  stored**, see `20260809100000_analytics_geo_gender.sql`), a
+  `Views by Country` chart, a self-reported-gender demographics donut
+  (`profiles.gender`, nullable, shown as "Unknown" rather than guessed —
+  good honest-data precedent to keep following), hourly Reader Trends,
+  and a real **Chapter Completion Rate** stat (`reading_progress` joined
+  against `pages` — correctly scoped to manga-style paged chapters only;
+  novel chapters are honestly excluded rather than estimated, per the
+  code comment at `dashboard/page.tsx:312-316`). This entire block is a
+  strong candidate to **extract and relocate** into
+  `/mangal-studio/webmangal`, not rebuild from scratch.
+  Migration `20260809101500_creator_can_view_own_series_analytics.sql`
+  is the key precedent for the RLS problem below — see next section.
+- K Circle: no analytics of any kind exist yet for creators/broadcast-
+  channel owners. Real underlying content tables exist (`kcircle_posts`,
+  `kcircle_post_likes`, `kcircle_post_comments`, `kcircle_broadcast_*`,
+  `kcircle_stories`, `kcircle_story_views`) but nothing currently
+  aggregates them for a creator-facing view.
+
+**Blocked by RLS today, needs a narrow new SELECT policy (Tier 1.5 — a
+few lines of SQL, same pattern WebMangal already uses, not a schema
+change):**
+- KaTube's `katube_watch_progress` table currently has **only**
+  `"katube_watch_progress_own_read" ... using (auth.uid() = viewer_id)`
+  — a creator cannot read ANY other viewer's progress row, which blocks
+  "average % watched" / completion-rate for KaTube videos entirely today
+  (this is exactly the same problem WebMangal had, and already solved,
+  for `reading_progress`/`follows` — see
+  `20260809101500_creator_can_view_own_series_analytics.sql`). **Fix:**
+  add the mirroring policy — a creator may `select` rows from
+  `katube_watch_progress` only where the row's `video_id` belongs to a
+  `videos` row they own (`videos.creator_id = auth.uid()`), same
+  `exists (...)` shape as the WebMangal precedent. This alone unlocks a
+  real (if coarse — single latest-position snapshot per viewer, not a
+  full per-second curve) **completion-rate stat for KaTube**, matching
+  what WebMangal already has for chapters.
+
+**Not trackable at all today, needs genuinely new infra (Tier 2 —
+real schema/RPC work, bigger scope, proposed as a later phase, not
+Phase 1):**
+- **True audience retention curve** (% of viewers still watching at each
+  timestamp) — `katube_watch_progress` only stores the *latest* position
+  per viewer, not a time-series, so a real retention *curve* (not just a
+  single completion percentage) needs periodic "watch heartbeat" event
+  logging during playback, analogous to how `view_events` logs a row per
+  view. Real scope, not a quick add.
+- **Traffic sources** (search / suggested / Shorts feed / external /
+  browse) — nothing today records *how* a viewer arrived at a video.
+  Would need a `referrer`/`source` field captured at the same point
+  `views` gets incremented.
+- **Device type breakdown** — not captured anywhere.
+- **True subscribers LOST over time** — `creator_follows` only has
+  current rows + `created_at`; an unfollow just deletes the row with no
+  history. Only *net* current count and *gained-this-period* (via
+  `created_at` bucketing) are honestly derivable today — "lost" would
+  need a follow-events log (insert-only, never delete) instead of/
+  alongside the current live table.
+- **Realtime (views in last 48h/60min)** for KaTube specifically —
+  `videos.views` is a bare incrementing counter with no timestamp per
+  view, unlike WebMangal's `view_events`. The exact same
+  `increment_series_views`-with-event-log pattern
+  (`20260809100000_analytics_geo_gender.sql`) could be replicated for
+  KaTube (`increment_video_views` + a `video_view_events` table) — this
+  is the single highest-value Tier 2 item since it also unlocks realtime
+  + geography + eventually traffic-source for KaTube, all from one new
+  table, following an already-proven, already-shipped pattern in this
+  codebase. Proposed as the first Tier 2 item if/when we get there.
+- KaTube has **no ad-monetization model** — there is no Revenue
+  equivalent to build, ever, for this platform.
+
+### Product-specific metric sets (YT Studio's metric *concepts*, not its
+literal video-only vocabulary, mapped onto what each product actually is)
+- **KaTube Studio** (closest analogue to real YouTube Studio — the
+  founder's explicit reference point): split **Long-form vs. Fast Tap
+  (Shorts)** exactly like YT Studio splits Videos vs. Shorts, since the
+  founder specifically asked for this split. Long-form: views, watch-
+  time proxy (completion % via the RLS fix above), likes, comments,
+  followers gained, per-series ("based on") performance. Fast Tap:
+  views, likes, average completion % (same RLS-fixed source, shorter
+  format so completion % is a much more meaningful single-number stat
+  than it is for a 20-minute video), comments, followers gained
+  specifically from Shorts content (derivable by joining `creator_follows.
+  created_at` proximity to a Shorts view — approximate, flag as
+  approximate in the UI, don't overstate precision).
+- **K Circle Studio:** reach/engagement/growth concepts, not
+  watch-time — post reach (views if tracked, else fall back to
+  like+comment count as an engagement proxy and say so honestly), top
+  posts, story views (`kcircle_story_views` already exists — real data),
+  broadcast-channel subscriber growth, comment volume. Needs the most
+  new "what do we even show" design thought since there's no existing
+  analytics precedent to extract, unlike WebMangal.
+- **WebMangal Studio:** extract the existing `/dashboard/page.tsx`
+  creator-analytics block (already real, already good) into
+  `/mangal-studio/webmangal` largely as-is — Chapter Completion Rate,
+  Views by Country, Reader Trends, gender demographics, Total Followers
+  — then verify (before claiming it in Studio's UI) whether per-chapter
+  view counts specifically are reliably tracked, since an earlier
+  session (`EditSeriesModal` era) flagged per-chapter views as an
+  "honest placeholder" at the time — needs a fresh check, not an
+  assumption, before Studio ships a per-chapter breakdown.
+
+### Proposed structure — new top-level folder
+`src/app/mangal-studio/`
+- `/mangal-studio` — root: a platform switcher landing that only shows
+  tabs for products the signed-in creator actually has content on (don't
+  show an empty "K Circle Studio" tab to someone with zero K Circle
+  posts) — redirects to the single available product's Studio if only
+  one applies, or to a small switcher screen if multiple.
+- `/mangal-studio/katube` — Overview (KPI cards + trend graph), `/content`
+  (sortable video+Shorts table, Long-form/Fast Tap filter), `/analytics`
+  (Engagement/Audience sub-tabs), `/comments` (cross-video moderation
+  queue).
+- `/mangal-studio/kcircle` — same shape, K Circle metric set.
+- `/mangal-studio/webmangal` — same shape, extracted from the existing
+  `/dashboard` analytics block.
+- A shared `StudioSwitcher` component in a common Studio shell/nav
+  (new — no existing product-switcher component anywhere in this
+  codebase today, confirmed by search).
+- **Theme:** propose Studio's shell stays visually neutral/consistent
+  regardless of which product tab is active (the way real YouTube Studio
+  looks the same regardless of channel branding), with a small colored
+  accent indicator per active product tab (KaTube red, K Circle purple,
+  WebMangal's own color) rather than re-skinning the whole Studio UI on
+  every tab switch — open question, flagged below for founder
+  confirmation rather than assumed.
+
+### What happens to the existing `/katube/dashboard`
+It's not purely analytics today — it's also where a creator does the
+one-time YouTube channel verification (§6, the core connect-your-channel
+flow every KaTube upload depends on). That flow has to live somewhere
+after this rebuild — proposed as a "Channel setup" tab inside
+`/mangal-studio/katube` rather than deleting `/katube/dashboard`
+outright, but this is an open question below, not a decision made yet.
+
+### Proposed phased rollout
+1. **Phase 1** — Studio shell + `StudioSwitcher` + full **KaTube Studio**
+   built on Tier 1 + the Tier 1.5 RLS fix (real completion-rate stat),
+   Long-form/Fast Tap split, since KaTube is the founder's explicit
+   reference point and has the most mature schema already.
+2. **Phase 2** — **WebMangal Studio**, mostly extraction/relocation of
+   the already-real `/dashboard` analytics block, plus the per-chapter
+   view-tracking verification noted above.
+3. **Phase 3** — **K Circle Studio**, the newest metric taxonomy,
+   built from real `kcircle_*` tables (reach/engagement/growth framing).
+4. **Phase 4 (later, explicitly not this pass)** — Tier 2 infra: a
+   KaTube `video_view_events` table (mirroring WebMangal's proven
+   `view_events` pattern) unlocking realtime views + geography for
+   KaTube; true audience retention curves; traffic-source tracking;
+   true subscribers-lost tracking.
+
+### Open questions for the founder before/while implementing Phase 1
+1. `/katube/dashboard`'s channel-verify flow — fold into a "Channel
+   setup" tab inside the new `/mangal-studio/katube`, or leave it where
+   it is and make Studio purely analytics?
+2. Build all three products' Studio shells now (even if K Circle/
+   WebMangal start with fewer metrics), or ship KaTube Studio fully
+   first and come back for the other two in separate follow-up passes?
+   (Proposed default above: full KaTube first, others after — confirm
+   or override.)
+3. OK to add the Tier 1.5 RLS policy (mirrors WebMangal's existing,
+   already-shipped precedent — narrow, creator-can-read-own-series-only,
+   no data exposed beyond what a creator should already see about their
+   own content) as part of Phase 1? Proposed yes, flagging since it's a
+   DB change.
+4. Studio's own visual theme — neutral shell with per-tab accent
+   indicator (proposed above), or fully re-skin per active product?
+
+**Status: plan only, logged per founder's explicit instruction. No
+application code has been touched this session for MANGAL Studio —
+next step is founder review/answers on the open questions above, then
+Phase 1 implementation.**
