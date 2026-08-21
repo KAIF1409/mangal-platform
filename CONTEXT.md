@@ -7852,3 +7852,41 @@ heart burst animation), per founder's explicit ask that it match "insta
 or other social platforms" rather than YouTube's plain single-like
 model.
 
+## §118 — K Circle like logic: Instagram-style double-tap + heart burst
+Founder's ask: same like *approach* as Instagram/other social apps for
+K Circle, as opposed to KaTube's plain single-tap YouTube model just
+finished in §117. K Circle already had a real single-tap heart-icon
+toggle (`kcircle_post_likes`, optimistic UI) — what Instagram actually
+adds on top is the **double-tap-the-photo-to-like** gesture with a big
+heart-burst animation, which was missing.
+
+**`likePost` extracted** — a like-only (never unlike) helper shared by
+both the toggle button and the new double-tap gesture, so there's one
+place doing the optimistic update + insert + `notify()`. `toggleLike`
+now calls it for the like branch and keeps its own unlike branch
+(button click still fully toggles; double-tap never unlikes an
+already-liked post, matching real Instagram behavior).
+
+**Double-tap detection is manual**, not `onDoubleClick` — a
+`lastTapRef` per-post timestamp map compares taps within a 300ms
+window. Native `dblclick` doesn't reliably fire from two quick mobile
+taps and this also sidesteps fighting the browser's own
+double-tap-to-zoom gesture on the `<img>`.
+
+**Heart burst** — a centered `Heart` icon (lucide) absolutely
+positioned over the post image, `pointerEvents: none`, animated via a
+new `kc-heart-burst` CSS keyframe (scale up past 100%, settle, fade
+out over ~0.9s — same shape as Instagram's own animation) added to the
+page's existing responsive `<style>` block. Works for both single-image
+and multi-image (grid) posts.
+
+**Like counts** now go through the shared `formatViews()` K/M
+abbreviation helper (same one KaTube's watch page uses, §117) instead
+of a raw number — applied to both post like counts and comment like
+counts, for consistency with KaTube's just-finished polish.
+
+No schema/RLS changes — built entirely on the existing
+`kcircle_post_likes` table. `tsc --noEmit` and `eslint` both clean (one
+pre-existing, unrelated `unused eslint-disable` warning on an
+unaffected line).
+

@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase';
 import { uploadMediaFile, MEDIA_FOLDERS } from '../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../lib/auth/authRedirect';
 import { instagramPreviewComments, COMMENT_PAGE_SIZE } from '../lib/commentRanking';
+import { formatViews } from '../lib/format';
 import {
   Search, Home, MessageCircle, Clapperboard, Megaphone, Bookmark,
   X, Circle, Globe, Tag, Camera, BarChart3, Sparkles, Pin, Check,
@@ -428,16 +429,57 @@ function KalpanaCircleInner() {
   };
 
   // ── likes ──
+  // Instagram-style: single-tap the heart icon toggles like/unlike as
+  // before. Double-tapping the post image is a separate, Instagram-
+  // specific gesture that only ever LIKES (never unlikes on a second
+  // double-tap of an already-liked post) and triggers a big heart-burst
+  // animation over the image — see kc-heart-burst keyframes above.
+  const [burstPostIds, setBurstPostIds] = useState<Set<string>>(new Set());
+  const lastTapRef = useRef<Record<string, number>>({});
+
+  const triggerHeartBurst = (postId: string) => {
+    setBurstPostIds(prev => new Set(prev).add(postId));
+    setTimeout(() => {
+      setBurstPostIds(prev => { const next = new Set(prev); next.delete(postId); return next; });
+    }, 900);
+  };
+
+  // Shared "like" (never unlike) used by both the double-tap gesture and
+  // the toggle button's like branch, so there's one place that does the
+  // optimistic update + insert + notify.
+  const likePost = async (post: KPost) => {
+    if (!userId || post.likedByMe) return;
+    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, likedByMe: true, likeCount: p.likeCount + 1 } : p));
+    await supabase.from('kcircle_post_likes').insert({ post_id: post.id, liker_id: userId });
+    notify(post.author_id, 'like', { post_id: post.id });
+  };
+
   const toggleLike = async (post: KPost) => {
     if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
-    setPosts(prev => prev.map(p => p.id === post.id
-      ? { ...p, likedByMe: !p.likedByMe, likeCount: p.likeCount + (p.likedByMe ? -1 : 1) }
-      : p));
-    if (post.likedByMe) {
-      await supabase.from('kcircle_post_likes').delete().eq('post_id', post.id).eq('liker_id', userId);
+    if (!post.likedByMe) { await likePost(post); return; }
+    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, likedByMe: false, likeCount: Math.max(0, p.likeCount - 1) } : p));
+    await supabase.from('kcircle_post_likes').delete().eq('post_id', post.id).eq('liker_id', userId);
+  };
+
+  // Manual double-tap detection (not native onDoubleClick) so the same
+  // ~300ms window works identically for touch and mouse — mobile
+  // browsers don't reliably fire dblclick from two quick taps, and this
+  // also avoids fighting the browser's built-in double-tap-to-zoom on
+  // an <img>.
+  const handleImageTap = (post: KPost) => {
+    if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    // False positive: this only ever runs inside an onClick handler, never
+    // during render — same class of false positive as the
+    // react-hooks/immutability disable on window.location.href above.
+    // eslint-disable-next-line react-hooks/purity
+    const now = Date.now();
+    const last = lastTapRef.current[post.id] ?? 0;
+    if (now - last < 300) {
+      lastTapRef.current[post.id] = 0;
+      triggerHeartBurst(post.id);
+      likePost(post);
     } else {
-      await supabase.from('kcircle_post_likes').insert({ post_id: post.id, liker_id: userId });
-      notify(post.author_id, 'like', { post_id: post.id });
+      lastTapRef.current[post.id] = now;
     }
   };
 
@@ -724,6 +766,17 @@ function KalpanaCircleInner() {
           .kc-katube-badge-text { display: none; }
           .kc-katube-badge { padding: 7px 8px !important; }
         }
+        /* Instagram-style double-tap-to-like heart burst — scales up past
+           100% then fades out, same feel as Instagram's own animation. */
+        @keyframes kc-heart-burst {
+          0% { transform: scale(0.3); opacity: 0; }
+          18% { transform: scale(1.15); opacity: 1; }
+          32% { transform: scale(0.95); opacity: 1; }
+          45% { transform: scale(1.05); opacity: 1; }
+          80% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1); opacity: 0; }
+        }
+        .kc-heart-burst { animation: kc-heart-burst 0.9s ease forwards; }
       `}</style>
       <KCircleShellStyle />
 
@@ -1187,18 +1240,32 @@ function KalpanaCircleInner() {
             {(() => {
               const imgs = post.image_urls?.length ? post.image_urls : (post.image_url ? [post.image_url] : []);
               if (!imgs.length) return null;
+              const burstOverlay = burstPostIds.has(post.id) && (
+                <div style={{
+                  position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  pointerEvents: 'none',
+                }}>
+                  <Heart size={84} fill="#fff" stroke="#fff" className="kc-heart-burst" style={{ filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.35))' }} />
+                </div>
+              );
               if (imgs.length === 1) {
                 return (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imgs[0]} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }} />
+                  <div style={{ position: 'relative' }} onClick={() => handleImageTap(post)}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imgs[0]} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block', cursor: 'pointer' }} />
+                    {burstOverlay}
+                  </div>
                 );
               }
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
-                  {imgs.map((src, i) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} src={src} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }} />
-                  ))}
+                <div style={{ position: 'relative' }} onClick={() => handleImageTap(post)}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
+                    {imgs.map((src, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={i} src={src} alt="" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block', cursor: 'pointer' }} />
+                    ))}
+                  </div>
+                  {burstOverlay}
                 </div>
               );
             })()}
@@ -1237,7 +1304,7 @@ function KalpanaCircleInner() {
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: '12.5px', color: post.likedByMe ? '#ef4444' : 'var(--text-tertiary)',
                 display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700,
-              }}><Heart size={15} fill={post.likedByMe ? '#ef4444' : 'none'} /> {post.likeCount}</button>
+              }}><Heart size={15} fill={post.likedByMe ? '#ef4444' : 'none'} /> {post.likeCount > 0 ? formatViews(post.likeCount) : ''}</button>
               <button onClick={() => toggleComments(post.id)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: '12.5px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700,
@@ -1283,7 +1350,7 @@ function KalpanaCircleInner() {
                                 color: c.likedByMe ? RADIANT_SOLID : 'var(--text-tertiary)',
                               }}
                             >
-                              <Heart size={11} fill={c.likedByMe ? RADIANT_SOLID : 'none'} /> {c.likes > 0 ? c.likes.toLocaleString() : 'Like'}
+                              <Heart size={11} fill={c.likedByMe ? RADIANT_SOLID : 'none'} /> {c.likes > 0 ? formatViews(c.likes) : 'Like'}
                             </button>
                           </div>
                         </div>
