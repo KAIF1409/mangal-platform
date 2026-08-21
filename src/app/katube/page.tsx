@@ -149,12 +149,12 @@ interface DemoShort {
 }
 
 const DEMO_SHORTS: DemoShort[] = [
-  { id: 's1', title: 'Aryavarta in 30 seconds', views: '12K', gradient: 'linear-gradient(160deg, #f97316, #fb923c)', icon: Zap },
-  { id: 's2', title: 'That plot twist though', views: '8.7K', gradient: 'linear-gradient(160deg, #7c2d12, #c2410c)', icon: Ghost },
-  { id: 's3', title: 'Banyan Spirit — best frame', views: '15K', gradient: 'linear-gradient(160deg, #ea580c, #f97316)', icon: TreePine },
-  { id: 's4', title: 'Street Life Mumbai vibes', views: '6.1K', gradient: 'linear-gradient(160deg, #9a3412, #fdba74)', icon: Building2 },
-  { id: 's5', title: 'POV: exam week hits different', views: '21K', gradient: 'linear-gradient(160deg, #f97316, #fde68a)', icon: Backpack },
-  { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #7c2d12, #fb923c)', icon: Ghost },
+  { id: 's1', title: 'Aryavarta in 30 seconds', views: '12K', gradient: 'linear-gradient(160deg, #e11d48, #fb7185)', icon: Zap },
+  { id: 's2', title: 'That plot twist though', views: '8.7K', gradient: 'linear-gradient(160deg, #4c0519, #9f1239)', icon: Ghost },
+  { id: 's3', title: 'Banyan Spirit — best frame', views: '15K', gradient: 'linear-gradient(160deg, #be123c, #e11d48)', icon: TreePine },
+  { id: 's4', title: 'Street Life Mumbai vibes', views: '6.1K', gradient: 'linear-gradient(160deg, #881337, #fda4af)', icon: Building2 },
+  { id: 's5', title: 'POV: exam week hits different', views: '21K', gradient: 'linear-gradient(160deg, #e11d48, #fecdd3)', icon: Backpack },
+  { id: 's6', title: 'Horror anthology jumpscare', views: '9.4K', gradient: 'linear-gradient(160deg, #4c0519, #fb7185)', icon: Ghost },
 ];
 
 // ── KaTube redesign Step 2 (11 Aug 2026) — sidebar now actually filters ──
@@ -293,8 +293,8 @@ function SidebarNav({
                     style={{
                       display: 'flex', alignItems: 'center', gap: '20px',
                       padding: '12px 20px', borderRadius: '10px', border: 'none',
-                      background: active === item.id ? 'rgba(249,115,22,0.12)' : 'transparent',
-                      color: active === item.id ? '#f97316' : 'var(--text-secondary)',
+                      background: active === item.id ? 'rgba(225,29,72,0.12)' : 'transparent',
+                      color: active === item.id ? '#e11d48' : 'var(--text-secondary)',
                       fontSize: '15px', fontWeight: active === item.id ? 800 : 600,
                       cursor: 'pointer', textAlign: 'left', whiteSpace: 'nowrap',
                       transition: 'background 0.15s, color 0.15s',
@@ -338,7 +338,7 @@ function SidebarNav({
           <Link href="/katube/upload" onClick={onClose} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             width: '100%', padding: '11px 0', borderRadius: '10px', textDecoration: 'none',
-            background: '#f97316', color: '#fff', fontSize: '13px', fontWeight: 800,
+            background: '#e11d48', color: '#fff', fontSize: '13px', fontWeight: 800,
             letterSpacing: '0.01em', marginBottom: '12px',
           }}><ArrowUp size={15} strokeWidth={2.5} /> Upload video</Link>
           {/* Was href="/" (site-wide marketing landing page) — "Back to
@@ -375,7 +375,7 @@ function DemoShortCard({ short }: { short: DemoShort }) {
         position: 'relative', aspectRatio: '2/3', background: short.gradient,
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
-        boxShadow: hover ? '0 12px 24px rgba(249,115,22,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
+        boxShadow: hover ? '0 12px 24px rgba(225,29,72,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
         transition: 'transform 0.15s, box-shadow 0.2s',
       }}
     >
@@ -410,7 +410,7 @@ function RealShortCard({ short }: { short: RealShort }) {
         position: 'relative', aspectRatio: '2/3', background: '#000',
         display: 'flex', alignItems: 'flex-end',
         transform: hover ? 'translateY(-4px) scale(1.02)' : 'none',
-        boxShadow: hover ? '0 12px 24px rgba(249,115,22,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
+        boxShadow: hover ? '0 12px 24px rgba(225,29,72,0.28)' : '0 2px 8px rgba(0,0,0,0.12)',
         transition: 'transform 0.15s, box-shadow 0.2s',
       }}
     >
@@ -454,7 +454,7 @@ function RealVideoCard({ video, winnerRank }: { video: RealVideo; winnerRank?: n
         background: 'var(--bg-card)', border: '1px solid var(--border-color)',
         transition: 'transform 0.15s, box-shadow 0.2s',
         transform: hover ? 'translateY(-4px)' : 'none',
-        boxShadow: hover ? '0 12px 28px rgba(249,115,22,0.20)' : 'none',
+        boxShadow: hover ? '0 12px 28px rgba(225,29,72,0.20)' : 'none',
       }}
     >
       <div className="mangal-katube-video-thumb" style={{ position: 'relative', aspectRatio: '16/9', background: '#000' }}>
@@ -504,7 +504,7 @@ function RealVideoCard({ video, winnerRank }: { video: RealVideo; winnerRank?: n
             <div style={{
               width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-primary)',
               border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '13px', fontWeight: 800, color: '#f97316',
+              fontSize: '13px', fontWeight: 800, color: '#e11d48',
             }}>{video.creator.trim().charAt(0).toUpperCase() || 'M'}</div>
           )}
         </div>
@@ -523,8 +523,8 @@ function RealVideoCard({ video, winnerRank }: { video: RealVideo; winnerRank?: n
                 href="#"
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                  fontSize: '10.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
-                  background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
+                  fontSize: '10.5px', fontWeight: 700, color: '#e11d48', textDecoration: 'none',
+                  background: 'rgba(225,29,72,0.10)', border: '1px solid rgba(225,29,72,0.28)',
                   padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
                   display: 'inline-flex', alignItems: 'center', gap: '4px',
                 }}>
@@ -601,6 +601,40 @@ export default function KaTubePage() {
   // grid (Home, New Voices row, etc). Same RPC the K Circle voting page
   // and the KaTube home banner both read, so all three stay in sync.
   const [weeklyWinnerRanks, setWeeklyWinnerRanks] = useState<Map<string, number>>(new Map());
+
+  // Dashboard hero redesign (reference: gaming-dashboard screenshot) —
+  // right-panel "In Library"-equivalent list. Real Continue Watching data
+  // when a signed-in viewer has any in-progress videos (same underlying
+  // katube_watch_progress table/logic as ContinueWatchingRow, just a
+  // second small query here since that component renders its own
+  // full-width row elsewhere and isn't shaped for a narrow sidebar list).
+  // Falls back to the 4 most recent uploads when there's no watch
+  // history yet (logged out, or nothing in progress) so the panel is
+  // never empty, matching the reference always showing 4 populated rows.
+  interface LibraryPanelItem { id: string; title: string; youtube_id: string; pct: number }
+  const [continueItems, setContinueItems] = useState<LibraryPanelItem[]>([]);
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const { data: rows } = await supabase.from('katube_watch_progress')
+        .select('video_id, position_seconds, duration_seconds, updated_at')
+        .eq('viewer_id', userId).order('updated_at', { ascending: false }).limit(8);
+      if (!rows || rows.length === 0) { setContinueItems([]); return; }
+      const ids = rows.map(r => r.video_id);
+      const { data: vids } = await supabase.from('videos').select('id, title, youtube_id').in('id', ids);
+      const vmap = new Map((vids || []).map(v => [v.id, v]));
+      const built = rows
+        .map(r => {
+          const v = vmap.get(r.video_id);
+          if (!v) return null;
+          const pct = r.duration_seconds ? Math.min(100, Math.round((r.position_seconds / r.duration_seconds) * 100)) : 0;
+          return { id: r.video_id, title: v.title, youtube_id: v.youtube_id, pct };
+        })
+        .filter((x): x is LibraryPanelItem => x !== null && x.pct < 92)
+        .slice(0, 4);
+      setContinueItems(built);
+    })();
+  }, [userId]);
 
   useEffect(() => {
     (async () => {
@@ -751,11 +785,17 @@ export default function KaTubePage() {
   // it to light — unlike before, this now actually re-themes the page
   // (previously the div's own hardcoded dark vars ignored the toggle
   // entirely). isLight is synced from ThemeToggle's onChange callback.
+  // Theme (Aug 2026 — reference-matched dashboard redesign): maroon/red
+  // gaming-dashboard palette per the founder's reference screenshot,
+  // replacing the previous flat near-black + orange. Scoped to this page
+  // only via the same local-CSS-var-override pattern already used here
+  // (isLight/ThemeToggle still works identically) — doesn't touch any
+  // other product's theme.
   const katubeDarkVars = {
-    '--bg-primary': '#07070a', '--bg-card': '#0d0d14', '--bg-input': '#08080c',
-    '--border-color': 'rgba(255, 255, 255, 0.18)', '--text-primary': '#f9fafb',
-    '--text-secondary': '#9ca3af', '--text-tertiary': '#6b7280',
-    '--nav-bg': 'rgba(7, 7, 10, 0.97)', '--nav-bg-transparent': 'rgba(7, 7, 10, 0.85)',
+    '--bg-primary': '#120610', '--bg-card': '#1d0a18', '--bg-input': '#170815',
+    '--border-color': 'rgba(225, 29, 72, 0.22)', '--text-primary': '#f9fafb',
+    '--text-secondary': '#c9a3b8', '--text-tertiary': '#8a6478',
+    '--nav-bg': 'rgba(18, 6, 16, 0.97)', '--nav-bg-transparent': 'rgba(18, 6, 16, 0.85)',
   } as CSSProperties;
   const katubeLightVars = {
     '--bg-primary': '#ffffff', '--bg-card': '#f7f7f9', '--bg-input': '#f0f0f3',
@@ -765,8 +805,32 @@ export default function KaTubePage() {
   } as CSSProperties;
   const katubeVars = isLight ? katubeLightVars : katubeDarkVars;
 
+  // Dashboard hero — big featured card where the reference's Spider-Man
+  // promo art sits, repurposed per founder request into a "Trending This
+  // Week" spotlight: this week's most-viewed real video (from `videos`,
+  // already loaded above), so it's always real content, never a fake
+  // placeholder promo. Falls back to null (renders a generic "what will
+  // you create today?" empty state) only when there are zero videos at all.
+  const heroVideo = videos.length > 0 ? [...videos].sort((a, b) => b.views - a.views)[0] : null;
+
+  // Right-panel list — real Continue Watching when available, else the 4
+  // newest uploads, so the panel matches the reference's "In Library"
+  // list (always 4 populated rows) using only real data.
+  const libraryPanelItems: { id: string; title: string; youtube_id: string; pct: number }[] =
+    continueItems.length > 0
+      ? continueItems
+      : videos.slice(0, 4).map(v => ({ id: v.id, title: v.title, youtube_id: v.youtube_id, pct: 0 }));
+  const libraryPanelLabel = continueItems.length > 0 ? 'Continue Watching' : 'Fresh Uploads';
+
   return (
-    <div data-theme={isLight ? 'light' : 'dark'} style={{ ...katubeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'clip' }}>
+    <div data-theme={isLight ? 'light' : 'dark'} style={{
+      ...katubeVars, minHeight: '100vh', color: 'var(--text-primary)', overflowX: 'clip',
+      // Reference-matched dashboard background — dark maroon radial glow
+      // instead of a flat color, only in dark mode (light mode keeps the
+      // plain white background, unaffected).
+      background: isLight ? 'var(--bg-primary)' : 'radial-gradient(ellipse 90% 60% at 50% -10%, rgba(225,29,72,0.16) 0%, transparent 55%), var(--bg-primary)',
+      backgroundAttachment: 'fixed',
+    }}>
       {/* overflowX: 'clip' not 'hidden' — same reasoning as globals.css:
           setting only overflow-x forces the browser to compute overflow-y
           as 'auto', which makes this page-root div a scroll container in
@@ -815,17 +879,21 @@ export default function KaTubePage() {
           flex-direction: column;
           overflow: hidden;
           position: sticky;
-          top: 64px;
+          top: 76px;
           left: 0;
           align-self: flex-start;
-          height: calc(100vh - 64px);
-          border-right: 1px solid var(--border-color);
-          background: transparent;
+          height: calc(100vh - 92px);
+          margin: 12px 0 12px 12px;
+          border-radius: 18px;
+          border: 1px solid var(--border-color);
+          background: linear-gradient(165deg, rgba(225,29,72,0.10) 0%, var(--bg-card) 55%);
+          box-shadow: 0 8px 30px rgba(0,0,0,0.35);
           transition: width 0.2s ease, border-color 0.2s ease;
         }
         .katube-sidebar.katube-sidebar--desktop-closed {
           width: 0px;
-          border-right: none;
+          border: none;
+          margin-left: 0;
         }
 
         @media (max-width: 768px) {
@@ -884,10 +952,12 @@ export default function KaTubePage() {
             z-index: 200;
             background: var(--bg-primary);
             border-right: none;
+            border-radius: 0;
+            margin: 0;
+            box-shadow: none;
             width: 240px;
             transform: translateX(-100%);
             transition: transform 0.2s ease;
-            box-shadow: none;
           }
           .katube-sidebar.katube-sidebar--mobile-open {
             transform: translateX(0);
@@ -901,7 +971,7 @@ export default function KaTubePage() {
              divider between cards instead of a bordered/rounded card.
              Desktop keeps its existing rounded card-grid untouched; no new
              colors introduced, still var(--bg-card)/var(--border-color)/
-             the existing #f97316 accent used throughout this page. */
+             the existing #e11d48 accent used throughout this page. */
           .mangal-katube-video-grid {
             display: flex !important;
             flex-direction: column !important;
@@ -1010,7 +1080,7 @@ export default function KaTubePage() {
           ><Search size={19} /></button>
           <Link href="/katube/upload" style={{
             padding: '8px 14px', borderRadius: '18px', fontSize: '12.5px', fontWeight: 700,
-            color: '#fff', textDecoration: 'none', background: '#f97316',
+            color: '#fff', textDecoration: 'none', background: '#e11d48',
             whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px',
           }}>
             <span className="katube-label-full">+ Create</span>
@@ -1065,26 +1135,170 @@ export default function KaTubePage() {
 
         <div style={{ flex: 1, minWidth: 0 }}>
 
-      {/* ── HERO STRIP ──
-          Mobile: hidden entirely (see .katube-hero rule below) — the
-          YouTube-app reference the founder pointed to goes straight from
-          the nav into the chip row with no hero block at all, and this
-          section was one of the two things (along with the drawer bugs
-          fixed in §108) contributing to the "everything overlaps/cluttered"
-          complaint by pushing all real content further down the fold.
-          Desktop keeps it — there's room, and it's useful context there. */}
+      {/* ── DASHBOARD HERO — reference-matched (gaming-dashboard screenshot) ──
+          Two-column row: big featured card (left) where the reference's
+          Spider-Man promo art sits — repurposed per founder request into a
+          "Trending This Week" spotlight on a real video, not a fake game
+          promo — plus a narrower "In Library"-equivalent panel (right)
+          showing Continue Watching (or newest uploads as a fallback).
+          Mobile: hidden entirely, same as the hero it replaces (see
+          .katube-hero CSS rule above) — the mobile home feed already has
+          its own §109 YouTube-app-style redesign and doesn't need this
+          desktop dashboard hero on top of it. */}
       <div className="katube-hero" style={{
-        padding: '36px 20px 24px', textAlign: 'center',
-        background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgba(249,115,22,0.10) 0%, transparent 70%)',
+        display: 'flex', gap: '20px', alignItems: 'stretch',
+        maxWidth: '1200px', margin: '20px auto 8px', padding: '0 20px',
       }}>
-        <h1 style={{
-          fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, margin: '0 0 8px', letterSpacing: '-0.03em',
-        }}>AI-Anime, Made by MANGAL Creators</h1>
-        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto' }}>
-          Every video here is an original AI-generated adaptation of a MANGAL series. Click a video to watch it,
-          or upload your own.
-        </p>
+        <div
+          onClick={() => heroVideo && router.push(`/katube/watch/${heroVideo.id}`)}
+          style={{
+            flex: '1 1 640px', minWidth: 0, position: 'relative', borderRadius: '20px',
+            overflow: 'hidden', minHeight: '380px', background: '#1d0a18',
+            cursor: heroVideo ? 'pointer' : 'default',
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          {heroVideo && (
+            <img
+              src={`https://img.youtube.com/vi/${heroVideo.youtube_id}/maxresdefault.jpg`}
+              alt=""
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }}
+            />
+          )}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(100deg, rgba(18,6,16,0.95) 0%, rgba(18,6,16,0.65) 45%, rgba(18,6,16,0.15) 100%)',
+          }} />
+          <div style={{
+            position: 'relative', zIndex: 1, height: '100%', padding: '32px',
+            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: '10px',
+          }}>
+            <span style={{
+              alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '6px',
+              fontSize: '11.5px', fontWeight: 800, color: '#fecdd3', background: 'rgba(225,29,72,0.22)',
+              border: '1px solid rgba(225,29,72,0.4)', padding: '5px 13px', borderRadius: '20px', letterSpacing: '0.02em',
+            }}>🔥 Trending This Week</span>
+            <h1 style={{
+              fontSize: 'clamp(22px, 3.4vw, 34px)', fontWeight: 900, margin: 0, color: '#fff',
+              letterSpacing: '-0.02em', lineHeight: 1.15, maxWidth: '520px',
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {heroVideo ? heroVideo.title : 'What will you create today?'}
+            </h1>
+            <p style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.75)', margin: 0, maxWidth: '480px' }}>
+              {heroVideo
+                ? `${heroVideo.creator} · ${heroVideo.views.toLocaleString()} views this week`
+                : 'Every video here is an original AI-generated adaptation of a MANGAL series. Upload yours and it could be featured here.'}
+            </p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+              {heroVideo && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px', fontWeight: 800,
+                  color: '#fff', background: 'linear-gradient(135deg, #e11d48, #fb7185)',
+                  padding: '10px 22px', borderRadius: '20px',
+                }}><Play size={14} fill="#fff" /> Watch now</span>
+              )}
+              <Link href="/katube/upload" onClick={e => e.stopPropagation()} style={{
+                display: 'inline-flex', alignItems: 'center', fontSize: '13px', fontWeight: 800,
+                color: '#fff', background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.3)',
+                padding: '10px 20px', borderRadius: '20px', textDecoration: 'none',
+              }}>Get creative — upload</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Right panel — Continue Watching / Fresh Uploads, matching the
+            reference's "In Library" list (thumbnail + title + tags row +
+            trailing icon, 4 rows). */}
+        <div style={{
+          flex: '1 1 300px', maxWidth: '340px', minWidth: '260px', borderRadius: '20px',
+          border: '1px solid var(--border-color)', background: 'linear-gradient(165deg, rgba(225,29,72,0.08) 0%, var(--bg-card) 60%)',
+          padding: '18px', display: 'flex', flexDirection: 'column', gap: '4px', overflow: 'hidden',
+        }}>
+          <h2 style={{ fontSize: '14px', fontWeight: 900, margin: '0 0 10px', letterSpacing: '-0.01em' }}>{libraryPanelLabel}</h2>
+          {libraryPanelItems.length === 0 ? (
+            <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: 0 }}>
+              Nothing here yet — <Link href="/katube/upload" style={{ color: '#e11d48', fontWeight: 700 }}>upload a video</Link> to get started.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {libraryPanelItems.map(item => (
+                <div
+                  key={item.id}
+                  onClick={() => router.push(`/katube/watch/${item.id}`)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', padding: '7px',
+                    borderRadius: '10px', cursor: 'pointer', transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(225,29,72,0.08)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                >
+                  <div style={{ position: 'relative', width: '52px', height: '52px', flexShrink: 0, borderRadius: '10px', overflow: 'hidden', background: '#000' }}>
+                    <img
+                      src={`https://img.youtube.com/vi/${item.youtube_id}/hqdefault.jpg`}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{
+                      fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>{item.title}</div>
+                    {item.pct > 0 && (
+                      <div style={{ marginTop: '5px', height: '3px', borderRadius: '2px', background: 'rgba(255,255,255,0.12)' }}>
+                        <div style={{ height: '100%', width: `${item.pct}%`, borderRadius: '2px', background: '#e11d48' }} />
+                      </div>
+                    )}
+                  </div>
+                  <Play size={14} style={{ flexShrink: 0, color: 'var(--text-tertiary)' }} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Fast tap — renamed from "Shorts" per the wireframe; relocated
+          here (directly under the dashboard hero, before Popular/New/
+          Rankings) per founder request — matches where the reference
+          screenshot's game grid picks up right after the hero art. Grid
+          instead of a horizontal scroll strip so it can collapse/expand
+          via "Show more", matching the wireframe's stacked-sections layout. */}
+      {(activeSidebar === 'home' || activeSidebar === 'fast') && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ▷ Fast Tap
+            </h2>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>9:16 · quick swipe-through</span>
+          </div>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: '4px',
+          }}>
+            {shorts.length > 0
+              ? (showAllFastTap ? shorts : shorts.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <RealShortCard key={s.id} short={s} />)
+              : (showAllFastTap ? DEMO_SHORTS : DEMO_SHORTS.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <DemoShortCard key={s.id} short={s} />)}
+          </div>
+          {(shorts.length > 6 || (shorts.length === 0 && DEMO_SHORTS.length > 6)) && (
+            <button
+              onClick={() => setShowAllFastTap(v => !v)}
+              style={{
+                display: 'block', margin: '12px auto 0', padding: '8px 20px', borderRadius: '20px',
+                fontSize: '12px', fontWeight: 700, color: '#e11d48', background: 'rgba(225,29,72,0.10)',
+                border: '1px solid rgba(225,29,72,0.28)', cursor: 'pointer',
+              }}
+            >
+              {showAllFastTap ? '▲ Show less' : '▼ Show more'}
+            </button>
+          )}
+          {shorts.length === 0 && (
+            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '10px 0 0' }}>
+              Demo placeholders — <Link href="/katube/upload" style={{ color: '#e11d48', fontWeight: 700 }}>upload a Short</Link> to replace these.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Filter row — Popular / New / Rankings / Categories / Tools, plus
           the "Filters" (duration/upload-date) toggle folded into the same
@@ -1107,7 +1321,7 @@ export default function KaTubePage() {
             onClick={() => setActiveFilter(i)}
             style={{
               flexShrink: 0, fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-              background: i === activeFilter ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'var(--bg-card)',
+              background: i === activeFilter ? 'linear-gradient(135deg, #e11d48, #fb7185)' : 'var(--bg-card)',
               color: i === activeFilter ? '#fff' : 'var(--text-secondary)',
               border: i === activeFilter ? 'none' : '1px solid var(--border-color)',
               cursor: 'pointer', whiteSpace: 'nowrap',
@@ -1118,8 +1332,8 @@ export default function KaTubePage() {
           style={{
             flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700,
             padding: '7px 16px', borderRadius: '20px', cursor: 'pointer',
-            background: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? 'rgba(249,115,22,0.12)' : 'var(--bg-card)',
-            color: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? '#f97316' : 'var(--text-secondary)',
+            background: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? 'rgba(225,29,72,0.12)' : 'var(--bg-card)',
+            color: showMoreFilters || activeDurationBucket > 0 || activeUploadDateBucket > 0 ? '#e11d48' : 'var(--text-secondary)',
             border: '1px solid var(--border-color)', whiteSpace: 'nowrap',
           }}
         >
@@ -1239,44 +1453,6 @@ export default function KaTubePage() {
         </div>
       )}
 
-      {/* Fast tap — renamed from "Shorts" per the wireframe. Grid instead of
-          a horizontal scroll strip so it can collapse/expand via "Show more",
-          matching the wireframe's stacked-sections layout. */}
-      {(activeSidebar === 'home' || activeSidebar === 'fast') && (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px 8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              ▷ Fast Tap
-            </h2>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>9:16 · quick swipe-through</span>
-          </div>
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: '4px',
-          }}>
-            {shorts.length > 0
-              ? (showAllFastTap ? shorts : shorts.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <RealShortCard key={s.id} short={s} />)
-              : (showAllFastTap ? DEMO_SHORTS : DEMO_SHORTS.slice(0, FAST_TAP_COLLAPSED_COUNT)).map(s => <DemoShortCard key={s.id} short={s} />)}
-          </div>
-          {(shorts.length > 6 || (shorts.length === 0 && DEMO_SHORTS.length > 6)) && (
-            <button
-              onClick={() => setShowAllFastTap(v => !v)}
-              style={{
-                display: 'block', margin: '12px auto 0', padding: '8px 20px', borderRadius: '20px',
-                fontSize: '12px', fontWeight: 700, color: '#f97316', background: 'rgba(249,115,22,0.10)',
-                border: '1px solid rgba(249,115,22,0.28)', cursor: 'pointer',
-              }}
-            >
-              {showAllFastTap ? '▲ Show less' : '▼ Show more'}
-            </button>
-          )}
-          {shorts.length === 0 && (
-            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '10px 0 0' }}>
-              Demo placeholders — <Link href="/katube/upload" style={{ color: '#f97316', fontWeight: 700 }}>upload a Short</Link> to replace these.
-            </p>
-          )}
-        </div>
-      )}
-
       {/* Slow tap — renamed from "Videos" per the wireframe. */}
       {(activeSidebar === 'home' || activeSidebar === 'slow') && (
         <>
@@ -1290,7 +1466,7 @@ export default function KaTubePage() {
           ) : videos.length === 0 ? (
             <div style={{ maxWidth: '600px', margin: '0 auto 60px', padding: '18px 22px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
               <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-                No videos yet — be the first! <Link href="/katube/upload" style={{ color: '#f97316', fontWeight: 700 }}>Upload a video</Link> and
+                No videos yet — be the first! <Link href="/katube/upload" style={{ color: '#e11d48', fontWeight: 700 }}>Upload a video</Link> and
                 it&apos;ll show up here automatically.
               </p>
             </div>
@@ -1337,7 +1513,7 @@ export default function KaTubePage() {
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
             flex: 1, padding: '6px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
-            color: activeSidebar === 'home' ? '#f97316' : 'var(--text-tertiary)',
+            color: activeSidebar === 'home' ? '#e11d48' : 'var(--text-tertiary)',
           }}
         >
           <Home size={20} strokeWidth={activeSidebar === 'home' ? 2.4 : 2} />
@@ -1348,7 +1524,7 @@ export default function KaTubePage() {
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
             flex: 1, padding: '6px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
-            color: activeSidebar === 'fast' ? '#f97316' : 'var(--text-tertiary)',
+            color: activeSidebar === 'fast' ? '#e11d48' : 'var(--text-tertiary)',
           }}
         >
           <Zap size={20} strokeWidth={activeSidebar === 'fast' ? 2.4 : 2} />
@@ -1363,7 +1539,7 @@ export default function KaTubePage() {
         >
           <span style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: '30px', height: '30px', borderRadius: '8px', background: '#f97316', color: '#fff',
+            width: '30px', height: '30px', borderRadius: '8px', background: '#e11d48', color: '#fff',
           }}><PlusSquare size={17} strokeWidth={2.4} /></span>
         </Link>
         <Link

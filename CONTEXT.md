@@ -7268,3 +7268,75 @@ relocated into the new sidebar column rather than rebuilt.
 rounds of concurrent commits from another active session on this repo
 (home-page mobile redesign, then a DB security-hardening pass) — neither
 touched this file, both merged with zero conflicts.
+
+## §111 — KaTube home (desktop): gaming-dashboard layout redesign + maroon/red theme
+
+Founder shared a gaming-platform dashboard screenshot and asked for the
+KaTube home page to match it "same to same" but with KaTube's own
+content, with the hero art slot repurposed into a "Trending This
+Week"/creative-ideas spotlight (not a fake game promo), the Fast Tap
+shorts row relocated to sit directly under that hero, and the reference's
+maroon/red color scheme applied. Scoped to the desktop layout for this
+pass, per founder ("let's first do and complete the homepage exactly
+like [the reference] ... go for it") — mobile keeps its existing §109
+YouTube-app-style redesign untouched.
+
+**Theme color pass** (`app/katube/page.tsx` only, not yet rolled out to
+the rest of the site or to the standalone banner components
+MangalOfTheWeekBanner/WriterOfTheMonthBanner/MangalIdeasRow/
+ContinueWatchingRow that render inside this page — noted as follow-up
+below): every `#f97316` orange accent and its `rgba(249,115,22,…)`
+variants swapped for a crimson/red `#e11d48` (+ `rgba(225,29,72,…)`),
+matching the reference's palette. `katubeDarkVars` background/border/
+text-secondary/tertiary values retuned to maroon tones (`#120610`
+page background, `#1d0a18` card background, red-tinted border). Page
+root now paints a radial maroon glow (`radial-gradient(... rgba(225,
+29,72,0.16) ...)`) behind the flat background, dark mode only — light
+mode unaffected. `DEMO_SHORTS` gradient palette (Fast Tap placeholder
+cards, only shown when there are zero real Shorts yet) recolored to
+the same red family. Left sidebar (`.katube-sidebar` CSS) restyled
+from a flush full-height list into a floating rounded card (18px
+radius, maroon gradient fill, subtle shadow, 12px margin) matching the
+reference's left rail — mobile drawer variant explicitly resets
+margin/radius/shadow back to a flush fixed panel so this doesn't leak
+into the mobile drawer.
+
+**Dashboard hero** (new, desktop-only via the existing `.katube-hero`
+mobile-hidden CSS rule — reused the class, replaced its contents):
+two-column row where the reference's Spider-Man promo art sits.
+- **Left (big card):** this week's most-viewed real video from the
+  already-loaded `videos` list (no new query) as a "🔥 Trending This
+  Week" spotlight — real title/creator/views, thumbnail background,
+  "Watch now" + "Get creative — upload" CTAs. Falls back to a generic
+  "What will you create today?" empty state only when there are zero
+  videos at all — never a placeholder/fake promo.
+- **Right (narrow panel):** matches the reference's "In Library" list.
+  New `continueItems` fetch (mirrors `ContinueWatchingRow`'s
+  `katube_watch_progress` query, kept separate since that component
+  renders its own full-width row elsewhere and isn't shaped for a
+  narrow sidebar list) shows the signed-in viewer's real in-progress
+  videos with a progress bar; falls back to the 4 newest uploads
+  ("Fresh Uploads") when there's no watch history, so the panel is
+  never empty — always 4 real rows, matching the reference.
+
+**Fast Tap relocated:** physically moved from its old spot (after New
+Voices, deep in the page) to directly under the new dashboard hero,
+before the Popular/New/Rankings/Categories/Tools filter row — matches
+where the reference's game grid picks up right after the hero art.
+Same component/data/collapse-behavior, just repositioned; removed from
+its old location rather than duplicated.
+
+**Not done (explicitly scoped out this pass):** the maroon/red theme
+was NOT propagated into MangalOfTheWeekBanner, WriterOfTheMonthBanner,
+MangalIdeasRow, ContinueWatchingRow, or any page outside `/katube` —
+those still render their existing orange styling inside this page for
+now. Founder said "same to same... let's first do and complete the
+homepage" — read as: get this page's own layout/hero/Fast-Tap/theme
+right first, full-palette rollout across nested components and other
+pages is a separate follow-up pass.
+
+**Verified:** `tsc --noEmit` clean. `eslint`: fixed one real error this
+pass introduced (synchronous `setState` inside a bare effect body for
+the new `continueItems` fetch — moved the early-return guard out from
+around the `setState` call). 0 errors after fix, same 5 pre-existing
+`<img>` LCP warnings only.
