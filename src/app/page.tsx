@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ThemeToggle from './components/shared/ThemeToggle';
 import MangalLogo from './components/shared/MangalLogo';
 import ParticleField from './components/shared/ParticleField';
@@ -50,6 +48,62 @@ function formatViews(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return n.toString();
+}
+
+// ── GSAP runtime loader ──────────────────────────────────────────────────
+// gsap + ScrollTrigger are NOT bundled — not statically AND not even via
+// dynamic import(). OpenNext concatenates every server-side chunk (including
+// lazy ones, since client components are SSR'd) into a single handler.mjs,
+// so ANY bundled form of these libraries counts against Cloudflare's 3 MiB
+// free-plan Worker size limit ([code: 10027] deploy failure). They live as
+// static assets under /vendor/ instead and are injected as classic script
+// tags on first use — same pattern as the books reader's pdf.js/epub.js.
+interface GsapTweenVars { [key: string]: unknown }
+interface GsapStatic {
+  registerPlugin(...plugins: unknown[]): void;
+  context(fn: () => void, scope?: Element | string | object | null): { revert(): void };
+  to(targets: string, vars: GsapTweenVars): unknown;
+  from(targets: string, vars: GsapTweenVars): unknown;
+}
+// Marker-only — ScrollTrigger instances are only ever passed back into
+// gsap.registerPlugin, never called directly.
+type ScrollTriggerPlugin = Record<string, unknown>;
+
+declare global {
+  interface Window {
+    gsap?: GsapStatic;
+    ScrollTrigger?: ScrollTriggerPlugin;
+  }
+}
+
+function injectScriptOnce(src: string, seen: Set<string>): Promise<void> {
+  if (seen.has(src)) return Promise.resolve();
+  seen.add(src);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error(`Could not load ${src}.`));
+    document.head.appendChild(s);
+  });
+}
+
+const gsapScriptsSeen = new Set<string>();
+let gsapPromise: Promise<{ gsap: GsapStatic; ScrollTrigger: ScrollTriggerPlugin }> | null = null;
+function loadGsap(): Promise<{ gsap: GsapStatic; ScrollTrigger: ScrollTriggerPlugin }> {
+  // Sequential on purpose — ScrollTrigger's UMD build attaches itself to
+  // the global gsap instance, so gsap.min.js must be evaluated first.
+  if (!gsapPromise) {
+    gsapPromise = (async () => {
+      await injectScriptOnce('/vendor/gsap.min.js', gsapScriptsSeen);
+      await injectScriptOnce('/vendor/ScrollTrigger.min.js', gsapScriptsSeen);
+      if (!window.gsap || !window.ScrollTrigger) {
+        throw new Error('Animation engine failed to initialize.');
+      }
+      return { gsap: window.gsap, ScrollTrigger: window.ScrollTrigger };
+    })();
+  }
+  return gsapPromise;
 }
 
 const FEATURE_CARDS = [
@@ -278,8 +332,15 @@ export default function LandingPage() {
   // side — all recolored amber instead of the reference's green.
   useEffect(() => {
     if (!splashDone) return;
-    gsap.registerPlugin(ScrollTrigger);
-    const ctx = gsap.context(() => {
+    let cancelled = false;
+    let ctx: { revert: () => void } | null = null;
+    // Loaded from /vendor static assets at runtime — see the loader note
+    // above for why this must never become an import of any kind.
+    (async () => {
+      const { gsap, ScrollTrigger } = await loadGsap();
+      if (cancelled) return;
+      gsap.registerPlugin(ScrollTrigger);
+      ctx = gsap.context(() => {
       gsap.to('#mangal-nav', {
         backgroundColor: 'rgba(10,8,6,0.92)',
         backdropFilter: 'blur(20px)',
@@ -307,8 +368,9 @@ export default function LandingPage() {
         scrollTrigger: { trigger: '#mangal-quote', start: 'top 70%', end: 'top 40%', scrub: 2 },
       });
 
-    }, mainRef);
-    return () => ctx.revert();
+      }, mainRef);
+    })();
+    return () => { cancelled = true; ctx?.revert(); };
   }, [splashDone]);
 
   // Separate effect: the outline heading only mounts once showcaseItems has
@@ -320,13 +382,20 @@ export default function LandingPage() {
   // actually present.
   useEffect(() => {
     if (!splashDone || showcaseItems.length < 3) return;
-    const ctx = gsap.context(() => {
-      gsap.from('#mangal-outline-heading', {
-        y: 50, opacity: 0,
-        scrollTrigger: { trigger: '#mangal-outline-heading', start: 'top 85%', end: 'top 60%', scrub: 1.5 },
-      });
-    }, mainRef);
-    return () => ctx.revert();
+    let cancelled = false;
+    let ctx: { revert: () => void } | null = null;
+    (async () => {
+      const { gsap, ScrollTrigger } = await loadGsap();
+      if (cancelled) return;
+      gsap.registerPlugin(ScrollTrigger);
+      ctx = gsap.context(() => {
+        gsap.from('#mangal-outline-heading', {
+          y: 50, opacity: 0,
+          scrollTrigger: { trigger: '#mangal-outline-heading', start: 'top 85%', end: 'top 60%', scrub: 1.5 },
+        });
+      }, mainRef);
+    })();
+    return () => { cancelled = true; ctx?.revert(); };
   }, [splashDone, showcaseItems.length]);
 
   const handleSearch = (e: React.FormEvent) => {

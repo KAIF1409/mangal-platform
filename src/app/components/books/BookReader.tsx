@@ -17,12 +17,15 @@
 // client-side too; EPUB previews never attempt a parse (a truncated zip
 // can't open) and show the cover + checkout card instead.
 //
-// NOTE ON THE WORKER FILE: pdf.js runs its parser in a Worker loaded from
-// `/pdf.worker.min.mjs`. That file is a checked-in copy of
-// node_modules/pdfjs-dist/build/pdf.worker.min.mjs — re-copy it whenever
-// the pdfjs-dist version changes (kept out of the bundler on purpose: a
-// static public asset works identically under Turbopack dev, webpack
-// builds, and the OpenNext/Workers deploy, with zero bundler magic).
+// NOTE ON THE READER ENGINES: pdf.js and epub.js are NOT bundled — not into
+// the client chunks and critically not into the OpenNext server function.
+// Client components are SSR'd, so a plain `import('pdfjs-dist')` here still
+// pulled the whole library into handler.mjs, which blew past Cloudflare's
+// 3 MiB free-plan Worker size limit on deploy ([code: 10027]). Instead both
+// engines live as static assets under /vendor/ (see public/vendor/README.md)
+// and are loaded at runtime by injecting script tags — see loadPdfjs() and
+// loadEpub() below. The types they used to come from 'pdfjs-dist' are now
+// minimal structural types defined locally.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -30,7 +33,6 @@ import {
   ArrowLeft, ArrowRight, Maximize, Minimize, Moon, Sun, Sunset,
   Type, ZoomIn, ZoomOut, Lock, Loader2, X, AlertCircle,
 } from 'lucide-react';
-import type { PDFDocumentProxy, PDFDocumentLoadingTask } from 'pdfjs-dist';
 import { supabase } from '../../lib/supabase';
 import { openRazorpayCheckout } from '../../lib/payments/razorpayClient';
 
@@ -73,6 +75,98 @@ function formatPaise(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 }
 
+// ── Minimal structural types for the two reader engines ──────────────────
+// Only the surface this component actually touches — the real libraries are
+// loaded at runtime from /vendor static assets, never imported.
+
+interface PdfViewport { width: number; height: number }
+interface PdfPageProxy {
+  getViewport(params: { scale: number }): PdfViewport;
+  render(params: {
+    canvasContext: CanvasRenderingContext2D;
+    viewport: PdfViewport;
+    canvas: HTMLCanvasElement;
+  }): { promise: Promise<void> };
+}
+interface PdfDocumentProxy {
+  numPages: number;
+  getPage(pageNumber: number): Promise<PdfPageProxy>;
+}
+interface PdfjsLib {
+  GlobalWorkerOptions: { workerSrc: string };
+  getDocument(src: { data: ArrayBuffer }): {
+    promise: Promise<PdfDocumentProxy>;
+    destroy(): Promise<void>;
+  };
+}
+
+interface EpubLocation { start?: { cfi?: string; percentage?: number } }
+interface EpubRendition {
+  themes: {
+    register(name: string, css: unknown): void;
+    select(name: string): void;
+    fontSize(size: string): void;
+  };
+  display(target?: string): Promise<unknown>;
+  on(event: string, cb: (loc: EpubLocation) => void): void;
+  next(): void;
+  prev(): void;
+  destroy(): void;
+}
+interface EpubBook {
+  ready: Promise<unknown>;
+  renderTo(el: HTMLElement, opts: Record<string, unknown>): EpubRendition;
+  destroy(): void;
+}
+type EpubCtor = (data: ArrayBuffer) => EpubBook;
+
+declare global {
+  interface Window {
+    pdfjsLib?: PdfjsLib;
+    ePub?: EpubCtor;
+  }
+}
+
+// Injects /vendor/pdf-loader.mjs once; resolves with the library after the
+// module graph has fully evaluated (module scripts' load event guarantees
+// that). Repeated calls reuse the same in-flight promise.
+let pdfjsPromise: Promise<PdfjsLib> | null = null;
+function loadPdfjs(): Promise<PdfjsLib> {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (!pdfjsPromise) {
+    pdfjsPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.type = 'module';
+      s.src = '/vendor/pdf-loader.mjs';
+      s.onload = () => {
+        if (window.pdfjsLib) resolve(window.pdfjsLib);
+        else reject(new Error('PDF engine failed to initialize.'));
+      };
+      s.onerror = () => reject(new Error('Could not load the PDF engine.'));
+      document.head.appendChild(s);
+    });
+  }
+  return pdfjsPromise;
+}
+
+let epubPromise: Promise<EpubCtor> | null = null;
+function loadEpub(): Promise<EpubCtor> {
+  if (window.ePub) return Promise.resolve(window.ePub);
+  if (!epubPromise) {
+    epubPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = '/vendor/epub.min.js';
+      s.onload = () => {
+        if (window.ePub) resolve(window.ePub);
+        else reject(new Error('EPUB engine failed to initialize.'));
+      };
+      s.onerror = () => reject(new Error('Could not load the EPUB engine.'));
+      document.head.appendChild(s);
+    });
+  }
+  return epubPromise;
+}
+
 export default function BookReader({ book, hasAccess, userId, initialProgress }: Props) {
   // ── shared state ──────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
@@ -87,10 +181,13 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const flippingRef = useRef(false);
 
   // ── PDF state ─────────────────────────────────────────────────────────
-  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
-  // In pdf.js v6 the teardown method lives on the loading task, not the
-  // document proxy — keep a ref so unmount can stop the worker cleanly.
-  const pdfLoadingTaskRef = useRef<PDFDocumentLoadingTask | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<PdfDocumentProxy | null>(null);
+  // The teardown method lives on the loading task, not the document proxy —
+  // keep a ref so unmount can stop the worker cleanly.
+  const pdfLoadingTaskRef = useRef<{
+    promise: Promise<PdfDocumentProxy>;
+    destroy(): Promise<void>;
+  } | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [spread, setSpread] = useState(0);
   const [mobilePage, setMobilePage] = useState(1);
@@ -105,7 +202,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const [epubReady, setEpubReady] = useState(false);
   const [fontIdx, setFontIdx] = useState(1);
   const [epubPercent, setEpubPercent] = useState<number | null>(null);
-  const epubRefs = useRef<{ book: unknown; rendition: unknown } | null>(null);
+  const epubRefs = useRef<{ book: EpubBook; rendition: EpubRendition } | null>(null);
 
   const previewOnly = !access && book.pricing_type === 'PAID';
 
@@ -165,12 +262,13 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
 
     (async () => {
       try {
-        const [{ buf }] = await Promise.all([fetchFileBuffer()]);
+        // Engine + file load in parallel — the engine comes from the
+        // /vendor static asset, never from a bundle.
+        const [buf, pdfjsLib] = await Promise.all([
+          fetchFileBuffer().then((r) => r.buf),
+          loadPdfjs(),
+        ]);
         if (cancelled) return;
-
-        const pdfjsLib = await import('pdfjs-dist');
-        if (cancelled) return;
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
         const loadingTask = pdfjsLib.getDocument({ data: buf });
         pdfLoadingTaskRef.current = loadingTask;
@@ -272,12 +370,11 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
 
     (async () => {
       try {
-        const { buf } = await fetchFileBuffer();
+        const [buf, ePub] = await Promise.all([
+          fetchFileBuffer().then((r) => r.buf),
+          loadEpub(),
+        ]);
         if (cancelled) return;
-
-        const ePubModule = await import('epubjs');
-        if (cancelled) return;
-        const ePub = ePubModule.default;
 
         const epubBook = ePub(buf);
         const rendition = epubBook.renderTo(epubContainerRef.current!, {
@@ -300,7 +397,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         await rendition.display(initialProgress?.lastLocation || undefined);
         if (cancelled) { rendition.destroy(); return; }
 
-        rendition.on('relocated', (loc: { start?: { cfi?: string; percentage?: number } }) => {
+        rendition.on('relocated', (loc: EpubLocation) => {
           const pct = loc.start?.percentage ?? null;
           setEpubPercent(pct);
           if (userId && loc.start?.cfi) {
@@ -320,8 +417,8 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
       cancelled = true;
       const refs = epubRefs.current;
       if (refs) {
-        try { (refs.rendition as { destroy: () => void }).destroy(); } catch { /* ignore */ }
-        try { (refs.book as { destroy: () => void }).destroy(); } catch { /* ignore */ }
+        try { refs.rendition.destroy(); } catch { /* ignore */ }
+        try { refs.book.destroy(); } catch { /* ignore */ }
         epubRefs.current = null;
       }
     };
@@ -330,10 +427,10 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
 
   // Live-apply theme/font changes to a mounted EPUB rendition.
   useEffect(() => {
-    const refs = epubRefs.current as { rendition?: { themes?: { select: (t: string) => void; fontSize: (s: string) => void } } } | null;
-    if (refs?.rendition?.themes) {
-      refs.rendition.themes.select(theme);
-      refs.rendition.themes.fontSize(FONT_SIZES[fontIdx]);
+    const themes = epubRefs.current?.rendition.themes;
+    if (themes) {
+      themes.select(theme);
+      themes.fontSize(FONT_SIZES[fontIdx]);
     }
   }, [theme, fontIdx, epubReady]);
 
@@ -378,7 +475,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const goNext = useCallback(() => {
     if (flippingRef.current) return;
     if (book.file_type === 'epub') {
-      (epubRefs.current?.rendition as { next?: () => void } | null)?.next?.();
+      epubRefs.current?.rendition.next();
       return;
     }
     if (isMobile) {
@@ -395,7 +492,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const goPrev = useCallback(() => {
     if (flippingRef.current) return;
     if (book.file_type === 'epub') {
-      (epubRefs.current?.rendition as { prev?: () => void } | null)?.prev?.();
+      epubRefs.current?.rendition.prev();
       return;
     }
     if (isMobile) {
