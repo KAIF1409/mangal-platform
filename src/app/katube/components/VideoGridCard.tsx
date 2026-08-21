@@ -308,7 +308,7 @@ export function KaTubeShell({ title, backHref = '/katube', children }: { title: 
           <Users size={20} strokeWidth={title === 'Following' ? 2.4 : 2} />
           <span style={{ fontSize: '10px', fontWeight: 700 }}>Following</span>
         </Link>
-        <Link href="/katube/dashboard" style={{
+        <Link href="/mangal-studio/katube" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
           flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#b088a0',
         }}>

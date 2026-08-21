@@ -321,7 +321,7 @@ export default function KaTubeUploadPage() {
               one-time step — after that, every upload here is checked automatically
               and you won&apos;t be asked again.
             </p>
-            <Link href="/katube/dashboard" style={{
+            <Link href="/mangal-studio/katube" style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px',
               background: '#e11d48', color: '#fff', fontSize: '13px', fontWeight: 700,
               textDecoration: 'none',
@@ -333,7 +333,7 @@ export default function KaTubeUploadPage() {
             padding: '10px 14px', borderRadius: '10px', marginBottom: '20px',
             background: 'rgba(225,29,72,0.08)', border: '1px solid rgba(225,29,72,0.25)',
             fontSize: '12px', fontWeight: 700, color: '#e11d48', display: 'flex', alignItems: 'center', gap: '6px',
-          }}><CheckCircle2 size={14} /> Verified channel — every upload is still checked against it. <Link href="/katube/dashboard" style={{ color: '#e11d48' }}>View KaTube profile</Link></div>
+          }}><CheckCircle2 size={14} /> Verified channel — every upload is still checked against it. <Link href="/mangal-studio/katube" style={{ color: '#e11d48' }}>View KaTube profile</Link></div>
 
           {/* Step indicator — mobile only. YouTube Studio's mobile upload
               flow is step-by-step rather than one long scroll; desktop

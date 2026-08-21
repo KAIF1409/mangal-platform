@@ -36,7 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/boost', label: 'Boost', icon: Rocket },
   { href: '/dashboard/perks', label: 'Perks', icon: Gift },
   { href: '/dashboard/academy', label: 'Academy', icon: GraduationCap },
-  { href: '/katube/dashboard', label: 'KaTube', icon: Clapperboard },
+  { href: '/mangal-studio/katube', label: 'KaTube', icon: Clapperboard },
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [

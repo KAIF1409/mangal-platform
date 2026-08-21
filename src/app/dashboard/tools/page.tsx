@@ -49,7 +49,7 @@ const TOOLS_BY_PRODUCT: Record<ProductKey, { label: string; icon: LucideIcon; to
     label: 'KaTube', icon: PlaySquareIcon,
     tools: [
       { icon: Upload, title: 'Video Uploader', desc: 'Upload a new video or Short to your channel.', href: '/katube/upload', live: true },
-      { icon: PlaySquareIcon, title: 'Channel Dashboard', desc: 'Manage your uploads, verification and channel details.', href: '/katube/dashboard', live: true },
+      { icon: PlaySquareIcon, title: 'Channel Dashboard', desc: 'Manage your uploads, verification and channel details.', href: '/mangal-studio/katube', live: true },
       { icon: Captions, title: 'Auto Captions', desc: 'Generate captions for your videos automatically.', href: '#', live: false },
       { icon: CalendarClock, title: 'Release Scheduler', desc: 'Queue videos to publish automatically on a schedule.', href: '#', live: false },
     ],

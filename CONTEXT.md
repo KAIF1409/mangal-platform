@@ -7742,3 +7742,89 @@ scaffold `/mangal-studio/katube` Overview tab against the now-unblocked
 real data (views, likes, followers-gained, completion % via the RLS
 fix above), Long-form/Fast Tap split, per-product theme applied from
 day one per decision 4 above.
+
+## §116 — MANGAL Studio Phase 1: KaTube Studio UI, implemented
+Picking up exactly where §115's scope note left off (RLS fix shipped,
+UI not yet built). New top-level folder `src/app/mangal-studio/`.
+
+**Migration:** none new here — §115 already shipped the Tier 1.5 fix
+(`20260821120000_creator_can_view_own_video_watch_progress.sql`), same
+`exists (...)` shape as the WebMangal precedent
+(`20260809101500_...`) — a creator may `select`
+`katube_watch_progress` rows only for videos they own. This section
+just builds the UI that consumes it.
+
+**Structure:**
+- `/mangal-studio` — root; for now just redirects into `/mangal-studio/
+  katube` (K Circle/WebMangal Studio don't exist yet, so there's nothing
+  to switch between — becomes a real content-aware switcher once K Circle
+  Studio / WebMangal Studio land in a later phase).
+- `ProductSwitcher.tsx` (shared) — pill row used inside the KaTube Studio
+  header: KaTube (live, filled red), K Circle / WebMangal (present,
+  correct brand colors, marked "· SOON" and inert — not linking to
+  nonexistent pages).
+- `/mangal-studio/katube` — `KatubeStudioShell.tsx` reuses the exact
+  maroon/red `katubeDarkVars`/`katubeLightVars` pair from the old
+  dashboard's `DashboardThemeShell` (same theme-context-bridge pattern,
+  renamed) since the founder confirmed per-product reskinning over a
+  neutral shell — `--accent` stays `#e11d48` throughout every KaTube
+  Studio tab. Tab nav: Overview / Content / Analytics / Comments /
+  Channel setup.
+  - **Overview** (`page.tsx`) — KPI cards (videos/views/likes/followers),
+    followers-gained-in-28-days, and the same per-video performance
+    ranking that used to be on `/katube/dashboard` (§28b), now linking
+    into the Content tab for the full list.
+  - **Content** (`content/page.tsx`) — sortable table (upload date/views/
+    likes/comments, click column header to sort), Long-form/Fast Tap
+    filter pills, thumbnails via the existing `img.youtube.com/vi/.../
+    mqdefault.jpg` pattern used elsewhere in KaTube. Per-video comment
+    counts computed client-side from a single `video_comments` query
+    scoped to the creator's video IDs (no N+1).
+  - **Analytics** (`analytics/page.tsx`) — Long-form vs. Fast Tap toggle
+    per the founder's explicit split request. Completion-rate stat now
+    real (unlocked by the Tier 1.5 migration above) — computed as
+    avg(`position_seconds`/`duration_seconds`) over `katube_watch_progress`
+    rows scoped to videos of the selected content type; shows "—" rather
+    than a fake number when no watch-progress rows exist yet for that
+    type. Explicitly labeled in-UI as a single latest-position snapshot,
+    not a full retention curve (that's the Tier 2 `video_view_events`-
+    style work, still future). Audience section shows real
+    followers-gained-28d; traffic sources/device breakdown/followers-lost
+    are named as not-yet-trackable rather than faked, matching §114's
+    honest-scope precedent.
+  - **Comments** (`comments/page.tsx`) — cross-video moderation queue,
+    read-only. Deliberately **not** wired to delete comments: the
+    existing `video_comments_own_delete` RLS policy only lets the
+    *commenter* delete their own comment, not a creator moderating their
+    own video — that's a second DB permission the founder didn't
+    explicitly approve this pass, so the tab is honestly labeled
+    read-only rather than shipping a delete button that would 403.
+  - **Channel setup** (`channel-setup/page.tsx`) — the exact old
+    `/katube/dashboard` connect/verify flow, logic unchanged, just moved
+    per founder answer #1. `/katube/dashboard` itself is now a client-side
+    redirect into `/mangal-studio/katube` so old bookmarks/links still
+    work; all in-app links that pointed at `/katube/dashboard`
+    (`VideoGridCard`, `katube/page.tsx`, `katube/upload/page.tsx`,
+    `dashboard/workspace/page.tsx`, `dashboard/tools/page.tsx`) were
+    repointed straight at `/mangal-studio/katube` to avoid the extra
+    redirect hop. `StudioSidebar`'s "KaTube" nav item now points at
+    `/mangal-studio/katube` too.
+
+**Added beyond the plan** (founder asked for any analytics features
+worth adding that weren't already listed): followers-gained-in-the-
+last-28-days as its own KPI (both Overview and Analytics), since
+"total followers" alone hides whether a channel is actually growing —
+real query, same `creator_follows.created_at` bucketing §114 already
+flagged as available. Kept everything else scoped to what's honestly
+derivable from real data today per §114's Tier 1/1.5/Tier-2 audit —
+did not add device/traffic-source/retention-curve UI with fabricated
+numbers.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on every new/
+touched file: 0 errors (one pre-existing-pattern `<img>`-vs-`next/image`
+warning on the Content tab thumbnail, same as every other KaTube page
+that renders a YouTube thumbnail this way).
+
+**Not done this pass (Phase 2/3, per founder answer #2):** K Circle
+Studio, WebMangal Studio, and the Tier 2 infra (KaTube `video_view_events`
+table, true retention curves, traffic sources, subscribers-lost).

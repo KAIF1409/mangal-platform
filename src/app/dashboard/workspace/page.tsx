@@ -107,7 +107,7 @@ export default function WorkspacePage() {
       meta: `${v.is_short ? 'Short' : 'Video'} · ${v.views} views`,
       icon: v.is_short ? Smartphone : PlaySquare,
       created_at: v.created_at,
-      href: '/katube/dashboard',
+      href: '/mangal-studio/katube',
     }));
     const fromPosts: WorkItem[] = posts.map((p) => ({
       id: `post-${p.id}`,
@@ -143,7 +143,7 @@ export default function WorkspacePage() {
       title: 'No KaTube uploads yet',
       sub: 'Upload a video or Short from your KaTube dashboard to see it here.',
       cta: 'Go to KaTube Dashboard',
-      href: '/katube/dashboard',
+      href: '/mangal-studio/katube',
     },
     kcircle: {
       title: 'No Kalpana Circle posts yet',

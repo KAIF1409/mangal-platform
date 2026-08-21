@@ -1101,7 +1101,7 @@ export default function KaTubePage() {
               the avatar (template reference) only renders when a user is
               actually logged in — graceful fallback to avatar-only otherwise. */}
           <Link
-            href="/katube/dashboard"
+            href="/mangal-studio/katube"
             aria-label="KaTube profile"
             title="KaTube profile"
             style={{
@@ -1553,7 +1553,7 @@ export default function KaTubePage() {
           <span style={{ fontSize: '10px', fontWeight: 700 }}>Following</span>
         </Link>
         <Link
-          href="/katube/dashboard"
+          href="/mangal-studio/katube"
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
             flex: 1, padding: '6px 2px', textDecoration: 'none', color: 'var(--text-tertiary)',
