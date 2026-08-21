@@ -38,6 +38,17 @@ interface NavbarProps {
   navClassName?: string;
   /** Optional className on the logo+centerSlot wrapper div — same reason. */
   brandWrapperClassName?: string;
+  /** Page-scoped dark-default override (KaTube dashboard — see
+   *  app/katube/dashboard/layout.tsx). When set, this Navbar's internal
+   *  ThemeToggle defaults to dark and only re-themes THIS page via
+   *  onThemeChange, never touching the site-wide global theme/localStorage
+   *  — same reasoning as ThemeToggle's own defaultLight/syncGlobal props.
+   *  Omitted (default) → Navbar behaves exactly as before, following the
+   *  global site-wide theme, for every other caller. */
+  forceDarkDefault?: boolean;
+  /** Required alongside forceDarkDefault — receives the toggle's state so
+   *  the caller can apply its own page-scoped theme vars. */
+  onThemeChange?: (isLight: boolean) => void;
 }
 
 export default function Navbar({
@@ -52,6 +63,8 @@ export default function Navbar({
   subtitle,
   navClassName,
   brandWrapperClassName,
+  forceDarkDefault = false,
+  onThemeChange,
 }: NavbarProps) {
   return (
     <nav
@@ -111,7 +124,7 @@ export default function Navbar({
 
       {variant === 'legal' ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
-          <ThemeToggle size={30} />
+          <ThemeToggle size={30} onChange={onThemeChange} defaultLight={!forceDarkDefault} syncGlobal={!forceDarkDefault} />
           {/* BUG FIX: this used to be hardcoded to href="/" regardless of what
               the caller passed in via the `href` prop, so every "legal"-variant
               Navbar (e.g. KaTube's dashboard) sent "Back to Home" to the root
@@ -124,7 +137,7 @@ export default function Navbar({
         </div>
       ) : (
         <div className="mangal-shared-nav-right" style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
-          <ThemeToggle size={32} />
+          <ThemeToggle size={32} onChange={onThemeChange} defaultLight={!forceDarkDefault} syncGlobal={!forceDarkDefault} />
           {rightSlot}
         </div>
       )}

@@ -7392,3 +7392,60 @@ across those three pages as a separate follow-up.
 touched file: 0 errors, only pre-existing warnings (a few `<img>` LCP
 notices and two pre-existing `exhaustive-deps` warnings, none
 introduced by this change).
+
+## §113 — KaTube watch/upload/dashboard: forced-dark maroon theme (light optional), matching the rest of KaTube
+
+§111/§112 gave the home page and every other KaTube page a maroon/red
+accent, but watch/upload/dashboard still just followed the *global*
+site-wide light/dark toggle rather than being forced dark by default
+like the home page and Fast Tap feed. Founder asked for those three to
+be fully forced-dark to match everything else, with light still
+available as an option.
+
+**Watch page & Upload page** (`app/katube/watch/[videoId]/page.tsx`,
+`app/katube/upload/page.tsx`): identical pattern to the home page's
+`katubeDarkVars`/`katubeLightVars` (§111) — added local `isLight` state,
+a maroon `katubeDarkVars` object (`#120610` bg / `#1d0a18` card /
+`#170815` input / red-tinted border+nav) and a plain-white
+`katubeLightVars` object, applied via `data-theme={isLight ? 'light' :
+'dark'}` + spread CSS vars on the page's root div. Each page's
+`<ThemeToggle>` now passes `onChange={setIsLight} defaultLight={false}
+syncGlobal={false}` — same "page-scoped, never touches the global
+site-wide theme" pattern already used on the home page.
+
+**Dashboard page** (`app/katube/dashboard/`) needed a different
+approach: its chrome (`StudioSidebar`) is rendered by `layout.tsx` as a
+sibling of `page.tsx`'s content, not inside it, so a page-local
+`useState` couldn't reach both. Split the theme state out into:
+- `ThemeContext.tsx` (new) — a small context (`isLight`/`setIsLight`)
+  bridging layout and page.
+- `DashboardThemeShell.tsx` (new) — client component holding the actual
+  `isLight` state + the same dark/light var objects (plus `--divider`/
+  `--text-faint`/`--accent`/`--accent-rgb` this time, since
+  `StudioSidebar` uses those and previously fell back to the sitewide
+  orange `--accent`), wraps `StudioSidebar` + `children` together in one
+  themed div so the sidebar and page content always match.
+- `layout.tsx` — reverted to a plain server component that just renders
+  `<DashboardThemeShell>{children}</DashboardThemeShell>`, keeping its
+  `metadata` export working (a client layout can't export `metadata`).
+- `page.tsx` reads `setIsLight` via `useKatubeDashboardTheme()` and
+  passes it to its `<Navbar>`.
+
+**Shared `Navbar.tsx` extended** (used by 22 other pages/products,
+kept fully backward-compatible): two new optional props,
+`forceDarkDefault` and `onThemeChange`. When omitted (every existing
+caller), Navbar's internal `<ThemeToggle>` behaves exactly as before
+(`defaultLight={true} syncGlobal={true}`, following the global theme).
+Only the KaTube dashboard page passes `forceDarkDefault
+onThemeChange={setIsLight}`, which flips those to
+`defaultLight={false} syncGlobal={false}` — page-scoped only, doesn't
+touch any other Navbar caller's behavior.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on every
+touched/new file: 0 errors. Two new `no-unused-vars` warnings on `uid`
+in dashboard/page.tsx and upload/page.tsx are pre-existing, introduced
+by a concurrent security commit (6887c7e, PII lockdown) that landed on
+`main` mid-session — confirmed via `git show --stat` before ruling them
+out as unrelated to this change. Pulled + merged once against 4
+concurrent commits (security hardening, comment ranking, Vercel→
+Cloudflare cleanup) with zero conflicts.

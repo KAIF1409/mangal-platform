@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -96,6 +96,13 @@ export default function KaTubeWatchPage() {
 
   const [shareOpen, setShareOpen] = useState(false);
   const [watchTogetherOpen, setWatchTogetherOpen] = useState(false);
+
+  // Forced-dark-by-default with a light option (matches the home page's
+  // pattern — see app/katube/page.tsx's katubeDarkVars comment). This page
+  // used to just follow the global site-wide theme, which meant it stayed
+  // plain near-black even after the rest of KaTube got the maroon/red
+  // dashboard theme — inconsistent with every other KaTube page now.
+  const [isLight, setIsLight] = useState(false);
 
   // ── Mobile watch-page polish (YouTube-app parity) ──
   // Sticky mini-player on scroll: once the real player scrolls out of the
@@ -734,8 +741,22 @@ export default function KaTubeWatchPage() {
     drawerDragStartY.current = null;
   }
 
+  const katubeDarkVars = {
+    '--bg-primary': '#120610', '--bg-card': '#1d0a18', '--bg-input': '#170815',
+    '--border-color': 'rgba(225, 29, 72, 0.22)', '--text-primary': '#f9fafb',
+    '--text-secondary': '#c9a3b8', '--text-tertiary': '#8a6478',
+    '--nav-bg': 'rgba(18, 6, 16, 0.97)', '--nav-bg-transparent': 'rgba(18, 6, 16, 0.85)',
+  };
+  const katubeLightVars = {
+    '--bg-primary': '#ffffff', '--bg-card': '#f7f7f9', '--bg-input': '#f0f0f3',
+    '--border-color': '#e5e7eb', '--text-primary': '#14141c',
+    '--text-secondary': '#4b5563', '--text-tertiary': '#6b7280',
+    '--nav-bg': 'rgba(255, 255, 255, 0.97)', '--nav-bg-transparent': 'rgba(255, 255, 255, 0.88)',
+  };
+  const katubeVars = (isLight ? katubeLightVars : katubeDarkVars) as CSSProperties;
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
+    <div data-theme={isLight ? 'light' : 'dark'} style={{ ...katubeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' }}>
 
       {/* Nav: MANGAL logo+wordmark, centered KaTube logo, theme toggle + a
           text "← Back to KaTube" button, in one non-wrapping row — on a
@@ -777,7 +798,7 @@ export default function KaTubeWatchPage() {
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-          <ThemeToggle size={30} />
+          <ThemeToggle size={30} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
           <Link href="/katube" className="mangal-watch-back" style={{
             padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
             color: 'var(--text-secondary)', textDecoration: 'none', border: '1px solid var(--border-color)', whiteSpace: 'nowrap',

@@ -7,6 +7,7 @@ import type { User } from '@supabase/supabase-js';
 import Navbar from '../../components/shared/Navbar';
 import Footer from '../../components/shared/Footer';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
+import { useKatubeDashboardTheme } from './ThemeContext';
 import { Clapperboard, CheckCircle2, ArrowRight } from 'lucide-react';
 
 // ── KaTube profile — lives inside the main MANGAL dashboard (one profile,
@@ -39,6 +40,7 @@ interface VideoPerf {
 }
 
 export default function KaTubeProfilePage() {
+  const { setIsLight } = useKatubeDashboardTheme();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -153,7 +155,7 @@ export default function KaTubeProfilePage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      <Navbar href="/katube" platformName="KaTube" logoSrc="/katube-logo.png" />
+      <Navbar href="/katube" platformName="KaTube" logoSrc="/katube-logo.png" forceDarkDefault onThemeChange={setIsLight} />
 
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '40px 24px 60px' }}>
         <div style={{ fontSize: '11px', fontWeight: 800, color: '#2563eb', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
