@@ -866,7 +866,7 @@ export default function KaTubeShortsFeedPage() {
         .katube-short-caption { top: 100%; bottom: auto; right: 0; padding: 13px 14px 0; background: #000; }
         .katube-short-actions { bottom: 54px; }
         .katube-short-caption, .katube-short-actions { z-index: 30 !important; }
-        .katube-short-progress { position: absolute; left: 14px; right: 14px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 31; }
+        .katube-short-progress { position: absolute; left: 14px; right: 14px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 31; touch-action: none; }
         /* Bug fix (§104): this used to carve out a 136px top strip and a
            108px bottom strip that the gesture layer didn't cover. Our
            own top-title-shield and bottom-share-shield (both z-index 20,
@@ -1186,7 +1186,20 @@ export default function KaTubeShortsFeedPage() {
                         onInput={event => seekTo(Number((event.target as HTMLInputElement).value))}
                         onChange={event => seekTo(Number(event.target.value))}
                         aria-label="Seek through Short"
-                        style={{ display: 'block', width: '100%', accentColor: '#e11d48', cursor: 'pointer', pointerEvents: 'auto' }}
+                        // Bug fix (§115): container had no explicit
+                        // touch-action, so it inherited `pan-y` from the
+                        // feed container above (reserved for the
+                        // swipe-between-shorts gesture). A tap is a single
+                        // point, no ambiguity, so it always landed fine —
+                        // but an actual horizontal drag was ambiguous
+                        // between "pan the page" and "drag this control,"
+                        // and touch devices resolved that in favor of the
+                        // page's pan-only gesture, so our pointermove-
+                        // driven seekTo never fired. `touch-action: none`
+                        // here (mirrored on the container above) gives
+                        // this element 100% ownership of pointer movement
+                        // over it.
+                        style={{ display: 'block', width: '100%', accentColor: '#e11d48', cursor: 'pointer', pointerEvents: 'auto', touchAction: 'none' }}
                       />
                     </div>
                   )}

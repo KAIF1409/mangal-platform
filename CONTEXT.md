@@ -7692,3 +7692,53 @@ outright, but this is an open question below, not a decision made yet.
 application code has been touched this session for MANGAL Studio —
 next step is founder review/answers on the open questions above, then
 Phase 1 implementation.**
+
+## §115 — KaTube Shorts seek bar: real hold-and-drag bug fixed + MANGAL Studio Phase 1 decisions locked in
+
+**Bug fixed:** founder reported the seek bar working on a fast tap but
+not on hold-and-drag. `.katube-short-progress` (bar container) had no
+explicit `touch-action`, so per the CSS touch-action spec its used
+value is the intersection with ancestors up to the containing block —
+and `.katube-shorts-feed` sets `touch-action: pan-y` for the
+swipe-between-shorts gesture. A tap is a single point, no ambiguity,
+so it always landed; an actual horizontal drag was ambiguous between
+"pan the page" and "drag this control," and touch devices resolved
+that in favor of the page's pan-only gesture, so the pointermove-
+driven `seekTo` never fired. Fixed with explicit `touch-action: none`
+on both the container and the range input itself (inline, defense in
+depth) — this element now owns 100% of pointer movement over it.
+
+**§114's open questions — founder's answers, locking in Phase 1:**
+1. Channel-verify flow → folds into `/mangal-studio/katube` as its own
+   "Channel setup" tab, not left separate. Decided.
+2. Build order → full KaTube Studio first, then K Circle and
+   WebMangal in later passes (matches §114's proposed default).
+   Decided.
+3. Tier 1.5 RLS fix → approved. **Shipped this pass**: new migration
+   `20260821120000_creator_can_view_own_video_watch_progress.sql`,
+   mirroring the WebMangal precedent exactly — a creator may read
+   `katube_watch_progress` rows only for videos they own
+   (`exists (... videos.creator_id = auth.uid())`), same shape as
+   `20260809101500_creator_can_view_own_series_analytics.sql`. This
+   unlocks a real completion-rate stat for KaTube videos.
+4. Studio theme → **overrides §114's proposed neutral-shell default**:
+   founder wants a full reskin per active product tab (KaTube red,
+   K Circle purple, WebMangal's own palette), not one consistent
+   neutral shell with just an accent indicator.
+
+**Founder also asked:** flag any analytics features they may have
+forgotten. Beyond §114's Tier 1/1.5 list, worth adding to the Phase 1
+KaTube Overview even though small: a "new vs. returning viewer" split
+is derivable today from `katube_watch_progress`'s `viewer_id` history
+per video (first-seen vs. repeat) without any schema change — same
+tier as the completion-rate fix, just not called out in §114
+explicitly. Flagging, not yet built.
+
+**Scope note:** the RLS fix above is shipped. The actual
+`/mangal-studio` shell, `StudioSwitcher`, and KaTube Studio
+Overview/Content/Analytics/Comments UI (per §114's proposed structure)
+is real, multi-file product work — not done in this pass. Next step:
+scaffold `/mangal-studio/katube` Overview tab against the now-unblocked
+real data (views, likes, followers-gained, completion % via the RLS
+fix above), Long-form/Fast Tap split, per-product theme applied from
+day one per decision 4 above.
