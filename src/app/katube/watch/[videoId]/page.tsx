@@ -13,6 +13,7 @@ import { AddToPlaylistButton, timeAgo } from '../../components/VideoGridCard';
 import VideoGridCard from '../../components/VideoGridCard';
 import KaTubePlayer from '../../components/KaTubePlayer';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
+import { youtubeCommentScore, sortByScore, COMMENT_PAGE_SIZE } from '../../../lib/commentRanking';
 
 // ── KaTube — Step 3: watch page ──
 // Clicking a video card on /katube now opens this page, which loads the
@@ -42,6 +43,8 @@ interface VideoComment {
   created_at: string;
   commenter_id: string;
   commenterName: string;
+  likes: number;
+  likedByMe: boolean;
 }
 
 // ── Review Hub — Step 27 ──
@@ -180,6 +183,11 @@ export default function KaTubeWatchPage() {
   const [commentText, setCommentText] = useState('');
   const [commentBusy, setCommentBusy] = useState(false);
   const commentLockRef = useRef(false);
+  // YouTube-style "Top comments" / "Newest first" toggle + page-size limit
+  // (comment section previously had no sort and no cap at all).
+  const [commentSort, setCommentSort] = useState<'top' | 'newest'>('top');
+  const [commentsVisibleCount, setCommentsVisibleCount] = useState<number>(COMMENT_PAGE_SIZE.katube);
+  const commentLikeLockRef = useRef<Set<string>>(new Set());
 
   // ── Review Hub — Step 27 ──
   const [accuracyReviews, setAccuracyReviews] = useState<AccuracyReview[]>([]);
@@ -326,19 +334,25 @@ export default function KaTubeWatchPage() {
       }
 
       const commenterIds = [...new Set(rows.map(r => r.commenter_id))];
-      const { data: profiles } = await supabase
-        .from('creator_profiles')
-        .select('user_id, username')
-        .in('user_id', commenterIds);
+      const commentIds = rows.map(r => r.id);
+      const [{ data: profiles }, { data: likeRows }] = await Promise.all([
+        supabase.from('creator_profiles').select('user_id, username').in('user_id', commenterIds),
+        supabase.from('video_comment_likes').select('comment_id, liker_id').in('comment_id', commentIds),
+      ]);
       const nameMap = new Map((profiles || []).map(p => [p.user_id, p.username]));
+      const likeCounts = new Map<string, number>();
+      (likeRows || []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) || 0) + 1));
+      const myLikedIds = new Set((likeRows || []).filter(l => l.liker_id === userId).map(l => l.comment_id));
 
       setComments(rows.map(r => ({
         ...r,
         commenterName: nameMap.get(r.commenter_id) || 'MANGAL Viewer',
+        likes: likeCounts.get(r.id) || 0,
+        likedByMe: myLikedIds.has(r.id),
       })));
       setCommentsLoading(false);
     })();
-  }, [videoId]);
+  }, [videoId, userId]);
 
   // Accuracy reviews — public read, same batched-username-join pattern as
   // comments. Only fetched once we know the video is tied to a series
@@ -466,11 +480,48 @@ export default function KaTubeWatchPage() {
     if (!error && row) {
       const { data: profile } = await supabase
         .from('creator_profiles').select('username').eq('user_id', userId).single();
-      setComments(cs => [{ ...row, commenterName: profile?.username || 'You' }, ...cs]);
+      setComments(cs => [{ ...row, commenterName: profile?.username || 'You', likes: 0, likedByMe: false }, ...cs]);
       setCommentText('');
     }
     commentLockRef.current = false;
     setCommentBusy(false);
+  }
+
+  // Like/unlike a single comment — same optimistic-then-confirm pattern as
+  // handleLike (video likes) above, keyed per-comment via a lock Set since
+  // multiple comments can be liked independently at once.
+  async function handleCommentLike(commentId: string) {
+    if (!userId) {
+      setPostLoginRedirect(window.location.pathname);
+      // False positive: identical `window.location.href = ...` redirect is
+      // used unflagged in handleFollow/handleCommentSubmit/handleAccuracySubmit
+      // above; tsc is clean and this exact pattern is safe (event handler,
+      // not render).
+      // eslint-disable-next-line react-hooks/immutability
+      window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+    if (commentLikeLockRef.current.has(commentId)) return;
+    commentLikeLockRef.current = new Set([...commentLikeLockRef.current, commentId]);
+
+    const target = comments.find(c => c.id === commentId);
+    if (!target) { commentLikeLockRef.current = new Set([...commentLikeLockRef.current].filter(id => id !== commentId)); return; }
+    const wasLiked = target.likedByMe;
+
+    setComments(cs => cs.map(c => c.id === commentId
+      ? { ...c, likedByMe: !wasLiked, likes: c.likes + (wasLiked ? -1 : 1) }
+      : c));
+
+    const { error: likeError } = wasLiked
+      ? await supabase.from('video_comment_likes').delete().eq('comment_id', commentId).eq('liker_id', userId)
+      : await supabase.from('video_comment_likes').insert({ comment_id: commentId, liker_id: userId });
+
+    if (likeError) {
+      setComments(cs => cs.map(c => c.id === commentId
+        ? { ...c, likedByMe: wasLiked, likes: c.likes + (wasLiked ? 1 : -1) }
+        : c));
+    }
+    commentLikeLockRef.current = new Set([...commentLikeLockRef.current].filter(id => id !== commentId));
   }
 
   async function handleAccuracySubmit() {
@@ -545,11 +596,36 @@ export default function KaTubeWatchPage() {
   // as before) and again inside the mobile bottom-sheet drawer, so there's
   // one source of truth for the list/input instead of two JSX copies that
   // could drift apart.
+  const rankedComments = commentSort === 'top'
+    ? sortByScore(comments, c => c.likes, c => c.created_at, youtubeCommentScore)
+    : [...comments].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const visibleComments = rankedComments.slice(0, commentsVisibleCount);
+
   const commentsBody = (
     <>
-      <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 12px' }}>
-        {comments.length > 0 ? `${comments.length.toLocaleString()} Comments` : 'Comments'}
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+        <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+          {comments.length > 0 ? `${comments.length.toLocaleString()} Comments` : 'Comments'}
+        </h2>
+        {/* YouTube-style Top comments / Newest first toggle */}
+        {comments.length > 1 && (
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {(['top', 'newest'] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => { setCommentSort(mode); setCommentsVisibleCount(COMMENT_PAGE_SIZE.katube); }}
+                style={{
+                  fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
+                  color: commentSort === mode ? '#fff' : 'var(--text-secondary)',
+                  background: commentSort === mode ? '#e11d48' : 'var(--bg-card)',
+                  border: commentSort === mode ? '1px solid #e11d48' : '1px solid var(--border-color)',
+                  borderRadius: '20px', padding: '4px 12px',
+                }}
+              >{mode === 'top' ? 'Top comments' : 'Newest first'}</button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div style={{ display: 'flex', gap: '10px', marginBottom: '18px' }}>
         <input
@@ -584,31 +660,56 @@ export default function KaTubeWatchPage() {
           No comments yet — be the first to say something.
         </p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {comments.map(c => (
-            <div key={c.id} style={{ display: 'flex', gap: '10px' }}>
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
-                background: 'rgba(225,29,72,0.15)', color: '#e11d48',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '13px', fontWeight: 800,
-              }}>
-                {c.commenterName.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
-                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)' }}>{c.commenterName}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                    {new Date(c.created_at).toLocaleDateString()}
-                  </span>
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {visibleComments.map(c => (
+              <div key={c.id} style={{ display: 'flex', gap: '10px' }}>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                  background: 'rgba(225,29,72,0.15)', color: '#e11d48',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '13px', fontWeight: 800,
+                }}>
+                  {c.commenterName.charAt(0).toUpperCase()}
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, wordBreak: 'break-word' }}>
-                  {c.comment_text}
-                </p>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
+                    <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)' }}>{c.commenterName}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                      {new Date(c.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 4px', wordBreak: 'break-word' }}>
+                    {c.comment_text}
+                  </p>
+                  <button
+                    onClick={() => handleCommentLike(c.id)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
+                      fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
+                      color: c.likedByMe ? '#e11d48' : 'var(--text-tertiary)',
+                      background: 'none', border: 'none', padding: '2px 0',
+                    }}
+                  >
+                    <ThumbsUp size={12} fill={c.likedByMe ? '#e11d48' : 'none'} /> {c.likes > 0 ? c.likes.toLocaleString() : ''}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          {rankedComments.length > commentsVisibleCount && (
+            <button
+              onClick={() => setCommentsVisibleCount(n => n + COMMENT_PAGE_SIZE.katube)}
+              style={{
+                marginTop: '16px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
+                color: 'var(--text-primary)', background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)', borderRadius: '20px', padding: '9px 18px',
+              }}
+            >
+              Show {Math.min(COMMENT_PAGE_SIZE.katube, rankedComments.length - commentsVisibleCount)} more comments
+            </button>
+          )}
+        </>
       )}
     </>
   );

@@ -9,11 +9,12 @@ import {
   CalendarClock, FileText, ArrowLeft, BookOpen, Sparkles, Wrench,
   Menu, Expand, Shrink, Lock, Unlock, Settings, X, ScrollText,
   MoveHorizontal, ChevronRight, ListOrdered, CornerDownRight,
-  Minus, Plus, Wifi,
+  Minus, Plus, Wifi, ThumbsUp,
 } from 'lucide-react';
 
 
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
+import { webnovelCommentScore, sortByScore, COMMENT_PAGE_SIZE } from '../../../lib/commentRanking';
 type PageItem = { id: string; page_number: number; image_url: string };
 type SeriesInfo = { id: string; title: string; reading_mode: 'scroll' | 'page'; content_type: 'mangal' | 'novel'; reading_direction: 'ltr' | 'rtl' | null; cover_url?: string | null };
 type ChapterNav = { id: string; chapter_number: number; title: string };
@@ -86,7 +87,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const [reactionLoading, setReactionLoading] = useState(false);
 
   // Step 4 — Chapter Comments
-  type CommentRow = { id: string; reader_id: string; body: string; created_at: string; full_name: string; parent_id: string | null; replies?: CommentRow[] };
+  type CommentRow = { id: string; reader_id: string; body: string; created_at: string; full_name: string; parent_id: string | null; replies?: CommentRow[]; likes: number; likedByMe: boolean };
   type CommentQueryRow = { id: string; reader_id: string; body: string; created_at: string; parent_id: string | null; profiles: { full_name: string | null }[] | { full_name: string | null } | null };
   const [comments, setComments] = useState<CommentRow[]>([]);
   // Bug fix — the "Comments (N)" badge was showing comments.length, which is
@@ -101,6 +102,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const [commentBody, setCommentBody] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  // Webnovel-style "Popular" / "Newest" toggle + page-size limit for
+  // top-level comments (replies stay chronological under their parent,
+  // same as Webnovel's own review threads — only top-level order changes).
+  const [commentSort, setCommentSort] = useState<'popular' | 'newest'>('popular');
+  const [commentsVisibleCount, setCommentsVisibleCount] = useState<number>(COMMENT_PAGE_SIZE.webmangal);
+  const commentLikeLockRef = useRef<Set<string>>(new Set());
 
   // Step 5 — Replies
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -585,6 +592,14 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         .order('created_at', { ascending: true });
       if (cancelled) return;
       if (data) {
+        const commentIds = data.map((r: CommentQueryRow) => r.id);
+        const { data: likeRows } = commentIds.length
+          ? await supabase.from('chapter_comment_likes').select('comment_id, liker_id').in('comment_id', commentIds)
+          : { data: [] as { comment_id: string; liker_id: string }[] };
+        const likeCounts = new Map<string, number>();
+        (likeRows || []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) || 0) + 1));
+        const myLikedIds = new Set((likeRows || []).filter(l => l.liker_id === userId).map(l => l.comment_id));
+
         const flat: CommentRow[] = data.map((r: CommentQueryRow) => ({
           id: r.id,
           reader_id: r.reader_id,
@@ -593,6 +608,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           parent_id: r.parent_id || null,
           full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader',
           replies: [],
+          likes: likeCounts.get(r.id) || 0,
+          likedByMe: myLikedIds.has(r.id),
         }));
         // Nest replies one level deep
         const topLevel: CommentRow[] = [];
@@ -608,7 +625,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     };
     loadComments();
     return () => { cancelled = true; };
-  }, [chapterId]);
+  }, [chapterId, userId]);
 
   // Step 4 — Submit a top-level comment.
   const handleCommentSubmit = async () => {
@@ -626,6 +643,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         id: r.id, reader_id: r.reader_id, body: r.body,
         created_at: r.created_at, parent_id: null,
         full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader', replies: [],
+        likes: 0, likedByMe: false,
       }]);
       setCommentBody('');
     }
@@ -648,6 +666,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         id: r.id, reader_id: r.reader_id, body: r.body,
         created_at: r.created_at, parent_id: parentId,
         full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader', replies: [],
+        likes: 0, likedByMe: false,
       };
       setComments(c => c.map(top => top.id === parentId
         ? { ...top, replies: [...(top.replies || []), newReply] }
@@ -681,6 +700,44 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       .eq('id', commentId)
       .eq('reader_id', userId!);
     if (error || !count) setComments(prevComments);
+  };
+
+  // Like/unlike a comment or reply — works on both since replies are just
+  // CommentRow entries nested one level under their parent's `replies`
+  // array; same optimistic-then-roll-back-on-failure pattern as
+  // handleDeleteComment above.
+  const handleCommentLike = async (commentId: string, parentId: string | null) => {
+    if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.assign('/login'); return; }
+    if (commentLikeLockRef.current.has(commentId)) return;
+    commentLikeLockRef.current = new Set([...commentLikeLockRef.current, commentId]);
+
+    const parent = parentId ? comments.find(c => c.id === parentId) : undefined;
+    const target = parentId ? parent?.replies?.find(r => r.id === commentId) : comments.find(c => c.id === commentId);
+    if (!target) { commentLikeLockRef.current = new Set([...commentLikeLockRef.current].filter(id => id !== commentId)); return; }
+    const wasLiked = target.likedByMe;
+
+    const applyDelta = (c: CommentRow): CommentRow => c.id === commentId
+      ? { ...c, likedByMe: !wasLiked, likes: c.likes + (wasLiked ? -1 : 1) }
+      : c;
+    setComments(cs => cs.map(top => parentId
+      ? (top.id === parentId ? { ...top, replies: (top.replies || []).map(applyDelta) } : top)
+      : applyDelta(top)
+    ));
+
+    const { error } = wasLiked
+      ? await supabase.from('chapter_comment_likes').delete().eq('comment_id', commentId).eq('liker_id', userId)
+      : await supabase.from('chapter_comment_likes').insert({ comment_id: commentId, liker_id: userId });
+
+    if (error) {
+      const revert = (c: CommentRow): CommentRow => c.id === commentId
+        ? { ...c, likedByMe: wasLiked, likes: c.likes + (wasLiked ? 1 : -1) }
+        : c;
+      setComments(cs => cs.map(top => parentId
+        ? (top.id === parentId ? { ...top, replies: (top.replies || []).map(revert) } : top)
+        : revert(top)
+      ));
+    }
+    commentLikeLockRef.current = new Set([...commentLikeLockRef.current].filter(id => id !== commentId));
   };
 
   // Content protection
@@ -1885,8 +1942,27 @@ function ReaderView({ chapterId }: { chapterId: string }) {
 
           {/* Comments section */}
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '14px' }}>
-              Comments {totalCommentCount > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({totalCommentCount})</span>}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                Comments {totalCommentCount > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({totalCommentCount})</span>}
+              </div>
+              {comments.length > 1 && (
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {(['popular', 'newest'] as const).map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => { setCommentSort(mode); setCommentsVisibleCount(COMMENT_PAGE_SIZE.webmangal); }}
+                      style={{
+                        fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                        color: commentSort === mode ? '#fff' : 'var(--text-secondary)',
+                        background: commentSort === mode ? 'linear-gradient(135deg, #f97316, #22c55e)' : 'var(--bg-card)',
+                        border: commentSort === mode ? '1px solid transparent' : '1px solid var(--border-color)',
+                        borderRadius: '20px', padding: '4px 12px',
+                      }}
+                    >{mode === 'popular' ? 'Popular' : 'Newest'}</button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Comment input */}
@@ -1932,9 +2008,19 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>Loading comments…</div>
             ) : comments.length === 0 ? (
               <div style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center', padding: '24px 0' }}>No comments yet. Be the first!</div>
-            ) : (
+            ) : (() => {
+              // Webnovel-style: "Popular" ranks top-level comments by likes
+              // with a gentle long-tail decay; "Newest" is plain reverse-
+              // chronological. Replies always stay chronological under
+              // their parent regardless of this toggle — only the order of
+              // top-level comments changes.
+              const rankedTopLevel = commentSort === 'popular'
+                ? sortByScore(comments, c => c.likes, c => c.created_at, webnovelCommentScore)
+                : [...comments].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+              const visibleTopLevel = rankedTopLevel.slice(0, commentsVisibleCount);
+              return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {comments.map(c => {
+                {visibleTopLevel.map(c => {
                   const isOwn = c.reader_id === userId;
                   const timeAgo = (created: string) => {
                     const diff = Date.now() - new Date(created).getTime();
@@ -1962,6 +2048,20 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                             <span style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{timeAgo(c.created_at)}</span>
                           </div>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            {/* False positive: handleCommentLike only reads
+                                commentLikeLockRef.current inside its own event-
+                                handler body (never during render); tsc is clean
+                                and the identical lock-ref pattern is used safely
+                                elsewhere in this codebase (e.g. KaTube watch page). */}
+                            <button
+                              // eslint-disable-next-line react-hooks/refs
+                              onClick={() => handleCommentLike(c.id, null)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '4px',
+                                background: 'none', border: 'none', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1,
+                                color: c.likedByMe ? '#d97706' : 'var(--text-muted)',
+                              }}
+                            ><ThumbsUp size={12} fill={c.likedByMe ? '#d97706' : 'none'} style={{ verticalAlign: 'middle', marginRight: '4px' }} />{c.likes > 0 ? c.likes.toLocaleString() : ''}</button>
                             <button
                               onClick={() => { setReplyingTo(isReplyingHere ? null : c.id); setReplyBody(''); }}
                               style={{ background: 'none', border: 'none', color: isReplyingHere ? '#d97706' : 'var(--text-muted)', fontSize: '11px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
@@ -2037,6 +2137,14 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                                   )}
                                 </div>
                                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, wordBreak: 'break-word' }}>{reply.body}</div>
+                                <button
+                                  onClick={() => handleCommentLike(reply.id, c.id)}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px',
+                                    background: 'none', border: 'none', fontSize: '10.5px', cursor: 'pointer', padding: 0,
+                                    color: reply.likedByMe ? '#d97706' : 'var(--text-faint)',
+                                  }}
+                                ><ThumbsUp size={11} fill={reply.likedByMe ? '#d97706' : 'none'} style={{ verticalAlign: 'middle', marginRight: '4px' }} />{reply.likes > 0 ? reply.likes.toLocaleString() : ''}</button>
                               </div>
                             );
                           })}
@@ -2046,7 +2154,25 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                   );
                 })}
               </div>
-            )}
+              );
+            })()}
+            {!commentsLoading && comments.length > 0 && (() => {
+              const rankedTopLevel = commentSort === 'popular'
+                ? sortByScore(comments, c => c.likes, c => c.created_at, webnovelCommentScore)
+                : comments;
+              return rankedTopLevel.length > commentsVisibleCount ? (
+                <button
+                  onClick={() => setCommentsVisibleCount(n => n + COMMENT_PAGE_SIZE.webmangal)}
+                  style={{
+                    marginTop: '14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    color: 'var(--text-secondary)', background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)', borderRadius: '20px', padding: '9px 18px',
+                  }}
+                >
+                  Load {Math.min(COMMENT_PAGE_SIZE.webmangal, rankedTopLevel.length - commentsVisibleCount)} more comments
+                </button>
+              ) : null;
+            })()}
           </div>
         </div>
       )}

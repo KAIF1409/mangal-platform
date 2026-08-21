@@ -13,6 +13,7 @@ import CrossProductLinks from '../components/shared/CrossProductLinks';
 import { supabase } from '../lib/supabase';
 import { uploadMediaFile, MEDIA_FOLDERS } from '../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../lib/auth/authRedirect';
+import { instagramPreviewComments, COMMENT_PAGE_SIZE } from '../lib/commentRanking';
 import {
   Search, Home, MessageCircle, Clapperboard, Megaphone, Bookmark,
   X, Circle, Globe, Tag, Camera, BarChart3, Sparkles, Pin, Check,
@@ -70,6 +71,8 @@ interface KComment {
   text: string;
   created_at: string;
   author?: AuthorInfo;
+  likes: number;
+  likedByMe: boolean;
 }
 
 interface StoryGroup {
@@ -167,6 +170,13 @@ function KalpanaCircleInner() {
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, KComment[]>>({});
   const [commentDraft, setCommentDraft] = useState('');
+  // Instagram-style: collapsed view shows only the most-liked preview
+  // comment(s); tapping "View all N comments" expands to the full
+  // chronological list for that post (per-post, since multiple posts'
+  // comment sections can be open at once on this feed).
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const [commentsVisibleCount, setCommentsVisibleCount] = useState<Record<string, number>>({});
+  const commentLikeLockRef = useRef<Set<string>>(new Set());
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
@@ -492,13 +502,27 @@ function KalpanaCircleInner() {
       const { data: rows } = await supabase.from('kcircle_post_comments')
         .select('id, post_id, author_id, text, created_at').eq('post_id', postId).order('created_at', { ascending: true });
       const authorIds = Array.from(new Set((rows ?? []).map(r => r.author_id)));
-      const { data: profs } = authorIds.length
-        ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds)
-        : { data: [] as { user_id: string; username: string }[] };
-      const usernameMap = new Map((profs ?? []).map(p => [p.user_id, p.username]));
+      const commentIds = (rows ?? []).map(r => r.id);
+      const [profsRes, likesRes] = await Promise.all([
+        authorIds.length
+          ? supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds)
+          : Promise.resolve({ data: [] as { user_id: string; username: string }[] }),
+        commentIds.length
+          ? supabase.from('kcircle_post_comment_likes').select('comment_id, liker_id').in('comment_id', commentIds)
+          : Promise.resolve({ data: [] as { comment_id: string; liker_id: string }[] }),
+      ]);
+      const usernameMap = new Map((profsRes.data ?? []).map(p => [p.user_id, p.username]));
+      const likeCounts = new Map<string, number>();
+      (likesRes.data ?? []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) ?? 0) + 1));
+      const myLikedIds = new Set((likesRes.data ?? []).filter(l => l.liker_id === userId).map(l => l.comment_id));
       setComments(prev => ({
         ...prev,
-        [postId]: (rows ?? []).map(r => ({ ...r, author: { username: usernameMap.get(r.author_id) ?? 'dreamer' } })),
+        [postId]: (rows ?? []).map(r => ({
+          ...r,
+          author: { username: usernameMap.get(r.author_id) ?? 'dreamer' },
+          likes: likeCounts.get(r.id) ?? 0,
+          likedByMe: myLikedIds.has(r.id),
+        })),
       }));
     }
   };
@@ -511,11 +535,44 @@ function KalpanaCircleInner() {
     const { error, data } = await supabase.from('kcircle_post_comments')
       .insert({ post_id: postId, author_id: userId, text }).select('id, post_id, author_id, text, created_at').single();
     if (!error && data) {
-      setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), { ...data, author: { username: myUsername ?? 'you' } }] }));
+      setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), { ...data, author: { username: myUsername ?? 'you' }, likes: 0, likedByMe: false }] }));
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p));
       const owner = posts.find(p => p.id === postId)?.author_id;
       if (owner) notify(owner, 'comment', { post_id: postId, preview: text.slice(0, 80) });
     }
+  };
+
+  // Like/unlike a single comment — mirrors the existing post-like optimistic
+  // pattern, keyed per comment so multiple can be liked independently.
+  const toggleCommentLike = async (postId: string, commentId: string) => {
+    if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    if (commentLikeLockRef.current.has(commentId)) return;
+    commentLikeLockRef.current = new Set([...commentLikeLockRef.current, commentId]);
+
+    const target = (comments[postId] ?? []).find(c => c.id === commentId);
+    if (!target) { commentLikeLockRef.current = new Set([...commentLikeLockRef.current].filter(id => id !== commentId)); return; }
+    const wasLiked = target.likedByMe;
+
+    setComments(prev => ({
+      ...prev,
+      [postId]: (prev[postId] ?? []).map(c => c.id === commentId
+        ? { ...c, likedByMe: !wasLiked, likes: c.likes + (wasLiked ? -1 : 1) }
+        : c),
+    }));
+
+    const { error } = wasLiked
+      ? await supabase.from('kcircle_post_comment_likes').delete().eq('comment_id', commentId).eq('liker_id', userId)
+      : await supabase.from('kcircle_post_comment_likes').insert({ comment_id: commentId, liker_id: userId });
+
+    if (error) {
+      setComments(prev => ({
+        ...prev,
+        [postId]: (prev[postId] ?? []).map(c => c.id === commentId
+          ? { ...c, likedByMe: wasLiked, likes: c.likes + (wasLiked ? 1 : -1) }
+          : c),
+      }));
+    }
+    commentLikeLockRef.current = new Set([...commentLikeLockRef.current].filter(id => id !== commentId));
   };
 
   // ── stories: add + view ──
@@ -1193,15 +1250,55 @@ function KalpanaCircleInner() {
 
             {openComments === post.id && (
               <div style={{ borderTop: '1px solid var(--border-color)', padding: '10px 14px 14px' }}>
-                {(comments[post.id] ?? []).map(c => (
-                  <div key={c.id} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                    <Avatar name={c.author?.username ?? 'dreamer'} size={24} />
-                    <p style={{ fontSize: '12.5px', margin: 0, lineHeight: 1.5 }}>
-                      <span style={{ fontWeight: 800 }}>{c.author?.username} </span>
-                      <span style={{ color: 'var(--text-secondary)' }}>{c.text}</span>
-                    </p>
-                  </div>
-                ))}
+                {(() => {
+                  const postComments = comments[post.id] ?? [];
+                  const isExpanded = expandedComments.has(post.id);
+                  const visibleCount = commentsVisibleCount[post.id] ?? COMMENT_PAGE_SIZE.kcircle;
+                  const shown = isExpanded
+                    ? postComments.slice(0, visibleCount)
+                    : instagramPreviewComments(postComments, c => c.likes, c => c.created_at, 2);
+                  return (
+                    <>
+                      {!isExpanded && postComments.length > shown.length && (
+                        <button
+                          onClick={() => setExpandedComments(prev => new Set(prev).add(post.id))}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '8px', display: 'block' }}
+                        >
+                          View all {postComments.length} comments
+                        </button>
+                      )}
+                      {shown.map(c => (
+                        <div key={c.id} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start' }}>
+                          <Avatar name={c.author?.username ?? 'dreamer'} size={24} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '12.5px', margin: 0, lineHeight: 1.5 }}>
+                              <span style={{ fontWeight: 800 }}>{c.author?.username} </span>
+                              <span style={{ color: 'var(--text-secondary)' }}>{c.text}</span>
+                            </p>
+                            <button
+                              onClick={() => toggleCommentLike(post.id, c.id)}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px',
+                                fontSize: '11px', fontWeight: 700, cursor: 'pointer', background: 'none', border: 'none', padding: 0,
+                                color: c.likedByMe ? RADIANT_SOLID : 'var(--text-tertiary)',
+                              }}
+                            >
+                              <Heart size={11} fill={c.likedByMe ? RADIANT_SOLID : 'none'} /> {c.likes > 0 ? c.likes.toLocaleString() : 'Like'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {isExpanded && postComments.length > visibleCount && (
+                        <button
+                          onClick={() => setCommentsVisibleCount(prev => ({ ...prev, [post.id]: visibleCount + COMMENT_PAGE_SIZE.kcircle }))}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '8px', display: 'block' }}
+                        >
+                          Load more comments
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
                 {userId ? (
                   <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                     <input
