@@ -65,7 +65,7 @@ export default function SubscriptionsFeedPage() {
     <KaTubeShell title="Following">
       {signedIn === false ? (
         <EmptyNote>
-          Sign in to see new uploads from the creators you follow. <Link href="/login?next=/katube/subscriptions" style={{ color: '#f97316', fontWeight: 700 }}>Sign in</Link>
+          Sign in to see new uploads from the creators you follow. <Link href="/login?next=/katube/subscriptions" style={{ color: '#e11d48', fontWeight: 700 }}>Sign in</Link>
         </EmptyNote>
       ) : loading ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280', fontSize: '13px' }}>Loading…</div>
@@ -84,8 +84,8 @@ export default function SubscriptionsFeedPage() {
 
 function EmptyNote({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ maxWidth: '600px', margin: '40px auto', padding: '18px 22px', borderRadius: '12px', background: '#0d0d14', border: '1px dashed rgba(255,255,255,0.18)', textAlign: 'center' }}>
-      <p style={{ fontSize: '12.5px', color: '#9ca3af', margin: 0, lineHeight: 1.6 }}>{children}</p>
+    <div style={{ maxWidth: '600px', margin: '40px auto', padding: '18px 22px', borderRadius: '12px', background: '#1d0a18', border: '1px dashed rgba(225,29,72,0.22)', textAlign: 'center' }}>
+      <p style={{ fontSize: '12.5px', color: '#b088a0', margin: 0, lineHeight: 1.6 }}>{children}</p>
     </div>
   );
 }

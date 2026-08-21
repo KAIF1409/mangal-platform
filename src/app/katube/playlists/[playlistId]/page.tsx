@@ -65,8 +65,8 @@ export default function PlaylistDetailPage() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280', fontSize: '13px' }}>Loading…</div>
       ) : videos.length === 0 ? (
-        <div style={{ maxWidth: '600px', padding: '18px 22px', borderRadius: '12px', background: '#0d0d14', border: '1px dashed rgba(255,255,255,0.18)', textAlign: 'center' }}>
-          <p style={{ fontSize: '12.5px', color: '#9ca3af', margin: 0 }}>No videos in this playlist yet. Add some from any watch page.</p>
+        <div style={{ maxWidth: '600px', padding: '18px 22px', borderRadius: '12px', background: '#1d0a18', border: '1px dashed rgba(225,29,72,0.22)', textAlign: 'center' }}>
+          <p style={{ fontSize: '12.5px', color: '#b088a0', margin: 0 }}>No videos in this playlist yet. Add some from any watch page.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>

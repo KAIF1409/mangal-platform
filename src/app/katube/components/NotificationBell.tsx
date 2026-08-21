@@ -107,7 +107,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
         {unreadCount > 0 && (
           <span style={{
             position: 'absolute', top: '-2px', right: '-2px', minWidth: '15px', height: '15px', padding: '0 3px',
-            borderRadius: '999px', background: '#f97316', color: '#fff', fontSize: '9.5px', fontWeight: 800,
+            borderRadius: '999px', background: '#e11d48', color: '#fff', fontSize: '9.5px', fontWeight: 800,
             display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
           }}>{unreadCount > 9 ? '9+' : unreadCount}</span>
         )}
@@ -123,7 +123,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border-color)' }}>
               <span style={{ fontSize: '13px', fontWeight: 800 }}>Notifications</span>
               {unreadCount > 0 && (
-                <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: '#f97316', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: '#e11d48', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}>
                   Mark all read
                 </button>
               )}
@@ -142,7 +142,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
                   onClick={() => setOpen(false)}
                   style={{
                     display: 'block', padding: '12px 14px', textDecoration: 'none', color: 'var(--text-primary)',
-                    borderBottom: '1px solid var(--border-color)', background: n.read ? 'transparent' : 'rgba(249,115,22,0.06)',
+                    borderBottom: '1px solid var(--border-color)', background: n.read ? 'transparent' : 'rgba(225,29,72,0.06)',
                   }}
                 >
                   <div style={{ fontSize: '12.5px', fontWeight: n.read ? 500 : 700 }}>

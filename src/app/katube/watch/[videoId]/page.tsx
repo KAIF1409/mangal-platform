@@ -568,7 +568,7 @@ export default function KaTubeWatchPage() {
           onClick={handleCommentSubmit}
           disabled={commentBusy || !commentText.trim()}
           style={{
-            fontSize: '12.5px', fontWeight: 700, color: '#fff', background: '#f97316',
+            fontSize: '12.5px', fontWeight: 700, color: '#fff', background: '#e11d48',
             border: 'none', borderRadius: '20px', padding: '0 18px', cursor: 'pointer',
             opacity: (commentBusy || !commentText.trim()) ? 0.5 : 1, flexShrink: 0,
           }}
@@ -589,7 +589,7 @@ export default function KaTubeWatchPage() {
             <div key={c.id} style={{ display: 'flex', gap: '10px' }}>
               <div style={{
                 width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
-                background: 'rgba(249,115,22,0.15)', color: '#f97316',
+                background: 'rgba(225,29,72,0.15)', color: '#e11d48',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '13px', fontWeight: 800,
               }}>
@@ -697,7 +697,7 @@ export default function KaTubeWatchPage() {
         ) : notFound || !video ? (
           <div style={{ textAlign: 'center', padding: '80px 20px', width: '100%' }}>
             <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px' }}>This video doesn&apos;t exist or was removed.</p>
-            <Link href="/katube" style={{ fontSize: '13px', fontWeight: 700, color: '#f97316', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={13} strokeWidth={2} /> Back to KaTube</Link>
+            <Link href="/katube" style={{ fontSize: '13px', fontWeight: 700, color: '#e11d48', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={13} strokeWidth={2} /> Back to KaTube</Link>
           </div>
         ) : (
           <>
@@ -737,7 +737,7 @@ export default function KaTubeWatchPage() {
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button
                         onClick={() => router.push(`/katube/watch/${recommended[0].id}`)}
-                        style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: '20px', padding: '8px 18px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}
+                        style={{ background: '#e11d48', color: '#fff', border: 'none', borderRadius: '20px', padding: '8px 18px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}
                       >Play now</button>
                       {autoplayEnabled && (
                         <button
@@ -763,7 +763,7 @@ export default function KaTubeWatchPage() {
                     aria-label="Toggle autoplay"
                     style={{
                       width: '36px', height: '20px', borderRadius: '999px', border: 'none', cursor: 'pointer',
-                      background: autoplayEnabled ? '#f97316' : 'var(--bg-card)', position: 'relative', transition: 'background 0.15s',
+                      background: autoplayEnabled ? '#e11d48' : 'var(--bg-card)', position: 'relative', transition: 'background 0.15s',
                     }}
                   >
                     <span style={{
@@ -805,8 +805,8 @@ export default function KaTubeWatchPage() {
                       <>
                         <span>·</span>
                         <Link href={video.seriesId ? `/WebMangal/series/${video.seriesId}` : '#'} style={{
-                          fontSize: '11.5px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
-                          background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
+                          fontSize: '11.5px', fontWeight: 700, color: '#e11d48', textDecoration: 'none',
+                          background: 'rgba(225,29,72,0.10)', border: '1px solid rgba(225,29,72,0.28)',
                           padding: '4px 11px', borderRadius: '20px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '5px',
                         }}>
                           <BookOpen size={13} /> Based on {video.basedOn}
@@ -836,7 +836,7 @@ export default function KaTubeWatchPage() {
                           <div style={{
                             width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-card)',
                             border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '15px', fontWeight: 800, color: '#f97316', flexShrink: 0,
+                            fontSize: '15px', fontWeight: 800, color: '#e11d48', flexShrink: 0,
                           }}>
                             {video.creator.trim().charAt(0).toUpperCase() || 'M'}
                           </div>
@@ -863,8 +863,8 @@ export default function KaTubeWatchPage() {
                           style={{
                             fontSize: '12.5px', fontWeight: 800,
                             color: following ? 'var(--text-secondary)' : '#fff',
-                            background: following ? 'var(--bg-card)' : '#f97316',
-                            border: following ? '1px solid var(--border-color)' : '1px solid #f97316',
+                            background: following ? 'var(--bg-card)' : '#e11d48',
+                            border: following ? '1px solid var(--border-color)' : '1px solid #e11d48',
                             borderRadius: '20px', padding: '8px 16px', cursor: followBusy ? 'default' : 'pointer',
                             opacity: followBusy ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0,
                           }}
@@ -881,14 +881,14 @@ export default function KaTubeWatchPage() {
                         style={{
                           display: 'flex', alignItems: 'center', gap: '6px',
                           fontSize: '13px', fontWeight: 700,
-                          color: liked ? '#f97316' : 'var(--text-secondary)',
-                          background: liked ? 'rgba(249,115,22,0.10)' : 'var(--bg-card)',
-                          border: liked ? '1px solid rgba(249,115,22,0.28)' : '1px solid var(--border-color)',
+                          color: liked ? '#e11d48' : 'var(--text-secondary)',
+                          background: liked ? 'rgba(225,29,72,0.10)' : 'var(--bg-card)',
+                          border: liked ? '1px solid rgba(225,29,72,0.28)' : '1px solid var(--border-color)',
                           borderRadius: '20px', padding: '9px 14px', cursor: likeBusy ? 'default' : 'pointer',
                           opacity: likeBusy ? 0.6 : 1,
                         }}
                       >
-                        <ThumbsUp size={15} fill={liked ? '#f97316' : 'none'} /> {video.likes.toLocaleString()}
+                        <ThumbsUp size={15} fill={liked ? '#e11d48' : 'none'} /> {video.likes.toLocaleString()}
                       </button>
                       <button
                         onClick={() => {
@@ -952,8 +952,8 @@ export default function KaTubeWatchPage() {
                     <span>{video.views.toLocaleString()} views · {timeAgo(video.created_at)}</span>
                     {video.basedOn && (
                       <Link href={video.seriesId ? `/WebMangal/series/${video.seriesId}` : '#'} style={{
-                        fontSize: '11px', fontWeight: 700, color: '#f97316', textDecoration: 'none',
-                        background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
+                        fontSize: '11px', fontWeight: 700, color: '#e11d48', textDecoration: 'none',
+                        background: 'rgba(225,29,72,0.10)', border: '1px solid rgba(225,29,72,0.28)',
                         padding: '3px 10px', borderRadius: '20px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px',
                       }}>
                         <BookOpen size={12} /> Based on {video.basedOn}
@@ -1003,7 +1003,7 @@ export default function KaTubeWatchPage() {
                         <div style={{
                           width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-card)',
                           border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '15px', fontWeight: 800, color: '#f97316', flexShrink: 0,
+                          fontSize: '15px', fontWeight: 800, color: '#e11d48', flexShrink: 0,
                         }}>
                           {video.creator.trim().charAt(0).toUpperCase() || 'M'}
                         </div>
@@ -1030,8 +1030,8 @@ export default function KaTubeWatchPage() {
                         style={{
                           fontSize: '12.5px', fontWeight: 800,
                           color: following ? 'var(--text-secondary)' : '#fff',
-                          background: following ? 'var(--bg-card)' : '#f97316',
-                          border: following ? '1px solid var(--border-color)' : '1px solid #f97316',
+                          background: following ? 'var(--bg-card)' : '#e11d48',
+                          border: following ? '1px solid var(--border-color)' : '1px solid #e11d48',
                           borderRadius: '20px', padding: '8px 16px', cursor: followBusy ? 'default' : 'pointer',
                           opacity: followBusy ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0,
                         }}
@@ -1048,14 +1048,14 @@ export default function KaTubeWatchPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: '6px',
                         fontSize: '13px', fontWeight: 700,
-                        color: liked ? '#f97316' : 'var(--text-secondary)',
-                        background: liked ? 'rgba(249,115,22,0.10)' : 'var(--bg-card)',
-                        border: liked ? '1px solid rgba(249,115,22,0.28)' : '1px solid var(--border-color)',
+                        color: liked ? '#e11d48' : 'var(--text-secondary)',
+                        background: liked ? 'rgba(225,29,72,0.10)' : 'var(--bg-card)',
+                        border: liked ? '1px solid rgba(225,29,72,0.28)' : '1px solid var(--border-color)',
                         borderRadius: '20px', padding: '9px 14px', cursor: likeBusy ? 'default' : 'pointer',
                         opacity: likeBusy ? 0.6 : 1,
                       }}
                     >
-                      <ThumbsUp size={15} fill={liked ? '#f97316' : 'none'} /> {video.likes.toLocaleString()}
+                      <ThumbsUp size={15} fill={liked ? '#e11d48' : 'none'} /> {video.likes.toLocaleString()}
                     </button>
                     <button
                       onClick={() => {
@@ -1110,7 +1110,7 @@ export default function KaTubeWatchPage() {
                       </h2>
                       {accuracyReviews.length > 0 && (
                         <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <Star size={12} fill="#f97316" stroke="none" /> {(accuracyReviews.reduce((s, r) => s + r.stars, 0) / accuracyReviews.length).toFixed(1)} avg
+                          <Star size={12} fill="#e11d48" stroke="none" /> {(accuracyReviews.reduce((s, r) => s + r.stars, 0) / accuracyReviews.length).toFixed(1)} avg
                           {' · '}{accuracyReviews.length.toLocaleString()} {accuracyReviews.length === 1 ? 'review' : 'reviews'}
                         </span>
                       )}
@@ -1131,9 +1131,9 @@ export default function KaTubeWatchPage() {
                           style={{
                             background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
                             display: 'flex', lineHeight: 1,
-                            color: (hoverStars || myStars) >= n ? '#f97316' : 'var(--border-color)',
+                            color: (hoverStars || myStars) >= n ? '#e11d48' : 'var(--border-color)',
                           }}
-                        ><Star size={22} fill={(hoverStars || myStars) >= n ? '#f97316' : 'none'} /></button>
+                        ><Star size={22} fill={(hoverStars || myStars) >= n ? '#e11d48' : 'none'} /></button>
                       ))}
                     </div>
 
@@ -1155,7 +1155,7 @@ export default function KaTubeWatchPage() {
                           onClick={handleAccuracySubmit}
                           disabled={accuracyBusy}
                           style={{
-                            fontSize: '12px', fontWeight: 700, color: '#fff', background: '#f97316',
+                            fontSize: '12px', fontWeight: 700, color: '#fff', background: '#e11d48',
                             border: 'none', borderRadius: '20px', padding: '0 16px', cursor: 'pointer',
                             opacity: accuracyBusy ? 0.5 : 1, flexShrink: 0,
                           }}
@@ -1171,9 +1171,9 @@ export default function KaTubeWatchPage() {
                           <div key={r.id}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                               <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.reviewerName}</span>
-                              <span style={{ fontSize: '11px', color: '#f97316', display: 'inline-flex', gap: '1px' }}>
+                              <span style={{ fontSize: '11px', color: '#e11d48', display: 'inline-flex', gap: '1px' }}>
                                 {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star key={i} size={11} fill={i < r.stars ? '#f97316' : 'none'} stroke={i < r.stars ? 'none' : '#f97316'} />
+                                  <Star key={i} size={11} fill={i < r.stars ? '#e11d48' : 'none'} stroke={i < r.stars ? 'none' : '#e11d48'} />
                                 ))}
                               </span>
                             </div>

@@ -70,7 +70,7 @@ export default function VideoGridCard({ video, badge }: { video: GridVideo; badg
         background: 'var(--bg-card)', border: '1px solid var(--border-color)',
         transition: 'transform 0.15s, box-shadow 0.2s',
         transform: hover ? 'translateY(-4px)' : 'none',
-        boxShadow: hover ? '0 12px 28px rgba(249,115,22,0.20)' : 'none',
+        boxShadow: hover ? '0 12px 28px rgba(225,29,72,0.20)' : 'none',
       }}
     >
       <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000' }}>
@@ -107,8 +107,8 @@ export default function VideoGridCard({ video, badge }: { video: GridVideo; badg
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
           {video.basedOn ? (
             <span style={{
-              fontSize: '10.5px', fontWeight: 700, color: '#f97316',
-              background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.28)',
+              fontSize: '10.5px', fontWeight: 700, color: '#e11d48',
+              background: 'rgba(225,29,72,0.10)', border: '1px solid rgba(225,29,72,0.28)',
               padding: '3px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
               display: 'inline-flex', alignItems: 'center', gap: '4px',
             }}>
@@ -200,7 +200,7 @@ export function AddToPlaylistButton({ videoId, userId }: { videoId: string; user
                     <span style={{
                       width: '16px', height: '16px', borderRadius: '4px', border: '1.5px solid var(--border-color)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: p.has ? '#f97316' : 'transparent', borderColor: p.has ? '#f97316' : 'var(--border-color)',
+                      background: p.has ? '#e11d48' : 'transparent', borderColor: p.has ? '#e11d48' : 'var(--border-color)',
                     }}>{p.has && <Check size={11} color="#fff" />}</span>
                     {p.title}
                   </div>
@@ -215,7 +215,7 @@ export function AddToPlaylistButton({ videoId, userId }: { videoId: string; user
                 placeholder="New playlist"
                 style={{ flex: 1, fontSize: '12px', padding: '6px 8px', borderRadius: '7px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', outline: 'none' }}
               />
-              <button onClick={createAndAdd} style={{ display: 'flex', alignItems: 'center', border: 'none', background: '#f97316', color: '#fff', borderRadius: '7px', padding: '0 9px', cursor: 'pointer' }}>
+              <button onClick={createAndAdd} style={{ display: 'flex', alignItems: 'center', border: 'none', background: '#e11d48', color: '#fff', borderRadius: '7px', padding: '0 9px', cursor: 'pointer' }}>
                 <Plus size={13} />
               </button>
             </div>
@@ -246,7 +246,7 @@ export function AddToPlaylistButton({ videoId, userId }: { videoId: string; user
 export function KaTubeShell({ title, backHref = '/katube', children }: { title: string; backHref?: string; children: React.ReactNode }) {
   return (
     <div style={{
-      minHeight: '100vh', background: '#07070a', color: '#f9fafb',
+      minHeight: '100vh', background: '#120610', color: '#f9fafb',
     } as React.CSSProperties}>
       <style>{`
         .katube-shell-bottom-nav { display: none; }
@@ -254,8 +254,8 @@ export function KaTubeShell({ title, backHref = '/katube', children }: { title: 
         @media (max-width: 768px) {
           .katube-shell-bottom-nav {
             display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 180;
-            background: rgba(7,7,10,0.97); backdrop-filter: blur(16px);
-            border-top: 1px solid rgba(255,255,255,0.1);
+            background: rgba(18,6,16,0.97); backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(225,29,72,0.18);
             padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
             justify-content: space-between;
           }
@@ -264,11 +264,11 @@ export function KaTubeShell({ title, backHref = '/katube', children }: { title: 
       `}</style>
 
       <div style={{
-        position: 'sticky', top: 0, zIndex: 10, background: 'rgba(7,7,10,0.97)',
-        borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '14px 20px',
+        position: 'sticky', top: 0, zIndex: 10, background: 'rgba(18,6,16,0.97)',
+        borderBottom: '1px solid rgba(225,29,72,0.18)', padding: '14px 20px',
         display: 'flex', alignItems: 'center', gap: '14px',
       }}>
-        <Link href={backHref} style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>← KaTube</Link>
+        <Link href={backHref} style={{ color: '#b088a0', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>← KaTube</Link>
         <h1 style={{ fontSize: '15px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{title}</h1>
       </div>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 20px 60px' }}>
@@ -279,38 +279,38 @@ export function KaTubeShell({ title, backHref = '/katube', children }: { title: 
       <nav className="katube-shell-bottom-nav" aria-label="KaTube mobile navigation">
         <Link href="/katube" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#9ca3af',
+          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#b088a0',
         }}>
           <Home size={20} />
           <span style={{ fontSize: '10px', fontWeight: 700 }}>Home</span>
         </Link>
         <Link href="/katube" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#9ca3af',
+          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#b088a0',
         }}>
           <Zap size={20} />
           <span style={{ fontSize: '10px', fontWeight: 700 }}>Fast Tap</span>
         </Link>
         <Link href="/katube/upload" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#9ca3af',
+          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#b088a0',
         }}>
           <span style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: '30px', height: '30px', borderRadius: '8px', background: '#f97316', color: '#fff',
+            width: '30px', height: '30px', borderRadius: '8px', background: '#e11d48', color: '#fff',
           }}><PlusSquare size={17} strokeWidth={2.4} /></span>
         </Link>
         <Link href="/katube/subscriptions" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
           flex: 1, padding: '6px 2px', textDecoration: 'none',
-          color: title === 'Following' ? '#f97316' : '#9ca3af',
+          color: title === 'Following' ? '#e11d48' : '#b088a0',
         }}>
           <Users size={20} strokeWidth={title === 'Following' ? 2.4 : 2} />
           <span style={{ fontSize: '10px', fontWeight: 700 }}>Following</span>
         </Link>
         <Link href="/katube/dashboard" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#9ca3af',
+          flex: 1, padding: '6px 2px', textDecoration: 'none', color: '#b088a0',
         }}>
           <UserCircle2 size={20} />
           <span style={{ fontSize: '10px', fontWeight: 700 }}>You</span>

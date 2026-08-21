@@ -64,9 +64,9 @@ export default function PlaylistsPage() {
   return (
     <KaTubeShell title="Playlists">
       {signedIn === false ? (
-        <div style={{ maxWidth: '600px', margin: '40px auto', padding: '18px 22px', borderRadius: '12px', background: '#0d0d14', border: '1px dashed rgba(255,255,255,0.18)', textAlign: 'center' }}>
-          <p style={{ fontSize: '12.5px', color: '#9ca3af', margin: 0 }}>
-            Sign in to build playlists. <Link href="/login?next=/katube/playlists" style={{ color: '#f97316', fontWeight: 700 }}>Sign in</Link>
+        <div style={{ maxWidth: '600px', margin: '40px auto', padding: '18px 22px', borderRadius: '12px', background: '#1d0a18', border: '1px dashed rgba(225,29,72,0.22)', textAlign: 'center' }}>
+          <p style={{ fontSize: '12.5px', color: '#b088a0', margin: 0 }}>
+            Sign in to build playlists. <Link href="/login?next=/katube/playlists" style={{ color: '#e11d48', fontWeight: 700 }}>Sign in</Link>
           </p>
         </div>
       ) : (
@@ -78,8 +78,8 @@ export default function PlaylistsPage() {
               onKeyDown={e => { if (e.key === 'Enter') createPlaylist(); }}
               placeholder="New playlist name"
               style={{
-                flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.18)',
-                background: '#08080c', color: '#f9fafb', fontSize: '13px', outline: 'none',
+                flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(225,29,72,0.22)',
+                background: '#170815', color: '#f9fafb', fontSize: '13px', outline: 'none',
               }}
             />
             <button
@@ -87,7 +87,7 @@ export default function PlaylistsPage() {
               disabled={creating || !newTitle.trim()}
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px',
-                border: 'none', background: '#f97316', color: '#fff', fontWeight: 700, fontSize: '13px',
+                border: 'none', background: '#e11d48', color: '#fff', fontWeight: 700, fontSize: '13px',
                 cursor: creating || !newTitle.trim() ? 'default' : 'pointer', opacity: creating || !newTitle.trim() ? 0.6 : 1,
               }}
             >
@@ -98,18 +98,18 @@ export default function PlaylistsPage() {
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280', fontSize: '13px' }}>Loading…</div>
           ) : playlists.length === 0 ? (
-            <div style={{ maxWidth: '600px', padding: '18px 22px', borderRadius: '12px', background: '#0d0d14', border: '1px dashed rgba(255,255,255,0.18)', textAlign: 'center' }}>
-              <p style={{ fontSize: '12.5px', color: '#9ca3af', margin: 0 }}>No playlists yet — create one above, then add videos from any watch page.</p>
+            <div style={{ maxWidth: '600px', padding: '18px 22px', borderRadius: '12px', background: '#1d0a18', border: '1px dashed rgba(225,29,72,0.22)', textAlign: 'center' }}>
+              <p style={{ fontSize: '12.5px', color: '#b088a0', margin: 0 }}>No playlists yet — create one above, then add videos from any watch page.</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
               {playlists.map(p => (
                 <Link key={p.id} href={`/katube/playlists/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div style={{
-                    padding: '18px', borderRadius: '14px', background: '#0d0d14', border: '1px solid rgba(255,255,255,0.14)',
+                    padding: '18px', borderRadius: '14px', background: '#1d0a18', border: '1px solid rgba(225,29,72,0.18)',
                     display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer',
                   }}>
-                    <ListVideo size={20} color="#f97316" />
+                    <ListVideo size={20} color="#e11d48" />
                     <div style={{ fontSize: '14px', fontWeight: 700 }}>{p.title}</div>
                     <div style={{ fontSize: '11.5px', color: '#6b7280' }}>{p.count} video{p.count === 1 ? '' : 's'}</div>
                   </div>

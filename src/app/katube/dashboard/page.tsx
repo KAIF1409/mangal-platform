@@ -209,7 +209,7 @@ export default function KaTubeProfilePage() {
                           {v.title} {v.isShort && <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>· Short</span>}
                         </div>
                         <div style={{ width: '120px', height: '6px', borderRadius: '4px', background: 'var(--border-color)', overflow: 'hidden', flexShrink: 0 }}>
-                          <div style={{ width: `${barPct}%`, height: '100%', background: '#f97316' }} />
+                          <div style={{ width: `${barPct}%`, height: '100%', background: '#e11d48' }} />
                         </div>
                         <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', width: '54px', textAlign: 'right', flexShrink: 0 }}>
                           {v.views.toLocaleString()}

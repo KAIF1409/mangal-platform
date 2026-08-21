@@ -7340,3 +7340,55 @@ pass introduced (synchronous `setState` inside a bare effect body for
 the new `continueItems` fetch — moved the early-return guard out from
 around the `setState` call). 0 errors after fix, same 5 pre-existing
 `<img>` LCP warnings only.
+
+## §112 — KaTube: maroon/red theme rolled out across every remaining page
+
+§111 scoped the maroon/red gaming-dashboard theme to the home page only.
+Founder confirmed the look and asked to apply the same pattern to the
+rest of KaTube. Mechanical color swap (same substitutions as §111)
+applied across every remaining KaTube page and shared component:
+
+- `#f97316` → `#e11d48`, `rgba(249,115,22,…)` → `rgba(225,29,72,…)`,
+  `fb923c` → `fb7185` (accent + its rgba/gradient variants)
+- `#0d0d14` (empty-state card background) → `#1d0a18`
+- `#08080c` (input background) → `#170815`
+- `#07070a` (page/shell background, `KaTubeShell` in VideoGridCard.tsx)
+  → `#120610`
+- `rgba(7,7,10,0.97)` (nav/shell bar background) → `rgba(18,6,16,0.97)`
+- `rgba(255,255,255,0.18)` / `0.14` / `0.1` used specifically as
+  theme borders → `rgba(225,29,72,0.22)` / `0.18` (left the shorts
+  page's black-video-chrome divider at `rgba(255,255,255,0.1)`
+  untouched — that's a white line on the pure-black player background,
+  not part of the maroon page surface, so it stays white on purpose)
+- `#9ca3af` (secondary/tertiary gray text) → `#b088a0` (maroon-tinted
+  gray, matching the text-secondary tone §111 set for the home page's
+  own local theme vars)
+
+**Files touched:** channel/[username], components/ContinueWatchingRow,
+components/MangalIdeasRow, components/NotificationBell,
+components/VideoGridCard (incl. the shared `KaTubeShell` wrapper used by
+channel/trending/playlists/subscriptions), dashboard, playlists (list +
+[playlistId]), shorts/[shortId], subscriptions, trending, upload, watch/
+[videoId].
+
+**Deliberately left alone:** `KatubeShareSheet.tsx` — its `#7c3aed`
+purple is the intentional Watch Together / K Circle cross-brand color
+(per the brand note at the top of `page.tsx`: K Circle's purple
+identity is meant to read as related-but-distinct from KaTube), not a
+KaTube accent that should follow this swap.
+
+**Still not covered** (same "not done" note as §111, unchanged):
+MangalOfTheWeekBanner and WriterOfTheMonthBanner don't use the orange
+accent at all (checked — they use their own week/month badge colors),
+so there was nothing to swap there. `watch`/`upload`/`dashboard` pages
+still theme via the *global* site `var(--bg-primary)` etc. rather than
+a forced-dark KaTube-local override the way `page.tsx`/`KaTubeShell`
+do — their accent colors are now maroon/red, but their base background
+still follows the site-wide light/dark toggle rather than being forced
+dark. Flagging in case the founder wants full dark-forced consistency
+across those three pages as a separate follow-up.
+
+**Verified:** `tsc --noEmit` clean project-wide. `eslint` on every
+touched file: 0 errors, only pre-existing warnings (a few `<img>` LCP
+notices and two pre-existing `exhaustive-deps` warnings, none
+introduced by this change).

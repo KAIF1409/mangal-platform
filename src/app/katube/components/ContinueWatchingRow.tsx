@@ -75,7 +75,7 @@ export default function ContinueWatchingRow({ userId }: { userId: string }) {
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
               <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '4px', background: 'rgba(255,255,255,0.25)' }}>
-                <div style={{ height: '100%', width: `${item.pct}%`, background: '#f97316' }} />
+                <div style={{ height: '100%', width: `${item.pct}%`, background: '#e11d48' }} />
               </div>
             </div>
             <div style={{

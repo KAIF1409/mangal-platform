@@ -851,12 +851,12 @@ export default function KaTubeShortsFeedPage() {
         .katube-short-details {
           position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 60;
           max-width: 520px; margin: 0 auto; padding: 18px; box-sizing: border-box;
-          background: #18181d; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px;
+          background: #18181d; border: 1px solid rgba(225,29,72,0.22); border-radius: 8px;
           box-shadow: 0 18px 48px rgba(0,0,0,0.45);
         }
         .katube-short-details-handle { width: 42px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.4); margin: -5px auto 16px; }
         .katube-short-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
-        .katube-short-stat { padding: 12px 6px; border-radius: 12px; text-align: center; background: rgba(249,115,22,0.16); color: #fff; }
+        .katube-short-stat { padding: 12px 6px; border-radius: 12px; text-align: center; background: rgba(225,29,72,0.16); color: #fff; }
         .katube-shorts-feed { overscroll-behavior-y: contain; touch-action: pan-y; }
         .katube-shorts-mobile-chrome { display: flex; position: fixed; left: 0; right: 0; z-index: 50; background: #000; box-sizing: border-box; }
         .katube-shorts-mobile-header { top: 0; height: calc(92px + env(safe-area-inset-top)); padding: calc(12px + env(safe-area-inset-top)) 16px 12px; align-items: center; justify-content: space-between; }
@@ -908,7 +908,7 @@ export default function KaTubeShortsFeedPage() {
 
       <aside className="katube-shorts-sidebar" aria-label="KaTube navigation">
         <Link href="/katube" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', textDecoration: 'none', padding: '0 12px 24px', fontSize: '18px', fontWeight: 900 }}>
-          <Play size={20} fill="#f97316" color="#f97316" /> KaTube
+          <Play size={20} fill="#e11d48" color="#e11d48" /> KaTube
         </Link>
         {[
           { href: '/katube', label: 'Home', icon: Home },
@@ -917,9 +917,9 @@ export default function KaTubeShortsFeedPage() {
           { href: '/katube/subscriptions', label: 'Following', icon: Users },
         ].map(item => {
           const Icon = item.icon;
-          return <Link key={item.label} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '11px 12px', borderRadius: '7px', color: item.active ? '#fff' : '#a1a1aa', background: item.active ? 'rgba(249,115,22,0.18)' : 'transparent', textDecoration: 'none', fontSize: '14px', fontWeight: item.active ? 800 : 600 }}><Icon size={19} color={item.active ? '#f97316' : 'currentColor'} />{item.label}</Link>;
+          return <Link key={item.label} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '11px 12px', borderRadius: '7px', color: item.active ? '#fff' : '#a1a1aa', background: item.active ? 'rgba(225,29,72,0.18)' : 'transparent', textDecoration: 'none', fontSize: '14px', fontWeight: item.active ? 800 : 600 }}><Icon size={19} color={item.active ? '#e11d48' : 'currentColor'} />{item.label}</Link>;
         })}
-        <Link href="/katube/upload" style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px', borderRadius: '7px', background: '#f97316', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}><PlusSquare size={16} /> Upload</Link>
+        <Link href="/katube/upload" style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px', borderRadius: '7px', background: '#e11d48', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}><PlusSquare size={16} /> Upload</Link>
       </aside>
 
       <header className="katube-shorts-mobile-chrome katube-shorts-mobile-header">
@@ -946,7 +946,7 @@ export default function KaTubeShortsFeedPage() {
           { href: '/katube/subscriptions', label: 'Following', icon: Users },
         ].map(item => {
           const Icon = item.icon;
-          return <Link key={item.label} href={item.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: item.label === 'Fast Tap' ? '#f97316' : '#fff', textDecoration: 'none', fontSize: '10px', fontWeight: 700 }}><Icon size={22} fill={item.label === 'Fast Tap' ? '#f97316' : 'none'} />{item.label}</Link>;
+          return <Link key={item.label} href={item.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: item.label === 'Fast Tap' ? '#e11d48' : '#fff', textDecoration: 'none', fontSize: '10px', fontWeight: 700 }}><Icon size={22} fill={item.label === 'Fast Tap' ? '#e11d48' : 'none'} />{item.label}</Link>;
         })}
       </nav>
 
@@ -964,7 +964,7 @@ export default function KaTubeShortsFeedPage() {
       ) : shorts.length === 0 ? (
         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '20px', textAlign: 'center' }}>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>No Fast Tap videos yet.</p>
-          <Link href="/katube" style={{ color: '#f97316', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={13} strokeWidth={2} /> Back to KaTube</Link>
+          <Link href="/katube" style={{ color: '#e11d48', fontSize: '13px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={13} strokeWidth={2} /> Back to KaTube</Link>
         </div>
       ) : (
         <div
@@ -1186,7 +1186,7 @@ export default function KaTubeShortsFeedPage() {
                         onInput={event => seekTo(Number((event.target as HTMLInputElement).value))}
                         onChange={event => seekTo(Number(event.target.value))}
                         aria-label="Seek through Short"
-                        style={{ display: 'block', width: '100%', accentColor: '#f97316', cursor: 'pointer', pointerEvents: 'auto' }}
+                        style={{ display: 'block', width: '100%', accentColor: '#e11d48', cursor: 'pointer', pointerEvents: 'auto' }}
                       />
                     </div>
                   )}

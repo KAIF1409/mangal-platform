@@ -275,12 +275,12 @@ export default function KaTubeUploadPage() {
             border: '1px solid var(--border-color)', fontSize: '13px', lineHeight: 1.6,
           }}>
             You need to be logged in to upload a video.{' '}
-            <Link href="/login?next=/katube/upload" style={{ color: '#f97316', fontWeight: 700 }}>Log in</Link>
+            <Link href="/login?next=/katube/upload" style={{ color: '#e11d48', fontWeight: 700 }}>Log in</Link>
           </div>
         ) : success ? (
           <div style={{
-            padding: '20px', borderRadius: '12px', background: 'rgba(249,115,22,0.08)',
-            border: '1px solid rgba(249,115,22,0.3)', fontSize: '13px', fontWeight: 700, color: '#f97316',
+            padding: '20px', borderRadius: '12px', background: 'rgba(225,29,72,0.08)',
+            border: '1px solid rgba(225,29,72,0.3)', fontSize: '13px', fontWeight: 700, color: '#e11d48',
           }}>
             Uploaded! Taking you to the video…
           </div>
@@ -299,7 +299,7 @@ export default function KaTubeUploadPage() {
             </p>
             <Link href="/katube/dashboard" style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px',
-              background: '#f97316', color: '#fff', fontSize: '13px', fontWeight: 700,
+              background: '#e11d48', color: '#fff', fontSize: '13px', fontWeight: 700,
               textDecoration: 'none',
             }}>Go to my KaTube profile <ArrowRight size={13} strokeWidth={2} /></Link>
           </div>
@@ -307,9 +307,9 @@ export default function KaTubeUploadPage() {
           <>
           <div style={{
             padding: '10px 14px', borderRadius: '10px', marginBottom: '20px',
-            background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.25)',
-            fontSize: '12px', fontWeight: 700, color: '#f97316', display: 'flex', alignItems: 'center', gap: '6px',
-          }}><CheckCircle2 size={14} /> Verified channel — every upload is still checked against it. <Link href="/katube/dashboard" style={{ color: '#f97316' }}>View KaTube profile</Link></div>
+            background: 'rgba(225,29,72,0.08)', border: '1px solid rgba(225,29,72,0.25)',
+            fontSize: '12px', fontWeight: 700, color: '#e11d48', display: 'flex', alignItems: 'center', gap: '6px',
+          }}><CheckCircle2 size={14} /> Verified channel — every upload is still checked against it. <Link href="/katube/dashboard" style={{ color: '#e11d48' }}>View KaTube profile</Link></div>
 
           {/* Step indicator — mobile only. YouTube Studio's mobile upload
               flow is step-by-step rather than one long scroll; desktop
@@ -326,7 +326,7 @@ export default function KaTubeUploadPage() {
                 {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                   <div key={i} style={{
                     flex: 1, height: '4px', borderRadius: '999px',
-                    background: i < mobileStep ? '#f97316' : 'var(--border-color)',
+                    background: i < mobileStep ? '#e11d48' : 'var(--border-color)',
                     transition: 'background 0.2s',
                   }} />
                 ))}
@@ -422,7 +422,7 @@ export default function KaTubeUploadPage() {
                 onClick={goNextStep}
                 style={{
                   width: '100%', padding: '13px', borderRadius: '10px', border: 'none',
-                  background: '#f97316', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer',
+                  background: '#e11d48', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '10px',
                 }}
               >Next <ArrowRight size={15} /></button>
@@ -464,7 +464,7 @@ export default function KaTubeUploadPage() {
                   onClick={() => setCategory(c)}
                   style={{
                     fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-                    background: category === c ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'var(--bg-card)',
+                    background: category === c ? 'linear-gradient(135deg, #e11d48, #fb7185)' : 'var(--bg-card)',
                     color: category === c ? '#fff' : 'var(--text-secondary)',
                     border: category === c ? 'none' : '1px solid var(--border-color)',
                     cursor: 'pointer',
@@ -483,7 +483,7 @@ export default function KaTubeUploadPage() {
                   onClick={() => setAiTool(t)}
                   style={{
                     fontSize: '12px', fontWeight: 700, padding: '7px 16px', borderRadius: '20px',
-                    background: aiTool === t ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'var(--bg-card)',
+                    background: aiTool === t ? 'linear-gradient(135deg, #e11d48, #fb7185)' : 'var(--bg-card)',
                     color: aiTool === t ? '#fff' : 'var(--text-secondary)',
                     border: aiTool === t ? 'none' : '1px solid var(--border-color)',
                     cursor: 'pointer',
@@ -509,7 +509,7 @@ export default function KaTubeUploadPage() {
                   onClick={goNextStep}
                   style={{
                     flex: 1, padding: '13px', borderRadius: '10px', border: 'none',
-                    background: '#f97316', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer',
+                    background: '#e11d48', color: '#fff', fontSize: '14px', fontWeight: 800, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                   }}
                 >Next <ArrowRight size={15} /></button>
@@ -607,7 +607,7 @@ export default function KaTubeUploadPage() {
                 disabled={submitting}
                 style={{
                   flex: 1, padding: '13px', borderRadius: '10px', border: 'none',
-                  background: submitting ? '#fdba8c' : '#f97316', color: '#fff',
+                  background: submitting ? '#fdba8c' : '#e11d48', color: '#fff',
                   fontSize: '14px', fontWeight: 800, cursor: submitting ? 'default' : 'pointer',
                 }}
               >

@@ -144,8 +144,8 @@ export default function KaTubeChannelPage() {
   if (notFound || !channel) {
     return (
       <KaTubeShell title="Channel not found">
-        <div style={{ maxWidth: '600px', margin: '40px auto', padding: '18px 22px', borderRadius: '12px', background: '#0d0d14', border: '1px dashed rgba(255,255,255,0.18)', textAlign: 'center' }}>
-          <p style={{ fontSize: '12.5px', color: '#9ca3af', margin: 0 }}>No KaTube channel found for @{username}.</p>
+        <div style={{ maxWidth: '600px', margin: '40px auto', padding: '18px 22px', borderRadius: '12px', background: '#1d0a18', border: '1px dashed rgba(225,29,72,0.22)', textAlign: 'center' }}>
+          <p style={{ fontSize: '12.5px', color: '#b088a0', margin: 0 }}>No KaTube channel found for @{username}.</p>
         </div>
       </KaTubeShell>
     );
@@ -160,7 +160,7 @@ export default function KaTubeChannelPage() {
           {channel.avatarUrl ? (
             <Image src={channel.avatarUrl} alt={channel.username} fill sizes="84px" style={{ objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: 900, color: '#f97316' }}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: 900, color: '#e11d48' }}>
               {channel.username[0]?.toUpperCase()}
             </div>
           )}
@@ -180,7 +180,7 @@ export default function KaTubeChannelPage() {
               </span>
             )}
           </h2>
-          <div style={{ display: 'flex', gap: '16px', fontSize: '12.5px', color: '#9ca3af', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '16px', fontSize: '12.5px', color: '#b088a0', flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Users size={13} /> {followerCount} followers</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><VideoIcon size={13} /> {videos.length + shorts.length} videos</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Eye size={13} /> {totalViews.toLocaleString()} views</span>
@@ -194,7 +194,7 @@ export default function KaTubeChannelPage() {
             style={{
               padding: '9px 22px', borderRadius: '22px', border: 'none', fontSize: '13px', fontWeight: 800,
               cursor: followBusy ? 'default' : 'pointer', flexShrink: 0,
-              background: following ? 'rgba(255,255,255,0.1)' : '#f97316',
+              background: following ? 'rgba(225,29,72,0.18)' : '#e11d48',
               color: following ? '#fff' : '#fff',
             }}
           >
@@ -228,8 +228,8 @@ export default function KaTubeChannelPage() {
 
       <h3 style={{ fontSize: '14px', fontWeight: 800, margin: '24px 0 12px' }}>Videos</h3>
       {videos.length === 0 ? (
-        <div style={{ padding: '18px 22px', borderRadius: '12px', background: '#0d0d14', border: '1px dashed rgba(255,255,255,0.18)', textAlign: 'center' }}>
-          <p style={{ fontSize: '12.5px', color: '#9ca3af', margin: 0 }}>No videos uploaded yet.</p>
+        <div style={{ padding: '18px 22px', borderRadius: '12px', background: '#1d0a18', border: '1px dashed rgba(225,29,72,0.22)', textAlign: 'center' }}>
+          <p style={{ fontSize: '12.5px', color: '#b088a0', margin: 0 }}>No videos uploaded yet.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>

@@ -44,7 +44,7 @@ interface CardData extends MangalIdeaRow {
 }
 
 const TYPE_META: Record<MangalIdeaRow['type'], { label: string; color: string; bg: string; icon: typeof Sparkles }> = {
-  company: { label: 'MANGAL', color: '#f97316', bg: 'rgba(249,115,22,0.14)', icon: Sparkles },
+  company: { label: 'MANGAL', color: '#e11d48', bg: 'rgba(225,29,72,0.14)', icon: Sparkles },
   story_demand: { label: 'In demand', color: '#a855f7', bg: 'rgba(168,85,247,0.14)', icon: BookOpen },
   audience: { label: 'Audience idea', color: '#10b981', bg: 'rgba(16,185,129,0.14)', icon: Users },
 };
@@ -179,7 +179,7 @@ export default function MangalIdeasRow({ userId }: { userId: string | null }) {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto 28px', padding: '0 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
-        <Sparkles size={16} strokeWidth={2.5} color="#f97316" />
+        <Sparkles size={16} strokeWidth={2.5} color="#e11d48" />
         <h2 style={{ fontSize: '16px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>Mangal Ideas</h2>
       </div>
       <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '4px' }}>
@@ -254,7 +254,7 @@ export default function MangalIdeasRow({ userId }: { userId: string | null }) {
                         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                         padding: '7px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
                         cursor: state === 'idle' ? 'pointer' : 'default',
-                        background: state === 'sent' ? 'rgba(16,185,129,0.14)' : '#f97316',
+                        background: state === 'sent' ? 'rgba(16,185,129,0.14)' : '#e11d48',
                         border: state === 'sent' ? '1px solid rgba(16,185,129,0.3)' : 'none',
                         color: state === 'sent' ? '#10b981' : '#fff',
                       }}

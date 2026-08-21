@@ -69,14 +69,14 @@ export default function TrendingPage() {
 
   return (
     <KaTubeShell title="Trending">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px', color: '#f97316', fontSize: '13px', fontWeight: 700 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px', color: '#e11d48', fontSize: '13px', fontWeight: 700 }}>
         <Flame size={16} /> What&apos;s hot across all of KaTube right now
       </div>
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280', fontSize: '13px' }}>Loading…</div>
       ) : videos.length === 0 ? (
-        <div style={{ maxWidth: '600px', margin: '40px auto', padding: '18px 22px', borderRadius: '12px', background: '#0d0d14', border: '1px dashed rgba(255,255,255,0.18)', textAlign: 'center' }}>
-          <p style={{ fontSize: '12.5px', color: '#9ca3af', margin: 0 }}>Nothing trending yet — check back once there are a few uploads.</p>
+        <div style={{ maxWidth: '600px', margin: '40px auto', padding: '18px 22px', borderRadius: '12px', background: '#1d0a18', border: '1px dashed rgba(225,29,72,0.22)', textAlign: 'center' }}>
+          <p style={{ fontSize: '12.5px', color: '#b088a0', margin: 0 }}>Nothing trending yet — check back once there are a few uploads.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
@@ -85,7 +85,7 @@ export default function TrendingPage() {
               {i < 10 && (
                 <div style={{
                   position: 'absolute', top: '8px', left: '8px', zIndex: 1,
-                  background: 'rgba(0,0,0,0.75)', color: '#f97316', fontWeight: 900,
+                  background: 'rgba(0,0,0,0.75)', color: '#e11d48', fontWeight: 900,
                   fontSize: '12px', padding: '2px 8px', borderRadius: '8px',
                 }}>#{i + 1}</div>
               )}
