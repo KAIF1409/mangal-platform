@@ -51,6 +51,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
       // Immutable — every upload gets a fresh random key (see
       // upload-media/route.ts), so a given key's content never changes.
       'Cache-Control': 'public, max-age=31536000, immutable',
+      // Defense in depth alongside upload-media's magic-byte validation:
+      // stops a browser from ever re-interpreting a served file as HTML/JS
+      // regardless of its declared Content-Type, for anything uploaded
+      // before that validation existed or reached this bucket any other
+      // way.
+      'X-Content-Type-Options': 'nosniff',
+      // Any file under this route is meant to be an image rendered inline
+      // (<img>) — never a page navigated to directly, so there's no
+      // legitimate reason for it to run as HTML in its own tab either.
+      'Content-Disposition': 'inline',
     },
   });
 

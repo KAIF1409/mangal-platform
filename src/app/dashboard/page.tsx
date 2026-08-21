@@ -292,18 +292,21 @@ export default function Dashboard() {
       });
       const dailyViews = Object.entries(dailyMap).map(([date, count]) => ({ date, count }));
 
-      // Real Gender split: follower profiles' self-reported gender (Settings).
-      // Unset (null) is counted as "unknown" rather than guessed.
+      // Real Gender split: aggregate-only via RPC now (see security
+      // migration) - the client never receives which individual reader
+      // has which gender, only the counts, computed server-side.
       const genderCounts = { male: 0, female: 0, unspecified: 0, unknown: 0 };
-      const readerIds = Array.from(new Set(followRows.map((f: { reader_id: string }) => f.reader_id).filter(Boolean)));
-      if (readerIds.length > 0) {
-        const { data: profileRows } = await supabase.from('profiles').select('id, gender').in('id', readerIds);
-        (profileRows || []).forEach((p: { gender: string | null }) => {
-          if (p.gender === 'male') genderCounts.male++;
-          else if (p.gender === 'female') genderCounts.female++;
-          else if (p.gender === 'unspecified') genderCounts.unspecified++;
-          else genderCounts.unknown++;
-        });
+      const { data: { user: analyticsUser } } = await supabase.auth.getUser();
+      if (analyticsUser) {
+        const { data: genderRow } = await supabase
+          .rpc('get_follower_gender_breakdown', { p_creator_id: analyticsUser.id })
+          .maybeSingle() as { data: { male: number; female: number; unspecified: number; unknown: number } | null };
+        if (genderRow) {
+          genderCounts.male = Number(genderRow.male) || 0;
+          genderCounts.female = Number(genderRow.female) || 0;
+          genderCounts.unspecified = Number(genderRow.unspecified) || 0;
+          genderCounts.unknown = Number(genderRow.unknown) || 0;
+        }
       }
 
       // Real Completion Rate: a reading_progress row counts as "completed"

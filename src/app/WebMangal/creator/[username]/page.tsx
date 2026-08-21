@@ -173,10 +173,15 @@ export default function CreatorProfilePage() {
       return;
     }
     setBanning(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ account_active: false })
-      .eq('id', creator.user_id);
+    // Uses the server-verified RPC (checks the caller is actually a
+    // developer) instead of updating another user's row directly - that
+    // direct update was silently blocked by RLS all along (0 rows
+    // changed, no error surfaced), so this button never actually worked
+    // before. See the security migration for why.
+    const { error } = await supabase.rpc('admin_set_account_active', {
+      p_target_user_id: creator.user_id,
+      p_active: false,
+    });
 
     if (error) {
       alert(`Failed to ban user: ${error.message}`);

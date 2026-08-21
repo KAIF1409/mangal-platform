@@ -172,10 +172,13 @@ export default function AdminReportsPage() {
       return;
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ account_active: false })
-      .eq('id', userId);
+    // Server-verified RPC (checks the caller is actually a developer)
+    // instead of updating another user's row directly - see the security
+    // migration for why the old direct update never actually worked.
+    const { error } = await supabase.rpc('admin_set_account_active', {
+      p_target_user_id: userId,
+      p_active: false,
+    });
 
     if (error) {
       patchAction(r.id, { banning: false, banConfirm: false });

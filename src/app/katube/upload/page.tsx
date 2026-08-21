@@ -137,16 +137,20 @@ export default function KaTubeUploadPage() {
 
   const refreshChannelStatus = async (uid: string) => {
     setChannelLoading(true);
-    const { data } = await supabase
-      .from('creator_profiles')
-      .select('verified_youtube_channel_id, pending_youtube_channel_id, youtube_verification_code, youtube_channel_handle')
-      .eq('user_id', uid)
-      .maybeSingle();
+    // Moved server-side: youtube_verification_code etc. are no longer
+    // directly selectable by the client (see the security migration) -
+    // this route forwards the caller's own session so RLS's "own row
+    // only" policy still applies, just via a server hop.
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/creator/youtube-status', {
+      headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
+    });
+    const data = res.ok ? await res.json() : null;
     setChannelStatus({
-      verifiedChannelId: data?.verified_youtube_channel_id ?? null,
-      pendingChannelId: data?.pending_youtube_channel_id ?? null,
-      pendingCode: data?.youtube_verification_code ?? null,
-      channelHandle: data?.youtube_channel_handle ?? null,
+      verifiedChannelId: data?.verifiedChannelId ?? null,
+      pendingChannelId: data?.pendingChannelId ?? null,
+      pendingCode: data?.pendingCode ?? null,
+      channelHandle: data?.channelHandle ?? null,
     });
     setChannelLoading(false);
   };
