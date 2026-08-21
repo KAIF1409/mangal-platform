@@ -29,6 +29,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 
 // Server-only client — service role bypasses RLS, so this file must NEVER
 // be imported into client-side code or a 'use client' component.
@@ -67,6 +68,11 @@ function encryptUserId(userId: string): string {
 
 export async function POST(req: NextRequest) {
   const supabase = getServiceClient();
+  const ip = getClientIp(req);
+  const withinLimit = await checkRateLimit(supabase, `delete-account:${ip}`, 5, 300);
+  if (!withinLimit) {
+    return NextResponse.json({ error: 'Too many requests. Please try again shortly.' }, { status: 429 });
+  }
 
   // Identify the requesting user from their session token, sent by the
   // client as a Bearer token (the client should call this with the user's

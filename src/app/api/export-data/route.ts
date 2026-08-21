@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 
 function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -29,6 +30,11 @@ function getServiceClient() {
 
 export async function GET(req: NextRequest) {
   const supabase = getServiceClient();
+  const ip = getClientIp(req);
+  const withinLimit = await checkRateLimit(supabase, `export-data:${ip}`, 5, 300);
+  if (!withinLimit) {
+    return NextResponse.json({ error: 'Too many requests. Please try again shortly.' }, { status: 429 });
+  }
 
   const authHeader = req.headers.get('authorization');
   const accessToken = authHeader?.replace('Bearer ', '');

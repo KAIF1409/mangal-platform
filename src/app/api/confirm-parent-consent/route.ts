@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 
 // Service-role client — server-only, NEVER expose this key to the client.
 // This is the only place allowed to write parent_consent_status now that
@@ -14,6 +15,16 @@ const supabaseAdmin = createClient(
 const CONSENT_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export async function GET(req: NextRequest) {
+  // Unauthenticated, token-guessing surface (token is a random UUID, so
+  // brute force isn't realistically feasible, but there's no reason not
+  // to also throttle it - cheap defense in depth, and stops it being
+  // usable to hammer the DB or as a free email-triggering vector).
+  const ip = getClientIp(req);
+  const withinLimit = await checkRateLimit(supabaseAdmin, `confirm-parent-consent:${ip}`, 20, 60);
+  if (!withinLimit) {
+    return redirectToResult(req, 'error');
+  }
+
   const token = req.nextUrl.searchParams.get('token');
 
   if (!token || typeof token !== 'string' || token.length < 16) {

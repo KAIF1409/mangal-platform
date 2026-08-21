@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendParentConsentEmail } from '@/app/lib/email';
+import { checkRateLimit, getClientIp } from '@/app/lib/rateLimit';
 
 // Service-role client — server-only, NEVER expose this key to the client.
 // This is the only place (along with confirm-parent-consent) allowed to
@@ -33,6 +34,14 @@ function isPlausibleDob(value: unknown): value is string {
 //   - the parent-consent token is generated server-side, never accepted
 //     from the client
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  // Throttle before doing any auth/DB work - this route sends a real email
+  // per call, so it's a resource to protect regardless of auth status.
+  const withinLimit = await checkRateLimit(supabaseAdmin, `send-parent-consent:${ip}`, 5, 300);
+  if (!withinLimit) {
+    return NextResponse.json({ error: 'Too many requests. Please try again shortly.' }, { status: 429 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();
