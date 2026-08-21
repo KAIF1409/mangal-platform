@@ -7828,3 +7828,27 @@ that renders a YouTube thumbnail this way).
 **Not done this pass (Phase 2/3, per founder answer #2):** K Circle
 Studio, WebMangal Studio, and the Tier 2 infra (KaTube `video_view_events`
 table, true retention curves, traffic sources, subscribers-lost).
+
+## §117 — KaTube like button: YouTube-style formatting + bump animation
+Founder sent a half-edited version of the watch page's like logic to
+finish: two small polish items on top of the already-real `video_likes`
+toggle (§4 item 5) —
+1. Like counts now go through the shared `formatViews()` helper
+   (`lib/format.ts`, same K/M abbreviation already used for view counts)
+   instead of `.toLocaleString()`, matching how YouTube actually displays
+   like counts ("12K" not "12,453"). Applied to the video like count
+   (both desktop and mobile action rows) and comment like counts.
+2. A brief scale-up "bump" on the thumbs-up icon on every *like* (not
+   unlike) — `likeBump` state, 260ms, cleared via timeout — same feel as
+   YouTube's own like-button micro-animation. Doesn't touch the
+   optimistic like/count logic underneath, purely a UI polish layer on
+   top of the existing toggle.
+
+No schema/RLS changes — this was UI-only. `tsc --noEmit` and `eslint`
+both clean (pre-existing `<img>`-vs-`next/image` warning only).
+
+Next: K Circle like logic, Instagram-style (double-tap-to-like on posts,
+heart burst animation), per founder's explicit ask that it match "insta
+or other social platforms" rather than YouTube's plain single-like
+model.
+

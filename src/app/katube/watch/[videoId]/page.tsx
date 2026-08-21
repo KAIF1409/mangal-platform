@@ -14,6 +14,7 @@ import VideoGridCard from '../../components/VideoGridCard';
 import KaTubePlayer from '../../components/KaTubePlayer';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
 import { youtubeCommentScore, sortByScore, COMMENT_PAGE_SIZE } from '../../../lib/commentRanking';
+import { formatViews } from '../../../lib/format';
 
 // ── KaTube — Step 3: watch page ──
 // Clicking a video card on /katube now opens this page, which loads the
@@ -164,6 +165,11 @@ export default function KaTubeWatchPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
+  // YouTube-style like button "bump": brief scale pop on every like (not
+  // unlike) so the click feels acknowledged instantly, same idea as
+  // YouTube's own thumbs-up micro-animation. Pure UI state, cleared on a
+  // timeout — doesn't touch the optimistic like/count logic below.
+  const [likeBump, setLikeBump] = useState(false);
   // Synchronous lock, separate from the `likeBusy` state used for the UI's
   // disabled/opacity look. State updates are batched/async in React, so a
   // fast double-click can fire the handler twice before the first
@@ -583,6 +589,10 @@ export default function KaTubeWatchPage() {
     // optimistic UI
     setLiked(!wasLiked);
     setVideo(v => v ? { ...v, likes: nextLikes } : v);
+    if (!wasLiked) {
+      setLikeBump(true);
+      setTimeout(() => setLikeBump(false), 260);
+    }
 
     const { error } = wasLiked
       ? await supabase.from('video_likes').delete().eq('video_id', video.id).eq('liker_id', userId)
@@ -698,7 +708,7 @@ export default function KaTubeWatchPage() {
                       background: 'none', border: 'none', padding: '2px 0',
                     }}
                   >
-                    <ThumbsUp size={12} fill={c.likedByMe ? '#e11d48' : 'none'} /> {c.likes > 0 ? c.likes.toLocaleString() : ''}
+                    <ThumbsUp size={12} fill={c.likedByMe ? '#e11d48' : 'none'} /> {c.likes > 0 ? formatViews(c.likes) : ''}
                   </button>
                 </div>
               </div>
@@ -1010,7 +1020,11 @@ export default function KaTubeWatchPage() {
                           opacity: likeBusy ? 0.6 : 1,
                         }}
                       >
-                        <ThumbsUp size={15} fill={liked ? '#e11d48' : 'none'} /> {video.likes.toLocaleString()}
+                        <ThumbsUp
+                          size={15}
+                          fill={liked ? '#e11d48' : 'none'}
+                          style={{ transform: likeBump ? 'scale(1.35)' : 'scale(1)', transition: 'transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+                        /> {formatViews(video.likes)}
                       </button>
                       <button
                         onClick={() => {
@@ -1177,7 +1191,11 @@ export default function KaTubeWatchPage() {
                         opacity: likeBusy ? 0.6 : 1,
                       }}
                     >
-                      <ThumbsUp size={15} fill={liked ? '#e11d48' : 'none'} /> {video.likes.toLocaleString()}
+                      <ThumbsUp
+                        size={15}
+                        fill={liked ? '#e11d48' : 'none'}
+                        style={{ transform: likeBump ? 'scale(1.35)' : 'scale(1)', transition: 'transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+                      /> {formatViews(video.likes)}
                     </button>
                     <button
                       onClick={() => {
