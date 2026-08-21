@@ -28,6 +28,9 @@ export interface R2ObjectBody {
   httpMetadata?: { contentType?: string };
   size: number;
   etag: string;
+  // Present on the real R2ObjectBody — used by the gated books file route,
+  // which buffers the object to enforce the preview byte cap.
+  arrayBuffer(): Promise<ArrayBuffer>;
 }
 
 export function getMediaBucket(): R2Bucket {
@@ -49,4 +52,11 @@ export const MEDIA_FOLDERS = {
   seriesCovers: 'manga-pages/covers',
   chapterPages: 'manga-pages/chapters',
   kcircleMedia: 'kcircle-media',
+  // Books module — covers go through /api/upload-media (image pipeline);
+  // book FILES (PDF/EPUB) go through /api/upload-book-file instead, which
+  // has its own document magic-byte allowlist and a much larger size cap.
+  // Files are never served from /api/media — only via the gated
+  // /api/books/file/[bookId] route, which checks purchase status first.
+  booksCovers: 'books/covers',
+  booksFiles: 'books/files',
 } as const;

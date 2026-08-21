@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       ...(payment.vpa ? { vpa: payment.vpa } : {}),
     })
     .eq('razorpay_order_id', payment.order_id)
-    .select('user_id, purpose')
+    .select('user_id, purpose, purpose_ref_id')
     .maybeSingle();
 
   if (error) {
@@ -87,6 +87,44 @@ export async function POST(req: NextRequest) {
   // harmless if both paths run for the same payment.
   if (nextStatus === 'captured' && updatedRow?.purpose === 'remove_ads' && updatedRow.user_id) {
     await supabaseAdmin.from('profiles').update({ ads_removed: true }).eq('id', updatedRow.user_id);
+  }
+
+  // Books module — same grant as /api/payments/verify's book_purchase
+  // branch, kept here because the webhook is the only guaranteed callback
+  // when the user closes the tab before Checkout's client-side handler
+  // fires. Idempotent via the (book_id, user_id) unique constraint, so it's
+  // harmless if verify already granted. Same server-side validation: book
+  // must exist and be PAID, and the captured amount must cover its price.
+  if (
+    nextStatus === 'captured' &&
+    updatedRow?.purpose === 'book_purchase' &&
+    updatedRow.purpose_ref_id &&
+    updatedRow.user_id
+  ) {
+    const { data: book } = await supabaseAdmin
+      .from('books')
+      .select('id, pricing_type, price_paise')
+      .eq('id', updatedRow.purpose_ref_id)
+      .maybeSingle();
+
+    const { data: paymentRow } = await supabaseAdmin
+      .from('payments')
+      .select('amount_paise')
+      .eq('razorpay_order_id', payment.order_id)
+      .maybeSingle();
+
+    if (book && book.pricing_type === 'PAID' && paymentRow && paymentRow.amount_paise >= (book.price_paise ?? 0)) {
+      await supabaseAdmin
+        .from('book_purchases')
+        .upsert(
+          {
+            book_id: book.id,
+            user_id: updatedRow.user_id,
+            amount_paid_paise: paymentRow.amount_paise,
+          },
+          { onConflict: 'book_id,user_id', ignoreDuplicates: false }
+        );
+    }
   }
 
   return NextResponse.json({ received: true });

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   FolderKanban,
+  BookOpen,
   Wallet,
   Rocket,
   Gift,
@@ -32,6 +33,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/workspace', label: 'Workspace', icon: FolderKanban, hasArrow: true },
+  { href: '/dashboard/books', label: 'Books', icon: BookOpen },
   { href: '/dashboard/earnings', label: 'Earnings', icon: Wallet },
   { href: '/dashboard/boost', label: 'Boost', icon: Rocket },
   { href: '/dashboard/perks', label: 'Perks', icon: Gift },

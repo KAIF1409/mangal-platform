@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { requireUser } from '../../../lib/auth/authedServerClient';
 import { verifyPaymentSignature } from '../../../lib/payments/razorpay';
+
+// Service-role client — used ONLY for the book_purchase grant below.
+// book_purchases has no client-side insert policy on purpose (a purchase row
+// IS the entitlement to a paid book, so it must never be writable by the
+// browser); only the server, after signature verification, may create one.
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // Infra-only per §27/§28d (see CONTEXT.md) — no checkout UI calls this
 // yet. This is the route Razorpay Checkout.js's success callback should
@@ -29,7 +39,7 @@ export async function POST(req: NextRequest) {
   // payment to captured.
   const { data: row, error: rowError } = await auth.supabase
     .from('payments')
-    .select('id, status, purpose')
+    .select('id, status, purpose, purpose_ref_id')
     .eq('razorpay_order_id', razorpay_order_id)
     .eq('user_id', auth.userId)
     .maybeSingle();
@@ -74,6 +84,43 @@ export async function POST(req: NextRequest) {
   // the DB row here, not from the request body.
   if (row.purpose === 'remove_ads') {
     await auth.supabase.from('profiles').update({ ads_removed: true }).eq('id', auth.userId);
+  }
+
+  // Books module — a captured book_purchase payment grants access to the
+  // book referenced by purpose_ref_id. Same defense-in-depth shape as the
+  // remove_ads branch: purpose is read from the DB row (never the request
+  // body), and the grant itself is validated server-side — the book must
+  // exist, actually be PAID, and the captured amount must cover its price.
+  // Idempotent via the (book_id, user_id) unique constraint, so a retry or
+  // the webhook firing first is a harmless no-op.
+  if (row.purpose === 'book_purchase' && row.purpose_ref_id) {
+    const { data: book } = await supabaseAdmin
+      .from('books')
+      .select('id, pricing_type, price_paise')
+      .eq('id', row.purpose_ref_id)
+      .maybeSingle();
+
+    if (book && book.pricing_type === 'PAID') {
+      const { data: paymentRow } = await auth.supabase
+        .from('payments')
+        .select('amount_paise')
+        .eq('id', row.id)
+        .maybeSingle();
+
+      if (paymentRow && paymentRow.amount_paise >= (book.price_paise ?? 0)) {
+        await supabaseAdmin
+          .from('book_purchases')
+          .upsert(
+            {
+              book_id: book.id,
+              user_id: auth.userId,
+              payment_id: row.id,
+              amount_paid_paise: paymentRow.amount_paise,
+            },
+            { onConflict: 'book_id,user_id' }
+          );
+      }
+    }
   }
 
   return NextResponse.json({ verified: true });
