@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 
-const siteUrl = "https://mangal-platform.vercel.app";
+// Bug fix: this pointed at a Vercel domain (mangal-platform.vercel.app)
+// that hasn't served this app since §89 moved everything to Cloudflare
+// Workers — layout.tsx already got this fix (fbc8a26), this file was
+// missed in that pass. Now matches the real Workers domain.
+const siteUrl = "https://mangal-platform.mangak.workers.dev";
 
 export default function robots(): MetadataRoute.Robots {
   return {

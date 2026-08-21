@@ -366,8 +366,10 @@ export default function TermsOfServicePage() {
 
       {/* FOOTER COMPONENT — official MANGAL logo shown here (unlike other
           "legal" pages that hide the brand block), linking out to the
-          company's official production site rather than this app's own "/". */}
-      <Footer logoHref="https://mangal-platform.vercel.app/" />
+          company's official production site rather than this app's own "/".
+          Bug fix: was still pointing at the dead Vercel URL — layout.tsx
+          got this fix already (fbc8a26), this page was missed. */}
+      <Footer logoHref="https://mangal-platform.mangak.workers.dev/" />
     </div>
   );
 }

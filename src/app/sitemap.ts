@@ -1,7 +1,11 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-const siteUrl = "https://mangal-platform.vercel.app";
+// Bug fix: this pointed at a Vercel domain (mangal-platform.vercel.app)
+// that hasn't served this app since §89 moved everything to Cloudflare
+// Workers — layout.tsx already got this fix (fbc8a26), this file was
+// missed in that pass. Now matches the real Workers domain.
+const siteUrl = "https://mangal-platform.mangak.workers.dev";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -15,8 +19,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Best-effort: include published series so search engines can discover and
   // index individual manga/novel pages. If env vars are missing at build
-  // time (unlikely on Vercel, but defensive for local builds) we just fall
-  // back to the static routes rather than failing the whole build.
+  // time (unlikely on the deployed Worker, but defensive for local builds)
+  // we just fall back to the static routes rather than failing the whole build.
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

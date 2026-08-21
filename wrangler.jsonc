@@ -1,11 +1,21 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // §89: Renamed from "mangal-platform" to "mangal" for a shorter URL.
-  // NOTE: renaming this creates a NEW Worker on Cloudflare's side (it
-  // doesn't rename the old one) — the old "mangal-platform" Worker will
-  // still exist in the dashboard and needs to be deleted manually if
-  // you don't want it hanging around.
-  "name": "mangal",
+  // Bug fix: this said "mangal" (from the §89 rename attempt below), but
+  // the rename never actually took effect — this project deploys via
+  // Cloudflare's Git-integrated "Workers Builds", which is tied to a fixed
+  // Worker resource rather than reading `name` from this file on each
+  // deploy. The live Worker has stayed "mangal-platform" this whole time
+  // (confirmed: only one Worker exists on the account, at
+  // mangal-platform.mangak.workers.dev) while this file quietly drifted to
+  // claim a different name that was never real. Reverted to match the
+  // actual deployed identity so this file stops being misleading.
+  //
+  // §89 (historical): renamed from "mangal-platform" to "mangal" for a
+  // shorter URL. NOTE: renaming this creates a NEW Worker on Cloudflare's
+  // side (it doesn't rename the old one) — if a real rename is still
+  // wanted, it needs to happen via the Cloudflare dashboard (Git
+  // integration → connected Worker) rather than just editing this field.
+  "name": "mangal-platform",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-01",
   // §90 follow-up (this session): root cause of SUPABASE_SERVICE_ROLE_KEY
