@@ -66,6 +66,24 @@ const nextConfig: NextConfig = {
   // actually reached at runtime server-side) instead of inlining them.
   serverExternalPackages: ["pdfjs-dist", "epubjs"],
 
+  // §123 follow-up: keep sharp (and its @img/* native binaries) out of the
+  // SERVER FILE TRACE as well. Images are served unoptimized (see images
+  // config below — Workers can't run sharp's native addon anyway), yet NFT
+  // still traced next's optional sharp dependency, and Next 16's standalone
+  // output emits it under a hashed name (node_modules/sharp-<hash>) that
+  // slips past OpenNext's own EXCLUDED_PACKAGES regex. Two problems from
+  // that: dead weight in the bundled Worker, and — locally on Windows —
+  // OpenNext crashes with `EPERM: operation not permitted, symlink` when it
+  // tries to re-create those hashed symlinks while copying traced files
+  // (symlink creation needs admin/Developer Mode there). Excluding the real
+  // paths here means they never enter the trace at all, fixing both.
+  outputFileTracingExcludes: {
+    "*": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/**/*",
+    ],
+  },
+
   allowedDevOrigins: [
     "192.168.*.*",
   ],

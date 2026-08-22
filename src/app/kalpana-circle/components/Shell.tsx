@@ -7,7 +7,7 @@ import ThemeToggle from '../../components/shared/ThemeToggle';
 import MangalLogo from '../../components/shared/MangalLogo';
 import NotificationBell from '../../components/shared/NotificationBell';
 import CrossProductLinks from '../../components/shared/CrossProductLinks';
-import { Search, MessageCircle, Clapperboard, Megaphone, Bookmark, Trophy } from 'lucide-react';
+import { Search, MessageCircle, Clapperboard, Megaphone, Bookmark, Trophy, User } from 'lucide-react';
 
 // ── K Circle desktop shell — shared across every K Circle page ──
 // Extracted from the home feed page (app/kalpana-circle/page.tsx, §55 in
@@ -119,62 +119,84 @@ export function KCircleRail({
 
   return (
     <aside className="kc-rail">
-      {/* Product's own logo leads the rail — K Circle brand mark first,
-          doubling as the home-feed link (was previously a plain divider
-          under the MANGAL logo up top; that MANGAL logo has moved to the
-          bottom of the rail, after CrossProductLinks, per founder's
-          ordering: product logo first, company logo last in the scroll). */}
-      <Link href="/kalpana-circle" title="K Circle Home" className="kc-rail-btn" style={{
+      {/* Product's own brand mark leads the rail and doubles as the ONLY
+          home-feed link. Previously there were TWO identical kcircle-logo
+          buttons stacked here (brand link + a second "Home feed" icon below
+          the divider) — visual duplicate clutter; now just one. */}
+      <Link href="/kalpana-circle" title="K Circle Home" aria-label="K Circle Home" className="kc-rail-btn" style={{
         width: '46px', height: '46px', borderRadius: '14px', display: 'flex',
         alignItems: 'center', justifyContent: 'center', marginBottom: '10px', flexShrink: 0,
       }}>
         <Image src="/kcircle-logo.png" alt="K Circle" width={100} height={100} style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
       </Link>
-      <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '10px', flexShrink: 0 }} />
+      <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '12px', flexShrink: 0 }} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '9px', flex: 1, minHeight: 0 }}>
-        <Link href="/kalpana-circle" title="Home feed" className="kc-rail-btn" style={active === 'home' ? RAIL_ICON_ACTIVE : RAIL_ICON_BASE}>
-          <Image src="/kcircle-logo.png" alt="" width={100} height={100} style={{ width: '25px', height: '25px', objectFit: 'contain' }} />
-        </Link>
+      {/* ── CORE NAVIGATION — product sections only (chat, clips/watch,
+          trophies, announcements/broadcasts, saved) plus search. User
+          profile items and third-party/product footer logos live in the
+          separate utility cluster at the bottom of the rail. ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', flex: 1, minHeight: 0 }}>
         {items.map(item => (
-          <Link key={item.key} href={item.href} title={item.title} className="kc-rail-btn" style={active === item.key ? RAIL_ICON_ACTIVE : RAIL_ICON_BASE}>
+          <Link key={item.key} href={item.href} title={item.title} aria-label={item.title} className="kc-rail-btn" style={active === item.key ? RAIL_ICON_ACTIVE : RAIL_ICON_BASE}>
             {item.icon}
           </Link>
         ))}
         <button
           onClick={onSearch ?? (() => { window.location.href = '/kalpana-circle'; })}
           title="Search"
+          aria-label="Search"
           className="kc-rail-btn"
           style={{ ...RAIL_ICON_BASE, background: 'transparent', border: 'none', cursor: 'pointer' }}
         ><Search size={19} /></button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0, paddingTop: '10px' }}>
-        {onCreatePost ? (
-          <button onClick={onCreatePost} title="Create post" style={{
-            width: '44px', height: '44px', borderRadius: '14px', background: RADIANT, border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#27272a',
-            fontSize: '20px', fontWeight: 900, cursor: 'pointer', flexShrink: 0,
-          }}>+</button>
-        ) : (
-          <Link href={createHref} title="Create post" style={{
-            width: '44px', height: '44px', borderRadius: '14px', background: RADIANT,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#27272a',
-            fontSize: '20px', fontWeight: 900, textDecoration: 'none', flexShrink: 0,
-          }}>+</Link>
+      {/* ── UTILITY / FOOTER CLUSTER — everything that isn't core
+          navigation: create action, notifications, account, theme, the
+          other MANGAL products' logos, and the company mark. A hairline
+          divider separates it from the nav above so the rail reads as
+          two intentional groups instead of one long icon pile. ── */}
+      <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '12px', flexShrink: 0 }} />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0, paddingBottom: '4px' }}>
+        {userId && (
+          onCreatePost ? (
+            <button onClick={onCreatePost} title="Create post" aria-label="Create post" style={{
+              width: '44px', height: '44px', borderRadius: '14px', background: RADIANT, border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#27272a',
+              fontSize: '20px', fontWeight: 900, cursor: 'pointer', flexShrink: 0,
+            }}>+</button>
+          ) : (
+            <Link href={createHref} title="Create post" aria-label="Create post" style={{
+              width: '44px', height: '44px', borderRadius: '14px', background: RADIANT,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#27272a',
+              fontSize: '20px', fontWeight: 900, textDecoration: 'none', flexShrink: 0,
+            }}>+</Link>
+          )
         )}
         <NotificationBell userId={userId} iconSize={20} />
-        <Link href={profileHref} title="Profile"><RailAvatar name={myUsername ?? 'you'} avatarUrl={myAvatarUrl} size={34} /></Link>
+        {/* Exactly ONE profile avatar in the rail. When logged out this is
+            a neutral sign-in button — NOT the old phantom initials avatar,
+            which rendered "YO" (initials of the fallback string 'you') for
+            every guest and read as a broken/duplicate account chip. */}
+        {userId ? (
+          <Link href={profileHref} title="Your profile" aria-label="Your profile"><RailAvatar name={myUsername ?? 'you'} avatarUrl={myAvatarUrl} size={34} /></Link>
+        ) : (
+          <Link href={profileHref} title="Sign in" aria-label="Sign in" style={{
+            width: '34px', height: '34px', borderRadius: '50%', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-color)',
+            color: 'var(--text-tertiary)', flexShrink: 0,
+          }}><User size={17} /></Link>
+        )}
         <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
-        {/* Logo-only links to the other two MANGAL products (replaces the
-            old single hardcoded KaTube-only link — see CrossProductLinks). */}
-        <CrossProductLinks current="kcircle" size={18} gap={6} direction="column" />
-        {/* Official MANGAL company logo — last item in the rail, after the
-            product logos, per founder's ordering: product's own brand
-            leads, company mark trails at the end of the scroll/list. */}
-        <Link href="/home" title="Back to MANGAL" aria-label="Back to MANGAL">
-          <MangalLogo size={20} />
-        </Link>
+        {/* Footer sub-group: other MANGAL products' logos + official company
+            mark, kept apart from navigation with extra breathing room and
+            tooltips (each link carries its own aria-label/title via
+            CrossProductLinks). */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', paddingTop: '2px' }}>
+          <CrossProductLinks current="kcircle" size={18} gap={6} direction="column" />
+          <Link href="/home" title="Back to MANGAL" aria-label="Back to MANGAL">
+            <MangalLogo size={20} />
+          </Link>
+        </div>
       </div>
     </aside>
   );

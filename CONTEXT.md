@@ -8016,3 +8016,85 @@ search mode, now generalized and turned on for browse mode too:
   data now shown in the main grid.
 
 `tsc --noEmit` clean, `eslint` 0 errors/warnings.
+
+## §123 — K Circle UI layout refactor + OpenNext Worker size hardening
+
+Two workstreams in one pass, both founder-requested.
+
+### Part 1 — /kalpana-circle layout & unauthenticated-state polish
+
+**Left rail (`components/Shell.tsx`):**
+- Removed the duplicate home entry: the rail previously rendered the
+  K Circle brand logo AND a second identical kcircle-logo "Home feed"
+  icon right under it (two visually identical buttons stacked). The top
+  brand link is now the single home affordance.
+- Rail split into two intentional groups separated by hairline dividers:
+  core navigation (Chat, Watch Together, Mangal of the Week,
+  Broadcasts, Saved, Search) up top; a utility/footer cluster below
+  holding create (+), notifications, account, theme toggle, the other
+  MANGAL products' logos, and the company mark.
+- Auth-aware bottom cluster: guests no longer get the phantom initials
+  avatar that rendered "YO" (initials of the `?? 'you'` fallback) plus a
+  working-looking "+" composer shortcut — instead a dashed-circle
+  User-icon "Sign in" button; create button hidden when logged out.
+  aria-labels added across the rail.
+
+**Home feed (`page.tsx`):**
+- Desktop channel header: inner row constrained to the same centered
+  640px column as stories/composer/feed, so "# home", the subtitle, and
+  the search pill sit flush with the main column instead of stretching
+  edge-to-edge across the center pane.
+- Stories bar: "Your Story (+)" tile and the "Manage Close Friends"
+  row now render only for signed-in sessions; padding normalized to
+  16px sides so tray/cards align on one column grid.
+- Composer: signed-out visitors now get ONE consolidated CTA card
+  ("Sign in to join the discussion" + Sparkles chip + Sign in button)
+  replacing the old combo of a disabled post box next to an interactive-
+  looking story creator. All interactive composer internals gated behind
+  `userId`.
+- Empty feed state: proper card on design tokens (bg-card, hairline
+  border, icon chip) with session-aware CTA ("Start the conversation"
+  scrolls to composer / "Sign in to post"); copy adapts when a ?tag=
+  filter is active.
+- Right panel: account card kept for members; guests get a compact
+  sign-in card. RECENTLY ACTIVE and TRENDING TAGS each wrapped in real
+  cards (bg-card / border / 14px radius), standardized 11px uppercase
+  0.08em tracking headings, skeleton pulse rows while data loads
+  (`loadingStories` added alongside the existing `loadingPosts`),
+  honest empty states retained. Recently Active rows are now profile
+  links; tag chips sit on bg-input inside their card.
+- Mobile bottom bar "+" becomes a login link for guests.
+
+### Part 2 — Worker size / build fixes
+
+- **Local build crash fixed**: `opennextjs-cloudflare build` died on
+  Windows with `EPERM: operation not permitted, symlink ...sharp-<hash>`
+  during traced-file copying. Root cause: Next 16's standalone output
+  emits hashed package symlinks (`node_modules/sharp-<hash>`) that slip
+  past @opennextjs/aws's EXCLUDED_PACKAGES regex (`sharp(?:/|$)`), and
+  re-symlinking them needs admin/Developer Mode on Windows. Fix:
+  `outputFileTracingExcludes: { "*": ["./node_modules/sharp/**/*",
+  "./node_modules/@img/**/*"] }` in next.config.ts — sharp never enters
+  the trace at all (it can't run on workerd anyway; images are served
+  unoptimized). Build now completes locally end-to-end.
+- **Route/function splitting investigated and documented** in
+  open-next.config.ts: @opennextjs/cloudflare v1.20 only ever bundles
+  `.open-next/server-functions/default` (its bundle-server.js ignores
+  the AWS adapter's split-functions config) and Workers Builds deploys a
+  single Worker from wrangler.jsonc's single `main`, so splitting is not
+  available on this stack; the config comment records this so nobody
+  burns another session rediscovering it. `routePreloadingBehavior:
+  "none"` made explicit.
+- **Measured result**: fresh `npx opennextjs-cloudflare build` +
+  `wrangler deploy --dry-run`: Total Upload 11571 KiB / **gzip 2795 KiB
+  < 3072 KiB free-plan limit** → [code: 10027] size failure resolved
+  with headroom. handler.mjs raw is 8.30 MB (gzip 2.42 MB); pdf.js/
+  epub.js confirmed absent from the bundle (vendor-file loading from
+  §119 intact); sharp/@img absent from the traced output.
+
+Verified: `tsc --noEmit` clean; `eslint` 0 errors (one pre-existing
+unused-disable warning on an untouched line); full local
+opennextjs-cloudflare build green; reader route access-control guard
+(purchase check mirroring the gated file route) and upload pipeline
+guard (requireUser → 401, rate limit, user-scoped R2 keys) reviewed and
+intact.

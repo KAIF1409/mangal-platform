@@ -153,6 +153,7 @@ function KalpanaCircleInner() {
   const [isCreator, setIsCreator] = useState(false);
 
   const [stories, setStories] = useState<StoryGroup[]>([]);
+  const [loadingStories, setLoadingStories] = useState(true);
   const [viewingStory, setViewingStory] = useState<{ groupIdx: number; storyIdx: number } | null>(null);
 
   const [draft, setDraft] = useState('');
@@ -324,10 +325,11 @@ function KalpanaCircleInner() {
 
   // ── load stories ──
   const loadStories = useCallback(async () => {
+    setLoadingStories(true);
     const { data: rows } = await supabase
       .from('kcircle_stories').select('id, author_id, image_url, created_at, close_friends_only')
       .order('created_at', { ascending: true });
-    if (!rows || rows.length === 0) { setStories([]); return; }
+    if (!rows || rows.length === 0) { setStories([]); setLoadingStories(false); return; }
 
     const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
     const [profilesRes, viewsRes] = await Promise.all([
@@ -350,6 +352,7 @@ function KalpanaCircleInner() {
       grouped.set(r.author_id, g);
     });
     setStories(Array.from(grouped.values()));
+    setLoadingStories(false);
   }, [userId]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on mount/userId change, same pattern as katube/upload
@@ -777,6 +780,13 @@ function KalpanaCircleInner() {
           100% { transform: scale(1); opacity: 0; }
         }
         .kc-heart-burst { animation: kc-heart-burst 0.9s ease forwards; }
+        /* Right-panel loading skeleton — soft opacity pulse, no layout shift
+           (same dimensions as the real rows they stand in for). */
+        @keyframes kc-skeleton-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.45; }
+        }
+        .kc-skeleton { animation: kc-skeleton-pulse 1.4s ease-in-out infinite; background: var(--bg-input); border-radius: 6px; }
       `}</style>
       <KCircleShellStyle />
 
@@ -835,16 +845,24 @@ function KalpanaCircleInner() {
 
       {/* ── DESKTOP CHANNEL HEADER (Discord's "# channel-name" top strip) —
           nav icons moved to the rail on the left, this just orients the
-          user in the current section and surfaces search. ── */}
+          user in the current section and surfaces search. The inner row is
+          constrained to the same centered 640px column as the stories bar /
+          composer / feed below, so "# home", the subtitle, and the search
+          pill line up flush with the main column instead of stretching to
+          the full center-pane width. ── */}
       <div className="kc-channel-header" style={{
         position: 'sticky', top: 0, zIndex: 100,
         background: 'var(--nav-bg)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border-color)',
         padding: '0 24px', height: '60px',
-        alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+        alignItems: 'center',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-          <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-faint)', flexShrink: 0 }}>#</span>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+          width: '100%', maxWidth: '640px', margin: '0 auto', minWidth: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+            <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-faint)', flexShrink: 0 }}>#</span>
           <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', flexShrink: 0 }}>home</span>
           <span style={{ width: '1px', height: '18px', background: 'var(--border-color)', flexShrink: 0 }} />
           <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -856,6 +874,7 @@ function KalpanaCircleInner() {
           fontSize: '12.5px', color: 'var(--text-tertiary)', background: 'var(--bg-card)',
           border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 14px', cursor: 'pointer',
         }}><Search size={14} strokeWidth={2.5} /> Search</button>
+        </div>{/* /.kc-channel-header inner column */}
       </div>
 
       {/* ── SEARCH OVERLAY ── */}
@@ -923,22 +942,32 @@ function KalpanaCircleInner() {
         </div>
       )}
 
-      {/* ── STORIES BAR ── */}
+      {/* ── STORIES BAR ──
+          Padding is tuned so the tray's left/right edges line up exactly
+          with the composer and feed cards below (same centered 640px
+          column), and the vertical rhythm reads as one block under the
+          channel header instead of floating mid-gap. The "Your Story (+)"
+          tile and the Close-Friends shortcut only render for a signed-in
+          session — previously guests saw an interactive-looking uploader
+          and a phantom initials avatar ("YO") here. */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '14px', overflowX: 'auto', padding: '14px 14px 4px',
+        display: 'flex', alignItems: 'center', gap: '14px', overflowX: 'auto',
+        padding: userId ? '16px 16px 6px' : '16px 16px 10px',
         maxWidth: '640px', margin: '0 auto', WebkitOverflowScrolling: 'touch',
       }}>
-        <div onClick={() => storyFileInputRef.current?.click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flexShrink: 0, cursor: 'pointer', width: '62px' }}>
-          <div style={{ position: 'relative', width: '58px', height: '58px' }}>
-            <Avatar name={myUsername ?? 'you'} size={58} />
-            <div style={{
-              position: 'absolute', bottom: -2, right: -2, width: '20px', height: '20px', borderRadius: '50%',
-              background: RADIANT_SOLID, border: '2px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '13px', color: '#fff', fontWeight: 900, lineHeight: 1,
-            }}>+</div>
+        {userId && (
+          <div onClick={() => storyFileInputRef.current?.click()} title="Add to your story" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', flexShrink: 0, cursor: 'pointer', width: '62px' }}>
+            <div style={{ position: 'relative', width: '58px', height: '58px' }}>
+              <Avatar name={myUsername ?? 'you'} avatarUrl={myAvatarUrl} size={58} />
+              <div style={{
+                position: 'absolute', bottom: -2, right: -2, width: '20px', height: '20px', borderRadius: '50%',
+                background: RADIANT_SOLID, border: '2px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '13px', color: '#fff', fontWeight: 900, lineHeight: 1,
+              }}>+</div>
+            </div>
+            <span style={{ fontSize: '10.5px', color: 'var(--text-tertiary)', fontWeight: 600 }}>Your Story</span>
           </div>
-          <span style={{ fontSize: '10.5px', color: 'var(--text-tertiary)', fontWeight: 600 }}>Your Story</span>
-        </div>
+        )}
         <input ref={storyFileInputRef} type="file" accept="image/*" onChange={handleAddStory} style={{ display: 'none' }} />
 
         {stories.map((g, idx) => {
@@ -958,11 +987,13 @@ function KalpanaCircleInner() {
           );
         })}
       </div>
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 14px 12px', textAlign: 'right' }}>
-        <Link href={navHref('/kalpana-circle/close-friends')} style={{ fontSize: '10.5px', fontWeight: 700, color: GREEN, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-          <Circle size={8} fill={GREEN} stroke="none" /> Manage Close Friends
-        </Link>
-      </div>
+      {userId && (
+        <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 16px 12px', textAlign: 'right' }}>
+          <Link href={navHref('/kalpana-circle/close-friends')} style={{ fontSize: '10.5px', fontWeight: 700, color: GREEN, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <Circle size={8} fill={GREEN} stroke="none" /> Manage Close Friends
+          </Link>
+        </div>
+      )}
 
       {/* ── STORY AUDIENCE PICKER — shown after choosing a file, before upload ── */}
       {pendingStoryFile && (
@@ -1044,6 +1075,30 @@ function KalpanaCircleInner() {
           padding: '14px 16px', borderRadius: '14px', background: 'var(--bg-card)',
           border: '1px solid var(--border-color)', marginBottom: '16px',
         }}>
+          {!userId ? (
+          /* ── GUEST STATE — one consolidated CTA card replaces the old
+              combo of a disabled "Log in to post" box sitting next to an
+              interactive-looking story creator, neither of which a
+              signed-out visitor could actually use. ── */
+          <div style={{ textAlign: 'center', padding: '18px 10px 8px' }}>
+            <div style={{
+              width: '46px', height: '46px', borderRadius: '50%', margin: '0 auto 12px',
+              background: 'rgba(124,58,237,0.14)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', color: '#a78bfa', flexShrink: 0,
+            }}><Sparkles size={22} /></div>
+            <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+              Sign in to join the discussion
+            </h3>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', lineHeight: 1.6, margin: '0 auto 16px', maxWidth: '400px' }}>
+              Post theories, share fan art, run polls, and follow the Circle&rsquo;s stories — all with your MANGAL account.
+            </p>
+            <Link href="/login?next=/kalpana-circle" onClick={() => setPostLoginRedirect('/kalpana-circle')} style={{
+              display: 'inline-block', fontSize: '12.5px', fontWeight: 800, padding: '9px 26px',
+              borderRadius: '20px', background: RADIANT, color: '#27272a', textDecoration: 'none',
+            }}>Sign in</Link>
+          </div>
+          ) : (
+          <>
           {/* ── POST TYPE TABS — same three types YouTube's Community
               composer offers (Text / Image / Poll). Switching tabs swaps
               which editing UI shows below, and clears whatever belonged
@@ -1195,16 +1250,44 @@ function KalpanaCircleInner() {
               )}
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* ── FEED ── */}
         {loadingPosts ? (
           <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px', padding: '30px 0' }}>Loading feed…</p>
         ) : posts.length === 0 ? (
-          <div style={{ padding: '16px 20px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', textAlign: 'center' }}>
-            <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', margin: 0, lineHeight: 1.6 }}>
-              No posts yet — be the first to share a theory, fan art, or request.
+          /* ── EMPTY STATE — proper card on the app's design tokens (bg-card,
+              hairline border, icon chip) instead of the old bare dashed box;
+              CTA adapts to session state. ── */
+          <div style={{
+            padding: '34px 24px', borderRadius: '14px', background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)', textAlign: 'center', marginBottom: '14px',
+          }}>
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '50%', margin: '0 auto 14px',
+              background: 'rgba(124,58,237,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa', flexShrink: 0,
+            }}><Sparkles size={24} /></div>
+            <h3 style={{ fontSize: '14.5px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+              No posts yet
+            </h3>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', lineHeight: 1.6, margin: '0 auto 18px', maxWidth: '360px' }}>
+              {tagFilter
+                ? <>Nothing tagged &ldquo;{tagFilter}&rdquo; yet — be the first to discuss it.</>
+                : 'Be the first to share a theory, fan art, or request with the Circle.'}
             </p>
+            {userId ? (
+              <button onClick={() => composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} style={{
+                fontSize: '12.5px', fontWeight: 800, padding: '9px 22px', borderRadius: '20px', border: 'none',
+                background: RADIANT, color: '#27272a', cursor: 'pointer',
+              }}>Start the conversation</button>
+            ) : (
+              <Link href="/login?next=/kalpana-circle" onClick={() => setPostLoginRedirect('/kalpana-circle')} style={{
+                display: 'inline-block', fontSize: '12.5px', fontWeight: 800, padding: '9px 22px',
+                borderRadius: '20px', background: RADIANT, color: '#27272a', textDecoration: 'none',
+              }}>Sign in to post</Link>
+            )}
           </div>
         ) : posts.map(post => (
           <div key={post.id} style={{
@@ -1397,9 +1480,12 @@ function KalpanaCircleInner() {
       {/* ── DESKTOP RIGHT PANEL (Discord's "Active Now"/member-list pattern,
           crossed with Instagram's account-switcher card) — only appears on
           wide desktop (>=1180px). Built entirely from data already fetched
-          for the feed/stories above, so no extra queries. ── */}
+          for the feed/stories above, so no extra queries. Every widget sits
+          inside a proper card (bg-card / hairline border / 14px radius) with
+          skeleton placeholders while its data loads and honest empty states
+          when there's nothing to show. ── */}
       <aside className="kc-right-panel">
-        {userId && (
+        {userId ? (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '10px', padding: '13px',
             borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', marginBottom: '20px',
@@ -1409,21 +1495,53 @@ function KalpanaCircleInner() {
               <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{myUsername ?? 'Dreamer'}</div>
               <div style={{ fontSize: '10.5px', color: 'var(--text-tertiary)' }}>Your account</div>
             </div>
-            <Link href={profileHref} style={{ fontSize: '11px', fontWeight: 800, color: RADIANT_SOLID, textDecoration: 'none', flexShrink: 0 }}>View</Link>
+            <Link href={profileHref} title="View your profile" style={{ fontSize: '11px', fontWeight: 800, color: RADIANT_SOLID, textDecoration: 'none', flexShrink: 0 }}>View</Link>
+          </div>
+        ) : (
+          /* Guest equivalent of the account card — invites the sign-up
+             instead of leaving an unexplained blank strip up top. */
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px', padding: '16px 14px',
+            borderRadius: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', marginBottom: '20px',
+          }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(124,58,237,0.14)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa', flexShrink: 0,
+            }}><User size={19} /></div>
+            <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
+              Join the Circle to post, comment, and save.
+            </p>
+            <Link href="/login?next=/kalpana-circle" onClick={() => setPostLoginRedirect('/kalpana-circle')} style={{
+              fontSize: '11px', fontWeight: 800, padding: '7px 18px', borderRadius: '16px',
+              background: RADIANT, color: '#27272a', textDecoration: 'none', flexShrink: 0,
+            }}>Sign in</Link>
           </div>
         )}
 
-        <div style={{ marginBottom: '24px' }}>
+        {/* ── RECENTLY ACTIVE — card container + skeleton/empty states ── */}
+        <div style={{
+          marginBottom: '16px', padding: '14px 14px 15px', borderRadius: '14px',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+        }}>
           <h3 style={{
-            display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 800,
-            color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px',
+            display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800,
+            color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px',
           }}><Users size={13} /> Recently Active</h3>
-          {recentlyActive.length === 0 ? (
+          {loadingStories ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                  <span className="kc-skeleton" style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0 }} />
+                  <span className="kc-skeleton" style={{ width: `${86 - i * 18}px`, height: '11px' }} />
+                </div>
+              ))}
+            </div>
+          ) : recentlyActive.length === 0 ? (
             <p style={{ fontSize: '11.5px', color: 'var(--text-faint)', margin: 0, lineHeight: 1.5 }}>No one has posted a story yet — be the first.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
               {recentlyActive.map(g => (
-                <div key={g.authorId} style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                <Link key={g.authorId} href={`/kalpana-circle/profile/${g.username}`} title={`@${g.username}`} style={{ display: 'flex', alignItems: 'center', gap: '9px', textDecoration: 'none' }}>
                   <div style={{ position: 'relative', flexShrink: 0 }}>
                     <Avatar name={g.username} size={30} />
                     <span style={{
@@ -1432,25 +1550,36 @@ function KalpanaCircleInner() {
                     }} />
                   </div>
                   <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.username}</span>
-                </div>
+                </Link>
               ))}
             </div>
           )}
         </div>
 
-        <div>
+        {/* ── TRENDING TAGS — same card treatment as Recently Active ── */}
+        <div style={{
+          padding: '14px 14px 15px', borderRadius: '14px',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+        }}>
           <h3 style={{
-            display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 800,
-            color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 12px',
+            display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800,
+            color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px',
           }}><TrendingUp size={13} /> Trending Tags</h3>
-          {trendingTags.length === 0 ? (
+          {loadingPosts ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[0, 1, 2].map(i => (
+                <span key={i} className="kc-skeleton" style={{ width: `${104 - i * 22}px`, height: '30px', borderRadius: '9px' }} />
+              ))}
+            </div>
+          ) : trendingTags.length === 0 ? (
             <p style={{ fontSize: '11.5px', color: 'var(--text-faint)', margin: 0, lineHeight: 1.5 }}>Tag a series in your post to start a trend.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {trendingTags.map(([tagName, count]) => (
-                <Link key={tagName} href={`/kalpana-circle?tag=${encodeURIComponent(tagName)}`} style={{
+                <Link key={tagName} href={`/kalpana-circle?tag=${encodeURIComponent(tagName)}`} title={`Posts tagged ${tagName}`} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none',
-                  padding: '8px 10px', borderRadius: '9px', background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                  padding: '7px 10px', borderRadius: '9px', background: 'var(--bg-input)', border: '1px solid transparent',
+                  transition: 'border-color 0.15s',
                 }}>
                   <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{tagName}</span>
                   <span style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text-tertiary)', flexShrink: 0, marginLeft: '8px' }}>{count}</span>
@@ -1471,10 +1600,17 @@ function KalpanaCircleInner() {
       }}>
         <Link href="/kalpana-circle" style={{ display: 'flex', textDecoration: 'none', color: RADIANT_SOLID }}><Home size={20} /></Link>
         <button onClick={() => setShowSearch(true)} style={{ background: 'none', border: 'none', display: 'flex', color: 'var(--text-tertiary)', cursor: 'pointer' }}><Search size={20} /></button>
-        <button onClick={openPhotoComposer} style={{
-          background: RADIANT, border: 'none', width: '34px', height: '34px', borderRadius: '9px',
-          fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>+</button>
+        {userId ? (
+          <button onClick={openPhotoComposer} title="Create post" aria-label="Create post" style={{
+            background: RADIANT, border: 'none', width: '34px', height: '34px', borderRadius: '9px',
+            fontSize: '17px', fontWeight: 900, color: '#27272a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>+</button>
+        ) : (
+          <Link href="/login?next=/kalpana-circle" onClick={() => setPostLoginRedirect('/kalpana-circle')} title="Sign in to post" aria-label="Sign in to post" style={{
+            background: RADIANT, width: '34px', height: '34px', borderRadius: '9px',
+            fontSize: '17px', fontWeight: 900, color: '#27272a', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>+</Link>
+        )}
         <Link href={navHref('/kalpana-circle/chat')} style={{ display: 'flex', textDecoration: 'none', color: 'var(--text-tertiary)' }}><MessageCircle size={20} /></Link>
         <button onClick={() => setShowMobileMenu(true)} style={{ background: 'none', border: 'none', display: 'flex', color: 'var(--text-tertiary)', cursor: 'pointer' }}><Menu size={20} /></button>
       </div>
