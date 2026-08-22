@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef, Suspense, CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import Image from 'next/image';
 import MangalLogo from '../components/shared/MangalLogo';
@@ -187,6 +188,18 @@ function KalpanaCircleInner() {
   // Report for anyone else's. Founder-reported gap: none of this existed
   // before (no share, no edit/delete, no report on a posted card).
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
+  const [postMenuPos, setPostMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const postMenuTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const togglePostMenu = (postId: string) => {
+    if (openMenuPostId === postId) { setOpenMenuPostId(null); return; }
+    const btn = postMenuTriggerRefs.current[postId];
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const menuWidth = 160;
+      setPostMenuPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)) });
+    }
+    setOpenMenuPostId(postId);
+  };
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editCaption, setEditCaption] = useState('');
   const [editSaving, setEditSaving] = useState(false);
@@ -1399,20 +1412,24 @@ function KalpanaCircleInner() {
               )}
 
               {/* Instagram-style "…" menu — Edit/Delete on your own posts,
-                  Report on anyone else's. */}
-              <div style={{ position: 'relative', flexShrink: 0 }}>
+                  Report on anyone else's. Portaled to document.body (same
+                  fix as ShareButton) so it can't get clipped by this
+                  card's overflow:hidden (needed for rounded image
+                  corners). */}
+              <div style={{ flexShrink: 0 }}>
                 <button
-                  onClick={() => setOpenMenuPostId(openMenuPostId === post.id ? null : post.id)}
+                  ref={el => { postMenuTriggerRefs.current[post.id] = el; }}
+                  onClick={() => togglePostMenu(post.id)}
                   title="More"
                   style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', color: 'var(--text-tertiary)', padding: '2px' }}
                 ><MoreHorizontal size={17} /></button>
-                {openMenuPostId === post.id && (
+                {openMenuPostId === post.id && postMenuPos && typeof document !== 'undefined' && createPortal(
                   <>
-                    <div onClick={() => setOpenMenuPostId(null)} style={{ position: 'fixed', inset: 0, zIndex: 149 }} />
+                    <div onClick={() => setOpenMenuPostId(null)} style={{ position: 'fixed', inset: 0, zIndex: 999 }} />
                     <div style={{
-                      position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 150,
+                      position: 'fixed', top: postMenuPos.top, left: postMenuPos.left, zIndex: 1000,
                       background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px',
-                      minWidth: '150px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                      minWidth: '160px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                     }}>
                       {post.author_id === userId ? (
                         <>
@@ -1433,7 +1450,8 @@ function KalpanaCircleInner() {
                         </div>
                       )}
                     </div>
-                  </>
+                  </>,
+                  document.body
                 )}
               </div>
             </div>

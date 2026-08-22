@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Share2, MessageCircle, Link2, Check } from 'lucide-react';
 
 interface ShareButtonProps {
@@ -15,17 +16,41 @@ interface ShareButtonProps {
 export default function ShareButton({ title, url, compact = false }: ShareButtonProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     }
     if (open) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
+
+  // BUG FIX (founder-reported, K Circle post cards): this menu used to be
+  // an absolutely-positioned child of the trigger button. Any ancestor
+  // with `overflow: hidden` (e.g. K Circle's post card, clipped for
+  // rounded image corners) silently clipped it — the menu opened but
+  // rendered invisible/cut off. Now portaled to document.body and
+  // positioned from the trigger's actual on-screen rect via `fixed`
+  // coordinates, so it always renders above everything, regardless of
+  // what ancestor containers do with overflow.
+  const toggleOpen = () => {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const menuWidth = 200;
+      let left = rect.right - menuWidth;
+      left = Math.max(8, Math.min(left, window.innerWidth - menuWidth - 8));
+      setMenuPos({ top: rect.bottom + 8, left });
+    }
+    setOpen(o => !o);
+  };
 
   const shareText = `Check out "${title}" on MANGAL — read free! ${url}`;
   const whatsappHref = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
@@ -38,9 +63,10 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
   }
 
   return (
-    <div ref={menuRef} style={{ position: 'relative', display: 'inline-block' }}>
+    <div style={{ display: 'inline-block' }}>
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={triggerRef}
+        onClick={toggleOpen}
         style={compact ? {
           width: '36px', height: '36px', borderRadius: '8px',
           background: 'var(--bg-card)', border: '1px solid var(--border-light)',
@@ -56,11 +82,11 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
         {compact ? <Share2 size={15} strokeWidth={2} /> : <><Share2 size={14} strokeWidth={2} /> Share</>}
       </button>
 
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 200,
+      {open && menuPos && typeof document !== 'undefined' && createPortal(
+        <div ref={menuRef} style={{
+          position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 1000,
           background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '10px',
-          minWidth: '180px', overflow: 'hidden',
+          minWidth: '200px', overflow: 'hidden',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}>
           <a
@@ -88,7 +114,8 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
           >
             {copied ? <Check size={16} strokeWidth={2} /> : <Link2 size={16} strokeWidth={2} />} {copied ? 'Copied!' : 'Copy Link'}
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
