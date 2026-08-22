@@ -7890,3 +7890,54 @@ No schema/RLS changes — built entirely on the existing
 pre-existing, unrelated `unused eslint-disable` warning on an
 unaffected line).
 
+## §119 — Bug fix: Cloudflare Workers deploy failing — "exceeded size limit of 3 MiB"
+Founder built the Books module (upload PDF/EPUB, paid/free toggle,
+pdf.js + epub.js dual-engine reader — real, substantial feature, not
+mine) and pushed it. Live deploy started failing at the final
+`wrangler deploy` step with:
+
+```
+✘ [ERROR] Your Worker failed validation because it exceeded size limits.
+ - Your Worker exceeded the size limit of 3 MiB. Please upgrade to a
+   paid plan to deploy Workers up to 10 MiB. [code: 10027]
+ Here are the 5 largest dependencies included in your script:
+ - .open-next/server-functions/default/handler.mjs - 12981.98 KiB
+```
+
+**Root cause:** `BookReader.tsx` only ever loads `pdfjs-dist` and
+`epubjs` via `await import(...)` inside client-side effects — correct
+in principle — but both are reached through a plain static
+`import BookReader from '...'` in `/WebMangal/books/[bookId]/read/page.tsx`.
+Next's server compiler still pulls the full module graph of a
+dynamically-imported target into the server (RSC/SSR) build if the
+component that calls `import()` is itself statically reachable from a
+server-rendered page — there's no real lazy-chunk-over-the-network for
+server code once OpenNext bundles it into a single Cloudflare Worker
+script, so both libraries got inlined whole into `handler.mjs`, which
+alone ballooned past the free-plan 3 MiB Worker limit.
+
+**Fix, two layers (belt and suspenders):**
+1. `next.config.ts` — added `serverExternalPackages: ["pdfjs-dist",
+   "epubjs"]`. Tells Next's server compiler to leave both packages
+   external (never actually reached at runtime server-side — they're
+   canvas/DOM-only) instead of inlining them into the server bundle.
+2. `read/page.tsx` — `BookReader` is now loaded via
+   `next/dynamic(() => import('...BookReader'), { ssr: false })`
+   instead of a static import, so it's excluded from the initial
+   server render entirely (and, as a side benefit, sidesteps pdf.js/
+   epub.js assuming `window`/`document`/canvas exist during SSR, which
+   they do at module scope).
+
+No product logic touched — `handleLike`, purchase-gating, the
+truncated-preview file route, none of it changed. `tsc --noEmit` clean,
+`eslint` 0 errors on every changed file (pre-existing `<img>`-vs-
+`next/image` warnings only, same pattern as the rest of the codebase).
+
+**Not independently verified in this session:** the sandbox's network
+egress can't reach fonts.googleapis.com (used by `next/font/google` in
+`layout.tsx`), so a full local `next build` fails before it even
+reaches the bundling stage this fix targets — that's a sandbox-only
+limitation (the actual Cloudflare build log shows Google Fonts
+resolving fine there; the size-limit error only showed up at the very
+last `wrangler deploy` step). Confirm the next Cloudflare deploy
+actually goes green after this push.

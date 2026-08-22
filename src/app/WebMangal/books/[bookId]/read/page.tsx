@@ -8,10 +8,26 @@
 
 import { useState, useEffect, use as usePromise } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../../../lib/supabase';
-import BookReader, { type ReaderBookInfo } from '../../../../components/books/BookReader';
-import { BookOpen } from 'lucide-react';
+import { type ReaderBookInfo } from '../../../../components/books/BookReader';
+import { BookOpen, Loader2 } from 'lucide-react';
+
+// Loaded client-side only, on demand — see next.config.ts's
+// serverExternalPackages note for why (pdfjs-dist/epubjs are heavy,
+// browser-only libraries that were bloating the server bundle past
+// Cloudflare Workers' size limit). ssr:false also means this page's
+// initial server render never has to deal with pdf.js/epub.js touching
+// `window`/`document`/canvas, which they assume are always present.
+const BookReader = dynamic(() => import('../../../../components/books/BookReader'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c0a09', color: '#a8a29e' }}>
+      <Loader2 size={22} className="animate-spin" />
+    </div>
+  ),
+});
 
 interface BookRow extends ReaderBookInfo {
   status: 'draft' | 'published';
