@@ -60,9 +60,14 @@ export default function WebMangalStudioOverview() {
         <div style={{ padding: '18px 20px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '4px' }}>
             <h2 style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>Series performance</h2>
-            <Link href="/mangal-studio/webmangal/analytics" style={{ fontSize: '11.5px', color: 'var(--accent)', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}>
-              Full analytics <ArrowRight size={12} />
-            </Link>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <Link href="/mangal-studio/katube/content" style={{ fontSize: '11.5px', color: 'var(--accent)', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                Manage content <ArrowRight size={12} />
+              </Link>
+              <Link href="/mangal-studio/webmangal/analytics" style={{ fontSize: '11.5px', color: 'var(--accent)', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                Full analytics <ArrowRight size={12} />
+              </Link>
+            </div>
           </div>
           <p style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', margin: '0 0 14px' }}>Ranked by views, highest first.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -89,8 +94,8 @@ export default function WebMangalStudioOverview() {
       ) : (
         <div style={{ padding: '30px', textAlign: 'center', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
           <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 14px' }}>No series yet — publish your first one to start seeing stats here.</p>
-          <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px', textDecoration: 'none', background: 'var(--accent)', color: '#fff', fontSize: '13px', fontWeight: 800 }}>
-            Go to Series manager <ArrowRight size={14} />
+          <Link href="/WebMangal/upload" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px', textDecoration: 'none', background: 'var(--accent)', color: '#fff', fontSize: '13px', fontWeight: 800 }}>
+            Publish a series <ArrowRight size={14} />
           </Link>
         </div>
       )}

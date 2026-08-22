@@ -8297,3 +8297,160 @@ rather than assuming.
 
 **Verified:** `tsc --noEmit` clean, `eslint` on both touched files: 0
 errors, 0 warnings.
+## §129 — Storage-tiering question for Books/Songs, resolved: single backend
+Founder asked: files under 10MB go to Supabase, 10MB+ go to R2 (where
+images/posts already live), and a book can't exceed 50MB overall.
+
+Flagged before touching anything: this app already fully migrated off
+Supabase Storage onto R2 for every media pipeline — including book
+files, which already have a hard 50MB cap (`upload-book-file/route.ts`,
+`MAX_BYTES`) enforced both server- and client-side
+(`dashboard/books/page.tsx`'s "max 50MB" label matches). Nothing is
+stored in Supabase Storage anywhere in the app today. Reintroducing it
+as a second backend for the <10MB tier would mean duplicating the
+whole private-file/paid-book-gating security posture (no public URL,
+ownership + purchase checks before ever streaming bytes — see
+`upload-book-file/route.ts`'s module comment) for Supabase Storage too,
+for files that comfortably fit R2's free tier regardless of size.
+
+**Founder's call:** keep the single R2 backend, treat the size numbers
+as validation only. Result: no functional change needed for Books —
+the 50MB cap already matched exactly what was asked — just documented
+the decision directly in `upload-book-file/route.ts` so it doesn't get
+silently re-litigated or re-implemented differently later.
+
+**Songs have no file upload at all yet** (confirmed in
+`WebMangal/songs/upload/page.tsx` — lyrics/text blocks only per §85,
+no audio). So the size-tier question doesn't currently apply to Songs;
+flagging here rather than fabricating an audio-upload feature that
+doesn't exist. If/when audio upload is actually wanted for Songs, it'd
+follow the same R2 pattern as Books (own route, own size cap, own
+folder prefix under `MEDIA_FOLDERS`).
+
+tsc --noEmit clean, eslint 0 errors.
+
+## §130 — Completed Mangal Studio: WebMangal Content tab was demo data, KaTube rows leaked every creator's videos
+Founder-reported: `/mangal-studio/` was "half done." Two real problems
+found in `/mangal-studio/katube/content` (§126's unified Content
+dashboard):
+
+1. **KaTube rows had no creator filter at all.** `fetchKatubeRows`
+   queried `videos` with zero `.eq('creator_id', ...)` — every
+   creator's Content tab was silently showing every OTHER creator's
+   videos too, not just their own. Fixed: `.eq('creator_id', userId)`,
+   now threaded through from `useStudioAuth`'s resolved `user.id`.
+   Comment counts (hardcoded to `0`) also now come from a real grouped
+   `video_comments` query scoped to that creator's video IDs, matching
+   the quality bar §116's original build set.
+2. **WebMangal rows were entirely hardcoded demo data** (`wm-1`
+   through `wm-5`, fake titles/numbers baked into the file) — this is
+   almost certainly what the founder actually saw and flagged.
+   Replaced with real queries against `series`/`chapters`/`follows`/
+   `ratings` (the same tables WebMangal's own pages already use):
+   - **Novels / Manga-Comics / Drafts** tabs: creator's `series` rows,
+     `reads` = `series.views`, `bookmarks` = `follows` count per
+     series, `chapters` = chapter count per series, "Reviews" column =
+     count of `ratings` rows that actually have `review_text` (a bare
+     star rating isn't a review to moderate/read). `content_type`
+     mapped `'mangal' → 'manga'` to match the table's existing
+     `'novel' | 'manga'` union.
+   - **Chapters** tab: real individual chapter rows across all of the
+     creator's series (title prefixed `Ch. N:`, series name shown
+     underneath). Honestly scoped: there's no per-chapter view/
+     bookmark/review tracking in the schema yet (only series-level
+     aggregates), so reads/bookmarks/comments show `0` rather than
+     fabricated numbers — the "chapters" column is repurposed to show
+     word count for this one tab instead, since a single chapter's own
+     chapter-count is always 1 and wouldn't tell a creator anything.
+   - Empty-state CTA for WebMangal changed from static text to an
+     actual "Publish a series" button → `/WebMangal/upload`, matching
+     KaTube's "Upload a video" CTA instead of leaving creators with no
+     next action.
+
+**`ProductSwitcher.tsx` updated to match reality**: WebMangal flipped
+from `live: false` ("· SOON", inert) to `live: true`, `href` pointed at
+`/mangal-studio/katube/content` (where its real data actually lives,
+via the type toggle — not a separate `/mangal-studio/webmangal` shell,
+since §126 already established the unified-dashboard pattern rather
+than per-product shells for Content). K Circle stays `live: false` —
+its Studio hasn't been started at all.
+
+Deliberately did NOT build a separate WebMangal Studio shell (own
+theme/sidebar/Overview/Analytics tabs) — §126's Content dashboard
+already unified KaTube+WebMangal into one page with a type toggle, and
+building a second, parallel per-product-shell pattern alongside that
+would be two different mental models for the same thing. Completing
+the existing pattern (real data, correct routing) rather than
+introducing a new one.
+
+**Not done this pass** (Overview/Analytics/Comments/Channel-setup tabs
+in the KaTube Studio shell remain KaTube-only — Comments/Channel-setup
+are KaTube-specific concepts anyway; a WebMangal Overview/Analytics
+view, if wanted, would extend the same type-toggle pattern the Content
+tab uses).
+
+`tsc --noEmit` clean, `eslint` 0 errors on every touched file.
+
+## §131 — WebMangal Studio shell built (Phase 2), reconciled with a concurrent session's §130 fix
+
+Picked up "founder says `/mangal-studio` is half done" by reading
+CONTEXT.md as instructed. Found §114's Phase 2/3 plan (K Circle/
+WebMangal Studio, still not built) plus §126 (unified Content
+dashboard, WebMangal side shipped as demo data). Built a real
+`/mangal-studio/webmangal` Studio shell — Overview (series/views/
+chapters/followers KPIs, followers-this-week, completion %, ranked
+series-performance list) and Analytics (Reading Time Distribution,
+Views by Country, Gender donut, Reader Trends, Chapter Completion
+Rate, per-chapter Retention) — extracted from the real, already-
+shipped `/dashboard` analytics block (same queries, same honesty
+rules: "—" not fabricated numbers when data's thin), same forced-dark
+shell pattern as KaTube Studio (§116) but with WebMangal's own real
+site accent (`#d97706`, from `globals.css`'s `--accent`) rather than
+a placeholder.
+
+**Mid-session discovery:** while finishing this, a concurrent session
+had independently landed §130 on `main` — fixing the exact same two
+bugs this session had also found (KaTube's Content tab missing
+`.eq('creator_id', ...)` entirely, and WebMangal's Content tab being
+hardcoded demo rows) — but with a different architectural call:
+§130 explicitly chose *not* to build a separate WebMangal Studio shell,
+keeping WebMangal's content management inside the existing unified
+Content dashboard's type-toggle (§126) instead.
+
+**Reconciled rather than overwritten:** §130's actual bug-fix code is
+better than this session's independent attempt at the same fix (real
+`series.status` for draft detection, `ratings.review_text`-gated
+review counts instead of raw comment counts, a proper Chapters tab) —
+kept §130's version of `/mangal-studio/katube/content` as-is, discarded
+this session's redundant rewrite of the same file. §130's stance
+against a *duplicate* content-management surface is correct and
+preserved: the new WebMangal Studio shell does not rebuild content
+management — its Overview links out to the existing (now-fixed)
+`/mangal-studio/katube/content` for that. What this session adds on
+top, without conflicting, is the Overview/Analytics *shell itself* —
+matching §114's original phased-rollout plan and the founder's own
+confirmed decision (§115 #2: full products built out one at a time)
+and decision #4 (reskin per product, which a single shared shell
+can't really deliver — KaTube Studio already has its own theme, so
+WebMangal needed one too, not just a toggle inside KaTube's).
+`ProductSwitcher`'s WebMangal pill now points at the new shell
+(`/mangal-studio/webmangal`) instead of straight into the Content
+dashboard, and its color is corrected to the real brand accent
+(§130 had left it as a placeholder blue, `#2563eb`).
+
+Also updated `/mangal-studio` root: was (and, per §130, still was) a
+dumb redirect straight into KaTube Studio. Now actually checks whether
+the signed-in creator has `videos` and/or `series` rows and redirects
+to whichever Studio applies, or shows a small picker if they have
+both — matching §114's original "content-aware switcher" description
+of this route, now that there are two real Studios to switch between.
+
+**Not done this pass:** K Circle Studio (Phase 3, still not started —
+matches founder's approved build order); Comments/Channel-setup-style
+tabs for WebMangal Studio (WebMangal has no channel-verify concept;
+a WebMangal comments-moderation tab, if wanted, would need the same
+kind of RLS check §115 did for KaTube before it could show anything
+real).
+
+Verified: `tsc --noEmit` clean project-wide (merged tree). `eslint` on
+`src/app/mangal-studio`: 0 errors, 0 warnings.
