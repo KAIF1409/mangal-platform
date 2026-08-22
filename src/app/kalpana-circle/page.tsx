@@ -735,7 +735,25 @@ function KalpanaCircleInner() {
   }, [posts]);
 
   return (
-    <div data-theme={dataTheme} style={{ ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', overflowX: 'hidden' } as CSSProperties} className="kc-page">
+    <div data-theme={dataTheme} style={{
+      ...themeVars, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)',
+      // §125 — was overflow-x: 'hidden'. Same CSS gotcha as globals.css's
+      // site-wide html/body rule fixed earlier: setting overflow-x alone
+      // forces the browser to compute overflow-y as auto, turning this
+      // div into its OWN scroll container instead of the real viewport
+      // scrolling. Every position:sticky element inside kc-page (the
+      // mobile nav header, the desktop "# home" channel header, and the
+      // right panel in Shell.tsx) was resolving sticky against THIS div's
+      // scrollport rather than the viewport — inconsistent pinning,
+      // double-scroll-position bugs, and the rail/content visually
+      // overlapping at certain scroll positions. The rail itself was
+      // already fixed by switching to position:fixed (previous commit),
+      // but that only patched one of four sticky elements on this page —
+      // this fixes the actual root cause for all of them at once.
+      // overflow-x: clip still blocks horizontal overflow without
+      // touching overflow-y's computed value.
+      overflowX: 'clip',
+    } as CSSProperties} className="kc-page">
 
       {/* Responsive rules (plain <style> tag: media queries can't be
           expressed with inline style={{}} objects) — same pattern as
