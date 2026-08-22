@@ -7941,3 +7941,24 @@ limitation (the actual Cloudflare build log shows Google Fonts
 resolving fine there; the size-limit error only showed up at the very
 last `wrangler deploy` step). Confirm the next Cloudflare deploy
 actually goes green after this push.
+
+## §120 — Bug fix: Books/Songs missing from the Browse page's type row
+Founder-reported (screenshot): the All/Mangal/Novel pill row on
+`/WebMangal` only showed those three, with Books and Songs nowhere in
+sight next to them — only reachable via the top nav, which read as
+"missing" since Books/Songs already exist as real, shipped sections.
+
+Not a data-model bug — Books and Songs are genuinely separate tables
+from `series` (which is what All/Mangal/Novel actually filters), so
+they can't become a 4th/5th value of the same `activeContentType`
+toggle without a much bigger unification effort. Fix instead adds two
+plain navigational pills, styled to match the existing toggle buttons,
+after Novel: **Books** → `/WebMangal/books`, **Songs** → `/WebMangal/
+songs`. They don't participate in the mangal/novel filtering state —
+clicking them just navigates, same as any other nav link — but they
+now sit exactly where the founder (and presumably other users) expect
+to find them.
+
+Reused the existing `.mangal-search-toggle-btn` class so the phone
+responsive rules (equal-width plain-text tabs, emoji hidden) apply to
+these too without new CSS. `tsc --noEmit` and `eslint` clean.

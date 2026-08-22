@@ -843,6 +843,38 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               {tabCounts && <span style={{ opacity: 0.6, fontWeight: 600, marginLeft: '4px' }}>{tabCounts[opt.value]}</span>}
             </button>
           ))}
+
+          {/* Books and Songs are separate content models (their own tables,
+              their own dedicated browse pages) rather than another
+              `series.content_type` value like Mangal/Novel are — so these
+              two navigate to their real pages instead of toggling a filter
+              here. Added because they were only reachable from the top
+              nav, not from this row, which read as "missing" next to
+              Mangal/Novel (founder-reported). */}
+          <Link
+            href="/WebMangal/books"
+            className="mangal-search-toggle-btn"
+            style={{
+              padding: '8px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
+              textDecoration: 'none', border: '1px solid var(--border-color)',
+              background: 'var(--bg-card)', color: 'var(--text-secondary)',
+              display: 'inline-flex', alignItems: 'center',
+            }}
+          >
+            <span className="mangal-search-toggle-emoji"><BookOpen size={13} /> </span>Books
+          </Link>
+          <Link
+            href="/WebMangal/songs"
+            className="mangal-search-toggle-btn"
+            style={{
+              padding: '8px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
+              textDecoration: 'none', border: '1px solid var(--border-color)',
+              background: 'var(--bg-card)', color: 'var(--text-secondary)',
+              display: 'inline-flex', alignItems: 'center',
+            }}
+          >
+            <span className="mangal-search-toggle-emoji"><Music size={13} /> </span>Songs
+          </Link>
         </div>
 
         {/* ── DISCOVERY CARD (Webnovel homepage style) — browse route only.
