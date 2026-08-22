@@ -1,0 +1,48 @@
+name: Deploy to Cloudflare Workers
+
+# Runs on every push to main. This replaces relying on Cloudflare's
+# Git-integrated "Workers Builds" (referenced in wrangler.jsonc's name
+# comment) — that integration turned out not to be actually connected:
+# real commits stopped showing up in the live Worker bundle, confirmed by
+# checking the deployed code directly via the Cloudflare API. This
+# workflow keeps the whole deploy path inside the repo instead, so it's
+# never dependent on a dashboard setting no one can see from here.
+on:
+  push:
+    branches: [main]
+  # Lets you manually re-trigger a deploy from the Actions tab without an
+  # empty commit, e.g. if a build fails for a transient reason.
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Same safety gate as ci.yml — don't deploy code that doesn't even
+      # typecheck. Redundant with CI on PRs, but pushes straight to main
+      # (bypassing PR review) are the norm in this repo, so this is the
+      # only gate that actually runs before those.
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build and deploy
+        # package.json's "deploy" script: opennextjs-cloudflare build &&
+        # opennextjs-cloudflare deploy. Wrangler (used under the hood)
+        # picks up CLOUDFLARE_API_TOKEN from the environment automatically.
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Only needed if the token has access to more than one Cloudflare
+          # account — wrangler infers it from the token otherwise. Uncomment
+          # and add the CLOUDFLARE_ACCOUNT_ID secret if a deploy fails with
+          # an "account ID could not be determined" style error.
+          # CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
