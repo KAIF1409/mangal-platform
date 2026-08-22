@@ -3,16 +3,26 @@
 // §114 — StudioSwitcher. Founder confirmed (2026-08-21): Studio reskins
 // per active product rather than staying neutral, so each pill carries
 // its product's accent color even when inactive; the active pill is
-// filled solid. K Circle / WebMangal are real destinations already (they
-// route to their existing pages) but their own Studio builds are Phase
-// 2/3 — not implemented yet — so they're marked "Soon" and are inert
-// rather than linking to a half-built page.
+// filled solid. K Circle is a real destination already (it routes to
+// its existing page) but its own Studio build hasn't started — marked
+// "Soon" and inert rather than linking to a half-built page.
+//
+// §131 — WebMangal now has its own Studio shell (Overview/Analytics,
+// `/mangal-studio/webmangal`), matching §114's original phased plan
+// (Phase 2) and KaTube Studio's own per-product-shell pattern — the
+// §130/§126 unified Content dashboard (`/mangal-studio/katube/content`,
+// type-toggle) is still where WebMangal's actual content management
+// lives and stays that way (not duplicated); the new shell's Overview
+// links out to it rather than rebuilding it. Color corrected from a
+// placeholder blue to WebMangal's real site accent (`--accent: #d97706`
+// in globals.css) — the two products' own themed shells now both use
+// their real brand colors, not one real + one placeholder.
 export type StudioProduct = 'katube' | 'kcircle' | 'webmangal';
 
 const PRODUCTS: { id: StudioProduct; label: string; color: string; href: string; live: boolean }[] = [
   { id: 'katube', label: 'KaTube', color: '#e11d48', href: '/mangal-studio/katube', live: true },
   { id: 'kcircle', label: 'K Circle', color: '#9333ea', href: '/mangal-studio/kcircle', live: false },
-  { id: 'webmangal', label: 'WebMangal', color: '#2563eb', href: '/mangal-studio/webmangal', live: false },
+  { id: 'webmangal', label: 'WebMangal', color: '#d97706', href: '/mangal-studio/webmangal', live: true },
 ];
 
 export default function ProductSwitcher({ active }: { active: StudioProduct }) {

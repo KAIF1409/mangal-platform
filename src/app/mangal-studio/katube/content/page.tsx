@@ -34,42 +34,130 @@ const CHANNEL_NAV: { label: string; katubeTab?: string; webmangalTab?: string; h
   { label: 'Analytics', href: '/mangal-studio/katube/analytics' },
 ];
 
-async function fetchKatubeRows(tab: string): Promise<KatubeRow[]> {
+async function fetchKatubeRows(tab: string, userId: string): Promise<KatubeRow[]> {
+  // Bug fix: was missing .eq('creator_id', userId) entirely — every
+  // creator's Content tab was showing every OTHER creator's videos too,
+  // not just their own.
   let q = supabase
     .from('videos')
     .select('id,title,views,likes,is_short,created_at')
+    .eq('creator_id', userId)
     .order('created_at', { ascending: false });
   if (tab === 'Shorts') q = q.eq('is_short', true);
   else if (tab === 'Videos') q = q.eq('is_short', false);
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []).map(v => ({
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  // Real comment counts (was hardcoded to 0) — one grouped query scoped
+  // to this creator's video IDs, same no-N+1 pattern used in
+  // /mangal-studio/katube/content's original build (§116).
+  const videoIds = rows.map(v => v.id);
+  const { data: comments } = await supabase.from('video_comments').select('video_id').in('video_id', videoIds);
+  const commentCounts: Record<string, number> = {};
+  (comments ?? []).forEach(c => { commentCounts[c.video_id] = (commentCounts[c.video_id] ?? 0) + 1; });
+
+  return rows.map(v => ({
     id: String(v.id),
     title: String(v.title ?? 'Untitled').slice(0, 140),
     thumbnailUrl: null,
     status: 'published' as const,
     visibility: 'public' as const,
-    metrics: { views: v.views ?? 0, likes: v.likes ?? 0, comments: 0 },
+    metrics: { views: v.views ?? 0, likes: v.likes ?? 0, comments: commentCounts[v.id] ?? 0 },
     createdAt: v.created_at ?? new Date().toISOString(),
     isShort: !!v.is_short,
   }));
 }
 
-// WebMangal Studio ships in Phase 2 — curated demo rows keep the tab real
-// until the live `manga_books` query lands (see CONTEXT.md 114).
-function fetchWebMangalRows(tab: string): Promise<WebMangalRow[]> {
-  const demo: WebMangalRow[] = [
-    { id: 'wm-1', title: 'The Night of Ayodhya — Ghost One', thumbnailUrl: null, status: 'published', visibility: 'public', metrics: { reads: 4820, bookmarks: 1260, chapters: 42, comments: 87 }, createdAt: '2026-02-18T10:00:00Z', contentType: 'novel', seriesId: 'wm-1', seriesTitle: 'The Night of Ayodhya' },
-    { id: 'wm-2', title: 'Yran Cranes Rising — One-Shot', thumbnailUrl: null, status: 'published', visibility: 'public', metrics: { reads: 3910, bookmarks: 933, chapters: 1, comments: 41 }, createdAt: '2026-04-06T11:30:00Z', contentType: 'manga', seriesId: 'wm-2', seriesTitle: 'Paper Cranes Rising' },
-    { id: 'wm-3', title: 'Embers of the Ghats — Part II', thumbnailUrl: null, status: 'scheduled', visibility: 'scheduled', metrics: { reads: 0, bookmarks: 0, chapters: 0, comments: 0 }, createdAt: '2026-08-30T09:00:00Z', contentType: 'novel', seriesId: 'wm-3', seriesTitle: 'Embers of the Ghats' },
-    { id: 'wm-4', title: 'Monsoon Circuits (Draft)', thumbnailUrl: null, status: 'draft', visibility: 'private', metrics: { reads: 12, bookmarks: 3, chapters: 5, comments: 1 }, createdAt: '2026-05-21T16:45:00Z', contentType: 'manga', seriesId: 'wm-4', seriesTitle: 'Monsoon Circuits' },
-    { id: 'wm-5', title: 'Letters from Bandra', thumbnailUrl: null, status: 'published', visibility: 'public', metrics: { reads: 15400, bookmarks: 2210, chapters: 24, comments: 208 }, createdAt: '2026-01-10T08:00:00Z', contentType: 'novel', seriesId: 'wm-5', seriesTitle: 'Letters from Bandra' },
-  ];
-  const filtered = tab === 'Novels' ? demo.filter(d => d.contentType === 'novel')
-    : tab === 'Manga/Comics' ? demo.filter(d => d.contentType === 'manga')
-    : tab === 'Drafts' ? demo.filter(d => d.status === 'draft')
-    : demo.filter(d => d.status === 'published');
-  return Promise.resolve(filtered);
+// WebMangal Studio content — real data (was curated demo rows; the demo
+// set is what founder spotted and reported as "half done"). Same
+// series/chapters schema WebMangal's own pages already use:
+// series(id, title, cover_url, content_type, status, views, created_at),
+// chapters(id, series_id, chapter_number, title, created_at, is_draft,
+// scheduled_at, word_count), follows(series_id) as the bookmark/follow
+// count, ratings(series_id, review_text) — a rating row WITH review text
+// is what "Reviews" counts (a bare star rating with no text isn't a
+// review to moderate/read).
+async function fetchWebMangalRows(tab: string, userId: string): Promise<WebMangalRow[]> {
+  if (tab === 'Chapters') {
+    const { data: seriesRows } = await supabase.from('series').select('id, title').eq('creator_id', userId);
+    const seriesMap = Object.fromEntries((seriesRows ?? []).map(s => [s.id, s.title]));
+    const seriesIds = Object.keys(seriesMap);
+    if (seriesIds.length === 0) return [];
+
+    const { data: chapterRows } = await supabase
+      .from('chapters')
+      .select('id, series_id, chapter_number, title, created_at, is_draft, scheduled_at, word_count')
+      .in('series_id', seriesIds)
+      .order('created_at', { ascending: false });
+
+    // No per-chapter view/bookmark/review tracking exists yet (only
+    // series-level aggregates) — reads/bookmarks/comments are honestly 0
+    // here rather than fabricated; "chapters" column repurposed to show
+    // word count for this one tab, since a chapter row's own chapter
+    // count is always 1 and wouldn't tell the creator anything.
+    const now = Date.now();
+    return (chapterRows ?? []).map(c => {
+      const isScheduled = !!c.scheduled_at && new Date(c.scheduled_at).getTime() > now;
+      const status = c.is_draft ? 'draft' as const : isScheduled ? 'scheduled' as const : 'published' as const;
+      return {
+        id: c.id,
+        title: `Ch. ${c.chapter_number}: ${c.title || 'Untitled'}`.slice(0, 140),
+        thumbnailUrl: null,
+        status,
+        visibility: c.is_draft ? 'draft' as const : isScheduled ? 'scheduled' as const : 'public' as const,
+        metrics: { reads: 0, bookmarks: 0, chapters: c.word_count ?? 0, comments: 0 },
+        createdAt: c.created_at ?? new Date().toISOString(),
+        contentType: 'novel' as const, // series-level type not fetched here; not shown for this tab
+        seriesId: c.series_id,
+        seriesTitle: seriesMap[c.series_id],
+      };
+    });
+  }
+
+  const { data: seriesRows } = await supabase
+    .from('series')
+    .select('id, title, cover_url, content_type, status, views, created_at')
+    .eq('creator_id', userId)
+    .order('created_at', { ascending: false });
+  const rows = seriesRows ?? [];
+  if (rows.length === 0) return [];
+
+  const seriesIds = rows.map(s => s.id);
+  const [followsRes, ratingsRes, chaptersRes] = await Promise.all([
+    supabase.from('follows').select('series_id').in('series_id', seriesIds),
+    supabase.from('ratings').select('series_id, review_text').in('series_id', seriesIds),
+    supabase.from('chapters').select('series_id').in('series_id', seriesIds),
+  ]);
+  const bookmarkCounts: Record<string, number> = {};
+  (followsRes.data ?? []).forEach(f => { bookmarkCounts[f.series_id] = (bookmarkCounts[f.series_id] ?? 0) + 1; });
+  const reviewCounts: Record<string, number> = {};
+  (ratingsRes.data ?? []).forEach(r => { if (r.review_text) reviewCounts[r.series_id] = (reviewCounts[r.series_id] ?? 0) + 1; });
+  const chapterCounts: Record<string, number> = {};
+  (chaptersRes.data ?? []).forEach(c => { chapterCounts[c.series_id] = (chapterCounts[c.series_id] ?? 0) + 1; });
+
+  const mapped: WebMangalRow[] = rows.map(s => ({
+    id: s.id,
+    title: s.title,
+    thumbnailUrl: s.cover_url,
+    status: s.status === 'published' ? 'published' as const : 'draft' as const,
+    visibility: s.status === 'published' ? 'public' as const : 'draft' as const,
+    metrics: {
+      reads: s.views ?? 0,
+      bookmarks: bookmarkCounts[s.id] ?? 0,
+      chapters: chapterCounts[s.id] ?? 0,
+      comments: reviewCounts[s.id] ?? 0,
+    },
+    createdAt: s.created_at ?? new Date().toISOString(),
+    contentType: s.content_type === 'mangal' ? 'manga' as const : 'novel' as const,
+    seriesId: s.id,
+  }));
+
+  if (tab === 'Novels') return mapped.filter(m => m.contentType === 'novel');
+  if (tab === 'Manga/Comics') return mapped.filter(m => m.contentType === 'manga');
+  if (tab === 'Drafts') return mapped.filter(m => m.status === 'draft');
+  return mapped;
 }
 
 export default function MangalStudioContentPage() {
@@ -91,7 +179,7 @@ export default function MangalStudioContentPage() {
     if (!user) return;
     let disposed = false;
     const load = async () => {
-      const data = contentType === 'katube' ? await fetchKatubeRows(activeTab) : await fetchWebMangalRows(activeTab);
+      const data = contentType === 'katube' ? await fetchKatubeRows(activeTab, user.id) : await fetchWebMangalRows(activeTab, user.id);
       if (!disposed) { setRows(data); setLoading(false); setPage(1); }
     };
     load().catch(() => { if (!disposed) { setRows([]); setLoading(false); } });
@@ -138,7 +226,8 @@ export default function MangalStudioContentPage() {
   const refresh = () => {
     setLoading(true);
     const load = async () => {
-      const data = contentType === 'katube' ? await fetchKatubeRows(activeTab) : await fetchWebMangalRows(activeTab);
+      if (!user) return;
+      const data = contentType === 'katube' ? await fetchKatubeRows(activeTab, user.id) : await fetchWebMangalRows(activeTab, user.id);
       setRows(data); setLoading(false); setPage(1);
     };
     load().catch(() => { setRows([]); setLoading(false); });
@@ -336,7 +425,7 @@ export default function MangalStudioContentPage() {
         emptyAction={contentType === 'katube' ? (
           <Link href="/katube/upload" style={{ ...accentBtn, padding: '8px 16px', fontSize: '12px' }}>Upload a video</Link>
         ) : (
-          <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Publish your first series and it will appear here.</span>
+          <Link href="/WebMangal/upload" style={{ ...accentBtn, padding: '8px 16px', fontSize: '12px' }}>Publish a series</Link>
         )}
       />
 
