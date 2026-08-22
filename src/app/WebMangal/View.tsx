@@ -22,7 +22,6 @@ import {
 // hamburger menu below so there's one source of truth for the nav items.
 const NAV_LINKS = [
   { label: 'Browse', href: '/' },
-  { label: 'Books', icon: <BookOpen size={13} />, href: '/WebMangal/books' },
   { label: 'Rankings', icon: <Trophy size={13} />, href: '/WebMangal/rankings' },
   { label: 'Genres', href: '/#genres' },
   { label: 'New Releases', href: '/#new' },

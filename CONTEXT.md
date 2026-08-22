@@ -7962,3 +7962,15 @@ to find them.
 Reused the existing `.mangal-search-toggle-btn` class so the phone
 responsive rules (equal-width plain-text tabs, emoji hidden) apply to
 these too without new CSS. `tsc --noEmit` and `eslint` clean.
+
+## §121 — Follow-up to §120: removed the now-redundant top-nav Books link
+Founder-reported (screenshot): once Books had its own pill in the All/
+Mangal/Novel/Books/Songs row (§120), the separate "Books" link still
+sitting in the top nav next to Browse/Rankings/Genres was pure
+duplication — same destination, two places. Removed the `Books` entry
+from `NAV_LINKS` in View.tsx (drives both the desktop nav's centerSlot
+and the mobile hamburger menu, single source of truth per the comment
+above the array — so one edit fixes both). Songs was never in the top
+nav to begin with, so nothing to remove there.
+
+tsc --noEmit clean, eslint 0 errors.
