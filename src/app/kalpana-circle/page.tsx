@@ -190,13 +190,17 @@ function KalpanaCircleInner() {
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const [postMenuPos, setPostMenuPos] = useState<{ top: number; left: number } | null>(null);
   const postMenuTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const togglePostMenu = (postId: string) => {
+  const togglePostMenu = (postId: string, isOwn: boolean) => {
     if (openMenuPostId === postId) { setOpenMenuPostId(null); return; }
     const btn = postMenuTriggerRefs.current[postId];
     if (btn) {
       const rect = btn.getBoundingClientRect();
       const menuWidth = 160;
-      setPostMenuPos({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)) });
+      const menuHeight = isOwn ? 92 : 50; // own: Edit+Delete rows; others': single Report row
+      const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
+      const opensBelow = rect.bottom + 4 + menuHeight <= window.innerHeight;
+      const top = opensBelow ? rect.bottom + 4 : Math.max(8, rect.top - 4 - menuHeight);
+      setPostMenuPos({ top, left });
     }
     setOpenMenuPostId(postId);
   };
@@ -1419,7 +1423,7 @@ function KalpanaCircleInner() {
               <div style={{ flexShrink: 0 }}>
                 <button
                   ref={el => { postMenuTriggerRefs.current[post.id] = el; }}
-                  onClick={() => togglePostMenu(post.id)}
+                  onClick={() => togglePostMenu(post.id, post.author_id === userId)}
                   title="More"
                   style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', color: 'var(--text-tertiary)', padding: '2px' }}
                 ><MoreHorizontal size={17} /></button>

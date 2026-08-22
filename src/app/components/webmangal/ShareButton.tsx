@@ -41,13 +41,22 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
   // positioned from the trigger's actual on-screen rect via `fixed`
   // coordinates, so it always renders above everything, regardless of
   // what ancestor containers do with overflow.
+  //
+  // FOLLOW-UP FIX (same report, round 2): the portal fix alone still let
+  // the menu render past the bottom edge of the actual browser viewport
+  // when the trigger was near the bottom of the page (menu opens
+  // downward unconditionally) — same visual symptom, different cause.
+  // Now flips upward when there isn't enough room below.
   const toggleOpen = () => {
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const menuWidth = 200;
+      const menuHeight = 92; // 2 rows, ~44-46px each
       let left = rect.right - menuWidth;
       left = Math.max(8, Math.min(left, window.innerWidth - menuWidth - 8));
-      setMenuPos({ top: rect.bottom + 8, left });
+      const opensBelow = rect.bottom + 8 + menuHeight <= window.innerHeight;
+      const top = opensBelow ? rect.bottom + 8 : Math.max(8, rect.top - 8 - menuHeight);
+      setMenuPos({ top, left });
     }
     setOpen(o => !o);
   };
