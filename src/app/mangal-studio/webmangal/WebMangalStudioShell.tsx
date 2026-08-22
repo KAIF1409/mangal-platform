@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import StudioSidebar from '../../components/shared/StudioSidebar';
 import ProductSwitcher from '../ProductSwitcher';
 import { WebMangalStudioThemeContext } from './ThemeContext';
-import { LayoutGrid, BarChart3 } from 'lucide-react';
+import { LayoutGrid, BarChart3, Star } from 'lucide-react';
 
 // §114/§126 Phase 2 — WebMangal Studio shell, same shape as
 // KatubeStudioShell (forced-dark-by-default, light optional plumbing,
@@ -15,9 +15,16 @@ import { LayoutGrid, BarChart3 } from 'lucide-react';
 // (:root / [data-theme='light']) rather than inventing new colors —
 // this *is* WebMangal's actual brand, unlike the placeholder blue
 // ProductSwitcher had been using before this pass (fixed alongside).
+//
+// §132 — Reviews tab added: WebMangal has no "channel setup" concept
+// (no channel-verify flow), so this is its Comments-tab equivalent —
+// a read-only moderation view over `ratings` (stars + optional
+// review_title/review_text), same honesty posture as KaTube's Comments
+// tab (see WebMangalStudioReviews' own header comment).
 const TABS = [
   { href: '/mangal-studio/webmangal', label: 'Overview', icon: LayoutGrid, exact: true },
   { href: '/mangal-studio/webmangal/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/mangal-studio/webmangal/reviews', label: 'Reviews', icon: Star },
 ];
 
 export default function WebMangalStudioShell({ children }: { children: React.ReactNode }) {
