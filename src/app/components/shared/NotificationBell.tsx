@@ -49,7 +49,7 @@ function labelFor(n: Notification) {
   }
 }
 
-export default function NotificationBell({ userId, iconSize = 19, color = 'var(--text-tertiary)', flipPanel = false }: {
+export default function NotificationBell({ userId, iconSize = 19, color = 'var(--text-tertiary)', flipPanel = false, openUpward = false }: {
   userId: string | null;
   iconSize?: number;
   color?: string;
@@ -58,6 +58,14 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
    * where the default right-anchoring pushed most of the 320px panel past
    * the viewport's left edge. */
   flipPanel?: boolean;
+  /** Anchor the dropdown ABOVE the trigger instead of below it — needed
+   * when the bell sits near the bottom of the viewport (K Circle's rail
+   * footer cluster), where the default downward-opening panel ran off the
+   * bottom of the browser window and got cut off mid-list. Every other
+   * usage of this component has the bell in a top nav bar, where opening
+   * downward is correct, so this defaults to false and only K Circle's
+   * rail passes it true. */
+  openUpward?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -148,7 +156,8 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
 
       {open && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 10px)',
+          position: 'absolute',
+          ...(openUpward ? { bottom: 'calc(100% + 10px)' } : { top: 'calc(100% + 10px)' }),
           ...(flipPanel ? { left: 0 } : { right: 0 }),
           width: '320px', maxWidth: '85vw',
           maxHeight: '420px', overflowY: 'auto', background: 'var(--bg-primary)', border: '1px solid var(--border-color)',

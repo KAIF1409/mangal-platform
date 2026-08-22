@@ -8263,3 +8263,37 @@ Verified: `tsc --noEmit` exit 0, eslint 0, `opennextjs-cloudflare build`
 green, `wrangler deploy --dry-run` → gzip 2784.90 KiB < 3072 KiB Worker
 limit, and `/kalpana-circle` serves 200 with the new rail CSS
 (`kc-rail-nav`, `overflow: visible`) in the HTML.
+
+## §128 — K Circle: Notifications panel was still cut off at the bottom of the viewport
+
+§127 fixed the rail's own overflow clipping (the rail had overflow-y:auto
+which computed overflow-x:auto and clipped popovers into a 72px sliver).
+Founder's follow-up screenshot showed a DIFFERENT, still-present bug:
+once that clipping was fixed, the Notifications panel rendered
+correctly-sized but still ran off the bottom edge of the browser
+window itself — because it always opens downward
+(`top: calc(100% + 10px)`) from wherever the bell button is, and the
+bell sits in the rail's fixed footer cluster near the bottom of the
+viewport. A 420px-tall panel opening downward from there has nowhere
+to go but off-screen.
+
+**Fix** (`components/shared/NotificationBell.tsx`, shared across KaTube/
+K Circle/chat — kept fully backward-compatible): new optional
+`openUpward` prop, default `false`. When true, the panel anchors
+`bottom: calc(100% + 10px)` instead of `top: calc(100% + 10px)`,
+opening above the trigger instead of below it. Every other usage of
+this component (KaTube's top nav, K Circle's own top mobile nav, K
+Circle chat's top nav) has the bell in a top bar, where downward-opening
+is correct and unaffected — checked all 4 usages individually before
+concluding only the rail's bottom-cluster placement needed the flip.
+Only `kalpana-circle/components/Shell.tsx`'s rail usage now passes
+`openUpward` alongside the existing `flipPanel`.
+
+Also reviewed the rest of the rail for other bottom-edge-adjacent
+popovers per founder's "see if there is other issue" ask: MoreMenu's
+own popover already anchors `bottom: 0` relative to its trigger (grows
+upward, not downward) — no issue there, confirmed by reading its layout
+rather than assuming.
+
+**Verified:** `tsc --noEmit` clean, `eslint` on both touched files: 0
+errors, 0 warnings.

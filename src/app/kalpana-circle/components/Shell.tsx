@@ -270,7 +270,7 @@ export function KCircleRail({
         {/* flipPanel: the 320px dropdown would otherwise anchor its right
             edge inside this ~70px rail and render mostly off-screen to the
             left; flipped, it opens rightward into the viewport. */}
-        <NotificationBell userId={userId} iconSize={20} flipPanel />
+        <NotificationBell userId={userId} iconSize={20} flipPanel openUpward />
         {/* Exactly ONE profile avatar in the rail. When logged out this is
             a neutral sign-in button — NOT the old phantom initials avatar,
             which rendered "YO" (initials of the fallback string 'you') for
