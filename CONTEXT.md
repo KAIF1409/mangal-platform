@@ -8134,3 +8134,61 @@ Re-ran the full deploy gate: `npx opennextjs-cloudflare build` green;
 **gzip 2796.28 KiB < 3072 KiB free-plan Worker limit** (handler.mjs
 8.30 MB raw / 2.42 MB gzip). `tsc --noEmit` clean, eslint 0 problems on
 both touched files.
+
+## §125 — K Circle rail: "More" popup consolidation + search converted to a slide-out drawer
+
+Founder pasted a screenshot + a detailed bug/task doc describing K Circle
+layout regressions (overlapping rail, duplicate avatars, dev-tool icons
+cluttering the rail, search should be a slide-out drawer). Investigated
+against actual current code before touching anything — most of it
+(§123/§124: fixed-position rail, single dedup'd avatar, matching
+right-panel card treatment, identical auth/unauth column widths,
+skeleton loading states, Worker bundle under the 3 MiB limit) was
+**already fixed** by those two prior sessions; the screenshot appears to
+have predated their deploy. No literal Flame/VS Code/Next.js icons exist
+anywhere in this codebase — what the screenshot read as "dev icons" is
+`CrossProductLinks` (KaTube/WebMangal logos) + the MANGAL company mark at
+small size.
+
+Two genuinely-remaining gaps from the founder's spec, both fixed this
+pass:
+
+**"More ☰" popup** (`kalpana-circle/components/Shell.tsx`): the rail's
+footer previously had the theme toggle, `CrossProductLinks`, and the
+MANGAL logo sitting inline as three more icons after the account avatar.
+New `MoreMenu` sub-component consolidates all three into a single
+`MoreHorizontal` trigger + popover (same click-outside-to-close pattern
+as `NotificationBell`'s `panelRef`/mousedown listener) — the rail's
+visible footer is now just: account avatar → More. Popover renders
+Theme (with the toggle inline) and "Other MANGAL apps" (the two
+cross-product logos + the MANGAL mark) as labeled sections.
+
+**Search overlay → slide-out drawer** (`kalpana-circle/page.tsx`): was a
+centered modal (`position: fixed; inset: 0` background + a centered
+480px card). Converted to a left-anchored drawer — `position: fixed;
+top/bottom: 0; left: 0`, slides in via a new `kc-drawer-in` keyframe
+(`translateX(-100%)` → `0`). Desktop (`≥768px`) offsets it to `left:
+70px !important` via the new `.kc-search-drawer` class so it opens
+adjacent to the fixed rail rather than on top of it, matching the
+spec's "slide-out drawer adjacent to the rail" ask; mobile (no rail)
+keeps it flush to the viewport's left edge. Same search logic/results
+markup, only the container changed.
+
+**Deliberately left alone:** `NotificationBell`'s panel — already
+`position: absolute` + `zIndex: 300` (an overlay, not something that
+expands the rail or displaces the feed), which already satisfies the
+spec's functional requirement even though it's a dropdown rather than a
+literal slide-out drawer; changing its core rendering would affect
+KaTube and WebMangal too, since it's a shared component, for a
+cosmetic-only difference. Did not touch `wrangler.jsonc`/
+`open-next.config.ts` bundle-size config — §123's dry-run already
+confirmed the Worker is well under the 3 MiB free-plan limit (2.42 MB
+gzip) and nothing in this pass adds meaningful bundle weight.
+
+**Verified:** `tsc --noEmit` clean. `eslint` on both touched files: 0
+errors (1 pre-existing unrelated warning at page.tsx:209, confirmed via
+`git stash` that it predates this change). Could not independently
+re-run `opennextjs-cloudflare build`/`wrangler deploy --dry-run` this
+session — no Cloudflare network access in this sandbox — relying on
+§123's very recent (same-day) verified dry-run instead of re-claiming a
+number without being able to check it.

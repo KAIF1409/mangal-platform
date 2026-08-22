@@ -895,17 +895,29 @@ function KalpanaCircleInner() {
         </div>{/* /.kc-channel-header inner column */}
       </div>
 
-      {/* ── SEARCH OVERLAY ── */}
+      {/* ── SEARCH DRAWER ──
+          Slides out from the left, adjacent to the 70px desktop rail,
+          instead of a centered modal — matches the same "adjacent to the
+          rail, doesn't displace the feed" treatment as the rail's own
+          NotificationBell/MoreMenu popovers. On mobile (rail hidden) it
+          still slides in from the left edge of the viewport, which reads
+          naturally there too since there's no rail to sit next to. */}
       {showSearch && (
         <div onClick={closeSearch} style={{
-          position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.45)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '8vh',
+          position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.4)',
         }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            width: '92%', maxWidth: '480px', maxHeight: '76vh', display: 'flex', flexDirection: 'column',
-            background: 'var(--bg-primary)', borderRadius: '14px', border: '1px solid var(--border-color)', overflow: 'hidden',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', borderBottom: '1px solid var(--border-color)' }}>
+          <div
+            onClick={e => e.stopPropagation()}
+            className="kc-search-drawer"
+            style={{
+              position: 'fixed', top: 0, bottom: 0, left: 0,
+              width: '360px', maxWidth: '86vw', display: 'flex', flexDirection: 'column',
+              background: 'var(--bg-primary)', borderRight: '1px solid var(--border-color)',
+              boxShadow: '12px 0 32px rgba(0,0,0,0.28)',
+              animation: 'kc-drawer-in 0.18s ease-out',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '16px 16px 12px' }}>
               <input
                 autoFocus
                 value={searchQuery}
@@ -918,7 +930,7 @@ function KalpanaCircleInner() {
               />
               <button onClick={closeSearch} style={{ background: 'none', border: 'none', display: 'flex', cursor: 'pointer', color: 'var(--text-primary)' }}><X size={18} /></button>
             </div>
-            <div style={{ overflowY: 'auto', padding: '4px 0' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0', borderTop: '1px solid var(--border-color)' }}>
               {searchLoading ? (
                 <p style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12.5px', padding: '24px 0' }}>Searching…</p>
               ) : !searchQuery.trim() ? (

@@ -1,13 +1,13 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeToggle from '../../components/shared/ThemeToggle';
 import MangalLogo from '../../components/shared/MangalLogo';
 import NotificationBell from '../../components/shared/NotificationBell';
 import CrossProductLinks from '../../components/shared/CrossProductLinks';
-import { Search, MessageCircle, Clapperboard, Megaphone, Bookmark, Trophy, User } from 'lucide-react';
+import { Search, MessageCircle, Clapperboard, Megaphone, Bookmark, Trophy, User, MoreHorizontal } from 'lucide-react';
 
 // ── K Circle desktop shell — shared across every K Circle page ──
 // Extracted from the home feed page (app/kalpana-circle/page.tsx, §55 in
@@ -57,6 +57,14 @@ export const KC_SHELL_CSS = `
   }
   .kc-rail-btn { transition: border-radius 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
   .kc-rail-btn:hover { border-radius: 16px !important; background: rgba(124,58,237,0.14) !important; color: #a78bfa !important; }
+
+  @keyframes kc-drawer-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  /* Search drawer sits flush left on mobile (no rail to sit next to);
+     desktop offsets it past the 70px fixed rail so it opens "adjacent to
+     the rail" rather than on top of it, per the reference layout. */
+  @media (min-width: 768px) {
+    .kc-search-drawer { left: 70px !important; }
+  }
 `;
 
 /** Renders the shared shell CSS as a <style> tag. Drop this once per page, anywhere in the tree. */
@@ -88,6 +96,62 @@ function RailAvatar({ name, avatarUrl, size }: { name: string; avatarUrl?: strin
       background: RADIANT, display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.36, fontWeight: 800, color: '#27272a',
     }}>{railInitials(name)}</div>
+  );
+}
+
+/** Bottom-left "More" popup — houses everything that isn't core K Circle
+ * navigation or the user's own account: theme toggle, the other two MANGAL
+ * products' logos, and the company mark. Previously these three sat
+ * directly in the rail's footer cluster, which read as visual overcrowding
+ * next to the account avatar — same click-outside-to-close pattern as
+ * NotificationBell (mousedown listener + a ref on the whole popover root). */
+function MoreMenu({ setIsLight }: { setIsLight: (light: boolean) => void }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [open]);
+
+  return (
+    <div ref={rootRef} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        title="More"
+        aria-label="More"
+        className="kc-rail-btn"
+        style={{ ...RAIL_ICON_BASE, background: open ? 'rgba(124,58,237,0.14)' : 'transparent', border: 'none', cursor: 'pointer', color: open ? '#a78bfa' : 'var(--text-tertiary)' }}
+      ><MoreHorizontal size={20} /></button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 'calc(100% + 10px)',
+          width: '186px', padding: '12px', borderRadius: '14px',
+          background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.22)', zIndex: 300,
+        }}>
+          <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 10px' }}>
+            More
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-secondary)' }}>Theme</span>
+            <ThemeToggle size={24} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
+          </div>
+          <div style={{ borderTop: '1px solid var(--border-color)', margin: '0 0 12px' }} />
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: '9px' }}>Other MANGAL apps</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <CrossProductLinks current="kcircle" size={20} gap={10} direction="row" />
+            <Link href="/home" title="Back to MANGAL" aria-label="Back to MANGAL" style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '32px', height: '32px', borderRadius: '50%',
+            }}><MangalLogo size={20} /></Link>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -205,17 +269,10 @@ export function KCircleRail({
             color: 'var(--text-tertiary)', flexShrink: 0,
           }}><User size={17} /></Link>
         )}
-        <ThemeToggle size={26} onChange={setIsLight} defaultLight={false} syncGlobal={false} />
-        {/* Footer sub-group: other MANGAL products' logos + official company
-            mark, kept apart from navigation with extra breathing room and
-            tooltips (each link carries its own aria-label/title via
-            CrossProductLinks). */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', paddingTop: '2px' }}>
-          <CrossProductLinks current="kcircle" size={18} gap={6} direction="column" />
-          <Link href="/home" title="Back to MANGAL" aria-label="Back to MANGAL">
-            <MangalLogo size={20} />
-          </Link>
-        </div>
+        {/* Theme toggle + other-product logos + company mark all moved into
+            this single "More" popup — see MoreMenu above — instead of
+            sitting inline as three more icons after the avatar. */}
+        <MoreMenu setIsLight={setIsLight} />
       </div>
     </aside>
   );
