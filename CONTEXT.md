@@ -8297,3 +8297,34 @@ rather than assuming.
 
 **Verified:** `tsc --noEmit` clean, `eslint` on both touched files: 0
 errors, 0 warnings.
+## §129 — Storage-tiering question for Books/Songs, resolved: single backend
+Founder asked: files under 10MB go to Supabase, 10MB+ go to R2 (where
+images/posts already live), and a book can't exceed 50MB overall.
+
+Flagged before touching anything: this app already fully migrated off
+Supabase Storage onto R2 for every media pipeline — including book
+files, which already have a hard 50MB cap (`upload-book-file/route.ts`,
+`MAX_BYTES`) enforced both server- and client-side
+(`dashboard/books/page.tsx`'s "max 50MB" label matches). Nothing is
+stored in Supabase Storage anywhere in the app today. Reintroducing it
+as a second backend for the <10MB tier would mean duplicating the
+whole private-file/paid-book-gating security posture (no public URL,
+ownership + purchase checks before ever streaming bytes — see
+`upload-book-file/route.ts`'s module comment) for Supabase Storage too,
+for files that comfortably fit R2's free tier regardless of size.
+
+**Founder's call:** keep the single R2 backend, treat the size numbers
+as validation only. Result: no functional change needed for Books —
+the 50MB cap already matched exactly what was asked — just documented
+the decision directly in `upload-book-file/route.ts` so it doesn't get
+silently re-litigated or re-implemented differently later.
+
+**Songs have no file upload at all yet** (confirmed in
+`WebMangal/songs/upload/page.tsx` — lyrics/text blocks only per §85,
+no audio). So the size-tier question doesn't currently apply to Songs;
+flagging here rather than fabricating an audio-upload feature that
+doesn't exist. If/when audio upload is actually wanted for Songs, it'd
+follow the same R2 pattern as Books (own route, own size cap, own
+folder prefix under `MEDIA_FOLDERS`).
+
+tsc --noEmit clean, eslint 0 errors.

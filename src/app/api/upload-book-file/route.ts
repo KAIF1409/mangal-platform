@@ -30,7 +30,16 @@ const rateLimitClient = createClient(
 
 // 50MB — generous for a novel-length EPUB or a text-heavy PDF while staying
 // well inside Cloudflare's request-body limits and the Worker's 128MB memory
-// (this route buffers the file once for sniffing + put).
+// (this route buffers the file once for sniffing + put). Founder explicitly
+// confirmed (2026-08-22) this stays a hard 50MB cap on a single backend
+// (R2) rather than a <10MB-goes-to-Supabase-Storage / >=10MB-goes-to-R2
+// split — Supabase Storage isn't used anywhere else in this app (every
+// media pipeline, including this one, already migrated fully onto R2; see
+// upload-media/route.ts and delete-media/route.ts's "Replaces client-side
+// supabase.storage..." comments), and splitting book files across two
+// backends would mean duplicating the private-file/paid-book-gating
+// security posture (see the module comment above) for Supabase Storage too,
+// for a file class that's well within R2's free-tier limits either way.
 const MAX_BYTES = 50 * 1024 * 1024;
 
 function asciiIncludes(bytes: Uint8Array, needle: string, limit: number): boolean {
