@@ -42,6 +42,7 @@ const GREEN = '#22c55e'; // close-friends story ring/badge — matches Instagram
 
 interface AuthorInfo {
   username: string;
+  avatar_url?: string | null;
 }
 
 interface PollOption {
@@ -83,6 +84,7 @@ interface KComment {
 interface StoryGroup {
   authorId: string;
   username: string;
+  avatarUrl: string | null;
   stories: { id: string; image_url: string; created_at: string; closeFriendsOnly: boolean }[];
   seen: boolean;
 }
@@ -230,7 +232,7 @@ function KalpanaCircleInner() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
-  const [userResults, setUserResults] = useState<{ user_id: string; username: string }[]>([]);
+  const [userResults, setUserResults] = useState<{ user_id: string; username: string; avatar_url?: string | null }[]>([]);
   const [postResults, setPostResults] = useState<{ id: string; caption: string | null; username: string }[]>([]);
 
   // ── auth ──
@@ -287,7 +289,7 @@ function KalpanaCircleInner() {
     const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
 
     const [profilesRes, likesRes, commentsRes, myLikesRes, mySavesRes, pollOptRes, pollVoteRes, myVoteRes] = await Promise.all([
-      supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds),
+      supabase.from('creator_profiles').select('user_id, username, avatar_url').in('user_id', authorIds),
       supabase.from('kcircle_post_likes').select('post_id').in('post_id', postIds),
       supabase.from('kcircle_post_comments').select('post_id').in('post_id', postIds),
       userId
@@ -304,6 +306,10 @@ function KalpanaCircleInner() {
     ]);
 
     const usernameMap = new Map((profilesRes.data ?? []).map(p => [p.user_id, p.username]));
+    // avatar_url rides along with the same batched profiles query — post
+    // cards were rendering bare initials ("MA") because only username was
+    // ever mapped, even when the author had uploaded a profile picture.
+    const avatarMap = new Map((profilesRes.data ?? []).map(p => [p.user_id, p.avatar_url as string | null]));
     const likeCounts = new Map<string, number>();
     (likesRes.data ?? []).forEach(l => likeCounts.set(l.post_id, (likeCounts.get(l.post_id) ?? 0) + 1));
     const commentCounts = new Map<string, number>();
@@ -323,7 +329,7 @@ function KalpanaCircleInner() {
 
     const mapped = rows.map(r => ({
       ...r,
-      author: { username: usernameMap.get(r.author_id) ?? 'dreamer' },
+      author: { username: usernameMap.get(r.author_id) ?? 'dreamer', avatar_url: avatarMap.get(r.author_id) ?? null },
       likeCount: likeCounts.get(r.id) ?? 0,
       commentCount: commentCounts.get(r.id) ?? 0,
       likedByMe: myLiked.has(r.id),
@@ -376,18 +382,20 @@ function KalpanaCircleInner() {
 
     const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
     const [profilesRes, viewsRes] = await Promise.all([
-      supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds),
+      supabase.from('creator_profiles').select('user_id, username, avatar_url').in('user_id', authorIds),
       userId
         ? supabase.from('kcircle_story_views').select('story_id').eq('viewer_id', userId)
         : Promise.resolve({ data: [] as { story_id: string }[] }),
     ]);
     const usernameMap = new Map((profilesRes.data ?? []).map(p => [p.user_id, p.username]));
+    const avatarMap = new Map((profilesRes.data ?? []).map(p => [p.user_id, p.avatar_url as string | null]));
     const seenIds = new Set((viewsRes.data ?? []).map(v => v.story_id));
 
     const grouped = new Map<string, StoryGroup>();
     rows.forEach(r => {
       const g: StoryGroup = grouped.get(r.author_id) ?? {
         authorId: r.author_id, username: usernameMap.get(r.author_id) ?? 'dreamer',
+        avatarUrl: avatarMap.get(r.author_id) ?? null,
         stories: [] as StoryGroup['stories'], seen: true,
       };
       g.stories.push({ id: r.id, image_url: r.image_url, created_at: r.created_at, closeFriendsOnly: r.close_friends_only });
@@ -622,13 +630,14 @@ function KalpanaCircleInner() {
       const commentIds = (rows ?? []).map(r => r.id);
       const [profsRes, likesRes] = await Promise.all([
         authorIds.length
-          ? supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds)
-          : Promise.resolve({ data: [] as { user_id: string; username: string }[] }),
+          ? supabase.from('creator_profiles').select('user_id, username, avatar_url').in('user_id', authorIds)
+          : Promise.resolve({ data: [] as { user_id: string; username: string; avatar_url: string | null }[] }),
         commentIds.length
           ? supabase.from('kcircle_post_comment_likes').select('comment_id, liker_id').in('comment_id', commentIds)
           : Promise.resolve({ data: [] as { comment_id: string; liker_id: string }[] }),
       ]);
       const usernameMap = new Map((profsRes.data ?? []).map(p => [p.user_id, p.username]));
+      const avatarMap = new Map((profsRes.data ?? []).map(p => [p.user_id, p.avatar_url as string | null]));
       const likeCounts = new Map<string, number>();
       (likesRes.data ?? []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) ?? 0) + 1));
       const myLikedIds = new Set((likesRes.data ?? []).filter(l => l.liker_id === userId).map(l => l.comment_id));
@@ -636,7 +645,7 @@ function KalpanaCircleInner() {
         ...prev,
         [postId]: (rows ?? []).map(r => ({
           ...r,
-          author: { username: usernameMap.get(r.author_id) ?? 'dreamer' },
+          author: { username: usernameMap.get(r.author_id) ?? 'dreamer', avatar_url: avatarMap.get(r.author_id) ?? null },
           likes: likeCounts.get(r.id) ?? 0,
           likedByMe: myLikedIds.has(r.id),
         })),
@@ -652,7 +661,7 @@ function KalpanaCircleInner() {
     const { error, data } = await supabase.from('kcircle_post_comments')
       .insert({ post_id: postId, author_id: userId, text }).select('id, post_id, author_id, text, created_at').single();
     if (!error && data) {
-      setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), { ...data, author: { username: myUsername ?? 'you' }, likes: 0, likedByMe: false }] }));
+      setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), { ...data, author: { username: myUsername ?? 'you', avatar_url: myAvatarUrl }, likes: 0, likedByMe: false }] }));
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p));
       const owner = posts.find(p => p.id === postId)?.author_id;
       if (owner) notify(owner, 'comment', { post_id: postId, preview: text.slice(0, 80) });
@@ -768,7 +777,7 @@ function KalpanaCircleInner() {
     setSearchLoading(true);
     const t = setTimeout(async () => {
       const [usersRes, postsRes] = await Promise.all([
-        supabase.from('creator_profiles').select('user_id, username').ilike('username', `%${q}%`).limit(10),
+        supabase.from('creator_profiles').select('user_id, username, avatar_url').ilike('username', `%${q}%`).limit(10),
         supabase.from('kcircle_posts').select('id, caption, author_id').ilike('caption', `%${q}%`).limit(10),
       ]);
       const authorIds = Array.from(new Set((postsRes.data ?? []).map(p => p.author_id)));
@@ -1018,7 +1027,7 @@ function KalpanaCircleInner() {
                         <Link key={u.user_id} href={`/kalpana-circle/profile/${u.username}`} onClick={closeSearch} style={{
                           display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', textDecoration: 'none', color: 'var(--text-primary)',
                         }}>
-                          <Avatar name={u.username} size={32} />
+                          <Avatar name={u.username} size={32} avatarUrl={u.avatar_url} />
                           <span style={{ fontSize: '13px', fontWeight: 700 }}>{u.username}</span>
                         </Link>
                       ))}
@@ -1081,7 +1090,7 @@ function KalpanaCircleInner() {
                 background: g.seen ? 'var(--border-color)' : (isCloseFriendsStory ? GREEN : RADIANT),
               }}>
                 <div style={{ width: '100%', height: '100%', borderRadius: '50%', border: '2px solid var(--bg-primary)', overflow: 'hidden' }}>
-                  <Avatar name={g.username} size={51} />
+                  <Avatar name={g.username} size={51} avatarUrl={g.avatarUrl} />
                 </div>
               </div>
               <span style={{ fontSize: '10.5px', color: 'var(--text-tertiary)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '62px' }}>{g.username}</span>
@@ -1139,7 +1148,7 @@ function KalpanaCircleInner() {
             ))}
           </div>
           <div style={{ position: 'absolute', top: '22px', left: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Avatar name={stories[viewingStory.groupIdx].username} size={30} />
+            <Avatar name={stories[viewingStory.groupIdx].username} size={30} avatarUrl={stories[viewingStory.groupIdx].avatarUrl} />
             <span style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>{stories[viewingStory.groupIdx].username}</span>
             {stories[viewingStory.groupIdx].stories[viewingStory.storyIdx].closeFriendsOnly && (
               <span style={{ fontSize: '10px', fontWeight: 800, color: GREEN, background: 'rgba(34,197,94,0.18)', padding: '2px 8px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -1226,7 +1235,7 @@ function KalpanaCircleInner() {
           )}
 
           <div style={{ display: 'flex', gap: '10px' }}>
-            <Avatar name={myUsername ?? 'you'} size={36} />
+            <Avatar name={myUsername ?? 'you'} size={36} avatarUrl={myAvatarUrl} />
             <div style={{ flex: 1, minWidth: 0 }}>
               {(composerImages.length > 0 || userId) && (
                 <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.05em', marginBottom: '4px' }}>
@@ -1403,7 +1412,7 @@ function KalpanaCircleInner() {
               }}><Sparkles size={13} /> Dreamer of the Week</div>
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}>
-              <Avatar name={post.author?.username ?? 'dreamer'} size={34} />
+              <Avatar name={post.author?.username ?? 'dreamer'} size={34} avatarUrl={post.author?.avatar_url} />
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.author?.username}</div>
                 <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{timeAgo(post.created_at)} ago</div>
@@ -1602,7 +1611,7 @@ function KalpanaCircleInner() {
                       )}
                       {shown.map(c => (
                         <div key={c.id} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start' }}>
-                          <Avatar name={c.author?.username ?? 'dreamer'} size={24} />
+                          <Avatar name={c.author?.username ?? 'dreamer'} size={24} avatarUrl={c.author?.avatar_url} />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontSize: '12.5px', margin: 0, lineHeight: 1.5 }}>
                               <span style={{ fontWeight: 800 }}>{c.author?.username} </span>
@@ -1726,7 +1735,7 @@ function KalpanaCircleInner() {
               {recentlyActive.map(g => (
                 <Link key={g.authorId} href={`/kalpana-circle/profile/${g.username}`} title={`@${g.username}`} style={{ display: 'flex', alignItems: 'center', gap: '9px', textDecoration: 'none' }}>
                   <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <Avatar name={g.username} size={30} />
+                    <Avatar name={g.username} size={30} avatarUrl={g.avatarUrl} />
                     <span style={{
                       position: 'absolute', bottom: '-1px', right: '-1px', width: '9px', height: '9px',
                       borderRadius: '50%', background: GREEN, border: '2px solid var(--bg-primary)',
