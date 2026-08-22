@@ -38,9 +38,26 @@ jobs:
         # package.json's "deploy" script: opennextjs-cloudflare build &&
         # opennextjs-cloudflare deploy. Wrangler (used under the hood)
         # picks up CLOUDFLARE_API_TOKEN from the environment automatically.
+        #
+        # The three Supabase env vars MUST be present at BUILD time: ten API
+        # routes instantiate their Supabase clients at module scope, and
+        # `next build` evaluates every route module while collecting page
+        # data — with the vars absent, supabase-js throws
+        # "supabaseUrl is required." and the whole build dies in seconds
+        # (deploy runs #15-#18 all failed exactly this way). They are read
+        # from GitHub Actions secrets here so CI builds match what
+        # .env.local provides locally.
+        #
+        # Runtime values on the deployed Worker itself are separate: they
+        # live in Cloudflare dashboard secrets and survive deploys via
+        # keep_vars: true in wrangler.jsonc — this step only affects what
+        # gets baked into the bundle during the build.
         run: npm run deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # Only needed if the token has access to more than one Cloudflare
           # account — wrangler infers it from the token otherwise. Uncomment
           # and add the CLOUDFLARE_ACCOUNT_ID secret if a deploy fails with
