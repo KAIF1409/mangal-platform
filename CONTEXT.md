@@ -7974,3 +7974,45 @@ above the array — so one edit fixes both). Songs was never in the top
 nav to begin with, so nothing to remove there.
 
 tsc --noEmit clean, eslint 0 errors.
+
+## §122 — Books/Songs pills now behave exactly like Mangal/Novel
+Founder-reported: after §120 added Books/Songs as pills next to All/
+Mangal/Novel, clicking them navigated to /WebMangal/books or /WebMangal/
+songs — a full page change — instead of switching what the current page
+shows, the way Mangal/Novel already do. Founder wanted identical
+behavior across all five tabs.
+
+**`ContentTypeFilter` widened** to `'all' | 'mangal' | 'novel' | 'books'
+| 'songs'`. Books and Songs are still genuinely different tables from
+`series` (which is all Mangal/Novel ever filtered), so rather than
+force them into the same `Series[]`-typed results pipeline, they get
+their own parallel state — same pattern §85 already used for Songs in
+search mode, now generalized and turned on for browse mode too:
+- **Songs fetch** — was gated `if (mode !== 'search') return`; now runs
+  unconditionally so the Songs tab has data to show on both routes.
+- **Books fetch** — new, mirrors `/WebMangal/books/page.tsx`'s query +
+  two-step author-name resolution exactly (published only, batched
+  `creator_profiles` lookup).
+- **`activeBooks`/`activeSongs`** — what the two tabs actually render:
+  full listing on browse, keyword-filtered (`bookMatches`/`songResults`)
+  on search, sorted via a small shared `sortSimple()` helper (Books/
+  Songs have no `avg_rating`, so 'rating' sort is hidden for them and
+  falls back to their already-newest-first fetch order).
+- **Card design** — Books tab reuses the exact card markup from `/
+  WebMangal/books/page.tsx` (price badge, cover, file-type chip) inline
+  here rather than extracting a shared component, to keep this change
+  contained to one file. Songs tab reuses the existing `<SongCard>`
+  component already imported.
+- **Genre/Language/Status filters** — hidden while Books or Songs is
+  the active tab (they're Mangal/Novel-specific vocab — a book's
+  `category` list and a song's lack of any genre concept don't map onto
+  them), Sort stays visible with 'rating' removed.
+- **tabCounts** extended with `books`/`songs` keys so the search route's
+  Webnovel-style per-tab counts ("Books 3") work for the new tabs too.
+- The small inline "Songs" preview strip under search results (added in
+  §85) now hides itself while the Songs tab is active, and its "See all
+  songs" link became a tab-switch button instead of a navigation link —
+  otherwise it would've been a smaller, redundant duplicate of the same
+  data now shown in the main grid.
+
+`tsc --noEmit` clean, `eslint` 0 errors/warnings.
