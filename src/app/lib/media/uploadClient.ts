@@ -50,4 +50,25 @@ export async function deleteMediaFiles(paths: string[]): Promise<void> {
   }
 }
 
+// Dedicated avatar-upload variant — same shape as uploadMediaFile but hits
+// /api/upload-avatar, which enforces avatar-specific rules server-side
+// (JPEG/PNG/WebP only after client-side canvas compression, tighter 2MB
+// cap, keys under kcircle-media/avatars/). Takes a Blob, not a File,
+// because the settings page compresses via Canvas before uploading.
+export async function uploadAvatarImage(blob: Blob): Promise<UploadResult> {
+  const formData = new FormData();
+  formData.append('file', blob, 'avatar.jpg');
+
+  const res = await fetch('/api/upload-avatar', {
+    method: 'POST',
+    headers: await authHeader(),
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Avatar upload failed.');
+  // Absolute URL for the same `new URL(...)` call sites as uploadMediaFile.
+  return { path: data.path, url: `${window.location.origin}${data.url}` } as UploadResult;
+}
+
 export { MEDIA_FOLDERS };
