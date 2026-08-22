@@ -22,10 +22,26 @@ export const KC_SHELL_CSS = `
   .kc-right-panel { display: none; }
   .kc-channel-header { display: none; }
   @media (min-width: 768px) {
-    .kc-shell { display: grid; grid-template-columns: 78px 1fr; align-items: start; }
+    /* §124 — the rail is FIXED to the viewport, not sticky. Sticky never
+       actually pinned here: the page root (.kc-page) carries
+       overflow-x:hidden, which makes that ancestor a scroll container, so
+       position:sticky resolved against ITS scrollport (which never scrolls)
+       instead of the viewport — the rail just scrolled away with the feed
+       and appeared clipped. position:fixed + z-index pins it for real; the
+       shell reserves the rail's 70px column via padding-left so the center
+       feed and right panel never slide under it. */
+    .kc-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      padding-left: 70px;
+      align-items: start;
+    }
     .kc-rail {
-      display: flex; flex-direction: column; align-items: center;
-      position: sticky; top: 0; height: 100vh; padding: 16px 0 20px;
+      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+      position: fixed; left: 0; top: 0;
+      width: 70px; height: 100vh; min-height: 100vh;
+      z-index: 50;
+      padding: 14px 0 16px;
       background: var(--bg-card); border-right: 1px solid var(--border-color);
       overflow-y: auto; scrollbar-width: none;
     }
@@ -33,7 +49,7 @@ export const KC_SHELL_CSS = `
     .kc-channel-header { display: flex; }
   }
   @media (min-width: 1180px) {
-    .kc-shell { grid-template-columns: 78px 1fr 300px; }
+    .kc-shell { grid-template-columns: minmax(0, 1fr) 300px; }
     .kc-right-panel {
       display: block; position: sticky; top: 0; height: 100vh;
       overflow-y: auto; padding: 22px 20px 40px; border-left: 1px solid var(--border-color);
@@ -172,7 +188,10 @@ export function KCircleRail({
             }}>+</Link>
           )
         )}
-        <NotificationBell userId={userId} iconSize={20} />
+        {/* flipPanel: the 320px dropdown would otherwise anchor its right
+            edge inside this ~70px rail and render mostly off-screen to the
+            left; flipped, it opens rightward into the viewport. */}
+        <NotificationBell userId={userId} iconSize={20} flipPanel />
         {/* Exactly ONE profile avatar in the rail. When logged out this is
             a neutral sign-in button — NOT the old phantom initials avatar,
             which rendered "YO" (initials of the fallback string 'you') for

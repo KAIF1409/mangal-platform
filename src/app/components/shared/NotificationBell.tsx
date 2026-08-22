@@ -49,10 +49,15 @@ function labelFor(n: Notification) {
   }
 }
 
-export default function NotificationBell({ userId, iconSize = 19, color = 'var(--text-tertiary)' }: {
+export default function NotificationBell({ userId, iconSize = 19, color = 'var(--text-tertiary)', flipPanel = false }: {
   userId: string | null;
   iconSize?: number;
   color?: string;
+  /** Anchor the dropdown's LEFT edge to the trigger instead of its right
+   * edge — needed when the bell lives in the narrow K Circle left rail,
+   * where the default right-anchoring pushed most of the 320px panel past
+   * the viewport's left edge. */
+  flipPanel?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -143,7 +148,9 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
 
       {open && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: '320px', maxWidth: '85vw',
+          position: 'absolute', top: 'calc(100% + 10px)',
+          ...(flipPanel ? { left: 0 } : { right: 0 }),
+          width: '320px', maxWidth: '85vw',
           maxHeight: '420px', overflowY: 'auto', background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
           borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,0.18)', zIndex: 300,
         }}>

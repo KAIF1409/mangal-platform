@@ -8098,3 +8098,39 @@ opennextjs-cloudflare build green; reader route access-control guard
 (purchase check mirroring the gated file route) and upload pipeline
 guard (requireUser → 401, rate limit, user-scoped R2 keys) reviewed and
 intact.
+
+## §124 — K Circle rail pinned to viewport (sticky was silently broken)
+
+Founder report: the far-left K Circle navigation rail was "half-clipped,
+missing fixed positioning, and scrolling with the page". Root cause found:
+the rail used `position: sticky`, but the page root div (`.kc-page`)
+carries `overflow-x: hidden` — per CSS that combination computes a real
+scroll container out of that ancestor, so sticky resolved against ITS
+scrollport (which never scrolls — the body scrolls) instead of the
+viewport. Net effect: no pinning at all; the rail scrolled away with the
+feed and looked clipped.
+
+Fix (all in the shared `KC_SHELL_CSS` in components/Shell.tsx, so every
+K Circle route gets it — home, chat, group chat, broadcasts, broadcast
+detail, watch-together, saved, settings, profile):
+- `.kc-rail` is now `position: fixed; left: 0; top: 0; width: 70px;
+  height: 100vh; min-height: 100vh; z-index: 50;
+  justify-content: space-between; overflow-y: auto`.
+- `.kc-shell` reserves the rail column via `padding-left: 70px` and its
+  grid templates became `minmax(0,1fr)` / `minmax(0,1fr) 300px`
+  (`minmax(0,...)` also hardens against grid blowout from wide children),
+  so the center feed and right panel can never slide under the fixed rail.
+- NotificationBell got an opt-in `flipPanel` prop: in a ~70px rail the
+  320px dropdown anchored `right: 0` rendered ~85% off-screen to the
+  LEFT of the viewport (pre-existing bug); the rail now passes
+  `flipPanel` so the panel opens rightward into view. Default behavior
+  everywhere else is unchanged.
+- Verified served HTML contains the fixed-pin rule, the 70px width, the
+  shell offset, z-index 50; `/kalpana-circle` returns 200 with the §123
+  guest CTA and single-profile-entry state intact.
+
+Re-ran the full deploy gate: `npx opennextjs-cloudflare build` green;
+`wrangler deploy --dry-run` → Total Upload 11573.51 KiB /
+**gzip 2796.28 KiB < 3072 KiB free-plan Worker limit** (handler.mjs
+8.30 MB raw / 2.42 MB gzip). `tsc --noEmit` clean, eslint 0 problems on
+both touched files.
