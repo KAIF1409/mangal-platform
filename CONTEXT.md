@@ -8192,3 +8192,35 @@ re-run `opennextjs-cloudflare build`/`wrangler deploy --dry-run` this
 session — no Cloudflare network access in this sandbox — relying on
 §123's very recent (same-day) verified dry-run instead of re-claiming a
 number without being able to check it.
+
+
+## §126 — Mangal Studio content dashboard (KaTube ↔ WebMangal tabs)
+
+YouTube Studio-style creator content dashboard at
+`/mangal-studio/katube/content` (the Content tab in the KaTube Studio
+shell, §114):
+
+- **Top bar:** "Search across your content…" pill, notification icon, and
+  `+ Create` → inline draft composer (saves drafts to local state).
+- **Creator identity header:** avatar, channel name, horizontal channel
+  nav (`Inspiration | Videos | Shorts | WebMangal / Series | Posts |
+  Analytics`) — clicking switches content type/sub-tab; Analytics links
+  to `/mangal-studio/katube/analytics`.
+- **Type + sub-tabs:** KaTube (Videos/Shorts/Live/Posts/Playlists) vs
+  WebMangal (Novels/Manga-Comics/Chapters/Drafts), status filter bar,
+  Select-all/Deselect, and Refresh.
+- **Unified data table** (`ContentTable.tsx`, `next/dynamic` + `ssr:false`
+  so it is its own chunk): checkbox bulk select, thumbnail/title, status
+  pills, visibility icons, sortable metrics that swap per type — KaTube:
+  Views/Likes/Comments; WebMangal: Reads/Bookmarks/Chapters/Reviews —
+  Date column, empty-state CTA (/katube/upload), horizontal scroll.
+
+Data: KaTube reads live `videos`; WebMangal Studio is Phase 2 per §114,
+so its rows use curated demo data until live `manga_books` lands.
+
+Also fixed leftover Shell.tsx type errors (duplicate `KCircleRailProps`
+declaration, duplicated Search `onClick`) and widened `KCircleRailActive`
+with `watch-together | mangal-of-the-week | broadcasts`.
+
+Verified: `tsc --noEmit` 0, eslint 0; opennextjs-cloudflare build green;
+`wrangler deploy --dry-run` gzip 2791 KiB < 3072 KiB Worker limit.

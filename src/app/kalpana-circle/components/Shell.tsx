@@ -22,24 +22,24 @@ export const KC_SHELL_CSS = `
   .kc-right-panel { display: none; }
   .kc-channel-header { display: none; }
   @media (min-width: 768px) {
-    /* §124 — the rail is FIXED to the viewport, not sticky. Sticky never
-       actually pinned here: the page root (.kc-page) carries
-       overflow-x:hidden, which makes that ancestor a scroll container, so
-       position:sticky resolved against ITS scrollport (which never scrolls)
-       instead of the viewport — the rail just scrolled away with the feed
-       and appeared clipped. position:fixed + z-index pins it for real; the
-       shell reserves the rail's 70px column via padding-left so the center
-       feed and right panel never slide under it. */
+    /* Instagram Web-style collapsed rail: a strict 72px icon column pinned to the
+       left edge of the viewport. Previously the rail used position:sticky, but
+       the page root (.kc-page) carries overflow-x:hidden — which makes that
+       ancestor a scroll container, so position:sticky resolved against ITS
+       scrollport (which never scrolls) instead of the viewport, and the rail
+       just scrolled away with the feed / appeared clipped. position:fixed +
+       z-index pins it for real; the shell reserves its 72px column via
+       padding-left so the center feed and right panel never slide under it. */
     .kc-shell {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
-      padding-left: 70px;
+      padding-left: 72px;
       align-items: start;
     }
     .kc-rail {
       display: flex; flex-direction: column; align-items: center; justify-content: space-between;
       position: fixed; left: 0; top: 0;
-      width: 70px; height: 100vh; min-height: 100vh;
+      width: 72px; height: 100vh; min-height: 100vh;
       z-index: 50;
       padding: 14px 0 16px;
       background: var(--bg-card); border-right: 1px solid var(--border-color);
@@ -72,7 +72,7 @@ export function KCircleShellStyle() {
   return <style>{KC_SHELL_CSS}</style>;
 }
 
-export type KCircleRailActive = 'home' | 'chat' | 'watch-together' | 'broadcasts' | 'saved' | 'mangal-of-the-week';
+export type KCircleRailActive = 'home' | 'chat' | 'clips' | 'watch-together' | 'mangal-of-the-week' | 'broadcasts' | 'notifications' | 'saved';
 
 const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
 
