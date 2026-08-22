@@ -7890,3 +7890,129 @@ No schema/RLS changes — built entirely on the existing
 pre-existing, unrelated `unused eslint-disable` warning on an
 unaffected line).
 
+## §119 — Bug fix: Cloudflare Workers deploy failing — "exceeded size limit of 3 MiB"
+Founder built the Books module (upload PDF/EPUB, paid/free toggle,
+pdf.js + epub.js dual-engine reader — real, substantial feature, not
+mine) and pushed it. Live deploy started failing at the final
+`wrangler deploy` step with:
+
+```
+✘ [ERROR] Your Worker failed validation because it exceeded size limits.
+ - Your Worker exceeded the size limit of 3 MiB. Please upgrade to a
+   paid plan to deploy Workers up to 10 MiB. [code: 10027]
+ Here are the 5 largest dependencies included in your script:
+ - .open-next/server-functions/default/handler.mjs - 12981.98 KiB
+```
+
+**Root cause:** `BookReader.tsx` only ever loads `pdfjs-dist` and
+`epubjs` via `await import(...)` inside client-side effects — correct
+in principle — but both are reached through a plain static
+`import BookReader from '...'` in `/WebMangal/books/[bookId]/read/page.tsx`.
+Next's server compiler still pulls the full module graph of a
+dynamically-imported target into the server (RSC/SSR) build if the
+component that calls `import()` is itself statically reachable from a
+server-rendered page — there's no real lazy-chunk-over-the-network for
+server code once OpenNext bundles it into a single Cloudflare Worker
+script, so both libraries got inlined whole into `handler.mjs`, which
+alone ballooned past the free-plan 3 MiB Worker limit.
+
+**Fix, two layers (belt and suspenders):**
+1. `next.config.ts` — added `serverExternalPackages: ["pdfjs-dist",
+   "epubjs"]`. Tells Next's server compiler to leave both packages
+   external (never actually reached at runtime server-side — they're
+   canvas/DOM-only) instead of inlining them into the server bundle.
+2. `read/page.tsx` — `BookReader` is now loaded via
+   `next/dynamic(() => import('...BookReader'), { ssr: false })`
+   instead of a static import, so it's excluded from the initial
+   server render entirely (and, as a side benefit, sidesteps pdf.js/
+   epub.js assuming `window`/`document`/canvas exist during SSR, which
+   they do at module scope).
+
+No product logic touched — `handleLike`, purchase-gating, the
+truncated-preview file route, none of it changed. `tsc --noEmit` clean,
+`eslint` 0 errors on every changed file (pre-existing `<img>`-vs-
+`next/image` warnings only, same pattern as the rest of the codebase).
+
+**Not independently verified in this session:** the sandbox's network
+egress can't reach fonts.googleapis.com (used by `next/font/google` in
+`layout.tsx`), so a full local `next build` fails before it even
+reaches the bundling stage this fix targets — that's a sandbox-only
+limitation (the actual Cloudflare build log shows Google Fonts
+resolving fine there; the size-limit error only showed up at the very
+last `wrangler deploy` step). Confirm the next Cloudflare deploy
+actually goes green after this push.
+
+## §120 — Bug fix: Books/Songs missing from the Browse page's type row
+Founder-reported (screenshot): the All/Mangal/Novel pill row on
+`/WebMangal` only showed those three, with Books and Songs nowhere in
+sight next to them — only reachable via the top nav, which read as
+"missing" since Books/Songs already exist as real, shipped sections.
+
+Not a data-model bug — Books and Songs are genuinely separate tables
+from `series` (which is what All/Mangal/Novel actually filters), so
+they can't become a 4th/5th value of the same `activeContentType`
+toggle without a much bigger unification effort. Fix instead adds two
+plain navigational pills, styled to match the existing toggle buttons,
+after Novel: **Books** → `/WebMangal/books`, **Songs** → `/WebMangal/
+songs`. They don't participate in the mangal/novel filtering state —
+clicking them just navigates, same as any other nav link — but they
+now sit exactly where the founder (and presumably other users) expect
+to find them.
+
+Reused the existing `.mangal-search-toggle-btn` class so the phone
+responsive rules (equal-width plain-text tabs, emoji hidden) apply to
+these too without new CSS. `tsc --noEmit` and `eslint` clean.
+
+## §121 — Follow-up to §120: removed the now-redundant top-nav Books link
+Founder-reported (screenshot): once Books had its own pill in the All/
+Mangal/Novel/Books/Songs row (§120), the separate "Books" link still
+sitting in the top nav next to Browse/Rankings/Genres was pure
+duplication — same destination, two places. Removed the `Books` entry
+from `NAV_LINKS` in View.tsx (drives both the desktop nav's centerSlot
+and the mobile hamburger menu, single source of truth per the comment
+above the array — so one edit fixes both). Songs was never in the top
+nav to begin with, so nothing to remove there.
+
+tsc --noEmit clean, eslint 0 errors.
+
+## §122 — Books/Songs pills now behave exactly like Mangal/Novel
+Founder-reported: after §120 added Books/Songs as pills next to All/
+Mangal/Novel, clicking them navigated to /WebMangal/books or /WebMangal/
+songs — a full page change — instead of switching what the current page
+shows, the way Mangal/Novel already do. Founder wanted identical
+behavior across all five tabs.
+
+**`ContentTypeFilter` widened** to `'all' | 'mangal' | 'novel' | 'books'
+| 'songs'`. Books and Songs are still genuinely different tables from
+`series` (which is all Mangal/Novel ever filtered), so rather than
+force them into the same `Series[]`-typed results pipeline, they get
+their own parallel state — same pattern §85 already used for Songs in
+search mode, now generalized and turned on for browse mode too:
+- **Songs fetch** — was gated `if (mode !== 'search') return`; now runs
+  unconditionally so the Songs tab has data to show on both routes.
+- **Books fetch** — new, mirrors `/WebMangal/books/page.tsx`'s query +
+  two-step author-name resolution exactly (published only, batched
+  `creator_profiles` lookup).
+- **`activeBooks`/`activeSongs`** — what the two tabs actually render:
+  full listing on browse, keyword-filtered (`bookMatches`/`songResults`)
+  on search, sorted via a small shared `sortSimple()` helper (Books/
+  Songs have no `avg_rating`, so 'rating' sort is hidden for them and
+  falls back to their already-newest-first fetch order).
+- **Card design** — Books tab reuses the exact card markup from `/
+  WebMangal/books/page.tsx` (price badge, cover, file-type chip) inline
+  here rather than extracting a shared component, to keep this change
+  contained to one file. Songs tab reuses the existing `<SongCard>`
+  component already imported.
+- **Genre/Language/Status filters** — hidden while Books or Songs is
+  the active tab (they're Mangal/Novel-specific vocab — a book's
+  `category` list and a song's lack of any genre concept don't map onto
+  them), Sort stays visible with 'rating' removed.
+- **tabCounts** extended with `books`/`songs` keys so the search route's
+  Webnovel-style per-tab counts ("Books 3") work for the new tabs too.
+- The small inline "Songs" preview strip under search results (added in
+  §85) now hides itself while the Songs tab is active, and its "See all
+  songs" link became a tab-switch button instead of a navigation link —
+  otherwise it would've been a smaller, redundant duplicate of the same
+  data now shown in the main grid.
+
+`tsc --noEmit` clean, `eslint` 0 errors/warnings.

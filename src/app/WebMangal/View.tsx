@@ -15,14 +15,13 @@ import SongCard, { type SongCardData } from '../components/webmangal/SongCard';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
 import {
   Trophy, Bell, Bookmark, Wrench, X, Menu, Search, Sparkles, BookOpen,
-  BookText, Circle, ArrowLeft, Music,
+  BookText, Circle, ArrowLeft, Music, FileText,
 } from 'lucide-react';
 
 // Same links shown in the desktop nav's centerSlot — reused by the mobile
 // hamburger menu below so there's one source of truth for the nav items.
 const NAV_LINKS = [
   { label: 'Browse', href: '/' },
-  { label: 'Books', icon: <BookOpen size={13} />, href: '/WebMangal/books' },
   { label: 'Rankings', icon: <Trophy size={13} />, href: '/WebMangal/rankings' },
   { label: 'Genres', href: '/#genres' },
   { label: 'New Releases', href: '/#new' },
@@ -68,10 +67,30 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'az', label: 'A–Z' },
 ];
 
-// Step 21 — Dual Content Mode: All/Manga/Novel filter pill, same localStorage
-// key + persistence pattern used on the homepage so the choice carries over.
-type ContentTypeFilter = 'all' | 'mangal' | 'novel';
+// Step 21 — Dual Content Mode: All/Manga/Novel/Books/Songs filter pill,
+// same localStorage key + persistence pattern used on the homepage so the
+// choice carries over. Books/Songs added per founder's explicit ask: they
+// should behave exactly like Mangal/Novel (switch what's shown on THIS
+// page) rather than navigating away to their own page.
+type ContentTypeFilter = 'all' | 'mangal' | 'novel' | 'books' | 'songs';
 const CONTENT_TYPE_STORAGE_KEY = 'mangal_content_type';
+
+interface BookRow {
+  id: string;
+  title: string;
+  cover_image_url: string | null;
+  file_type: 'pdf' | 'epub';
+  pricing_type: 'FREE' | 'PAID';
+  price_paise: number | null;
+  category: string | null;
+  author_id: string;
+  views: number;
+  created_at: string;
+}
+
+function formatPaise(paise: number): string {
+  return `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+}
 
 // ── FUZZY MATCH (trigram-style client-side) ──
 // Splits query into 3-char trigrams and checks how many appear in the target.
@@ -117,6 +136,15 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
   // dedicated Songs entry point on the home page toggle.
   const [songs, setSongs] = useState<(SongCardData & { creator_id: string })[]>([]);
   const [songUsernames, setSongUsernames] = useState<Record<string, string>>({});
+  const [songsLoading, setSongsLoading] = useState(true);
+
+  // Books — own state/loading, same shape as Songs above. Fetched
+  // unconditionally (both browse and search) since, per founder's ask,
+  // the Books pill now behaves exactly like Mangal/Novel: it switches
+  // what this page shows rather than navigating to /WebMangal/books.
+  const [books, setBooks] = useState<BookRow[]>([]);
+  const [bookAuthors, setBookAuthors] = useState<Record<string, string>>({});
+  const [booksLoading, setBooksLoading] = useState(true);
 
   const [genreFilter, setGenreFilter] = useState(searchParams.get('genre') ?? 'All');
   const [languageFilter, setLanguageFilter] = useState(searchParams.get('language') ?? 'All');
@@ -141,7 +169,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
     // Step 21 — Dual Content Mode: restore the reader's last toggle choice
     try {
       const saved = localStorage.getItem(CONTENT_TYPE_STORAGE_KEY);
-      if (saved === 'all' || saved === 'mangal' || saved === 'novel') setActiveContentType(saved); // eslint-disable-line react-hooks/set-state-in-effect
+      if (saved === 'all' || saved === 'mangal' || saved === 'novel' || saved === 'books' || saved === 'songs') setActiveContentType(saved); // eslint-disable-line react-hooks/set-state-in-effect
     } catch {
       // localStorage unavailable — default 'all' is fine
     }
@@ -181,13 +209,11 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
     });
   }, []);
 
-  // §85 continued (4) — Songs fetch, search route only. Small, bounded
-  // fetch (published songs only, capped) rather than the full unbounded
-  // catalog the series fetch above does — songs here are only ever used
-  // for the client-side fuzzy match preview below, not a paginated grid,
-  // so there's no need to mirror the series fetch's "everything" approach.
+  // §85 continued (4) — Songs fetch. Was search-route-only (comment
+  // below is historical); now runs on both routes since the Songs pill
+  // needs a full listing to show when browsing too, not just a search
+  // preview.
   useEffect(() => {
-    if (mode !== 'search') return;
     supabase
       .from('songs')
       .select('id, title, genre, cover_url, views, blocks, creator_id, linked_series_id')
@@ -196,7 +222,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
       .limit(200)
       .then(async ({ data }) => {
         const rows = (data ?? []) as { id: string; title: string; genre: string | null; cover_url: string | null; views: number; blocks: unknown[]; creator_id: string; linked_series_id: string | null }[];
-        if (rows.length === 0) return;
+        if (rows.length === 0) { setSongsLoading(false); return; }
         const creatorIds = Array.from(new Set(rows.map(r => r.creator_id)));
         const linkedSeriesIds = Array.from(new Set(rows.map(r => r.linked_series_id).filter(Boolean))) as string[];
         const [usernameRes, seriesRes] = await Promise.all([
@@ -214,8 +240,30 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
           linked_series_title: r.linked_series_id ? seriesTitleMap[r.linked_series_id] ?? null : null,
           creator_id: r.creator_id,
         })));
+        setSongsLoading(false);
       });
-  }, [mode]);
+  }, []);
+
+  // Books fetch — published only (RLS enforces it too), same two-step
+  // author-name resolution pattern as /WebMangal/books/page.tsx.
+  useEffect(() => {
+    supabase
+      .from('books')
+      .select('id, title, cover_image_url, file_type, pricing_type, price_paise, category, author_id, views, created_at')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(200)
+      .then(async ({ data }) => {
+        const rows = (data ?? []) as BookRow[];
+        setBooks(rows);
+        if (rows.length > 0) {
+          const authorIds = Array.from(new Set(rows.map(b => b.author_id)));
+          const { data: profiles } = await supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds);
+          setBookAuthors(Object.fromEntries((profiles ?? []).map(p => [p.user_id, p.username])));
+        }
+        setBooksLoading(false);
+      });
+  }, []);
 
   // Keep the URL in sync (shareable/bookmarkable search), without a full page reload
   useEffect(() => {
@@ -324,6 +372,39 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
     });
   }, [mode, q, songs, songUsernames]);
 
+  // Same idea as songResults, for the Books tab — checked against
+  // title/category/author username.
+  const bookMatches = useMemo(() => {
+    if (mode !== 'search' || !q) return [];
+    return books.filter(b => {
+      const username = (bookAuthors[b.author_id] ?? '').toLowerCase();
+      return fuzzyMatch(b.title, q) || fuzzyMatch(b.category ?? '', q) || username.includes(q);
+    });
+  }, [mode, q, books, bookAuthors]);
+
+  // Sort helper for Books/Songs — smaller than sortResults() above since
+  // neither has a rating field; 'rating' falls back to newest (their
+  // fetch is already ordered newest-first, so no re-sort needed for it).
+  const sortSimple = <T extends { title: string; views?: number }>(r: T[]): T[] => {
+    if (sortBy === 'views') return [...r].sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
+    if (sortBy === 'az') return [...r].sort((a, b) => a.title.localeCompare(b.title));
+    return r;
+  };
+
+  // What the Books/Songs tabs actually render: browse shows the full
+  // published listing, search shows only keyword matches (same
+  // "haven't searched yet" rule as the series results below).
+  const activeBooks = useMemo(
+    () => sortSimple(mode === 'search' ? bookMatches : books),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mode, bookMatches, books, sortBy]
+  );
+  const activeSongs = useMemo(
+    () => sortSimple(mode === 'search' ? songResults : songs),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mode, songResults, songs, sortBy]
+  );
+
   // The overlay's live "as you type" preview — always keyword-driven,
   // regardless of which route it was opened from.
   const overlayResults = useMemo(
@@ -350,9 +431,11 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
       all: matches.length,
       mangal: matches.filter(s => s.content_type === 'mangal').length,
       novel: matches.filter(s => s.content_type === 'novel').length,
+      books: bookMatches.length,
+      songs: songResults.length,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, q, baseFilteredNoType]);
+  }, [mode, q, baseFilteredNoType, bookMatches, songResults]);
 
   const filtersActive = activeContentType !== 'all' || genreFilter !== 'All' || languageFilter !== 'All' || statusFilter !== 'All' || sortBy !== 'newest';
   const createHref = isCreator ? '/dashboard' : user ? '/become-creator' : '/login';
@@ -469,6 +552,8 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
         .mangal-search-nav-links { display: flex; gap: 4px; align-items: center; }
 
         .mangal-search-container { padding: 32px 24px 60px; }
+
+        .books-catalog-card:hover { transform: translateY(-3px); border-color: var(--accent) !important; }
 
         .mangal-search-toggle-row,
         .mangal-search-filters-row { flex-wrap: wrap; }
@@ -820,12 +905,16 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
 
         {/* ── CONTENT TYPE TOGGLE (Step 21) — on the search route each tab
              also shows a Webnovel-style count (e.g. "Mangal 8") once a
-             keyword has been typed. ── */}
+             keyword has been typed. Books/Songs behave exactly like
+             Mangal/Novel (switch what this page shows) per founder's
+             explicit ask — no navigation, same toggle mechanism. ── */}
         <div className="mangal-search-toggle-row" style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
           {([
             { value: 'all' as ContentTypeFilter, emoji: <Sparkles size={13} />, label: 'All' },
             { value: 'mangal' as ContentTypeFilter, emoji: <BookOpen size={13} />, label: 'Mangal' },
             { value: 'novel' as ContentTypeFilter, emoji: <BookText size={13} />, label: 'Novel' },
+            { value: 'books' as ContentTypeFilter, emoji: <FileText size={13} />, label: 'Books' },
+            { value: 'songs' as ContentTypeFilter, emoji: <Music size={13} />, label: 'Songs' },
           ]).map(opt => (
             <button
               key={opt.value}
@@ -927,40 +1016,47 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
         {/* ── FILTERS + SORT ── */}
         <div className="mangal-search-filters-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <select
-              value={genreFilter}
-              onChange={e => setGenreFilter(e.target.value)}
-              style={{
-                padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
-                border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              {GENRE_OPTIONS.map(g => <option key={g} value={g}>{g === 'All' ? 'All Genres' : g}</option>)}
-            </select>
+            {/* Genre/Language/Status are series-specific vocab (mangal/novel
+                content_type) — Books use a different category list, Songs
+                have neither, so these only make sense for All/Mangal/Novel. */}
+            {(activeContentType === 'all' || activeContentType === 'mangal' || activeContentType === 'novel') && (
+              <>
+                <select
+                  value={genreFilter}
+                  onChange={e => setGenreFilter(e.target.value)}
+                  style={{
+                    padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  {GENRE_OPTIONS.map(g => <option key={g} value={g}>{g === 'All' ? 'All Genres' : g}</option>)}
+                </select>
 
-            <select
-              value={languageFilter}
-              onChange={e => setLanguageFilter(e.target.value)}
-              style={{
-                padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
-                border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              {LANGUAGE_OPTIONS.map(l => <option key={l} value={l}>{l === 'All' ? 'All Languages' : l}</option>)}
-            </select>
+                <select
+                  value={languageFilter}
+                  onChange={e => setLanguageFilter(e.target.value)}
+                  style={{
+                    padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  {LANGUAGE_OPTIONS.map(l => <option key={l} value={l}>{l === 'All' ? 'All Languages' : l}</option>)}
+                </select>
 
-            {hasCompletionStatus && (
-              <select
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
-                style={{
-                  padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
-                  border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                <option value="All">All Statuses</option>
-                {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+                {hasCompletionStatus && (
+                  <select
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    style={{
+                      padding: '9px 12px', borderRadius: '8px', background: 'var(--bg-card)',
+                      border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    <option value="All">All Statuses</option>
+                    {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                )}
+              </>
             )}
 
             {filtersActive && (
@@ -987,7 +1083,10 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
                 border: '1px solid var(--border-color)', color: '#d97706', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
               }}
             >
-              {SORT_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              {(activeContentType === 'books' || activeContentType === 'songs'
+                ? SORT_OPTIONS.filter(s => s.value !== 'rating')
+                : SORT_OPTIONS
+              ).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
         </div>
@@ -998,16 +1097,19 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
             Rendered independently of the series RESULTS block below —
             shows whenever there's a keyword and matching songs, even if
             series matched nothing (or the reverse), so a song-only or
-            series-only search both work correctly. */}
-        {mode === 'search' && q && songResults.length > 0 && (
+            series-only search both work correctly. Hidden while the
+            Songs tab itself is active — the main RESULTS grid below
+            already shows the full list then, so this preview would just
+            be a smaller, redundant duplicate. */}
+        {mode === 'search' && q && songResults.length > 0 && activeContentType !== 'songs' && (
           <div style={{ marginBottom: '28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Music size={14} strokeWidth={2} color="#a78bfa" /> Songs ({songResults.length})
               </h3>
-              <Link href="/WebMangal/songs" style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none' }}>
+              <button onClick={() => handleContentTypeToggle('songs')} style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer' }}>
                 See all songs →
-              </Link>
+              </button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 170px))', gap: '14px' }}>
               {songResults.slice(0, 8).map(s => (
@@ -1018,7 +1120,92 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
         )}
 
         {/* ── RESULTS ── */}
-        {loading ? (
+        {activeContentType === 'books' ? (
+          /* Books tab — same toggle mechanism as Mangal/Novel now (founder's
+             ask), rendered with the book-catalog card design from
+             /WebMangal/books/page.tsx (price badge, cover, file type). */
+          booksLoading ? (
+            <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><FileText size={32} /></div>
+              <div style={{ fontSize: '14px' }}>Loading books...</div>
+            </div>
+          ) : mode === 'search' && !q ? (
+            <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Search size={32} /></div>
+              <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>Search for a title, category, or creator to get started.</div>
+            </div>
+          ) : activeBooks.length === 0 ? (
+            <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><FileText size={32} /></div>
+              <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
+                {query.trim() ? <>No books found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.</> : 'No books published yet.'}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>{activeBooks.length} books found</div>
+              <div className="mangal-search-grid" style={{ display: 'grid', gap: '16px' }}>
+                {activeBooks.map(book => (
+                  <Link key={book.id} href={`/WebMangal/books/${book.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', height: '100%', transition: 'transform 0.15s, border-color 0.15s' }} className="books-catalog-card">
+                      <div style={{ position: 'relative', width: '100%', aspectRatio: '2 / 3', background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.15), var(--bg-input))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {book.cover_image_url ? (
+                          <Image src={book.cover_image_url} alt={book.title} fill unoptimized style={{ objectFit: 'cover' }} />
+                        ) : (
+                          <BookOpen size={30} style={{ color: 'var(--text-faint)' }} />
+                        )}
+                        <span style={{
+                          position: 'absolute', top: '8px', left: '8px', padding: '3px 9px', borderRadius: '999px',
+                          fontSize: '10.5px', fontWeight: 800,
+                          background: book.pricing_type === 'PAID' ? 'rgba(var(--accent-rgb), 0.92)' : 'rgba(16,185,129,0.92)',
+                          color: '#fff',
+                        }}>
+                          {book.pricing_type === 'PAID' && book.price_paise ? formatPaise(book.price_paise) : 'FREE'}
+                        </span>
+                      </div>
+                      <div style={{ padding: '10px 12px 12px' }}>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: '4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{book.title}</div>
+                        <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginBottom: '6px' }}>@{bookAuthors[book.author_id] ?? 'unknown'}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: 'var(--text-tertiary)' }}>
+                          <FileText size={11} /> {book.file_type.toUpperCase()}
+                          {book.category ? <span>· {book.category}</span> : null}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )
+        ) : activeContentType === 'songs' ? (
+          songsLoading ? (
+            <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Music size={32} /></div>
+              <div style={{ fontSize: '14px' }}>Loading songs...</div>
+            </div>
+          ) : mode === 'search' && !q ? (
+            <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Search size={32} /></div>
+              <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>Search for a title, genre, or creator to get started.</div>
+            </div>
+          ) : activeSongs.length === 0 ? (
+            <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Music size={32} /></div>
+              <div style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>
+                {query.trim() ? <>No songs found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.</> : 'No songs published yet.'}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>{activeSongs.length} songs found</div>
+              <div className="mangal-search-grid" style={{ display: 'grid', gap: '16px' }}>
+                {activeSongs.map(s => (
+                  <SongCard key={s.id} song={s} creatorUsername={songUsernames[s.creator_id]} />
+                ))}
+              </div>
+            </>
+          )
+        ) : loading ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
             <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><BookOpen size={32} /></div>
             <div style={{ fontSize: '14px' }}>Loading stories...</div>

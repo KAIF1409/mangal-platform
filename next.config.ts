@@ -51,6 +51,21 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
 
+  // Bug fix (build failure, Cloudflare Workers deploy — "exceeded size
+  // limit of 3 MiB"): the Books module's reader (pdfjs-dist + epubjs,
+  // both browser-only — canvas/DOM rendering, never touched server-side)
+  // was only ever loaded via `await import(...)` inside client-side
+  // useEffects, but Next's server compiler still statically pulled both
+  // packages' full module graphs into the RSC/SSR build for the reader
+  // page, since it's reachable from a normal static `import BookReader`
+  // and OpenNext bundles that server build into one Worker script with no
+  // real lazy-chunk loading at the edge. That alone pushed the server
+  // handler to ~13 MB, over the free-plan 3 MiB Worker size limit.
+  // serverExternalPackages tells Next's server compiler to leave these
+  // two packages out of the server bundle entirely (require()'d, never
+  // actually reached at runtime server-side) instead of inlining them.
+  serverExternalPackages: ["pdfjs-dist", "epubjs"],
+
   allowedDevOrigins: [
     "192.168.*.*",
   ],
