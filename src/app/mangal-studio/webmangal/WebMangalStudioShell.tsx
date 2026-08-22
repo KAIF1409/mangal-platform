@@ -81,6 +81,7 @@ export default function WebMangalStudioShell({ children }: { children: React.Rea
                 <Link
                   key={tab.href}
                   href={tab.href}
+                  prefetch={false}
                   className="mg-wmstudio-tab"
                   style={{
                     display: 'flex', alignItems: 'center', gap: '6px', padding: '12px 14px',

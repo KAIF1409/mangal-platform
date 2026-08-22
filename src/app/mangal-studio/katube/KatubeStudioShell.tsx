@@ -75,6 +75,7 @@ export default function KatubeStudioShell({ children }: { children: React.ReactN
                 <Link
                   key={tab.href}
                   href={tab.href}
+                  prefetch={false}
                   className="mg-kstudio-tab"
                   style={{
                     display: 'flex', alignItems: 'center', gap: '6px', padding: '12px 14px',

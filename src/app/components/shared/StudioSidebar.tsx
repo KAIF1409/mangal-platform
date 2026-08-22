@@ -159,7 +159,7 @@ export default function StudioSidebar() {
 
             <div className="mg-studio-nav-list">
               {NAV_ITEMS.map((item) => (
-                <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))}>
+                <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))} prefetch={false}>
                   <item.icon size={18} strokeWidth={2} />
                   <span style={{ flex: 1 }}>{item.label}</span>
                 </Link>
@@ -170,7 +170,7 @@ export default function StudioSidebar() {
 
             <div className="mg-studio-nav-list">
               {BOTTOM_ITEMS.map((item) => (
-                <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))}>
+                <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))} prefetch={false}>
                   <item.icon size={18} strokeWidth={2} />
                   <span style={{ flex: 1 }}>{item.label}</span>
                   {item.hasArrow && <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>›</span>}
@@ -189,7 +189,7 @@ export default function StudioSidebar() {
       <aside className="mg-studio-sidebar">
         <div className="mg-studio-nav-list">
           {NAV_ITEMS.map((item) => (
-            <Link key={item.href} href={item.href} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))}>
+            <Link key={item.href} href={item.href} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))} prefetch={false}>
               <item.icon size={18} strokeWidth={2} />
               <span style={{ flex: 1 }}>{item.label}</span>
             </Link>
@@ -200,7 +200,7 @@ export default function StudioSidebar() {
 
         <div className="mg-studio-nav-list">
           {BOTTOM_ITEMS.map((item) => (
-            <Link key={item.href} href={item.href} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))}>
+            <Link key={item.href} href={item.href} className="mg-studio-nav-item" style={itemStyle(isActive(item.href))} prefetch={false}>
               <item.icon size={18} strokeWidth={2} />
               <span style={{ flex: 1 }}>{item.label}</span>
               {item.hasArrow && <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>›</span>}
@@ -214,9 +214,9 @@ export default function StudioSidebar() {
         </div>
 
         <div className="mg-studio-bottom-icons">
-          <Link href="/dashboard" title="Inbox"><Inbox size={16} strokeWidth={2} /></Link>
-          <Link href="/dashboard" title="Messages"><MessageCircle size={16} strokeWidth={2} /></Link>
-          <Link href="/dashboard" title="Shop"><ShoppingBag size={16} strokeWidth={2} /></Link>
+          <Link href="/dashboard" title="Inbox" prefetch={false}><Inbox size={16} strokeWidth={2} /></Link>
+          <Link href="/dashboard" title="Messages" prefetch={false}><MessageCircle size={16} strokeWidth={2} /></Link>
+          <Link href="/dashboard" title="Shop" prefetch={false}><ShoppingBag size={16} strokeWidth={2} /></Link>
         </div>
       </aside>
     </>
