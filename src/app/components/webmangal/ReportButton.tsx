@@ -7,7 +7,10 @@ import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 // §85 — added 'song' so the WebMangal Songs feature can reuse this exact
 // component (same Report button, zero new UI) instead of building its own.
-type TargetType = 'series' | 'chapter' | 'comment' | 'song';
+// Added 'kcircle_post' so K Circle post cards can reuse it too (founder-
+// reported gap — see reports_allow_kcircle_post_target migration for the
+// matching DB constraint update).
+type TargetType = 'series' | 'chapter' | 'comment' | 'song' | 'video' | 'kcircle_post';
 
 const REASONS = ['Inappropriate', 'Spam', 'Copyright', 'Other'] as const;
 

@@ -19,7 +19,10 @@ import {
   Search, Home, MessageCircle, Clapperboard, Megaphone, Bookmark,
   X, Circle, Globe, Tag, Camera, BarChart3, Sparkles, Pin, Check,
   Heart, User, Users, TrendingUp, Trophy, Menu,
+  MoreHorizontal, Pencil, Trash2,
 } from 'lucide-react';
+import ShareButton from '../components/webmangal/ShareButton';
+import ReportButton from '../components/webmangal/ReportButton';
 
 // ── K Circle — Instagram-style social layer for MANGAL ──
 // Posts + likes + comments + stories + DMs (chat is a separate route,
@@ -180,6 +183,16 @@ function KalpanaCircleInner() {
   const [commentsVisibleCount, setCommentsVisibleCount] = useState<Record<string, number>>({});
   const commentLikeLockRef = useRef<Set<string>>(new Set());
 
+  // Post card menu (Instagram-style "…") — Edit/Delete for your own posts,
+  // Report for anyone else's. Founder-reported gap: none of this existed
+  // before (no share, no edit/delete, no report on a posted card).
+  const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editCaption, setEditCaption] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const postRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const focusPostId = searchParams.get('post'); // deep link from Share
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
   const openPhotoComposer = () => {
@@ -322,6 +335,19 @@ function KalpanaCircleInner() {
   // composer's tag field once so a reply naturally stays tagged to that series too.
   // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time prefill from URL, mirrors loadPosts pattern above
   useEffect(() => { if (tagFilter) setComposerTag(tagFilter); }, [tagFilter]);
+
+  // Deep link from a Share link (?post=<id>) — scroll to it and open its
+  // comments once it's loaded into the feed.
+  const [focusHandled, setFocusHandled] = useState(false);
+  useEffect(() => {
+    if (!focusPostId || focusHandled || posts.length === 0) return;
+    const match = posts.find(p => p.id === focusPostId);
+    if (!match) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time deep-link handoff on data arrival, same pattern as tagFilter above
+    setFocusHandled(true);
+    setOpenComments(focusPostId);
+    setTimeout(() => postRefs.current[focusPostId]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+  }, [focusPostId, focusHandled, posts]);
 
   // ── load stories ──
   const loadStories = useCallback(async () => {
@@ -537,6 +563,35 @@ function KalpanaCircleInner() {
     } else {
       await supabase.from('kcircle_saved_posts').insert({ post_id: post.id, user_id: userId });
     }
+  };
+
+  // ── edit / delete (own posts only — RLS already scopes both to
+  // auth.uid() = author_id, kcircle_posts_own_update/_own_delete) ──
+  const startEdit = (post: KPost) => {
+    setEditingPostId(post.id);
+    setEditCaption(post.caption ?? '');
+    setOpenMenuPostId(null);
+  };
+
+  const cancelEdit = () => { setEditingPostId(null); setEditCaption(''); };
+
+  const saveEdit = async (post: KPost) => {
+    if (editSaving) return;
+    setEditSaving(true);
+    const { error } = await supabase.from('kcircle_posts')
+      .update({ caption: editCaption.trim() || null }).eq('id', post.id);
+    setEditSaving(false);
+    if (error) return;
+    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, caption: editCaption.trim() || null } : p));
+    setEditingPostId(null);
+  };
+
+  const deletePost = async (post: KPost) => {
+    setOpenMenuPostId(null);
+    if (!window.confirm('Delete this post? This can\u2019t be undone.')) return;
+    const { error } = await supabase.from('kcircle_posts').delete().eq('id', post.id);
+    if (error) return;
+    setPosts(prev => prev.filter(p => p.id !== post.id));
   };
 
   // ── comments ──
@@ -1320,7 +1375,7 @@ function KalpanaCircleInner() {
             )}
           </div>
         ) : posts.map(post => (
-          <div key={post.id} style={{
+          <div key={post.id} ref={el => { postRefs.current[post.id] = el; }} style={{
             borderRadius: '14px', background: 'var(--bg-card)', border: `1px solid ${post.pinnedAt ? RADIANT_SOLID : 'var(--border-color)'}`,
             marginBottom: '14px', overflow: 'hidden',
           }}>
@@ -1342,9 +1397,72 @@ function KalpanaCircleInner() {
                   color: post.pinnedAt ? RADIANT_SOLID : 'var(--text-tertiary)', flexShrink: 0,
                 }}><Pin size={15} /></button>
               )}
+
+              {/* Instagram-style "…" menu — Edit/Delete on your own posts,
+                  Report on anyone else's. */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  onClick={() => setOpenMenuPostId(openMenuPostId === post.id ? null : post.id)}
+                  title="More"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', color: 'var(--text-tertiary)', padding: '2px' }}
+                ><MoreHorizontal size={17} /></button>
+                {openMenuPostId === post.id && (
+                  <>
+                    <div onClick={() => setOpenMenuPostId(null)} style={{ position: 'fixed', inset: 0, zIndex: 149 }} />
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 150,
+                      background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px',
+                      minWidth: '150px', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    }}>
+                      {post.author_id === userId ? (
+                        <>
+                          <button onClick={() => startEdit(post)} style={{
+                            display: 'flex', alignItems: 'center', gap: '9px', width: '100%', padding: '11px 14px',
+                            fontSize: '12.5px', fontWeight: 600, color: 'var(--text-primary)', background: 'transparent',
+                            border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid var(--border-color)',
+                          }}><Pencil size={14} /> Edit</button>
+                          <button onClick={() => deletePost(post)} style={{
+                            display: 'flex', alignItems: 'center', gap: '9px', width: '100%', padding: '11px 14px',
+                            fontSize: '12.5px', fontWeight: 600, color: '#ef4444', background: 'transparent',
+                            border: 'none', cursor: 'pointer', textAlign: 'left',
+                          }}><Trash2 size={14} /> Delete</button>
+                        </>
+                      ) : (
+                        <div style={{ padding: '4px' }} onClick={() => setOpenMenuPostId(null)}>
+                          <ReportButton targetType="kcircle_post" targetId={post.id} variant="text" />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
-            {post.caption && (
+            {editingPostId === post.id ? (
+              <div style={{ padding: '0 14px 10px' }}>
+                <textarea
+                  value={editCaption}
+                  onChange={e => setEditCaption(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  style={{
+                    width: '100%', resize: 'none', boxSizing: 'border-box', padding: '9px 11px', borderRadius: '8px',
+                    fontSize: '13.5px', fontFamily: 'inherit', color: 'var(--text-primary)',
+                    background: 'var(--bg-input, var(--bg-primary))', border: '1px solid var(--border-color)',
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <button onClick={() => saveEdit(post)} disabled={editSaving} style={{
+                    padding: '7px 16px', borderRadius: '8px', border: 'none', fontSize: '12.5px', fontWeight: 800,
+                    background: RADIANT, color: '#27272a', cursor: editSaving ? 'default' : 'pointer', opacity: editSaving ? 0.7 : 1,
+                  }}>{editSaving ? 'Saving…' : 'Save'}</button>
+                  <button onClick={cancelEdit} style={{
+                    padding: '7px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+                    background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer',
+                  }}>Cancel</button>
+                </div>
+              </div>
+            ) : post.caption && (
               <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 10px', padding: '0 14px' }}>
                 {post.caption}
               </p>
@@ -1362,10 +1480,16 @@ function KalpanaCircleInner() {
                 </div>
               );
               if (imgs.length === 1) {
+                // BUG FIX (founder-reported): objectFit: 'cover' + a hard
+                // maxHeight cropped taller images (posters, portrait fan
+                // art) — the bottom of the image was silently cut off with
+                // no indication anything was missing. 'contain' + a filled
+                // backdrop shows the whole image, Instagram-post-style,
+                // still capped so one huge image can't dominate the feed.
                 return (
-                  <div style={{ position: 'relative' }} onClick={() => handleImageTap(post)}>
+                  <div style={{ position: 'relative', width: '100%', maxHeight: '520px', background: 'var(--bg-primary)', display: 'flex', justifyContent: 'center' }} onClick={() => handleImageTap(post)}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgs[0]} alt="" style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block', cursor: 'pointer' }} />
+                    <img src={imgs[0]} alt="" style={{ maxWidth: '100%', maxHeight: '520px', objectFit: 'contain', display: 'block', cursor: 'pointer' }} />
                     {burstOverlay}
                   </div>
                 );
@@ -1422,10 +1546,17 @@ function KalpanaCircleInner() {
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                 fontSize: '12.5px', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700,
               }}><MessageCircle size={15} /> {post.commentCount}</button>
-              <button onClick={() => toggleSave(post)} title={post.savedByMe ? 'Unsave' : 'Save'} style={{
-                background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: 'auto', display: 'flex',
-                color: post.savedByMe ? RADIANT_SOLID : 'var(--text-tertiary)',
-              }}><Bookmark size={15} fill={post.savedByMe ? RADIANT_SOLID : 'none'} /></button>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <ShareButton
+                  title={post.caption ? `${post.author?.username ?? 'A dreamer'} on K Circle: "${post.caption.slice(0, 60)}"` : `${post.author?.username ?? 'A dreamer'}'s post on K Circle`}
+                  url={typeof window !== 'undefined' ? `${window.location.origin}/kalpana-circle?post=${post.id}` : `/kalpana-circle?post=${post.id}`}
+                  compact
+                />
+                <button onClick={() => toggleSave(post)} title={post.savedByMe ? 'Unsave' : 'Save'} style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex',
+                  color: post.savedByMe ? RADIANT_SOLID : 'var(--text-tertiary)',
+                }}><Bookmark size={15} fill={post.savedByMe ? RADIANT_SOLID : 'none'} /></button>
+              </div>
             </div>
 
             {openComments === post.id && (
