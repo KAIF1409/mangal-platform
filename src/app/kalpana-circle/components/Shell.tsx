@@ -37,15 +37,24 @@ export const KC_SHELL_CSS = `
       align-items: start;
     }
     .kc-rail {
-      display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+      /* Fixed 72px icon column. Layout = fixed top block (brand) + a
+         flex-1 nav column that scrolls internally + a fixed bottom block
+         (create/bell/avatar/More). Previously the RAIL itself had
+         overflow-y:auto, which computed overflow-x:auto and CLIPPED the
+         absolutely-positioned popovers (NotificationBell's 320px panel,
+         MoreMenu) into a ~72px sliver inside the rail — overlapping,
+         unreadable, unclickable. Popovers now escape freely (rail
+         overflow is visible); only the middle nav scrolls. */
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
       position: fixed; left: 0; top: 0;
       width: 72px; height: 100vh; min-height: 100vh;
       z-index: 50;
-      padding: 14px 0 16px;
+      padding: 12px 0 12px;
       background: var(--bg-card); border-right: 1px solid var(--border-color);
-      overflow-y: auto; scrollbar-width: none;
+      overflow: visible;
     }
-    .kc-rail::-webkit-scrollbar { display: none; }
+    .kc-rail-nav { scrollbar-width: none; }
+    .kc-rail-nav::-webkit-scrollbar { display: none; }
     .kc-channel-header { display: flex; }
   }
   @media (min-width: 1180px) {
@@ -203,19 +212,26 @@ export function KCircleRail({
           home-feed link. Previously there were TWO identical kcircle-logo
           buttons stacked here (brand link + a second "Home feed" icon below
           the divider) — visual duplicate clutter; now just one. */}
+      {/* Fixed top block: brand mark (also the single home-feed link) +
+          hairline divider. Never participates in the scrollable nav. */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
       <Link href="/kalpana-circle" title="K Circle Home" aria-label="K Circle Home" className="kc-rail-btn" style={{
         width: '46px', height: '46px', borderRadius: '14px', display: 'flex',
         alignItems: 'center', justifyContent: 'center', marginBottom: '10px', flexShrink: 0,
       }}>
         <Image src="/kcircle-logo.png" alt="K Circle" width={100} height={100} style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
       </Link>
-      <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '12px', flexShrink: 0 }} />
+        <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginTop: '2px', flexShrink: 0 }} />
+      </div>
 
-      {/* ── CORE NAVIGATION — product sections only (chat, clips/watch,
-          trophies, announcements/broadcasts, saved) plus search. User
-          profile items and third-party/product footer logos live in the
-          separate utility cluster at the bottom of the rail. ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', flex: 1, minHeight: 0 }}>
+      {/* ── CORE NAVIGATION — product sections (chat, clips/watch, trophies,
+          broadcasts, saved) + search. This middle column is the ONLY
+          scroller (flex:1 + min-height:0 + overflow-y:auto), so on short
+          viewports it scrolls instead of the 46px icons squashing into the
+          footer cluster — the logged-in "overlapping, can't-click icons"
+          bug. (The + create button makes the footer taller when signed in,
+          which used to tip the whole rail over on shorter screens.) ── */}
+      <div className="kc-rail-nav" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 0 6px', scrollbarWidth: 'none' }}>
         {items.map(item => (
           <Link key={item.key} href={item.href} title={item.title} aria-label={item.title} className="kc-rail-btn" style={active === item.key ? RAIL_ICON_ACTIVE : RAIL_ICON_BASE}>
             {item.icon}
@@ -230,13 +246,12 @@ export function KCircleRail({
         ><Search size={19} /></button>
       </div>
 
-      {/* ── UTILITY / FOOTER CLUSTER — everything that isn't core
-          navigation: create action, notifications, account, theme, the
-          other MANGAL products' logos, and the company mark. A hairline
-          divider separates it from the nav above so the rail reads as
-          two intentional groups instead of one long icon pile. ── */}
-      <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '12px', flexShrink: 0 }} />
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0, paddingBottom: '4px' }}>
+      {/* ── UTILITY / FOOTER CLUSTER — fixed bottom block: create, bell,
+          profile (exactly ONE avatar), and the MoreMenu popup. Lives
+          OUTSIDE the scrollable nav and the rail's overflow is visible,
+          so the bell/More popovers can render freely to the right. ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', flexShrink: 0, paddingTop: '10px' }}>
+        <div style={{ width: '30px', height: '2px', background: 'var(--border-color)', borderRadius: '2px', marginBottom: '2px', flexShrink: 0 }} />
         {userId && (
           onCreatePost ? (
             <button onClick={onCreatePost} title="Create post" aria-label="Create post" style={{

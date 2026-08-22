@@ -8224,3 +8224,42 @@ with `watch-together | mangal-of-the-week | broadcasts`.
 
 Verified: `tsc --noEmit` 0, eslint 0; opennextjs-cloudflare build green;
 `wrangler deploy --dry-run` gzip 2791 KiB < 3072 KiB Worker limit.
+## §127 — K Circle rail: popover clipping + logged-in overlap fix
+
+Founder report after §124/§125: on desktop the K Circle page is fine when
+logged out, but "messed up / overlapping" after login — icons overlapping,
+and popups (the bell / More menus) render as unreadable, unclickable
+blocks.
+
+Two concrete root causes, both in `kalpana-circle/components/Shell.tsx`:
+
+1. **The rail clipped its own popovers.** `.kc-rail` had `overflow-y: auto`,
+which per CSS computes `overflow-x: auto` too. The absolutely-positioned
+`NotificationBell` dropdown (320px) and the `MoreMenu` popup (186px) live
+*inside* the 72px rail, so when opened they were clipped to a ~72px sliver
+inside the rail — overlapping icons, unclickable, invisible. The bell also
+renders `null` when logged out, which is exactly why the page looked fine
+before login and broke after: the clipped panels only existed for logged-in
+users.
+
+2. **The rail squeezed on shorter viewports.** `justify-content:
+   space-between` + a `flex:1` center column + a fixed-height footer
+   (create / bell / avatar / More) meant a briefly shorter viewport crushed
+   the nav's fixed 46px icons into the footer — the "can't click the red /
+   purple active icons, they overlap" symptom. Worse when logged in because
+   the footer gains the `+` create button.
+
+Fix (shared `KC_SHELL_CSS` + `KCircleRail` JSX, so all K Circle routes):
+- Rail is now three explicit blocks: fixed top (brand) / scrollable middle
+  (`#kc-rail-nav`: `flex:1; min-height:0; overflow-y:auto`) / fixed bottom
+  (footer template) — the ONLY scroller is the middle column, so nav icons
+  can never collide with the footer at any viewport height.
+- `.kc-rail` itself is now `overflow: visible` (no more popover clipping);
+  bell + More popovers escape and render as proper overlays.
+- Footer moves inside the rail's fixed bottom block with the hairline
+  divider, `flex-shrink: 0`.
+
+Verified: `tsc --noEmit` exit 0, eslint 0, `opennextjs-cloudflare build`
+green, `wrangler deploy --dry-run` → gzip 2784.90 KiB < 3072 KiB Worker
+limit, and `/kalpana-circle` serves 200 with the new rail CSS
+(`kc-rail-nav`, `overflow: visible`) in the HTML.
