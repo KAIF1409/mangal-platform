@@ -8,7 +8,7 @@ import ThemeToggle from '../../../components/shared/ThemeToggle';
 import MangalLogo from '../../../components/shared/MangalLogo';
 import { supabase } from '../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
-import { Users, ThumbsUp, BookOpen, Star, ArrowLeft, Share2, MessageCircle, X, ChevronUp } from 'lucide-react';
+import { Users, ThumbsUp, ThumbsDown, BookOpen, Star, ArrowLeft, Share2, MessageCircle, X, ChevronUp } from 'lucide-react';
 import { AddToPlaylistButton, timeAgo } from '../../components/VideoGridCard';
 import VideoGridCard from '../../components/VideoGridCard';
 import KaTubePlayer from '../../components/KaTubePlayer';
@@ -178,6 +178,17 @@ export default function KaTubeWatchPage() {
   // synchronously, so the second click sees the lock immediately.
   const likeLockRef = useRef(false);
 
+  // ── Dislike — YouTube-style ──
+  // Mutually exclusive with Like (liking clears any dislike and vice
+  // versa, exactly like real YouTube). Toggled state only, for the current
+  // viewer — the count is intentionally NEVER shown anywhere (also matches
+  // real YouTube, which keeps the dislike count private). Backed by its
+  // own video_dislikes table (same shape/RLS pattern as video_likes, but
+  // read-scoped to the viewer's own row only — see the migration).
+  const [disliked, setDisliked] = useState(false);
+  const [dislikeBusy, setDislikeBusy] = useState(false);
+  const dislikeLockRef = useRef(false);
+
   // ── §4 item 5, step 2: Comment + Follow ──
   // video_comments + creator_follows tables (RLS already in place,
   // 20260811165752_katube_comments_and_subscriptions.sql +
@@ -324,6 +335,17 @@ export default function KaTubeWatchPage() {
       .eq('liker_id', userId)
       .maybeSingle()
       .then(({ data }) => setLiked(!!data));
+  }, [videoId, userId]);
+
+  useEffect(() => {
+    if (!videoId || !userId) return;
+    supabase
+      .from('video_dislikes')
+      .select('video_id')
+      .eq('video_id', videoId)
+      .eq('disliker_id', userId)
+      .maybeSingle()
+      .then(({ data }) => setDisliked(!!data));
   }, [videoId, userId]);
 
   // Comments — public read, so fetch as soon as we have the videoId (no
@@ -583,30 +605,94 @@ export default function KaTubeWatchPage() {
     setLikeBusy(true);
 
     const wasLiked = liked;
+    const wasDisliked = disliked;
     const prevLikes = video.likes;
     const nextLikes = prevLikes + (wasLiked ? -1 : 1);
 
-    // optimistic UI
+    // optimistic UI — liking also clears any existing dislike (mutually
+    // exclusive, same as real YouTube: you can't be both liked and
+    // disliked on a video at once).
     setLiked(!wasLiked);
+    if (wasDisliked && !wasLiked) setDisliked(false);
     setVideo(v => v ? { ...v, likes: nextLikes } : v);
     if (!wasLiked) {
       setLikeBump(true);
       setTimeout(() => setLikeBump(false), 260);
     }
 
-    const { error } = wasLiked
-      ? await supabase.from('video_likes').delete().eq('video_id', video.id).eq('liker_id', userId)
-      : await supabase.from('video_likes').insert({ video_id: video.id, liker_id: userId });
+    const ops = [
+      wasLiked
+        ? supabase.from('video_likes').delete().eq('video_id', video.id).eq('liker_id', userId)
+        : supabase.from('video_likes').insert({ video_id: video.id, liker_id: userId }),
+      ...(wasDisliked && !wasLiked
+        ? [supabase.from('video_dislikes').delete().eq('video_id', video.id).eq('disliker_id', userId)]
+        : []),
+    ];
+    const results = await Promise.all(ops);
+    const error = results[0].error;
 
     if (!error) {
       await supabase.from('videos').update({ likes: Math.max(0, nextLikes) }).eq('id', video.id);
     } else {
       // roll back optimistic UI on failure
       setLiked(wasLiked);
+      setDisliked(wasDisliked);
       setVideo(v => v ? { ...v, likes: prevLikes } : v);
     }
     likeLockRef.current = false;
     setLikeBusy(false);
+  }
+
+  // Dislike — mirrors handleLike's optimistic/lock pattern. No count is
+  // ever read back from or written to a public field (see video_dislikes
+  // migration comment) — this only ever toggles the current viewer's own
+  // state. Disliking clears any existing like, same mutual-exclusivity
+  // rule as above.
+  async function handleDislike() {
+    if (!video) return;
+    if (!userId) {
+      setPostLoginRedirect(window.location.pathname);
+      window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+    if (dislikeLockRef.current) return;
+    dislikeLockRef.current = true;
+    setDislikeBusy(true);
+
+    const wasDisliked = disliked;
+    const wasLiked = liked;
+    const prevLikes = video.likes;
+    const nextLikes = wasLiked ? Math.max(0, prevLikes - 1) : prevLikes;
+
+    setDisliked(!wasDisliked);
+    if (wasLiked && !wasDisliked) {
+      setLiked(false);
+      setVideo(v => v ? { ...v, likes: nextLikes } : v);
+    }
+
+    const ops = [
+      wasDisliked
+        ? supabase.from('video_dislikes').delete().eq('video_id', video.id).eq('disliker_id', userId)
+        : supabase.from('video_dislikes').insert({ video_id: video.id, disliker_id: userId }),
+      ...(wasLiked && !wasDisliked
+        ? [supabase.from('video_likes').delete().eq('video_id', video.id).eq('liker_id', userId)]
+        : []),
+    ];
+    const results = await Promise.all(ops);
+    const error = results[0].error;
+
+    if (!error) {
+      if (wasLiked && !wasDisliked) {
+        await supabase.from('videos').update({ likes: nextLikes }).eq('id', video.id);
+      }
+    } else {
+      // roll back optimistic UI on failure
+      setDisliked(wasDisliked);
+      setLiked(wasLiked);
+      setVideo(v => v ? { ...v, likes: prevLikes } : v);
+    }
+    dislikeLockRef.current = false;
+    setDislikeBusy(false);
   }
 
   // Shared comments body — rendered inline on desktop (in the left column,
@@ -1027,6 +1113,21 @@ export default function KaTubeWatchPage() {
                         /> {formatViews(video.likes)}
                       </button>
                       <button
+                        onClick={handleDislike}
+                        disabled={dislikeBusy}
+                        aria-label="Dislike"
+                        style={{
+                          display: 'flex', alignItems: 'center',
+                          color: disliked ? '#e11d48' : 'var(--text-secondary)',
+                          background: disliked ? 'rgba(225,29,72,0.10)' : 'var(--bg-card)',
+                          border: disliked ? '1px solid rgba(225,29,72,0.28)' : '1px solid var(--border-color)',
+                          borderRadius: '20px', padding: '9px 12px', cursor: dislikeBusy ? 'default' : 'pointer',
+                          opacity: dislikeBusy ? 0.6 : 1,
+                        }}
+                      >
+                        <ThumbsDown size={15} fill={disliked ? '#e11d48' : 'none'} />
+                      </button>
+                      <button
                         onClick={() => {
                           if (!userId) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname); return; }
                           setShareOpen(true);
@@ -1196,6 +1297,21 @@ export default function KaTubeWatchPage() {
                         fill={liked ? '#e11d48' : 'none'}
                         style={{ transform: likeBump ? 'scale(1.35)' : 'scale(1)', transition: 'transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
                       /> {formatViews(video.likes)}
+                    </button>
+                    <button
+                      onClick={handleDislike}
+                      disabled={dislikeBusy}
+                      aria-label="Dislike"
+                      style={{
+                        display: 'flex', alignItems: 'center',
+                        color: disliked ? '#e11d48' : 'var(--text-secondary)',
+                        background: disliked ? 'rgba(225,29,72,0.10)' : 'var(--bg-card)',
+                        border: disliked ? '1px solid rgba(225,29,72,0.28)' : '1px solid var(--border-color)',
+                        borderRadius: '20px', padding: '9px 12px', cursor: dislikeBusy ? 'default' : 'pointer',
+                        opacity: dislikeBusy ? 0.6 : 1,
+                      }}
+                    >
+                      <ThumbsDown size={15} fill={disliked ? '#e11d48' : 'none'} />
                     </button>
                     <button
                       onClick={() => {
