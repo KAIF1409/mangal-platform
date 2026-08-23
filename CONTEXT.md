@@ -8555,3 +8555,34 @@ experience — while actually swiping through shorts, not on Home.
 
 **Verified:** `tsc --noEmit` clean, `eslint` 0 new errors (pre-existing
 warnings only).
+
+## §95 — Actual root cause of the hero-card-doesn't-hide-on-mobile bug
+
+§93's viewport meta tag fix was real and needed, but it turned out not to
+be the whole story — the founder retested and the hero card ("Trending
+This Week" / "Continue Watching"–"Fresh Uploads" two-column block) was
+STILL rendering on mobile, overlapping the drawer. Root cause is
+completely different and unrelated to viewport reporting:
+
+`.katube-hero`'s div carries BOTH `className="katube-hero"` AND an inline
+`style={{ display: 'flex', ... }}` (needed for its desktop two-column
+layout). Inline styles always beat a plain class-based CSS rule
+regardless of specificity or media query — so
+`@media (max-width:768px) { .katube-hero { display: none; } }` was never
+actually capable of hiding it, on any device, at any time. This had
+nothing to do with §93's missing viewport tag; that was a real, separate
+bug (whole page rendering at zoomed-out desktop width) that's now fixed,
+but it was never going to touch this one.
+
+Fix: added `!important` to the mobile hide rule — that's the one thing
+that does override an element's own inline style. Checked every other
+class-based mobile show/hide rule on the page
+(`.katube-subtitle`, `.katube-search-wrap`, `.katube-theme-toggle`,
+`.katube-label-full`/`-mobile`, `.katube-mobile-search-btn`) for the same
+inline-style-vs-class conflict — none of the others had a competing
+inline `display`, so `.katube-hero` was the only one affected.
+
+**Verified:** `tsc --noEmit` clean, `eslint` 0 new errors (pre-existing
+warnings only). Given the pattern of back-and-forth on this exact bug,
+worth Kaif confirming on an actual phone once this deploys before
+considering it closed.
