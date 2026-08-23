@@ -34,31 +34,6 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
-      # TEMP DIAGNOSTIC — will be removed once the deploy failure is
-      # root-caused. Raw job logs aren't fetchable from the debugging
-      # environment used to investigate this, so this reports (without ever
-      # printing the actual values) which of the required secrets are
-      # actually configured in this repo's Settings → Secrets, via
-      # ::notice:: annotations that ARE readable through the Checks API.
-      - name: "DIAGNOSTIC: check required secrets are set"
-        run: |
-          check() {
-            if [ -z "$2" ]; then
-              echo "::error::Secret $1 is EMPTY or not set in repo Settings → Secrets and variables → Actions"
-            else
-              echo "::notice::Secret $1 is set (length ${#2})"
-            fi
-          }
-          check CLOUDFLARE_API_TOKEN "$CF_TOKEN"
-          check NEXT_PUBLIC_SUPABASE_URL "$SUPA_URL"
-          check NEXT_PUBLIC_SUPABASE_ANON_KEY "$SUPA_ANON"
-          check SUPABASE_SERVICE_ROLE_KEY "$SUPA_SERVICE"
-        env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          SUPA_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPA_ANON: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPA_SERVICE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
       - name: Build and deploy
         # package.json's "deploy" script: opennextjs-cloudflare build &&
         # opennextjs-cloudflare deploy. Wrangler (used under the hood)
