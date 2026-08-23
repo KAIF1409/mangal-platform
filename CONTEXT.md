@@ -8511,3 +8511,24 @@ counts) — confirmed, nothing needed there.
 
 **Verified:** `tsc --noEmit` clean, `eslint` 0 new errors (same
 pre-existing warnings only).
+
+## §93 — Site-wide mobile bug: missing viewport meta tag
+
+Reported via screenshot: KaTube home badly broken on a real phone — the
+desktop-only hero card and the sidebar rendering on top of each other,
+tiny overlapping text, black empty content area. All the mobile CSS
+(`@media (max-width: 768px)` rules — bottom nav, hidden hero, drawer
+sidebar, etc., all across the app, not just KaTube) looked correct on
+inspection, which was the actual clue: the root layout had **no viewport
+meta tag anywhere**. Without one, mobile browsers assume a desktop site,
+lay it out at a fixed ~980px virtual width, then zoom the whole page down
+to fit the physical screen — so none of the `max-width: 768px` rules ever
+actually matched, on any page, anywhere in the app.
+
+Fix: added Next.js's `viewport` export (`width: device-width,
+initialScale: 1`) to `src/app/layout.tsx`. Site-wide fix, not
+KaTube-specific — every route was affected identically.
+
+**Verified:** `tsc --noEmit` clean, `eslint` 0 new errors (pre-existing
+warnings only). Worth Kaif double-checking on an actual phone once
+deployed, since it couldn't be visually verified from this environment.
