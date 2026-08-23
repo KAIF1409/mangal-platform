@@ -916,8 +916,17 @@ export default function KaTubePage() {
 
           /* Hero block hidden on mobile — see the comment on .katube-hero's
              JSX above (§109: home redesign toward the founder's YouTube-app
-             reference, which starts straight at the chip row, no hero). */
-          .katube-hero { display: none; }
+             reference, which starts straight at the chip row, no hero).
+             Bug fix: needs !important. The element also carries an inline
+             style={{ display: 'flex', ... }} (for its desktop two-column
+             layout), and inline styles always beat a plain class rule
+             regardless of media query — so this was never actually able
+             to hide the hero on mobile until now. That's why the hero +
+             "Continue Watching"/"Fresh Uploads" panel kept rendering
+             (oversized, overlapping the drawer) even after the viewport
+             meta tag fix, which only addressed the separate desktop-width-
+             zoomed-out symptom, not this one. */
+          .katube-hero { display: none !important; }
 
           .katube-backdrop.katube-backdrop--open {
             display: block;
