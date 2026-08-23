@@ -8532,3 +8532,26 @@ KaTube-specific — every route was affected identically.
 **Verified:** `tsc --noEmit` clean, `eslint` 0 new errors (pre-existing
 warnings only). Worth Kaif double-checking on an actual phone once
 deployed, since it couldn't be visually verified from this environment.
+
+## §94 — KaTube mobile: removed duplicate nav on Home
+
+Reported via screenshots: on mobile, Home showed the hamburger drawer
+(Home/Fast Tap/Slow tap/Trending/Following/Playlists/Saved) AND a
+separate always-on bottom tab bar (Home/Fast Tap/Create/Following/You) at
+the same time — same items duplicated across two nav mechanisms.
+
+Founder's clarification, now the rule going forward: the drawer is the
+one permanent mobile nav on every regular page including Home. The
+bottom-tab-bar pattern belongs only to the full-screen Fast Tap (Shorts)
+experience — while actually swiping through shorts, not on Home.
+
+- Removed the bottom nav bar entirely from Home (`src/app/katube/page.tsx`)
+  — JSX, its spacer, and the CSS. Home now has only the drawer on mobile.
+- Fast Tap already had its own equivalent bar
+  (`.katube-shorts-mobile-tabs`, `shorts/[shortId]/page.tsx`) and never
+  had a drawer — nothing to change there structurally, just added a
+  missing "You" tab so it has full parity with what Home's bar used to
+  offer (Home/Fast Tap/Create/Following/You, same 5 items).
+
+**Verified:** `tsc --noEmit` clean, `eslint` 0 new errors (pre-existing
+warnings only).
