@@ -13,7 +13,7 @@ import MangalOfTheWeekBanner from './components/MangalOfTheWeekBanner';
 import WriterOfTheMonthBanner from './components/WriterOfTheMonthBanner';
 import { MangalWeekBadge } from './components/VideoGridCard';
 import { supabase } from '../lib/supabase';
-import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo, X, PlusSquare, UserCircle2 } from 'lucide-react';
+import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // ── KaTube — Step 3 (video grid + watch page) + Step 4 (upload flow,
@@ -869,8 +869,6 @@ export default function KaTubePage() {
 
         .katube-backdrop { display: none; }
         .katube-mobile-search-btn { display: none; }
-        .katube-bottom-nav { display: none; }
-        .katube-bottom-nav-spacer { display: none; }
 
         .katube-sidebar {
           width: 240px;
@@ -920,21 +918,6 @@ export default function KaTubePage() {
              JSX above (§109: home redesign toward the founder's YouTube-app
              reference, which starts straight at the chip row, no hero). */
           .katube-hero { display: none; }
-
-
-          /* ── Bottom tab bar — YouTube-app style (Home / Shorts / Create /
-             Subscriptions / You). Only below 768px; desktop keeps the
-             sidebar as the primary nav and has no bottom bar. A spacer div
-             at the end of the page reserves the same height so the bar
-             never covers the last row of content/footer links. */
-          .katube-bottom-nav {
-            display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 180;
-            background: var(--nav-bg); backdrop-filter: blur(16px);
-            border-top: 1px solid var(--border-color);
-            padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
-            justify-content: space-between;
-          }
-          .katube-bottom-nav-spacer { display: block; height: 58px; }
 
           .katube-backdrop.katube-backdrop--open {
             display: block;
@@ -1494,84 +1477,18 @@ export default function KaTubePage() {
           the fixed bottom tab bar never overlaps the last row of cards or
           the placeholder note above. No-op on desktop (bar isn't rendered
           there). */}
-      <div className="katube-bottom-nav-spacer" aria-hidden="true" />
-
         </div>
       </div>
 
-      {/* ── Mobile bottom tab bar — YouTube-app layout ──
-          Home / Shorts / Create / Subscriptions / You. Home and Shorts
-          reuse the exact same activeSidebar state the desktop sidebar
-          items already drive (tapping either just filters this same page,
-          same as clicking "Home"/"Fast tap" in the drawer) — Create,
-          Subscriptions, and You are real routes. CSS-only hidden above
-          768px (see .katube-bottom-nav in the <style> block above), so
-          it's harmless to always render. */}
-      <nav className="katube-bottom-nav" aria-label="KaTube mobile navigation">
-        <button
-          onClick={() => { setActiveSidebar('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-          style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-            flex: 1, padding: '6px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
-            color: activeSidebar === 'home' ? '#e11d48' : 'var(--text-tertiary)',
-          }}
-        >
-          <Home size={20} strokeWidth={activeSidebar === 'home' ? 2.4 : 2} />
-          <span style={{ fontSize: '10px', fontWeight: 700 }}>Home</span>
-        </button>
-        <button
-          onClick={() => { setActiveSidebar('fast'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-          style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-            flex: 1, padding: '6px 2px', border: 'none', background: 'transparent', cursor: 'pointer',
-            color: activeSidebar === 'fast' ? '#e11d48' : 'var(--text-tertiary)',
-          }}
-        >
-          <Zap size={20} strokeWidth={activeSidebar === 'fast' ? 2.4 : 2} />
-          <span style={{ fontSize: '10px', fontWeight: 700 }}>Fast Tap</span>
-        </button>
-        <Link
-          href="/katube/upload"
-          style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-            flex: 1, padding: '6px 2px', textDecoration: 'none', color: 'var(--text-tertiary)',
-          }}
-        >
-          <span style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: '30px', height: '30px', borderRadius: '8px', background: '#e11d48', color: '#fff',
-          }}><PlusSquare size={17} strokeWidth={2.4} /></span>
-        </Link>
-        <Link
-          href="/katube/subscriptions"
-          style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-            flex: 1, padding: '6px 2px', textDecoration: 'none', color: 'var(--text-tertiary)',
-          }}
-        >
-          <Users size={20} />
-          <span style={{ fontSize: '10px', fontWeight: 700 }}>Following</span>
-        </Link>
-        <Link
-          href="/mangal-studio/katube"
-          style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-            flex: 1, padding: '6px 2px', textDecoration: 'none', color: 'var(--text-tertiary)',
-          }}
-        >
-          {userName ? (
-            <span style={{
-              width: '20px', height: '20px', borderRadius: '50%',
-              background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '10px', color: 'var(--text-tertiary)', fontWeight: 700,
-            }}>K</span>
-          ) : (
-            <UserCircle2 size={20} />
-          )}
-          <span style={{ fontSize: '10px', fontWeight: 700 }}>You</span>
-        </Link>
-      </nav>
+      {/* ── Mobile bottom tab bar — REMOVED (was duplicating the drawer) ──
+          Home used to render both the hamburger drawer AND this bottom
+          tab bar at the same time on mobile, with overlapping items
+          (Home/Fast Tap/Following showed in both places at once). Per
+          founder's clarification: the drawer is the one permanent mobile
+          nav on every regular page (Home included) — this bottom bar
+          pattern belongs only to the full-screen Fast Tap (Shorts) view,
+          which already has its own equivalent bar
+          (.katube-shorts-mobile-tabs in shorts/[shortId]/page.tsx). */}
 
       {/* ── Mobile full-screen search takeover ──
           Opens over everything (nav included) via the search icon added to

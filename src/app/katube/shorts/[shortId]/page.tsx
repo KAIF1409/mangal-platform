@@ -944,6 +944,7 @@ export default function KaTubeShortsFeedPage() {
           { href: '/katube', label: 'Fast Tap', icon: Zap },
           { href: '/katube/upload', label: 'Create', icon: PlusSquare },
           { href: '/katube/subscriptions', label: 'Following', icon: Users },
+          { href: '/mangal-studio/katube', label: 'You', icon: UserCircle },
         ].map(item => {
           const Icon = item.icon;
           return <Link key={item.label} href={item.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: item.label === 'Fast Tap' ? '#e11d48' : '#fff', textDecoration: 'none', fontSize: '10px', fontWeight: 700 }}><Icon size={22} fill={item.label === 'Fast Tap' ? '#e11d48' : 'none'} />{item.label}</Link>;
