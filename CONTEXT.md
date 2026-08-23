@@ -8454,3 +8454,60 @@ real).
 
 Verified: `tsc --noEmit` clean project-wide (merged tree). `eslint` on
 `src/app/mangal-studio`: 0 errors, 0 warnings.
+
+## §91 — Deploy failure root-caused: missing GitHub Actions secrets
+
+"Deploy to Cloudflare Workers" workflow had been failing (~20s, fails
+fast) on every push despite an earlier commit adding the Supabase env var
+passthrough. Root cause found via a temporary diagnostic step (added,
+run once, then removed same session — raw Actions job logs weren't
+fetchable from the environment used to debug this, so the diagnostic
+reported SET/EMPTY status through `::notice::`/`::error::` annotations
+instead, which ARE readable via the Checks API):
+
+- `CLOUDFLARE_API_TOKEN` — confirmed set correctly.
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY` — **not set** as repo Actions secrets at
+  all. The workflow had been updated to reference them, but they were
+  never actually created in Settings → Secrets and variables → Actions —
+  so `${{ secrets.X }}` was silently resolving to empty strings, hitting
+  the exact same "supabaseUrl is required" build crash the passthrough
+  commit was meant to fix.
+
+**Not fixable from here** — needs the three secrets added manually in the
+repo's GitHub settings (values available from the Cloudflare Worker's own
+dashboard secrets, or the Supabase project settings). Flagged for Kaif.
+
+Separately confirmed: Cloudflare's own git-integrated "Workers Builds" and
+a "Cloudflare Pages" integration are BOTH also connected to this repo and
+succeeding on every push — meaning the live Worker has likely been
+deploying fine via Workers Builds regardless of this custom GitHub Actions
+workflow's failures. Worth deciding at some point whether the custom
+deploy.yml is still needed alongside Workers Builds, or just redundant
+noise in the Checks tab — not resolved this session, just noted.
+
+## §92 — KaTube: YouTube-style Dislike (Like was already done)
+
+Checked in expecting to build KaTube's like system YouTube-style; found
+Like itself already done (K/M-formatted count via `formatViews`, bump
+animation on click — from an earlier session not previously logged here).
+Missing piece was Dislike. Added:
+
+- `video_dislikes` migration — same shape as `video_likes` (composite PK,
+  RLS), but read-scoped to the viewer's own row only (no public-read
+  policy) since the count is never shown to anyone, matching real
+  YouTube's private dislike count.
+- `handleDislike()` in the watch page, same optimistic-UI + sync-lock-ref
+  pattern as the existing `handleLike`/`handleFollow`/etc. Mutually
+  exclusive with Like in both directions (liking clears a dislike,
+  disliking clears a like and decrements the public like count) — both
+  DB ops fire together via `Promise.all`.
+- Dislike button (ThumbsDown icon, no count shown) added next to Like in
+  both action rows (Shorts + long-form sidebar).
+
+K Circle's like system was already fully Instagram-style pre-existing
+(double-tap-to-like with heart-burst animation, optimistic UI, K/M
+counts) — confirmed, nothing needed there.
+
+**Verified:** `tsc --noEmit` clean, `eslint` 0 new errors (same
+pre-existing warnings only).
