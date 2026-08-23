@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ConsentBanner from "./components/shared/ConsentBanner";
@@ -57,6 +57,20 @@ export const metadata: Metadata = {
   // app/apple-icon.png (already in the repo) and serves those directly.
   // The previous version forced everything to favicon.ico instead, which
   // meant the sharper PNG icons were never actually used.
+};
+
+// Bug fix: there was no viewport meta tag anywhere in the app at all.
+// Without one, mobile browsers default to treating the page as a
+// desktop site — they lay it out at a fixed ~980px virtual viewport
+// width and then zoom the whole thing down to fit the physical screen.
+// Every one of this codebase's `@media (max-width: 768px)` mobile rules
+// (bottom nav, hidden desktop hero, drawer sidebar, etc.) never actually
+// matched, because the browser never reported a narrow viewport in the
+// first place — hence the squished, overlapping, zoomed-out desktop
+// layout screenshotted on a real phone.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
