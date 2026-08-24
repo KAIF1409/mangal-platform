@@ -8586,3 +8586,43 @@ inline `display`, so `.katube-hero` was the only one affected.
 warnings only). Given the pattern of back-and-forth on this exact bug,
 worth Kaif confirming on an actual phone once this deploys before
 considering it closed.
+
+## §132 — Company homepage nav was leaking one product's internal sub-nav into the top-level company nav
+
+Founder screenshot: the main MANGAL company homepage's top nav showed
+Browse / Rankings / Genres / New Releases sitting alongside the three
+product links (WebMangal, Tube, Circle) and asked for the page to look
+more professional, specifically pointing at those items and asking for
+research on how a real company/main site handles this.
+
+**Research (web):** consistent finding across corporate-site design
+guides — the most common corporate nav failure is structuring
+top-level navigation to reflect the company's *internal* org/product
+structure instead of the visitor's actual top-level question. For a
+homepage representing multiple products, the top nav should mirror
+"which product?", not one product's own internal sub-navigation.
+
+**Root cause:** Browse/Rankings/Genres/New Releases are WebMangal's
+own in-product reading-site nav (all four literally hrefed to
+`/WebMangal*` routes), hard-coded directly onto the shared company nav
+— so a first-time visitor who had never picked a product yet saw four
+links that only make sense once already inside WebMangal, mixed with
+three links representing the whole company. Same links were also
+duplicated in the footer under a column mislabeled "Platform."
+
+**Fix:**
+- Top nav (desktop + mobile menu): removed all four WebMangal-only
+  links entirely — they still exist exactly where they belong, inside
+  WebMangal's own in-product nav (untouched). Company-level nav is now
+  just the three product links + auth, matching the task-based/
+  audience-based pattern from the research above.
+- Footer: "Platform" column (same four WebMangal-only links) relabeled
+  "Products" and repointed at the three actual products (WebMangal,
+  KaTube, K Circle), consistent with the nav fix.
+
+**Not touched:** the `FEATURES` section (`FEATURE_CARDS`, "Why Choose
+Mangal?") — already a genuine, honestly-worded 6-card grid covering
+the real cross-product value prop (desi stories, mobile-first, zero
+gatekeepers, one login/one ecosystem), which is the actual "features"
+content a professional homepage needs; the nav was the actual
+unprofessional-looking element, not the features section itself.

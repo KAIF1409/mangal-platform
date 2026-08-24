@@ -524,22 +524,21 @@ export default function LandingPage() {
             <span className="mangal-landing-brand-text" style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
           </Link>
 
+          {/* §132 fix: this used to open with Browse / Rankings / Genres /
+              New Releases — WebMangal's own internal reading-site
+              sub-navigation, hard-coded onto the company-level nav that
+              also has to represent KaTube and K Circle. A first-time
+              visitor landing on the MANGAL company page saw four links
+              that only make sense once you're already inside one specific
+              product, mixed in with three product-switcher links that
+              represent the whole company — reading as cluttered/confused
+              rather than a clean top-level company nav. Standard practice
+              for a multi-product company homepage is a nav that mirrors
+              the visitor's actual top-level choice (which product?), not
+              one product's internal org structure — so those four are
+              gone from here entirely; they still exist exactly where they
+              belong, inside WebMangal's own in-product nav. */}
           <div className="mangal-landing-nav-center">
-            {[
-              { label: 'Browse', href: '/WebMangal' },
-              { label: 'Rankings', href: '/WebMangal/rankings' },
-              { label: 'Genres', href: '/WebMangal' },
-              { label: 'New Releases', href: '/WebMangal' },
-            ].map(link => (
-              <a key={link.label} href={link.href} data-cursor-hover="true" style={{
-                padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
-                color: 'var(--text-secondary)', textDecoration: 'none', whiteSpace: 'nowrap',
-                transition: 'color 0.15s, background 0.15s',
-              }}
-                onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--text-primary)'; (e.target as HTMLElement).style.background = 'var(--border-color)'; }}
-                onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-secondary)'; (e.target as HTMLElement).style.background = 'transparent'; }}
-              >{link.label}</a>
-            ))}
             <a href="/WebMangal" data-cursor-hover="true" style={{
               display: 'flex', alignItems: 'center', gap: '5px',
               padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
@@ -635,9 +634,10 @@ export default function LandingPage() {
           </div>
         </nav>
 
-        {/* ── MOBILE NAV MENU — sub-640px only; the links above (Browse,
-             Rankings, KaTube, K Circle, Log in) get hidden by CSS at that
-             width with no other way to reach them, so this fills the gap. */}
+        {/* ── MOBILE NAV MENU — sub-640px only; the product links above
+             (WebMangal, KaTube, K Circle, Log in) get hidden by CSS at
+             that width with no other way to reach them, so this fills
+             the gap. */}
         <div
           className="mangal-landing-mobile-menu"
           style={{
@@ -649,10 +649,6 @@ export default function LandingPage() {
           }}
         >
           {[
-            { label: 'Browse', href: '/WebMangal' },
-            { label: 'Rankings', href: '/WebMangal/rankings' },
-            { label: 'Genres', href: '/WebMangal' },
-            { label: 'New Releases', href: '/WebMangal' },
             { label: 'WebMangal', href: '/WebMangal', icon: '/webmangal-logo.png' },
             { label: 'Tube', href: '/katube', icon: '/katube-logo.png' },
             { label: 'Circle', href: '/kalpana-circle', icon: '/kcircle-logo.png' },
@@ -1053,9 +1049,15 @@ export default function LandingPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
-                <FooterCol title="Platform" links={[
-                  { label: 'Browse', href: '/WebMangal' }, { label: 'Rankings', href: '/WebMangal/rankings' },
-                  { label: 'Genres', href: '/WebMangal' }, { label: 'New Releases', href: '/WebMangal' },
+                {/* §132 fix: this column was labeled "Platform" but only
+                    ever linked WebMangal's internal reading-site pages
+                    (Browse/Rankings/Genres/New Releases) — misleading on a
+                    footer that also has to represent KaTube and K Circle.
+                    Relabeled "Products" and pointed at the three actual
+                    products, matching the nav fix above. */}
+                <FooterCol title="Products" links={[
+                  { label: 'WebMangal', href: '/WebMangal' }, { label: 'KaTube', href: '/katube' },
+                  { label: 'K Circle', href: '/kalpana-circle' },
                 ]} />
                 <FooterCol title="Account" links={[
                   { label: 'Log In', href: '/login?next=%2F' }, { label: 'Sign Up', href: '/login?next=%2F' }, { label: 'Become a Creator', href: '/login?creator=1' },
