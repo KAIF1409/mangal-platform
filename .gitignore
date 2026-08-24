@@ -33,7 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
-
+.env.local
 # vercel
 .vercel
 
@@ -44,3 +44,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local session artifacts (never part of the repo)
+*.log
+!pnpm-lock.log
+lint-verify*.txt
+.rooignore
+.fix-deps.cjs
+MANGAL_Context_Updated_47.docx

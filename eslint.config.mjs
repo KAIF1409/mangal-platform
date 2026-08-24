@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
     ".open-next/**",
     ".wrangler/**",
     ".vercel/**",
+    // One-off local maintenance scripts at the repo root (e.g. dependency
+    // fixups) — CommonJS on purpose, never shipped, never app code.
+    ".fix-deps.cjs",
     // Vendored third-party MINIFIED libraries (epub.js, GSAP ScrollTrigger,
     // pdf.js + its 1.2MB worker) and every other static asset live under
     // public/ — served verbatim, never bundled or transformed, so ESLint

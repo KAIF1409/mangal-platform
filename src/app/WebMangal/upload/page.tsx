@@ -8,6 +8,7 @@ import { checkImageBatchQuality } from '../../lib/media/imageQuality';
 import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { suggestTags } from '../../lib/tagSuggest';
+import WebMangalAiEditor from '../../components/editor/WebMangalAiEditor';
 import {
   ArrowLeft, Camera, BookOpen, BookText, ScrollText, ArrowRight,
   PartyPopper, Eye, Plus, CheckCircle2, Search, Upload, Check,
@@ -1025,7 +1026,15 @@ function UploadFlow() {
 
                 <div>
                   <label style={labelStyle}>Description</label>
-                  <textarea placeholder="Write the cosmic arc..." value={synopsis} onChange={(e) => setSynopsis(e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' as const }} />
+                  <WebMangalAiEditor
+                    feature="synopsis"
+                    ariaLabel="Series description"
+                    placeholder="Write the cosmic arc..."
+                    value={synopsis}
+                    onChange={setSynopsis}
+                    rows={4}
+                    style={{ ...inputStyle, resize: 'vertical' as const }}
+                  />
                 </div>
 
                 <div>
@@ -1242,10 +1251,12 @@ function UploadFlow() {
                   {/* Author's Note — before chapter. Optional; needs chapters.author_note_before */}
                   <div>
                     <label style={labelStyle}>Author&apos;s Note — Before Chapter (optional)</label>
-                    <textarea
+                    <WebMangalAiEditor
+                      feature="author-note"
+                      ariaLabel="Author's note before chapter"
                       placeholder="e.g. Sorry for the late update! Thanks for 1k reads"
                       value={authorNoteBefore}
-                      onChange={(e) => setAuthorNoteBefore(e.target.value)}
+                      onChange={setAuthorNoteBefore}
                       rows={2}
                       style={{ ...inputStyle, resize: 'vertical' as const, fontSize: '12px' }}
                     />
@@ -1277,11 +1288,13 @@ function UploadFlow() {
                         dangerouslySetInnerHTML={{ __html: novelContent.trim() ? renderNovelPreviewHtml(novelContent) : '<p style="color:var(--text-muted);">Nothing to preview yet — start writing.</p>' }}
                       />
                     ) : (
-                      <textarea
-                        ref={novelTextareaRef}
+                      <WebMangalAiEditor
+                        innerRef={novelTextareaRef}
+                        feature="chapter"
+                        ariaLabel="Chapter manuscript"
                         placeholder={'Likho yahan... # for a heading, **bold**, *italic*'}
                         value={novelContent}
-                        onChange={(e) => setNovelContent(e.target.value)}
+                        onChange={setNovelContent}
                         onKeyDown={handleNovelTextareaKeyDown}
                         rows={16}
                         spellCheck
@@ -1348,10 +1361,12 @@ function UploadFlow() {
                   {/* Author's Note — after chapter. Optional; needs chapters.author_note_after */}
                   <div>
                     <label style={labelStyle}>Author&apos;s Note — After Chapter (optional)</label>
-                    <textarea
+                    <WebMangalAiEditor
+                      feature="author-note"
+                      ariaLabel="Author's note after chapter"
                       placeholder="e.g. Next chapter drops Friday. Comment your theories!"
                       value={authorNoteAfter}
-                      onChange={(e) => setAuthorNoteAfter(e.target.value)}
+                      onChange={setAuthorNoteAfter}
                       rows={2}
                       style={{ ...inputStyle, resize: 'vertical' as const, fontSize: '12px' }}
                     />

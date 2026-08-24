@@ -11,9 +11,13 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.84",
     "@opennextjs/cloudflare": "^1.20.2",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
+    "@tiptap/pm": "^3.30.3",
+    "@tiptap/react": "^3.30.3",
+    "@tiptap/starter-kit": "^3.30.3",
     "framer-motion": "^13.1.0",
     "gsap": "^3.15.0",
     "lucide-react": "^1.31.0",

@@ -1,5 +1,7 @@
 'use client';
 
+import WebMangalAiEditor from '../../../components/editor/WebMangalAiEditor';
+
 // §85 — WebMangal "Songs" category, phase 2 (upload flow).
 // Lyrics/text only for now — no audio upload (see CONTEXT.md §85). Whole
 // song uploads as one page: title + blocks + optional series/chapter link
@@ -366,8 +368,10 @@ export default function SongUploadPage() {
                   <button onClick={() => removeBlock(block.id)} style={iconBtnStyle(false)}><X size={14} /></button>
                 </div>
               </div>
-              <textarea
-                value={block.content} onChange={e => updateBlockContent(block.id, e.target.value)}
+              <WebMangalAiEditor
+                feature="lyrics"
+                ariaLabel={`${block.label} lyrics block`}
+                value={block.content} onChange={e => updateBlockContent(block.id, e)}
                 placeholder={`Write the ${block.label.toLowerCase()}...`} rows={4}
                 style={{
                   width: '100%', resize: 'vertical' as const, boxSizing: 'border-box' as const,

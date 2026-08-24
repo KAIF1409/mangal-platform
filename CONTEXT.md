@@ -8455,6 +8455,110 @@ real).
 Verified: `tsc --noEmit` clean project-wide (merged tree). `eslint` on
 `src/app/mangal-studio`: 0 errors, 0 warnings.
 
+## §132 — WebMangal AI Writer: privacy-first AI Writing & Translation Assistant
+
+Built the AI Writing & Translation Assistant into WebMangal Studio as a new
+**AI Writer** tab (`/mangal-studio/webmangal/write`, added to the Studio
+shell TABS). Creator-facing flow: draft prose in a rich text editor, click
+"✨ Check & Polish Page", review a paragraph-level diff, accept all / select
+paragraphs / discard. Two assist lanes behind one UI: fiction grammar/style
+polish and Hinglish → English conversion (e.g. "abhi ne us deen us khatre ko
+meehsoos karta hi…" → "Abhi sensed the danger that day…"), plus Auto-detect.
+
+**Scale architecture (the point of the feature):**
+1. **Threshold-based batching** (`lib/ai/editorAssist.ts`): NO request ever
+   fires on keystrokes/typing pauses. The only trigger is one explicit
+   button click, armed solely at ≥300 words OR ≥1,500 chars (~one page),
+   hard-capped at 24k chars/batch; the threshold is re-checked server- AND
+   client-side. At 100k+ creators this is the ~95% API-request reduction.
+2. **Hybrid compute**: default engine is ON-DEVICE `@mlc-ai/web-llm`
+   (WebGPU) via a lazy dynamic-import singleton (`lib/ai/webllmEngine.ts`,
+   Llama-3.2-3B → Qwen2.5-1.5B → Qwen2.5-0.5B cascade). Cloud mode is an
+   explicit fallback.
+3. **BYOK cloud fallback**: `/api/ai/editor-assist` (route handler) proxies
+   Gemini (`gemini-2.0-flash-lite`) or Groq (`llama-3.3-70b-versatile`)
+   using the creator's OWN key passed per-request via `x-wm-ai-provider` /
+   `x-wm-ai-key` headers. Stateless pass-through: key used once, never
+   persisted or logged (logs carry sizes/status only). No server keys exist.
+
+**Privacy implementation:** keys are AES-GCM encrypted before localStorage
+(`lib/ai/byokStorage.ts`); the non-extractable CryptoKey lives in IndexedDB
+(`wm-ai-vault`). Cloud actions require the explicit consent checkbox ("I
+understand my key is kept strictly local to my browser"). The mandated
+compliance notice (🔒 …GDPR/IT Act…) renders in both the settings modal and
+a dismissible editor banner. Settings modal = BYOK panel (provider picker,
+masked input, wipe-keys). Drafts autosave locally only (`wm_ai_writer_draft_v1`).
+
+**Editor plumbing:** Tiptap v3 (`@tiptap/react@3`, StarterKit trimmed to
+what MANGAL's reader renders) in `components/editor/AiWritingEditor.tsx`
+(`immediatelyRender: false` for SSR safety; live word/char counters + read
+time; "340 / 300 words required for batch AI check" indicator; status bar:
+"✨ WebMangal AI polishing full page…" + model-download %). New
+`components/editor/manuscriptText.ts` bridges Tiptap docs ↔ MANGAL's chapter
+dialect (**bold**, *italic*, "# heading", "***" scene break), so AI output
+round-trips through the exact format `novelEditor.ts`'s reader parser
+expects — no new formatting dialect introduced. Diff highlighting uses a
+dependency-free word-LCS (`lib/ai/textDiff.ts`) in
+`components/editor/DiffReviewModal.tsx`.
+
+**CSP changes (next.config.ts):** script-src gained `'wasm-unsafe-eval'`
+(WebLLM's TVM WASM runtime) and moved below a comment block; connect-src
+gained huggingface.co/*.huggingface.co/*.hf.co/*.xethub.hf.co (on-device
+weight downloads); added `worker-src 'self' blob:`. The CLOUD path needs no
+provider domains in CSP — it goes through same-origin `/api/ai/editor-assist`.
+
+**Not done this pass:** wiring the assistant INTO the legacy textarea writer
+at `/WebMangal/upload` (1286-line page — deliberately untouched; the Studio
+AI Writer page + "Copy for uploader" export covers the workflow without
+destabilizing the live upload flow); publishing polished chapters directly
+to Supabase from the AI Writer (kept read/write local on purpose); model-ID
+verification against live HF availability for the WebLLM cascade (first
+local run will confirm; failures auto-fall-through to smaller models).
+
+Verified this pass: `npx tsc --noEmit` clean project-wide; `npm run lint`
+clean on touched files; `npm run build` production build succeeds.
+
+## §134 — AI Writer attached to every creator text surface (+ BYOK hardening)
+
+Universal attachment layer shipped: `components/editor/useAiAssistEngine.ts`
+is now the SINGLE orchestration brain (thresholds, >4k-word auto-splitting,
+on-device/BYOK lanes, §133 recovery matrix, toasts, diff handoff), and
+`components/editor/WebMangalAiEditor.tsx` is the drop-in universal textarea
+(`useAiAssistant` exported as the public hook alias; per-feature batching
+bars in FEATURE_THRESHOLDS — prose keeps 300w/1500c, metadata fields get
+proportionally smaller click-gated bars). `AiAssistOverlays.tsx` renders the
+shared settings/diff/toast stack. The Tiptap Studio writer
+(AiWritingEditor) still carries its own pre-extraction copy of the pipeline
+— converging it onto the hook is the noted follow-up.
+
+**Wired surfaces:** `/WebMangal/upload` — series Description (synopsis),
+Author's Note before/after, and the novel Chapter Text editor (textarea ref
+forwarded via innerRef so Bold/Italic/Heading/Scene-break selection tooling
+keeps working); focus-mode stays plain by design. Plus Books module
+Description (`maxLength=4000` preserved) and Songs lyric blocks.
+Character-profile / lore-codex / scene-script editors don't exist in the
+repo yet (§~822 skipped them as scope creep) — WebMangalAiEditor's feature
+map already defines their bars for when they're built.
+
+**Key-pipeline hardening (from §133 feedback):** OpenAI added as a third
+provider (gpt-4o-mini; sk-/sk-proj- format); new `lib/ai/keyVerification.ts`
+runs gate 1 offline prefix checks (AIzaSy…/gsk_…/sk-…) with wrong-platform
+detection ("Invalid Key Format for selected provider.") and gate 2 zero-
+token dry-run pings (provider models-list via same-origin proxy
+`{ping:true}`); settings modal shows 🟢/🔴/🟡 badges and Save unlocks ONLY
+on verified. "Get Free API Key" deep-links to the selected portal with an
+SSO notice built from the session email (useStudioAuth user.email threaded
+page → editor → modal).
+
+**Not done this pass:** AiWritingEditor→hook convergence (above); reader
+comments/reviews intentionally NOT AI-wrapped (reader-generated, not
+creator drafting).
+
+Verified this pass: `npx tsc --noEmit` clean project-wide; eslint 0 errors
+(2 pre-existing warnings remain on untouched upload-page lines);
+`npm run build` succeeds.
+
+
 ## §91 — Deploy failure root-caused: missing GitHub Actions secrets
 
 "Deploy to Cloudflare Workers" workflow had been failing (~20s, fails

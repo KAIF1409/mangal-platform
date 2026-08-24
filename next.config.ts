@@ -19,7 +19,8 @@ const securityHeaders = [
       // were leftovers from before that move (and from the now-removed
       // <Analytics /> component, see layout.tsx) — dropped since they no
       // longer correspond to anything this app actually loads.
-      "script-src 'self' 'unsafe-inline' https://www.youtube.com",
+      // §133: script-src now lives below the WebMangal AI Writer block
+      // (adds 'wasm-unsafe-eval' for WebLLM's WASM runtime).
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.supabase.co https://img.youtube.com https://i.ytimg.com",
       "font-src 'self' data:",
@@ -32,7 +33,18 @@ const securityHeaders = [
       // page couldn't load"). Every other product page that doesn't open a
       // Realtime socket was unaffected, which is why only Kalpana Circle
       // broke. Adding the wss:// scheme explicitly fixes it.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      //
+      // §133 additions — WebMangal AI Writer's ON-DEVICE inference path:
+      // @mlc-ai/web-llm downloads model weights + configs straight from
+      // Hugging Face's CDNs into the browser cache (the cloud assist path
+      // needs nothing here because it proxies through same-origin
+      // /api/ai/editor-assist). *.hf.co covers hf.co mirrors; *.xethub.hf.co
+      // is Hugging Face's Xet blob storage where LFS shards actually live.
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://huggingface.co https://*.huggingface.co https://*.hf.co https://*.xethub.hf.co",
+      // 'wasm-unsafe-eval' — WebLLM compiles its TVM runtime to WebAssembly;
+      // without this the on-device engine can't boot. No looser eval added.
+      "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.youtube.com",
+      "worker-src 'self' blob:",
       "frame-ancestors 'none'",
       "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
       "base-uri 'self'",

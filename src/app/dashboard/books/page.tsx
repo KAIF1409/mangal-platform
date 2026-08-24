@@ -1,5 +1,7 @@
 'use client';
 
+import WebMangalAiEditor from '../../components/editor/WebMangalAiEditor';
+
 // Books module — creator-side management under the Studio sidebar.
 // Create (draft or publish), publish/unpublish, and delete books. The book
 // FILE goes through /api/upload-book-file (PDF/EPUB magic-byte validated,
@@ -334,7 +336,15 @@ export default function DashboardBooksPage() {
                 </div>
                 <div>
                   <label style={labelStyle}>Description</label>
-                  <textarea style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this book about?" maxLength={4000} />
+                  <WebMangalAiEditor
+                    feature="book-description"
+                    ariaLabel="Book description"
+                    style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }}
+                    value={description}
+                    onChange={setDescription}
+                    placeholder="What is this book about?"
+                    maxLength={4000}
+                  />
                 </div>
                 <div>
                   <label style={labelStyle}>Category</label>
