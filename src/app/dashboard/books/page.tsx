@@ -10,7 +10,7 @@ import WebMangalAiEditor from '../../components/editor/WebMangalAiEditor';
 // it to its author, and the DB's CHECK constraint is what enforces
 // "PAID requires price > 0" no matter what this UI does.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
@@ -19,10 +19,19 @@ import Navbar from '../../components/shared/Navbar';
 import Footer from '../../components/shared/Footer';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
+import { countWords, estimateReadTime, renderNovelPreviewHtml } from '../../lib/novelEditor';
+import { generateBookPdfBlob, bookPdfBlobToFile } from '../../lib/bookPdf';
 import {
   BookOpen, Plus, Trash2, Eye, EyeOff, Loader2, FileText,
-  IndianRupee, CheckCircle2, X,
+  IndianRupee, CheckCircle2, X, Upload, PenLine, Expand, Edit3,
 } from 'lucide-react';
+
+// Minimum length before a "Write here" manuscript can be published — same
+// bar as a single novel chapter (see lib/novelEditor.ts / WebMangal/upload),
+// reused here rather than inventing a separate number since a whole book is
+// obviously longer than one chapter but there's no existing "book-length"
+// convention to anchor to instead.
+const MIN_WORDS_PER_WRITTEN_BOOK = 300;
 
 interface BookRow {
   id: string;
@@ -77,6 +86,25 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: '0.04em',
 };
 
+const toolbarBtnStyle: React.CSSProperties = {
+  padding: '6px 10px', borderRadius: '6px',
+  background: 'var(--bg-input)', border: '1px solid var(--border-color)',
+  color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const toolbarBtnActiveStyle: React.CSSProperties = {
+  background: 'rgba(var(--accent-rgb), 0.18)', border: '1px solid var(--accent)', color: 'var(--text-primary)',
+};
+
+const sourceModeBtnStyle = (active: boolean): React.CSSProperties => ({
+  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+  padding: '10px', borderRadius: '8px', cursor: 'pointer',
+  border: active ? '2px solid var(--accent)' : '1px solid var(--border-color)',
+  background: active ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-input)',
+  color: 'var(--text-primary)', fontWeight: 700, fontSize: '13px',
+});
+
 export default function DashboardBooksPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,6 +124,16 @@ export default function DashboardBooksPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Book source — "Upload a file" (unchanged, existing flow) or "Write here"
+  // (new: a novel-writer-style manuscript editor that gets rendered into a
+  // real PDF client-side and pushed through the exact same upload pipeline).
+  const [bookSourceMode, setBookSourceMode] = useState<'upload' | 'write'>('upload');
+  const [bookContent, setBookContent] = useState('');
+  const [writePreviewMode, setWritePreviewMode] = useState(false);
+  const [writeFocusMode, setWriteFocusMode] = useState(false);
+  const [myUsername, setMyUsername] = useState<string | null>(null);
+  const writeTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
   // Two-click confirm delete — same pattern as chapter deletes on /dashboard.
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busyBookId, setBusyBookId] = useState<string | null>(null);
@@ -110,6 +148,15 @@ export default function DashboardBooksPage() {
       }
       setUser(data.user);
       await loadBooks(data.user.id);
+      // Best-effort only — used for the "by <username>" line on a
+      // Write-mode PDF's title page. No username yet is fine, the PDF
+      // just omits the byline.
+      const { data: profile } = await supabase
+        .from('creator_profiles')
+        .select('username')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+      setMyUsername(profile?.username ?? null);
       setLoading(false);
     })();
   }, []);
@@ -134,6 +181,10 @@ export default function DashboardBooksPage() {
     setPricingType('FREE');
     setPriceRupees('');
     setFormError(null);
+    setBookSourceMode('upload');
+    setBookContent('');
+    setWritePreviewMode(false);
+    setWriteFocusMode(false);
   }
 
   function handleCoverPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -141,6 +192,89 @@ export default function DashboardBooksPage() {
     setCoverFile(f);
     setCoverPreview(f ? URL.createObjectURL(f) : null);
   }
+
+  // ── Write-mode manuscript toolbar ────────────────────────────────────
+  // Same **bold** / *italic* / "# heading" / "***" scene-break toolbar as
+  // the novel chapter writer (WebMangal/upload), scoped to this page's own
+  // textarea/state rather than sharing that page's handlers directly.
+  const applyToWriteTextarea = (nextValue: string, selStart: number, selEnd: number) => {
+    const el = writeTextareaRef.current;
+    if (!el) return;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+    if (setter) {
+      setter.call(el, nextValue);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      setBookContent(nextValue);
+    }
+    el.focus();
+    el.setSelectionRange(selStart, selEnd);
+  };
+
+  const wrapWriteSelection = (mark: string, placeholder: string) => {
+    const el = writeTextareaRef.current;
+    if (!el) return;
+    const { selectionStart, selectionEnd, value } = el;
+    const selected = value.slice(selectionStart, selectionEnd);
+    const ml = mark.length;
+
+    const startsWithExact = selected.startsWith(mark) && selected[ml] !== '*';
+    const endsWithExact = selected.endsWith(mark) && selected[selected.length - ml - 1] !== '*';
+    if (startsWithExact && endsWithExact && selected.length > ml * 2) {
+      const inner = selected.slice(ml, selected.length - ml);
+      const next = value.slice(0, selectionStart) + inner + value.slice(selectionEnd);
+      applyToWriteTextarea(next, selectionStart, selectionStart + inner.length);
+      return;
+    }
+    const beforeIsExactMark =
+      selectionStart >= ml &&
+      value.slice(selectionStart - ml, selectionStart) === mark &&
+      value[selectionStart - ml - 1] !== '*';
+    const afterIsExactMark =
+      value.slice(selectionEnd, selectionEnd + ml) === mark &&
+      value[selectionEnd + ml] !== '*';
+    if (beforeIsExactMark && afterIsExactMark) {
+      const next = value.slice(0, selectionStart - ml) + selected + value.slice(selectionEnd + ml);
+      applyToWriteTextarea(next, selectionStart - ml, selectionStart - ml + selected.length);
+      return;
+    }
+
+    const word = selected || placeholder;
+    const next = value.slice(0, selectionStart) + mark + word + mark + value.slice(selectionEnd);
+    applyToWriteTextarea(next, selectionStart + ml + word.length + ml, selectionStart + ml + word.length + ml);
+  };
+
+  const toggleWriteHeading = () => {
+    const el = writeTextareaRef.current;
+    if (!el) return;
+    const { selectionStart, value } = el;
+    const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+    const prefix = '# ';
+    if (value.slice(lineStart, lineStart + prefix.length) === prefix) {
+      const next = value.slice(0, lineStart) + value.slice(lineStart + prefix.length);
+      applyToWriteTextarea(next, Math.max(lineStart, selectionStart - prefix.length), Math.max(lineStart, selectionStart - prefix.length));
+    } else {
+      const next = value.slice(0, lineStart) + prefix + value.slice(lineStart);
+      applyToWriteTextarea(next, selectionStart + prefix.length, selectionStart + prefix.length);
+    }
+  };
+
+  const insertWriteSceneBreak = () => {
+    const el = writeTextareaRef.current;
+    if (!el) return;
+    const { selectionStart, value } = el;
+    const needsLeadingBreak = selectionStart > 0 && value[selectionStart - 1] !== '\n';
+    const block = `${needsLeadingBreak ? '\n\n' : ''}***\n\n`;
+    const next = value.slice(0, selectionStart) + block + value.slice(selectionStart);
+    applyToWriteTextarea(next, selectionStart + block.length, selectionStart + block.length);
+  };
+
+  const handleWriteTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 'b') { e.preventDefault(); wrapWriteSelection('**', 'bold text'); }
+    if (mod && e.key.toLowerCase() === 'i') { e.preventDefault(); wrapWriteSelection('*', 'italic text'); }
+    if (mod && e.key.toLowerCase() === 'h') { e.preventDefault(); toggleWriteHeading(); }
+  };
 
   async function handleSubmit(status: 'draft' | 'published') {
     setFormError(null);
@@ -164,16 +298,33 @@ export default function DashboardBooksPage() {
       setFormError('Book title is required.');
       return;
     }
-    if (!bookFile) {
+    if (bookSourceMode === 'upload' && !bookFile) {
       setFormError('Attach the book file (PDF or EPUB).');
+      return;
+    }
+    // Drafts are allowed to be unfinished — same convention as the novel
+    // chapter writer's "Save Draft" (bypasses the word-count minimum).
+    if (bookSourceMode === 'write' && status === 'published' && countWords(bookContent) < MIN_WORDS_PER_WRITTEN_BOOK) {
+      setFormError(`Your manuscript needs at least ${MIN_WORDS_PER_WRITTEN_BOOK} words to publish — you have ${countWords(bookContent)}.`);
+      return;
+    }
+    if (bookSourceMode === 'write' && !bookContent.trim()) {
+      setFormError('Write something before saving.');
       return;
     }
 
     setSubmitting(true);
     try {
-      // 1. Book file → gated storage prefix.
+      // 1. Book file → gated storage prefix. In Write mode, the manuscript
+      // is rendered into a real PDF client-side first, then pushed through
+      // the exact same upload route/validation a hand-picked file would go
+      // through — nothing downstream needs to know which path was used.
+      const fileToUpload = bookSourceMode === 'write'
+        ? bookPdfBlobToFile(await generateBookPdfBlob(title.trim(), myUsername, bookContent), title)
+        : bookFile!;
+
       const fd = new FormData();
-      fd.append('file', bookFile);
+      fd.append('file', fileToUpload);
       fd.append('folder', MEDIA_FOLDERS.booksFiles);
       const { data: sessionData } = await supabase.auth.getSession();
       const fileRes = await fetch('/api/upload-book-file', {
@@ -293,8 +444,9 @@ export default function DashboardBooksPage() {
           </button>
         </div>
         <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.5 }}>
-          Publish standalone books — novels, novellas, poetry collections — as PDF or EPUB files.
-          Free books are readable by everyone; paid books unlock after purchase.
+          Publish standalone books — novels, novellas, poetry collections — as PDF or EPUB files,
+          or write one straight into MANGAL like a novel chapter. Free books are readable by
+          everyone; paid books unlock after purchase.
         </p>
 
         {/* ── Add / create form ─────────────────────────────────────── */}
@@ -353,17 +505,121 @@ export default function DashboardBooksPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>Book file * (PDF or EPUB, max 50MB)</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.epub,application/pdf,application/epub+zip"
-                    onChange={(e) => setBookFile(e.target.files?.[0] || null)}
-                    style={{ ...inputStyle, padding: '8px' }}
-                  />
-                  {bookFile && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      <FileText size={13} /> {bookFile.name} · {formatBytes(bookFile.size)}
-                    </div>
+                  <label style={labelStyle}>Book content *</label>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                    <button type="button" onClick={() => setBookSourceMode('upload')} style={sourceModeBtnStyle(bookSourceMode === 'upload')}>
+                      <Upload size={14} /> Upload a file
+                    </button>
+                    <button type="button" onClick={() => setBookSourceMode('write')} style={sourceModeBtnStyle(bookSourceMode === 'write')}>
+                      <PenLine size={14} /> Write here
+                    </button>
+                  </div>
+
+                  {bookSourceMode === 'upload' ? (
+                    <>
+                      <label style={{ ...labelStyle, fontSize: '11px' }}>PDF or EPUB, max 50MB</label>
+                      <input
+                        type="file"
+                        accept=".pdf,.epub,application/pdf,application/epub+zip"
+                        onChange={(e) => setBookFile(e.target.files?.[0] || null)}
+                        style={{ ...inputStyle, padding: '8px' }}
+                      />
+                      {bookFile && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          <FileText size={13} /> {bookFile.name} · {formatBytes(bookFile.size)}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', margin: '0 0 8px', lineHeight: 1.5 }}>
+                        Write your book like a novel chapter — <code>**bold**</code>, <code>*italic*</code>,{' '}
+                        <code># heading</code>, and a scene-break button are all supported. On publish,
+                        this is turned into a real PDF automatically.
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Manuscript</span>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button type="button" onClick={() => setWriteFocusMode(true)} title="Focus mode — distraction-free full screen" style={toolbarBtnStyle}>
+                            <Expand size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Focus
+                          </button>
+                          <button type="button" onClick={() => setWritePreviewMode((p) => !p)} title="Toggle live preview" style={{ ...toolbarBtnStyle, ...(writePreviewMode ? toolbarBtnActiveStyle : {}) }}>
+                            {writePreviewMode ? <><Edit3 size={13} style={{ verticalAlign: 'middle' }} /> Edit</> : <><Eye size={13} style={{ verticalAlign: 'middle' }} /> Preview</>}
+                          </button>
+                        </div>
+                      </div>
+
+                      {!writePreviewMode && (
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                          <button type="button" onClick={() => wrapWriteSelection('**', 'bold text')} title="Bold (Ctrl+B)" style={toolbarBtnStyle}><strong>B</strong></button>
+                          <button type="button" onClick={() => wrapWriteSelection('*', 'italic text')} title="Italic (Ctrl+I)" style={toolbarBtnStyle}><em>I</em></button>
+                          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={toggleWriteHeading} title="Heading (Ctrl+H)" style={toolbarBtnStyle}>H</button>
+                          <button type="button" onClick={insertWriteSceneBreak} title="Scene break" style={toolbarBtnStyle}>⁘ Scene Break</button>
+                        </div>
+                      )}
+
+                      {writePreviewMode ? (
+                        <div
+                          style={{ ...inputStyle, minHeight: '320px', lineHeight: 1.7, fontFamily: 'Georgia, "Noto Serif", serif', fontSize: '14px', overflowY: 'auto' }}
+                          dangerouslySetInnerHTML={{ __html: bookContent.trim() ? renderNovelPreviewHtml(bookContent) : '<p style="color:var(--text-muted);">Nothing to preview yet — start writing.</p>' }}
+                        />
+                      ) : (
+                        <WebMangalAiEditor
+                          innerRef={writeTextareaRef}
+                          feature="chapter"
+                          ariaLabel="Book manuscript"
+                          placeholder={'Likho yahan... # for a heading, **bold**, *italic*'}
+                          value={bookContent}
+                          onChange={setBookContent}
+                          onKeyDown={handleWriteTextareaKeyDown}
+                          rows={16}
+                          spellCheck
+                          style={{
+                            ...inputStyle,
+                            resize: 'vertical',
+                            lineHeight: 1.7,
+                            fontFamily: 'Georgia, "Noto Serif", serif',
+                            fontSize: '14px',
+                          }}
+                        />
+                      )}
+
+                      {/* Focus mode — full-screen distraction-free overlay, same textarea state */}
+                      {writeFocusMode && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', zIndex: 1000, display: 'flex', flexDirection: 'column', padding: '32px' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px', maxWidth: '760px', margin: '0 auto 16px', width: '100%' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{countWords(bookContent)} words · {estimateReadTime(countWords(bookContent))}</span>
+                            <button type="button" onClick={() => setWriteFocusMode(false)} style={toolbarBtnStyle}><X size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Exit Focus Mode</button>
+                          </div>
+                          <textarea
+                            autoFocus
+                            value={bookContent}
+                            onChange={(e) => setBookContent(e.target.value)}
+                            onKeyDown={handleWriteTextareaKeyDown}
+                            spellCheck
+                            style={{
+                              flex: 1, width: '100%', maxWidth: '760px', margin: '0 auto',
+                              background: 'transparent', border: 'none', outline: 'none', resize: 'none',
+                              color: 'var(--text-primary)', lineHeight: 1.9, fontFamily: 'Georgia, "Noto Serif", serif', fontSize: '17px',
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px',
+                        padding: '10px 14px', borderRadius: '8px',
+                        background: countWords(bookContent) >= MIN_WORDS_PER_WRITTEN_BOOK ? 'rgba(16,185,129,0.1)' : 'rgba(217,119,6,0.1)',
+                        border: `1px solid ${countWords(bookContent) >= MIN_WORDS_PER_WRITTEN_BOOK ? 'rgba(16,185,129,0.3)' : 'rgba(217,119,6,0.3)'}`,
+                      }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: countWords(bookContent) >= MIN_WORDS_PER_WRITTEN_BOOK ? '#10b981' : '#d97706' }}>
+                          {countWords(bookContent)} / {MIN_WORDS_PER_WRITTEN_BOOK} words minimum
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          {estimateReadTime(countWords(bookContent))}
+                        </span>
+                      </div>
+                    </>
                   )}
                 </div>
                 <div>
@@ -421,19 +677,27 @@ export default function DashboardBooksPage() {
                   >
                     Save Draft
                   </button>
-                  <button
-                    onClick={() => handleSubmit('published')}
-                    disabled={submitting}
-                    style={{
-                      flex: 1, padding: '11px', borderRadius: '8px', cursor: submitting ? 'wait' : 'pointer',
-                      border: 'none', background: 'var(--accent)', color: '#fff',
-                      fontWeight: 800, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      opacity: submitting ? 0.7 : 1,
-                    }}
-                  >
-                    {submitting && <Loader2 size={15} className="spin" />}
-                    Publish
-                  </button>
+                  {(() => {
+                    const belowMinimum = bookSourceMode === 'write' && countWords(bookContent) < MIN_WORDS_PER_WRITTEN_BOOK;
+                    return (
+                      <button
+                        onClick={() => handleSubmit('published')}
+                        disabled={submitting || belowMinimum}
+                        style={{
+                          flex: 1, padding: '11px', borderRadius: '8px', cursor: (submitting || belowMinimum) ? 'not-allowed' : 'pointer',
+                          border: 'none', background: belowMinimum ? 'var(--border-color)' : 'var(--accent)',
+                          color: belowMinimum ? 'var(--text-tertiary)' : '#fff',
+                          fontWeight: 800, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                          opacity: submitting ? 0.7 : 1,
+                        }}
+                      >
+                        {submitting && <Loader2 size={15} className="spin" />}
+                        {belowMinimum
+                          ? `Need ${MIN_WORDS_PER_WRITTEN_BOOK - countWords(bookContent)} more word(s)`
+                          : 'Publish'}
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
