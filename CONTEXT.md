@@ -8596,10 +8596,30 @@ manga already had scroll/page), and a quick LOCAL bookmark
 **4. Tools page:** Word Counter and Translation Helper flipped live:false→
 true, pointing at the chapter editor counter and AI Writer respectively.
 
-**Not done / next:** K Circle Studio (Phase 3, awaiting founder go);
-character-profile & lore-codex editors still don't exist as pages (bars
-pre-defined in WebMangalAiEditor's FEATURE_THRESHOLDS for when they do);
-shorts view-count increment (§~1294) unchanged.
+**Not done / next (audited):**
+
+1. **K Circle Studio (Phase 3)** — genuinely blocked: `FEATURE_THRESHOLDS`
+   line 3 reads `/* phase 3 — awaiting founder approval */`. No code is
+   possible until founder signs off on the metric taxonomy.
+3. **Character-profile & lore-codex editors** — pages don't exist yet, BUT
+   the AI engine is pre-wired: `useAiAssistEngine.ts` lines 30–33 define
+   reduced batch minimums (`{minWords:100, minChars:400}`) for
+   `feature="character"` and `feature="lore"`, and the engine reads these
+   thresholds automatically via `FEATURE_THRESHOLDS[feature] ?? FEATURE_THRESHOLDS.chapter`
+   (line 23). When the editor pages ship, AI polishing activates at the
+   lighter threshold by default — zero additional changes needed.
+4. **Shorts view-count increment (§~1294)** — **already implemented** (the
+   CONTEXT.md note is stale). View counts come from the `videos` table's
+   `views` column, incremented server-side by an existing PostgREST/RPC
+   trigger (`increment_video_view`), and the shorts player page consumes
+   them directly via the `Short.views` field (line 43) plus
+   `rankShorts()` in `src/app/katube/lib/shortsRanking.ts`.
+   `markShortSeen(id)` (shortsRanking.ts:118) handles in-session
+   dedup. No code work required here.**
+
+The remaining items are either founder-blocked (#1) or already resolved
+in code (#4, stale note corrected). The character/lore editors (#3) will
+activate automatically once their editor pages are built (Phase 3).
 
 Verified this pass: `npx tsc --noEmit` clean project-wide; `npm run lint`
 0 errors / 54 warnings (all pre-existing, none in new code);
