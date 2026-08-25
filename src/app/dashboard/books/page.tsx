@@ -19,6 +19,7 @@ import Navbar from '../../components/shared/Navbar';
 import Footer from '../../components/shared/Footer';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
+import type { BookRow } from '../../lib/database.types';
 import { countWords, estimateReadTime, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { generateBookPdfBlob, bookPdfBlobToFile } from '../../lib/bookPdf';
 import {
@@ -33,21 +34,8 @@ import {
 // convention to anchor to instead.
 const MIN_WORDS_PER_WRITTEN_BOOK = 300;
 
-interface BookRow {
-  id: string;
-  title: string;
-  description: string | null;
-  cover_image_url: string | null;
-  file_url: string;
-  file_type: 'pdf' | 'epub';
-  file_size_bytes: number | null;
-  pricing_type: 'FREE' | 'PAID';
-  price_paise: number | null;
-  category: string | null;
-  status: 'draft' | 'published';
-  views: number;
-  created_at: string;
-}
+// BookRow comes from lib/database.types.ts — one shared definition across the
+// dashboard, catalog, detail page and View rails, mirroring public.books.
 
 const CATEGORY_OPTIONS = [
   'Fiction', 'Non-Fiction', 'Mythology', 'Fantasy', 'Science Fiction',

@@ -15,6 +15,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../../lib/supabase';
+import type { BookRow } from '../../../lib/database.types';
 import Navbar from '../../../components/shared/Navbar';
 import Footer from '../../../components/shared/Footer';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
@@ -23,20 +24,7 @@ import {
   BookOpen, FileText, ArrowLeft, Loader2, Lock, PlayCircle,
 } from 'lucide-react';
 
-interface BookRow {
-  id: string;
-  title: string;
-  description: string | null;
-  cover_image_url: string | null;
-  file_type: 'pdf' | 'epub';
-  file_size_bytes: number | null;
-  pricing_type: 'FREE' | 'PAID';
-  price_paise: number | null;
-  category: string | null;
-  status: 'draft' | 'published';
-  views: number;
-  author_id: string;
-}
+// BookRow comes from lib/database.types.ts (shared books-module row shape).
 
 function formatPaise(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;

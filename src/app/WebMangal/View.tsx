@@ -5,6 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import type { BookRow } from '../lib/database.types';
 import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/shared/ProfileMenu';
 import Navbar from '../components/shared/Navbar';
@@ -75,18 +76,7 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 type ContentTypeFilter = 'all' | 'mangal' | 'novel' | 'books' | 'songs';
 const CONTENT_TYPE_STORAGE_KEY = 'mangal_content_type';
 
-interface BookRow {
-  id: string;
-  title: string;
-  cover_image_url: string | null;
-  file_type: 'pdf' | 'epub';
-  pricing_type: 'FREE' | 'PAID';
-  price_paise: number | null;
-  category: string | null;
-  author_id: string;
-  views: number;
-  created_at: string;
-}
+// BookRow comes from lib/database.types.ts (shared books-module row shape).
 
 function formatPaise(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;

@@ -10,22 +10,12 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
+import type { BookRow } from '../../lib/database.types';
 import Navbar from '../../components/shared/Navbar';
 import Footer from '../../components/shared/Footer';
 import { BookOpen, FileText } from 'lucide-react';
 
-interface BookRow {
-  id: string;
-  title: string;
-  description: string | null;
-  cover_image_url: string | null;
-  file_type: 'pdf' | 'epub';
-  pricing_type: 'FREE' | 'PAID';
-  price_paise: number | null;
-  category: string | null;
-  author_id: string;
-  created_at: string;
-}
+// BookRow comes from lib/database.types.ts (shared books-module row shape).
 
 const CATEGORY_FILTERS = ['All', 'Fiction', 'Non-Fiction', 'Mythology', 'Fantasy', 'Science Fiction', 'Horror', 'Romance', 'Thriller', 'Poetry', 'Other'];
 
