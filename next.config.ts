@@ -227,6 +227,14 @@ const nextConfig: NextConfig = {
         destination: "/WebMangal/creator/:username",
         permanent: true,
       },
+      // §135 — Webtoon storyboard tool lives inside WebMangal Studio (per
+      // product-namespacing decision, §131). /studio/convert is kept as a
+      // friendly alias so the roadmap URL still lands in the right place.
+      {
+        source: '/studio/convert',
+        destination: '/mangal-studio/webmangal/convert',
+        permanent: false,
+      },
     ];
   },
 };

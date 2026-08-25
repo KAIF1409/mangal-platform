@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import StudioSidebar from '../../components/shared/StudioSidebar';
 import ProductSwitcher from '../ProductSwitcher';
 import { WebMangalStudioThemeContext } from './ThemeContext';
-import { LayoutGrid, BarChart3, Star, Sparkles } from 'lucide-react';
+import { LayoutGrid, BarChart3, Star, Sparkles, Clapperboard } from 'lucide-react';
 
 // §114/§126 Phase 2 — WebMangal Studio shell, same shape as
 // KatubeStudioShell (forced-dark-by-default, light optional plumbing,
@@ -26,6 +26,7 @@ const TABS = [
   { href: '/mangal-studio/webmangal/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/mangal-studio/webmangal/reviews', label: 'Reviews', icon: Star },
   { href: '/mangal-studio/webmangal/write', label: 'AI Writer', icon: Sparkles },
+  { href: '/mangal-studio/webmangal/convert', label: 'Storyboard', icon: Clapperboard },
 ];
 
 export default function WebMangalStudioShell({ children }: { children: React.ReactNode }) {

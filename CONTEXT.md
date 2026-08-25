@@ -8518,7 +8518,7 @@ local run will confirm; failures auto-fall-through to smaller models).
 Verified this pass: `npx tsc --noEmit` clean project-wide; `npm run lint`
 clean on touched files; `npm run build` production build succeeds.
 
-## §134 — AI Writer attached to every creator text surface (+ BYOK hardening)
+## §133–134 — AI Writer universal attachment + BYOK key pipeline hardening
 
 Universal attachment layer shipped: `components/editor/useAiAssistEngine.ts`
 is now the SINGLE orchestration brain (thresholds, >4k-word auto-splitting,
@@ -8557,6 +8557,54 @@ creator drafting).
 Verified this pass: `npx tsc --noEmit` clean project-wide; eslint 0 errors
 (2 pre-existing warnings remain on untouched upload-page lines);
 `npm run build` succeeds.
+
+## §135 — Recommendations engine, webtoon storyboard, reader spec gaps (roadmap close-out)
+
+Audit-first pass against the external feature brief: Mangal Studio analytics
+(§114/§116/§126/§130/§131), the immersive novel/manga reader's theme/font/
+line-height controls and DB-backed resume (`reading_progress` upsert +
+`resumeApplied`), and per-product studios were ALREADY complete — rebuilt
+nothing there. Genuinely missing pieces shipped below; payments/Razorpay
+excluded per the standing zero-paid-integrations constraint.
+
+**1. In-house recommendations (replaces "no ranking beyond ilike" gap):**
+`/api/recommendations` scores published series with cosine similarity over
+binary genre vectors + author/language overlap + log-scaled popularity prior,
+seeded from `reading_progress` recency ∪ `follows`. Deliberately NOT pgvector
+— binary-vector cosine is array-intersection math; stock Postgres suffices
+at this cardinality (zero extension, zero cost). Optional Bearer token →
+personalised; anonymous → trending fallbacks. UI:
+`components/feed/RecommendedForYou.tsx` renders three scroll-snap rails
+("Recommended For You" / "Because you read X" / "Trending in <genre>") on
+`/WebMangal/home` above the footer.
+
+**2. Webtoon storyboard tool:** `/mangal-studio/webmangal/convert`
+(+ non-permanent redirect from the briefed `/studio/convert`, keeping the
+§131 product-namespacing rule). Pure client-side: heuristic text→panel
+splitter (# heading → SCENE, *** → TRANSITION, `Name:` / quoted lines →
+DIALOGUE with speaker detection, @char cues → ACTION, long narration split
+≤240 chars); HTML5 drag-and-drop reorder (+ ◀ ▶ fallback); editable text,
+dialogue balloon position, transition/camera notes, delete; exports
+re-importable structured JSON and a plain-text shot-list script.
+
+**3. Reader gaps filled** (spec items the reader lacked): side-margin
+selector (Narrow/Normal/Wide, persisted in `mangal_reader_prefs`),
+paginated book view for novels (CSS-columns horizontal pager with snap;
+manga already had scroll/page), and a quick LOCAL bookmark
+(`wm_reader_bookmarks_v1`) with floating toggle + "% restore" banner.
+
+**4. Tools page:** Word Counter and Translation Helper flipped live:false→
+true, pointing at the chapter editor counter and AI Writer respectively.
+
+**Not done / next:** K Circle Studio (Phase 3, awaiting founder go);
+character-profile & lore-codex editors still don't exist as pages (bars
+pre-defined in WebMangalAiEditor's FEATURE_THRESHOLDS for when they do);
+shorts view-count increment (§~1294) unchanged.
+
+Verified this pass: `npx tsc --noEmit` clean project-wide; `npm run lint`
+0 errors / 54 warnings (all pre-existing, none in new code);
+`npm run build` production build succeeds with no broken imports or
+hydration errors.
 
 
 ## §91 — Deploy failure root-caused: missing GitHub Actions secrets

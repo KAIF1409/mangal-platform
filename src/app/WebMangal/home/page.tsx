@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
+import RecommendedForYou from '../../components/feed/RecommendedForYou';
 import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../../components/shared/ProfileMenu';
 import ThemeToggle from '../../components/shared/ThemeToggle';
@@ -932,6 +933,9 @@ export default function HomePage() {
           </>
         )}
       </div>
+
+      {/* §135 — In-house recommendation rails (For You / Because you read / Trending) */}
+      <RecommendedForYou />
 
       {/* ── FOOTER ── */}
       <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '32px 24px', textAlign: 'center' }}>

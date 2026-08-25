@@ -9,7 +9,7 @@ import {
   CalendarClock, FileText, ArrowLeft, BookOpen, Sparkles, Wrench,
   Menu, Expand, Shrink, Lock, Unlock, Settings, X, ScrollText,
   MoveHorizontal, ChevronRight, ListOrdered, CornerDownRight,
-  Minus, Plus, Wifi, ThumbsUp,
+  Minus, Plus, Wifi, ThumbsUp, Bookmark,
 } from 'lucide-react';
 
 
@@ -67,6 +67,14 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const [lineHeight, setLineHeight] = useState<1.5 | 2 | 2.4>(2);
   const [scrollPercent, setScrollPercent] = useState(0);
   const [fontSize, setFontSize] = useState(16); // px, range 14–24
+
+  // §135 — Reader spec gaps filled: side-margin control, paginated (book)
+  // layout for novels, and a quick LOCAL bookmark with a restore banner.
+  const [contentMargin, setContentMargin] = useState<28 | 44 | 64>(28);
+  const [novelPageMode, setNovelPageMode] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [localResumePct, setLocalResumePct] = useState<number | null>(null);
+  const pageColRef = useRef<HTMLDivElement>(null);
 
   // Author's Note (before/after) + Tags — read-only display for readers.
   // Needs chapters.author_note_before / author_note_after / tags.
@@ -250,6 +258,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       const saved = raw ? JSON.parse(raw) : {};
       if (series.content_type === 'novel') {
         setBgColor(saved.novelBgColor ?? '#f5f0e0');
+        setContentMargin((saved.contentMargin ?? 28) as 28 | 44 | 64);
+        setNovelPageMode(Boolean(saved.novelPageMode));
       } else {
         setBgColor(saved.mangaBgColor ?? '#000000');
       }
@@ -267,11 +277,54 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       // Save bgColor under a type-specific key so novel and manga prefs don't overwrite each other.
       const existing = (() => { try { return JSON.parse(localStorage.getItem('mangal_reader_prefs') || '{}'); } catch { return {}; } })();
       const bgKey = isNovel ? 'novelBgColor' : 'mangaBgColor';
-      localStorage.setItem('mangal_reader_prefs', JSON.stringify({ ...existing, modeOverride, fitMode, tapZonesEnabled, imageQuality, [bgKey]: bgColor, fontSize, fontFamily, lineHeight }));
+      localStorage.setItem('mangal_reader_prefs', JSON.stringify({ ...existing, modeOverride, fitMode, tapZonesEnabled, imageQuality, [bgKey]: bgColor, fontSize, fontFamily, lineHeight, contentMargin, novelPageMode: series?.content_type === 'novel' ? novelPageMode : undefined }));
     } catch {
       // ignore storage errors (private browsing, quota, etc.)
     }
-  }, [modeOverride, fitMode, tapZonesEnabled, imageQuality, bgColor, prefsLoaded, fontSize, fontFamily, lineHeight]);
+  }, [modeOverride, fitMode, tapZonesEnabled, imageQuality, bgColor, prefsLoaded, fontSize, fontFamily, lineHeight, contentMargin, novelPageMode, series?.content_type]);
+
+  // §135 — Quick LOCAL bookmark: one per chapter, restored via banner.
+  const BOOKMARKS_KEY = 'wm_reader_bookmarks_v1';
+  const readBookmarks = (): { chapterId: string; seriesId: string; pct: number; at: number }[] => {
+    try { return JSON.parse(localStorage.getItem(BOOKMARKS_KEY) || '[]'); } catch { return []; }
+  };
+  useEffect(() => {
+    if (!chapterId) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      const mine = readBookmarks().find((b) => b.chapterId === chapterId);
+      setIsBookmarked(Boolean(mine));
+      setLocalResumePct(mine && mine.pct >= 3 ? mine.pct : null);
+    });
+    return () => { cancelled = true; };
+  }, [chapterId]);
+
+  const toggleBookmark = () => {
+    try {
+      const all = readBookmarks();
+      const existing = all.find((b) => b.chapterId === chapterId);
+      if (existing) {
+        localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(all.filter((b) => b.chapterId !== chapterId)));
+        setIsBookmarked(false);
+        setLocalResumePct(null);
+      } else {
+        all.push({ chapterId, seriesId: series?.id ?? '', pct: scrollPercent, at: Date.now() });
+        localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(all));
+        setIsBookmarked(true);
+      }
+    } catch { /* storage unavailable */ }
+  };
+
+  const resumeFromBookmark = () => {
+    const el = containerRef.current;
+    if (el && localResumePct !== null) {
+      el.scrollTo({ top: ((el.scrollHeight - el.clientHeight) * localResumePct) / 100 });
+    }
+    setLocalResumePct(null);
+  };
+
+
 
   // Effective reading mode = reader's override if set, else the series' default.
   // Novels are always scroll — page-by-page navigation doesn't apply to text.
@@ -1395,6 +1448,52 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         ><Unlock size={16} /></button>
       )}
 
+      {/* ── §135 QUICK BOOKMARK + RESTORE BANNER (novels) ── */}
+      {isNovel && !lockScreen && (
+        <button
+          onClick={toggleBookmark}
+          aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this spot'}
+          title={isBookmarked ? 'Bookmarked — tap to remove' : 'Bookmark this spot'}
+          style={{
+            position: 'fixed', top: '14px', right: '56px', zIndex: 400,
+            width: '34px', height: '34px', borderRadius: '17px',
+            border: '1px solid var(--border-color)', background: 'var(--nav-bg-transparent)', backdropFilter: 'blur(8px)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <Bookmark size={15} color={isBookmarked ? '#d97706' : 'var(--text-secondary)'} fill={isBookmarked ? '#d97706' : 'none'} />
+        </button>
+      )}
+      {localResumePct !== null && !lockScreen && (
+        <div
+          role="status"
+          style={{
+            position: 'fixed', top: '58px', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 300, display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '8px 12px', borderRadius: '10px',
+            background: 'var(--bg-card)', border: '1px solid rgba(217,119,6,0.45)',
+            boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
+          }}
+        >
+          <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+            Bookmarked at {localResumePct}%
+          </span>
+          <button
+            onClick={resumeFromBookmark}
+            style={{ padding: '5px 10px', borderRadius: '7px', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: '11px', cursor: 'pointer' }}
+          >
+            Jump back
+          </button>
+          <button
+            onClick={() => setLocalResumePct(null)}
+            aria-label="Dismiss"
+            style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: '2px', display: 'inline-flex' }}
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
       {/* ── FULLSCREEN EXIT — BUG FIX: the only way to exit fullscreen before
           was the Shrink icon inside the top bar, but entering fullscreen now
           immediately hides that whole bar (see toggleFullscreen), so the exit
@@ -1557,6 +1656,27 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           ))}
         </div>
 
+        {/* §135 — Page layout (novel): paginated book view toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Paginated View</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>Swipe sideways like a book</div>
+          </div>
+          <button onClick={() => setNovelPageMode(v => !v)} style={toggleSwitch(novelPageMode)}>
+            <span style={toggleKnob(novelPageMode)} />
+          </button>
+        </div>
+
+        {/* §135 — Side margins (novel) */}
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Side Margins</div>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+          {([28, 44, 64] as const).map((m) => (
+            <button key={m} onClick={() => setContentMargin(m)} style={{ ...settingsBtn(contentMargin === m), flex: 1, fontSize: '11px', padding: '8px 4px' }}>
+              {m === 28 ? 'Narrow' : m === 44 ? 'Normal' : 'Wide'}
+            </button>
+          ))}
+        </div>
+
         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Line Spacing</div>
         <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
           {([
@@ -1650,12 +1770,31 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           return (
             <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh' }}>
               <div style={{
-                width: '100%', maxWidth: '760px', padding: '40px 28px 60px',
+                width: '100%', maxWidth: `${760 + (contentMargin - 28) * 2}px`,
+                padding: novelPageMode ? `24px ${contentMargin}px 40px` : '40px 28px 60px',
                 fontFamily: fontFamily === 'serif' ? "'Georgia', 'Noto Serif', 'Lora', serif"
                   : fontFamily === 'sans' ? "'Inter', 'Helvetica Neue', Arial, sans-serif"
                   : "'Comic Sans MS', 'Comic Sans', cursive",
                 fontSize: `${fontSize}px`, lineHeight, color: textColor,
               }}>
+                {/* §135 paginated book view — CSS columns snap sideways */}
+                <div
+                  ref={pageColRef}
+                  onScroll={novelPageMode ? (() => {
+                    const el = pageColRef.current;
+                    if (!el) return;
+                    const max = el.scrollWidth - el.clientWidth;
+                    setScrollPercent(max > 0 ? Math.min(100, Math.round((el.scrollLeft / max) * 100)) : 0);
+                  }) : undefined}
+                  style={novelPageMode ? {
+                    height: 'calc(100vh - 150px)',
+                    overflowX: 'auto', overflowY: 'hidden',
+                    columnWidth: `${Math.min(700, 680)}px`,
+                    columnGap: `${contentMargin * 2}px`,
+                    columnFill: 'auto',
+                    scrollSnapType: 'x proximity',
+                  } : undefined}
+                >
 
                 {/* Chapter title + meta row */}
                 <div style={{ borderBottom: `1px solid ${dividerColor}`, paddingBottom: '20px', marginBottom: '28px' }}>
@@ -1716,6 +1855,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                     <span style={{ fontWeight: 700, fontStyle: 'normal', color: '#d97706', marginRight: '6px' }}>Author&apos;s Note:</span>{authorNoteAfter}
                   </div>
                 )}
+                </div>{/* /§135 paginated wrapper */}
 
                 {/* Divider before nav */}
                 <div style={{ height: '1px', background: dividerColor, margin: '48px 0 32px' }} />
