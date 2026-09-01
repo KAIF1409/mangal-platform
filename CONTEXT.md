@@ -8924,3 +8924,89 @@ duplicate closing brace from the multi-part file write; fixed before any commit.
 **Untouched, per scope:** books/book_purchases/book_reading_progress, payments tables,
 and all Phase 3 mobile work (§93–95, §124–128). The only shared file edited is
 WebMangalStudioShell.tsx (tab registration; no style or nav logic changed).
+
+## 139. Performance/architecture audit (hardening pass — pre-fix report)
+
+> Full-codebase audit performed before any code change (per session scope:
+> performance/structure only, no features). Numbered findings are referenced by
+> the fix commits below (§140). "Bounded" = has `.limit()`/`.range()` or is
+> domain-bounded (per-user own-data). Base tables (series/chapters/pages/
+> comments/follows/reading_progress/ratings/reports) predate the migrations
+> folder — verified via live-DB introspection before the §139 index migration.
+
+### A. Unbounded lists (no pagination/limit) — fix category 1
+| # | Location | Problem |
+|---|----------|---------|
+| A1 | `kalpana-circle/chat/page.tsx` `loadConversations` (~L212) | Fetches **every `kcircle_messages` row in every conversation the user is in** (`.in('conversation_id', convoIds)` + `order desc`, no limit) on every chat open, to derive each thread's last message. Whole DM history shipped per visit. |
+| A2 | `kalpana-circle/chat/page.tsx` `loadMessages` (~L261) | Thread view fetches **all messages of a conversation, no limit** — Creator Lounge group chats grow without bound. |
+| A3 | `kalpana-circle/broadcasts/page.tsx` (~L96) | All messages of **all** broadcast channels fetched to render last-message previews. |
+| A4 | `kalpana-circle/page.tsx` `loadStories` (~L378) | All `kcircle_stories` rows, no limit. |
+| A5 | `kalpana-circle/page.tsx` `toggleComments` (~L627) | All comments of a post on expand, no limit. |
+| A6 | `kalpana-circle/profile/[username]/page.tsx` (~L129) | All posts of a user, no limit. |
+| A7 | `katube/subscriptions/page.tsx` (~L39) | **All videos from all followed creators**, no limit. |
+| A8 | `katube/watch/[videoId]/page.tsx` (~L360 video_comments, ~L400 video_accuracy_reviews) | Both lists unbounded. |
+
+| A9 | `WebMangal/read/[chapterId]/page.tsx` (~L641) | All chapter comments, no limit. |
+| A10 | `WebMangal/series/[seriesId]/page.tsx` reviews refetch (~L501) | All reviews per series, no limit (fetchChapters deliberately left: a series page legitimately renders its chapter list; tens-of-rows domain bound). |
+| A11 | `admin/reports/page.tsx` (~L63) | All reports ever, no limit (admin-only but grows forever). |
+| A12 | `kalpana-circle/watch-together/page.tsx` (~L535) + `watch-together/shorts/[roomId]` | Thread/room messages unbounded. |
+| — | Feed posts (`kcircle_posts` limit 30), watch-together room feed, comments in chat panels, MangalIdeasRow (RPC max 4), home browse + songs pages, notifications (limit 20) | Already bounded (home/songs use the §82 `.range()` + "Load More" pattern — **this is the reusable pagination pattern**). |
+
+### B. Re-fetch on every mount, no client cache — fix category 2
+Every client page does raw `useEffect` + `supabase.from(...)`: navigating back
+re-runs identical queries seconds later. No SWR/React Query in `package.json`.
+Highest-traffic read paths to convert: WebMangal home/series/read/library/
+bookmarks/history/rankings/tags/creator, KaTube home/watch/subscriptions/
+playlists/channel, K Circle feed/profile/saved, recommendations fetch.
+
+### C. HTTP cache headers — fix category 3
+No `Cache-Control` anywhere (next.config `headers()` only sets security
+headers; no API route sets cache headers). Workers serve `public/` and
+`/_next/static` — Next static chunks are already immutable, but `public/`
+assets and API responses are not. Targets: `/api/books/file/[bookId]`
+(published book files), `/api/recommendations` (anonymous pool is stable),
+`/api/media/[...path]` (R2 media proxy), and `public/` static assets.
+
+### D. Expensive recompute per render — fix category 4
+- `kalpana-circle/page.tsx`: `instagramPreviewComments(...)` (sort per post)
+  and feed mapping run inside the render body of every post card on every
+  state change of the feed page.
+- Recommendation scoring (§135) is server-side per request over a ≤300 pool —
+  fine, addressed via cache headers instead.
+- Dashboard analytics aggregation runs once per tab-open, not per render — OK.
+- `rankShorts` (shortsRanking) pool ≤ 50 — OK.
+
+### E. Missing DB indexes (filters/sorts/joins with no covering index) — fix category 5
+Verified against all 72 migration files + PK definitions. Missing:
+`chapters(series_id)`, `pages(chapter_id)`, `comments(chapter_id)`,
+`follows(reader_id)`, `follows(series_id)`, `reading_progress(reader_id)`,
+`reading_progress(series_id)`, `reading_progress(chapter_id)`,
+`ratings(series_id)`, `series(creator_id)`, `series(status, created_at)`,
+`kcircle_post_comments(post_id)`, `kcircle_saved_posts(post_id)`,
+`kcircle_story_views(viewer_id)`, `kcircle_conversation_participants(user_id)`,
+`kcircle_messages(conversation_id, created_at desc)`,
+`kcircle_poll_options(post_id)`, `visual_quest_submissions(quest_id)`,
+`visual_quest_votes(quest_id)`, `video_comments(video_id, created_at)`,
+`video_accuracy_reviews(video_id, created_at)`, `creator_follows(follower_id)`,
+`katube_playlist_videos(video_id)`, `reports(created_at)`.
+(Covered already by PKs: kcircle_post_likes(post_id), kcircle_poll_votes(post_id),
+kcircle_story_views(story_id), video_likes(video_id), kcircle_saved_posts(user_id).)
+
+### F. N+1 patterns — fix category 6
+- A1/A3 above are fetch-all variants of N+1 (loop-equivalent data pulled to
+  compute per-group maxima client-side).
+- `WebMangal/upload/page.tsx` tag upsert + page-reorder loops: deliberate,
+  tiny N (unique-constraint workaround) — left.
+- `WebMangal/series/[seriesId]/page.tsx` `handleDeleteSeries` per-chapter
+  cleanup loop: rare admin/owner action — left.
+
+### G. Oversized assets — fix category 7
+Workers serve images **unoptimized** (next.config: sharp can't run there), so
+source bytes ship as-is. Worst offenders in `public/`:
+`kcircle-door.png` 2.9MB, `kalpanaverse-logo.png` 2.1MB, `kcommunity-preview.jpg`
+2.0MB, `webmangal-door.png` 1.9MB, `icon.png` 855KB (rendered at 30px!),
+`logo-icon.png` 855KB (unused?), `katube-logo.png` 789KB, `logo-wordmark.png`
+781KB (unused?), `kcircle-logo.png` 781KB, `comics.jpg` 451KB, `hero-bg.jpg`
+410KB, `mangal-flame-icon.png` 361KB, `webmangal-logo.png` 354KB,
+`bg-aryavarta.jpg` 345KB; `videos/katube-door-preview.mp4` 3.5MB.
+
