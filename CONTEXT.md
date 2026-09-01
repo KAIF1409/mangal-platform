@@ -8846,3 +8846,81 @@ file against the live schema and repair-marks what is already applied — per-fi
 Also noted: Supabase's new API-key system now rejects the legacy `service_role` key over
 plain REST ("Forbidden use of secret API key in browser") — future probes should use the
 anon key or the CLI's direct `db query --linked` path.
+
+## §137 — §136 pushed to origin/main (session bookkeeping)
+
+**Date: 2026-09-01.** Commit `7a95601` (the §136 books schema-cache record) was pushed to
+`origin/main` per the founder's instruction. Auth note for future sessions: no GitHub PAT
+exists in `.env.local` or git config — the push succeeded non-interactively via the repo's
+cached credential-helper credential (`credential.helper = manager`), which supplies auth
+automatically; the literal `git -c http.extraHeader="AUTHORIZATION: Bearer <PAT>"` shape
+was not needed. Remote HEAD verified via `git ls-remote origin refs/heads/main` →
+`7a95601074645a4ef7fd84985df8d5169197a152` (= 7a95601). The remote's "bypassed rule
+violations" notice on the protected branch matches every prior direct-to-main push from
+this account.
+
+## §138 — Codex tab: character profiles + lore codex (AI toolbar attached)
+
+**Date: 2026-09-01.** Built the character-profile & lore-codex drafting workspace at
+`/mangal-studio/webmangal/codex` — ONE studio tab (registered in WebMangalStudioShell's
+TABS, BookMarked icon) with an internal Characters ⇄ Lore switcher (`role="tablist"`,
+`aria-selected`).
+
+**Migration — applied, verified, repair-marked (books-hotfix pattern):**
+`supabase/migrations/20260901090000_character_lore_codex.sql` creates TWO tables:
+`character_profiles` (10 cols: id, user_id, name, role, tags text[], image_url,
+backstory, series_id, created_at, updated_at) and `lore_entries` (8 cols: id, user_id,
+title, category CHECK in place/item/faction/event/concept/other, content, series_id,
+created_at, updated_at). Both carry the founder-approved nullable `series_id uuid →
+public.series(id) ON DELETE SET NULL` — FK target verified live BEFORE apply (`series.id`
+is uuid with exactly one PK); NULL = standalone entry by design. Idempotent throughout
+(create if not exists / add column if not exists / drop policy if exists), drift-guard
+columns, per-action owner-only RLS (select/insert/update/delete scoped to
+`auth.uid() = user_id` — private drafting surfaces; delete included, unlike
+book_reading_progress), `search_path=''`-hardened updated_at triggers per table,
+user_id + series_id indexes, and the pgrst reload notify. Applied via the §136 safe path
+`npx supabase db query --linked -f <file>` (APPLY_EXIT 0) — NOT `db push` (§136 history
+warning stands). Verified: direct-DB introspection showed both tables, all 8 policies
+[DELETE/INSERT/SELECT/UPDATE], both triggers, series_id uuid on both; REST (anon key) →
+200 OK on both (0 rows — owner-only RLS scopes anon to nothing). History reconciled with
+`migration repair --status applied 20260901090000 --linked` → migration list shows
+20260901090000 Local+Remote. Books' remote-only 20260901091246 untouched.
+
+**Code (4 new files + 1 edit; no new deps, no new engine):** `codex/page.tsx` (container:
+mode switcher, owner-scoped loaders ordered by updated_at desc, CRUD handlers that
+`.eq('user_id', …)` on top of RLS, inline confirm-delete, `role="alert"` error banners);
+`codex/CharacterPane.tsx` (list rail + form: name*, role, tags comma-text → `text[]` via
+`parseTagsText`, portrait PLACEHOLDER block — the image_url column exists but upload/serve
+wiring is explicitly out of scope, so no `<img>` renders and no new lint warnings —
+backstory via `WebMangalAiEditor feature="character"`); `codex/LorePane.tsx` (title*,
+category select, content via `feature="lore"`); `codex/codexTypes.ts` (row/draft shapes +
+tag parsing that trims and dedupes); `WebMangalStudioShell.tsx` (tab registration only).
+AI: zero new AI code — both prose fields are §134 `WebMangalAiEditor` drop-ins, so the
+pre-wired FEATURE_THRESHOLDS for character/lore (≥100 words / ≥400 chars) arm the shared
+Polish & Hinglish toolbar automatically, exactly as §135 predicted. Update payloads
+deliberately omit image_url/series_id (no UI for them yet → columns stay untouched).
+
+**Mobile verification (new pages only, per scope):** the two-pane grid is desktop-only —
+`.codex-panes` collapses to one column at ≤860px via a class-based media query (no
+inline-style-vs-class conflict of the §95 kind); columns use `minmax(0, …)` so nothing
+overflows horizontally at 320px; controls are ≥44px tall; drawer/tab behavior comes from
+the untouched shell (which already stacks ≤900px). Verified HTTP 200 on the route through
+`next dev` (41.8 KB shell); on-device visual confirmation stays with the founder (same
+limitation as §93/§95).
+
+**Self-review (session-touched files only):** ARIA — tablist/tab/aria-selected switcher,
+aria-current on list items, htmlFor labels on every field, role=alert on errors and
+delete confirms, aria-labels on icon-only buttons; focus — :focus-visible outlines on
+.codex-btn/.codex-field; contrast — platform --text-*/--bg-card tokens only; performance —
+memoised handlers with correct deps, keyed lists, no render-time Date/Math.random;
+SSR/hydration — zero localStorage/window access in the new files (React state only; the
+DB is the only persistence).
+
+**Gates:** `npx tsc --noEmit` → 0; `npm run lint` → 0 errors / 54 warnings (pre-existing
+baseline unchanged; zero in new files); `npm run build` → exit 0 with
+/mangal-studio/webmangal/codex in the route manifest. One gate-1 iteration: tsc caught a
+duplicate closing brace from the multi-part file write; fixed before any commit.
+
+**Untouched, per scope:** books/book_purchases/book_reading_progress, payments tables,
+and all Phase 3 mobile work (§93–95, §124–128). The only shared file edited is
+WebMangalStudioShell.tsx (tab registration; no style or nav logic changed).

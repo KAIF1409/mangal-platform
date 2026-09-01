@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import StudioSidebar from '../../components/shared/StudioSidebar';
 import ProductSwitcher from '../ProductSwitcher';
 import { WebMangalStudioThemeContext } from './ThemeContext';
-import { LayoutGrid, BarChart3, Star, Sparkles, Clapperboard } from 'lucide-react';
+import { LayoutGrid, BarChart3, Star, Sparkles, Clapperboard, BookMarked } from 'lucide-react';
 
 // §114/§126 Phase 2 — WebMangal Studio shell, same shape as
 // KatubeStudioShell (forced-dark-by-default, light optional plumbing,
@@ -21,12 +21,16 @@ import { LayoutGrid, BarChart3, Star, Sparkles, Clapperboard } from 'lucide-reac
 // a read-only moderation view over `ratings` (stars + optional
 // review_title/review_text), same honesty posture as KaTube's Comments
 // tab (see WebMangalStudioReviews' own header comment).
+//
+// §138 — Codex tab added: the character-profile & lore-codex drafting
+// workspace at /mangal-studio/webmangal/codex (private, owner-scoped).
 const TABS = [
   { href: '/mangal-studio/webmangal', label: 'Overview', icon: LayoutGrid, exact: true },
   { href: '/mangal-studio/webmangal/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/mangal-studio/webmangal/reviews', label: 'Reviews', icon: Star },
   { href: '/mangal-studio/webmangal/write', label: 'AI Writer', icon: Sparkles },
   { href: '/mangal-studio/webmangal/convert', label: 'Storyboard', icon: Clapperboard },
+  { href: '/mangal-studio/webmangal/codex', label: 'Codex', icon: BookMarked },
 ];
 
 export default function WebMangalStudioShell({ children }: { children: React.ReactNode }) {
