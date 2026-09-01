@@ -8798,3 +8798,51 @@ the real cross-product value prop (desi stories, mobile-first, zero
 gatekeepers, one login/one ecosystem), which is the actual "features"
 content a professional homepage needs; the nav was the actual
 unprofessional-looking element, not the features section itself.
+
+## §136 — Books schema-cache fix applied to the LIVE DB only (zero code changes)
+
+**Date: 2026-09-01.** Closed the standing `Could not find the table 'public.books' in
+the schema cache` (PGRST205 / HTTP 404) on /dashboard/books, /WebMangal/books and every
+books API route. Audit (this session) confirmed the root cause before touching anything:
+both books migrations existed only as repo files — `migration list` showed
+`20260822000000` and `20260825000000` Local-only; a live REST probe returned PGRST205
+for all three books tables while `tool_clicks` / `public_profiles` / `reading_progress`
+were visible (schema cache healthy → tables genuinely absent); and no CI/CD step applies
+migrations (deploy.yml only passes env vars).
+
+**What was done — database only; nothing under `src/` or `supabase/` changed.**
+The reviewed hotfix (`20260825000000_books_schema_cache_hotfix.sql`, verified a strict
+superset of the module migration — all 35 module statements covered, both `updated_at`
+functions hardened with `set search_path = ''`) was applied to the live project via the
+**Supabase MCP connector**, after a Dashboard SQL Editor attempt silently failed to land
+(direct-DB introspection beforehand: 0 book tables out of 75 public tables). The apply
+API auto-assigned the remote version **`20260901091246`** (name
+`20260825000000_books_schema_cache_hotfix`).
+
+**Migration history is now deliberately a three-entry state:**
+1. `20260901091246` — the real DDL, ran once via MCP. Has **no local file**; the two
+   existing local files already match its output, so no stub was created.
+2. `20260822000000` — repair-marked applied (`migration repair --status applied …
+   --linked`): content fully live; marking it stops any future `db push` from re-running
+   the module file, whose `create or replace function` would regress both `updated_at`
+   functions to un-hardened bodies (no `set search_path = ''`).
+3. `20260825000000` — same repair-marking, same rationale.
+
+**Verification (raw outputs in session):** REST via anon key → 200 OK on books /
+book_purchases / book_reading_progress (empty tables); direct DB → RLS enabled on all
+three with all 8 expected policies; table-level grants are hosted defaults (all roles —
+same posture as every other table in the project; the row-level boundary is the RLS
+policies); /WebMangal/books' published-catalog query and /dashboard/books' select-*
+query → 200 via anon; both routes → HTTP 200 through `next dev` (27 KB / 40 KB shells;
+dev server stopped after). `npx tsc --noEmit` clean; `eslint` 0 errors / 54
+pre-existing warnings — expected, since no code changed.
+
+**⚠️ For future sessions:** the local `supabase/migrations/` folder is still out of sync
+with remote history beyond books (~40 pre-existing local-only versions were applied
+out-of-band under auto-generated timestamps, plus remote-only `20260901091246`). Do NOT
+run `npx supabase db push` until a dedicated reconciliation session audits each drifted
+file against the live schema and repair-marks what is already applied — per-file applies
+(Dashboard SQL Editor / MCP / `supabase db query --linked -f <file>`) are the safe path.
+Also noted: Supabase's new API-key system now rejects the legacy `service_role` key over
+plain REST ("Forbidden use of secret API key in browser") — future probes should use the
+anon key or the CLI's direct `db query --linked` path.
