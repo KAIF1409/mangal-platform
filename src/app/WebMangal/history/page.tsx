@@ -7,6 +7,7 @@ import Link from 'next/link';
 import ThemeToggle from '../../components/shared/ThemeToggle';
 
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
+import { useCachedQuery } from '../../lib/swrCache';
 import {
   Flame, Clock, Trash2, ScrollText, BookText, BookOpen, Heart, Play, X,
 } from 'lucide-react';
@@ -56,8 +57,6 @@ interface ChapterCountRow {
 }
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -74,11 +73,18 @@ export default function HistoryPage() {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
-      const { data: u } = await supabase.auth.getUser();
+    supabase.auth.getUser().then(({ data: u }) => {
       if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
       setUserId(u.user.id);
+    });
+  }, []);
 
+  // §139-B — cached at the feed tier (the list changes as you read, so it
+  // revalidates on focus, but a repeat visit paints instantly from cache
+  // instead of blocking on the network).
+  const { data: historyData, isLoading, mutate: mutateHistory } = useCachedQuery<HistoryEntry[]>(
+    userId ? ['wm-history', userId] : null,
+    async () => {
       // Fetch all reading progress rows, join series (incl. content_type) + chapter
       const { data: progress } = await supabase
         .from('reading_progress')
@@ -90,10 +96,10 @@ export default function HistoryPage() {
           series:series_id ( title, cover_url, genre, content_type ),
           chapter:chapter_id ( chapter_number, title )
         `)
-        .eq('reader_id', u.user.id)
+        .eq('reader_id', userId!)
         .order('updated_at', { ascending: false });
 
-      if (!progress || progress.length === 0) { setLoading(false); return; }
+      if (!progress || progress.length === 0) return [];
 
       // Batch fetch chapter counts for all series in history
       //
@@ -120,7 +126,7 @@ export default function HistoryPage() {
         countMap[ch.series_id] = (countMap[ch.series_id] ?? 0) + 1;
       });
 
-      const entries: HistoryEntry[] = progress.map((p: ProgressRow) => {
+      return progress.map((p: ProgressRow): HistoryEntry => {
         const s = Array.isArray(p.series) ? p.series[0] : p.series;
         const ch = Array.isArray(p.chapter) ? p.chapter[0] : p.chapter;
         return {
@@ -137,12 +143,13 @@ export default function HistoryPage() {
           content_type: s?.content_type ?? null,
         };
       });
-
-      setHistory(entries);
-      setLoading(false);
-    };
-    load();
-  }, []);
+    },
+    'feed',
+  );
+  const history = useMemo(() => historyData ?? [], [historyData]);
+  // Still "loading" while auth resolves (key is conditional on userId) or the
+  // first fetch is in flight.
+  const loading = !userId || isLoading;
 
   // Filter logic — clicking active pill resets to 'all'
   const handleContentTypeToggle = (type: FilterType) => {
@@ -169,7 +176,8 @@ export default function HistoryPage() {
       .delete()
       .eq('reader_id', userId)
       .eq('series_id', seriesId);
-    setHistory(prev => prev.filter(h => h.series_id !== seriesId));
+    // §139-B — same local-only update as before, now via the cache.
+    void mutateHistory(prev => (prev ?? []).filter(h => h.series_id !== seriesId), { revalidate: false });
   };
 
   const clearAll = async () => {
@@ -179,7 +187,7 @@ export default function HistoryPage() {
       .from('reading_progress')
       .delete()
       .eq('reader_id', userId);
-    setHistory([]);
+    void mutateHistory([], { revalidate: false });
     setClearing(false);
     setConfirmClear(false);
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
@@ -8,6 +8,7 @@ import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { useKCircleTheme } from '../theme';
 import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import { Bookmark } from 'lucide-react';
+import { useCachedQuery } from '../../lib/swrCache';
 
 // ── K Circle — Saved posts (bookmarks) ──
 // Private list, backed by kcircle_saved_posts (user_id, post_id), RLS
@@ -49,8 +50,6 @@ export default function SavedPostsPage() {
   // shared K Circle rail's profile icon does (see components/Shell.tsx, §66).
   const [myUsername, setMyUsername] = useState<string | null>(null);
   const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
-  const [posts, setPosts] = useState<SavedPost[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time auth check on mount, same pattern as ../chat/page.tsx
   useEffect(() => {
@@ -70,43 +69,45 @@ export default function SavedPostsPage() {
   }, [userId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const loadSaved = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    const { data: saves } = await supabase
-      .from('kcircle_saved_posts').select('post_id, created_at')
-      .eq('user_id', userId).order('created_at', { ascending: false });
+  // §139-B — cached at the feed tier: revisiting Saved paints instantly from
+  // cache and revalidates in the background instead of re-running the
+  // saves → posts → profiles chain every time.
+  const { data: postsData, isLoading, mutate: mutatePosts } = useCachedQuery<SavedPost[]>(
+    userId ? ['kc-saved-posts', userId] : null,
+    async () => {
+      const { data: saves } = await supabase
+        .from('kcircle_saved_posts').select('post_id, created_at')
+        .eq('user_id', userId!).order('created_at', { ascending: false });
 
-    if (!saves || saves.length === 0) { setPosts([]); setLoading(false); return; }
+      if (!saves || saves.length === 0) return [];
 
-    const postIds = saves.map(s => s.post_id);
-    const { data: rows } = await supabase
-      .from('kcircle_posts').select('id, author_id, caption, image_url, image_urls, created_at')
-      .in('id', postIds);
-    if (!rows || rows.length === 0) { setPosts([]); setLoading(false); return; }
+      const postIds = saves.map(s => s.post_id);
+      const { data: rows } = await supabase
+        .from('kcircle_posts').select('id, author_id, caption, image_url, image_urls, created_at')
+        .in('id', postIds);
+      if (!rows || rows.length === 0) return [];
 
-    const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
-    const { data: profiles } = await supabase
-      .from('creator_profiles').select('user_id, username').in('user_id', authorIds);
-    const usernameMap = new Map((profiles ?? []).map(p => [p.user_id, p.username]));
+      const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
+      const { data: profiles } = await supabase
+        .from('creator_profiles').select('user_id, username').in('user_id', authorIds);
+      const usernameMap = new Map((profiles ?? []).map(p => [p.user_id, p.username]));
 
-    // keep saved-order (most recently saved first), not post created_at order
-    const byId = new Map(rows.map(r => [r.id, r]));
-    const ordered = saves
-      .map(s => byId.get(s.post_id))
-      .filter((r): r is NonNullable<typeof r> => !!r)
-      .map(r => ({ ...r, username: usernameMap.get(r.author_id) ?? 'dreamer' }));
-
-    setPosts(ordered);
-    setLoading(false);
-  }, [userId]);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as ../page.tsx
-  useEffect(() => { loadSaved(); }, [loadSaved]);
+      // keep saved-order (most recently saved first), not post created_at order
+      const byId = new Map(rows.map(r => [r.id, r]));
+      return saves
+        .map(s => byId.get(s.post_id))
+        .filter((r): r is NonNullable<typeof r> => !!r)
+        .map(r => ({ ...r, username: usernameMap.get(r.author_id) ?? 'dreamer' }));
+    },
+    'feed',
+  );
+  const posts = postsData ?? [];
+  const loading = !userId || isLoading;
 
   const unsave = async (postId: string) => {
     if (!userId) return;
-    setPosts(prev => prev.filter(p => p.id !== postId));
+    // §139-B — same optimistic local removal as before, now via the cache.
+    void mutatePosts(prev => (prev ?? []).filter(p => p.id !== postId), { revalidate: false });
     await supabase.from('kcircle_saved_posts').delete().eq('post_id', postId).eq('user_id', userId);
   };
 

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, Radio } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useCachedQuery } from '../../lib/swrCache';
 
 // ── K Circle notification bell — dropdown panel + unread badge ──
 // Backend: supabase/migrations/20260813120000_kcircle_notifications.sql
@@ -69,8 +70,6 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<Notification[]>([]);
-  const [unread, setUnread] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Unique per mounted instance (not just per user) — this component is
@@ -85,31 +84,38 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
   // per-instance id keeps each mount's channel independent.
   const [instanceId] = useState(() => Math.random().toString(36).slice(2));
 
-  const load = useCallback(async () => {
-    if (!userId) return;
-    const { data: rows } = await supabase.from('kcircle_notifications')
-      .select('id, actor_id, type, post_id, conversation_id, room_id, preview, read, created_at')
-      .eq('recipient_id', userId).order('created_at', { ascending: false }).limit(20);
-    const actorIds = Array.from(new Set((rows ?? []).map(r => r.actor_id).filter(Boolean))) as string[];
-    const { data: profs } = actorIds.length
-      ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', actorIds)
-      : { data: [] as { user_id: string; username: string }[] };
-    const usernameMap = new Map((profs ?? []).map(p => [p.user_id, p.username]));
-    const withNames = (rows ?? []).map(r => ({ ...r, actorUsername: r.actor_id ? usernameMap.get(r.actor_id) : undefined }));
-    setItems(withNames as Notification[]);
-    setUnread(withNames.filter(n => !n.read).length);
-  }, [userId]);
-
-  useEffect(() => { load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect
+  // §139-B — cached at the realtime tier. This bell is rendered TWICE at once
+  // on K Circle's main page (mobile + desktop nav), and each instance used to
+  // run this exact fetch on every mount — and again on every page navigation.
+  // SWR collapses the duplicate concurrent requests, keeps the list warm
+  // across navigations (cached-first paint, background revalidate), and the
+  // realtime handler below just revalidates instead of re-implementing load.
+  const { data: itemsData, mutate: mutateItems } = useCachedQuery<Notification[]>(
+    userId ? ['kc-notifications', userId] : null,
+    async () => {
+      const { data: rows } = await supabase.from('kcircle_notifications')
+        .select('id, actor_id, type, post_id, conversation_id, room_id, preview, read, created_at')
+        .eq('recipient_id', userId!).order('created_at', { ascending: false }).limit(20);
+      const actorIds = Array.from(new Set((rows ?? []).map(r => r.actor_id).filter(Boolean))) as string[];
+      const { data: profs } = actorIds.length
+        ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', actorIds)
+        : { data: [] as { user_id: string; username: string }[] };
+      const usernameMap = new Map((profs ?? []).map(p => [p.user_id, p.username]));
+      return (rows ?? []).map(r => ({ ...r, actorUsername: r.actor_id ? usernameMap.get(r.actor_id) : undefined })) as Notification[];
+    },
+    'realtime',
+  );
+  const items = useMemo(() => itemsData ?? [], [itemsData]);
+  const unread = useMemo(() => items.filter(n => !n.read).length, [items]);
 
   // Live badge count + fresh items on new notifications — no polling.
   useEffect(() => {
     if (!userId) return;
     const channel = supabase.channel(`kcircle-notifications-${userId}-${instanceId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kcircle_notifications', filter: `recipient_id=eq.${userId}` }, () => load())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kcircle_notifications', filter: `recipient_id=eq.${userId}` }, () => { void mutateItems(); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [userId, load, instanceId]);
+  }, [userId, mutateItems, instanceId]);
 
   useEffect(() => {
     if (!open) return;
@@ -122,8 +128,8 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
     setOpen(prev => !prev);
     if (!open && unread > 0 && userId) {
       const unreadIds = items.filter(n => !n.read).map(n => n.id);
-      setItems(prev => prev.map(n => ({ ...n, read: true })));
-      setUnread(0);
+      // §139-B — same optimistic mark-as-read as before, now via the cache.
+      void mutateItems(prev => (prev ?? []).map(n => ({ ...n, read: true })), { revalidate: false });
       if (unreadIds.length) await supabase.from('kcircle_notifications').update({ read: true }).in('id', unreadIds);
     }
   };

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useCachedQuery } from '../../lib/swrCache';
 
 // §28a — Notification bell for new uploads. K Circle already has a
 // notifications system (kcircle_notifications, CONTEXT.md §14) — this
@@ -23,52 +24,46 @@ interface NotifRow {
 
 export default function NotificationBell({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false);
-  const [notifs, setNotifs] = useState<NotifRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const loadedOnceRef = useRef(false);
+  // §139-B — the badge stays a cheap head-count on mount; the full list is
+  // cached at the realtime tier (shared across every KaTube page mount), so
+  // re-opening the bell or revisiting a page paints from cache and
+  // revalidates in the background instead of re-running the
+  // notifications → videos → profiles chain every time.
+  const [badgeCount, setBadgeCount] = useState(0);
+  const { data: notifsData, isLoading, mutate: mutateNotifs } = useCachedQuery<NotifRow[]>(
+    open ? ['kt-notifications', userId] : null,
+    async () => {
+      const { data: rows } = await supabase.from('katube_notifications')
+        .select('id, video_id, actor_id, read, created_at')
+        .eq('recipient_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(30);
 
-  const unreadCount = notifs.filter(n => !n.read).length;
+      if (!rows || rows.length === 0) return [];
 
-  async function load() {
-    setLoading(true);
-    const { data: rows } = await supabase.from('katube_notifications')
-      .select('id, video_id, actor_id, read, created_at')
-      .eq('recipient_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(30);
+      const videoIds = [...new Set(rows.map(r => r.video_id).filter(Boolean))] as string[];
+      const actorIds = [...new Set(rows.map(r => r.actor_id).filter(Boolean))] as string[];
+      const [videosRes, actorsRes] = await Promise.all([
+        videoIds.length ? supabase.from('videos').select('id, title').in('id', videoIds) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+        actorIds.length ? supabase.from('creator_profiles').select('user_id, username').in('user_id', actorIds) : Promise.resolve({ data: [] as { user_id: string; username: string }[] }),
+      ]);
+      const videoMap = new Map((videosRes.data || []).map(v => [v.id, v.title]));
+      const actorMap = new Map((actorsRes.data || []).map(a => [a.user_id, a.username]));
 
-    if (!rows || rows.length === 0) { setNotifs([]); setLoading(false); return; }
-
-    const videoIds = [...new Set(rows.map(r => r.video_id).filter(Boolean))] as string[];
-    const actorIds = [...new Set(rows.map(r => r.actor_id).filter(Boolean))] as string[];
-    const [videosRes, actorsRes] = await Promise.all([
-      videoIds.length ? supabase.from('videos').select('id, title').in('id', videoIds) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-      actorIds.length ? supabase.from('creator_profiles').select('user_id, username').in('user_id', actorIds) : Promise.resolve({ data: [] as { user_id: string; username: string }[] }),
-    ]);
-    const videoMap = new Map((videosRes.data || []).map(v => [v.id, v.title]));
-    const actorMap = new Map((actorsRes.data || []).map(a => [a.user_id, a.username]));
-
-    setNotifs(rows.map(r => ({
-      id: r.id, video_id: r.video_id, actor_id: r.actor_id, read: r.read, created_at: r.created_at,
-      videoTitle: (r.video_id && videoMap.get(r.video_id)) || 'a new video',
-      actorName: (r.actor_id && actorMap.get(r.actor_id)) || 'A creator you follow',
-    })));
-    setLoading(false);
-  }
-
-  // Poll-on-open rather than a permanent realtime subscription, keeping
-  // this component cheap for the common case (bell closed most of the
-  // time) — the table is realtime-enabled (replica identity full +
-  // supabase_realtime publication) so a future badge-without-opening
-  // upgrade can subscribe directly if wanted.
-  /* eslint-disable react-hooks/set-state-in-effect -- opening the dropdown
-     triggers a fetch; same "just opened, fetch once" pattern this codebase
-     already grants an exception elsewhere (see KatubeShareSheet.tsx). */
-  useEffect(() => {
-    if (open && !loadedOnceRef.current) { loadedOnceRef.current = true; load(); }
-    else if (open) { load(); }
-  }, [open]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+      return rows.map(r => ({
+        id: r.id, video_id: r.video_id, actor_id: r.actor_id, read: r.read, created_at: r.created_at,
+        videoTitle: (r.video_id && videoMap.get(r.video_id)) || 'a new video',
+        actorName: (r.actor_id && actorMap.get(r.actor_id)) || 'A creator you follow',
+      }));
+    },
+    'realtime',
+  );
+  const notifs = notifsData ?? [];
+  // Before the list has ever been fetched, the badge comes from the cheap
+  // head-count below (same visible behavior as the old placeholder rows);
+  // once real data is in the cache, the badge derives from it.
+  const unreadCount = notifsData ? notifs.filter(n => !n.read).length : badgeCount;
+  const loading = open && isLoading;
 
   // Lightweight unread-count check on mount so the badge shows without
   // requiring the viewer to open the dropdown first.
@@ -78,17 +73,14 @@ export default function NotificationBell({ userId }: { userId: string }) {
         .select('id', { count: 'exact', head: true })
         .eq('recipient_id', userId)
         .eq('read', false);
-      if (count && count > 0) {
-        setNotifs(prev => prev.length ? prev : Array.from({ length: count }, (_, i) => ({
-          id: `placeholder-${i}`, video_id: null, actor_id: null, read: false, created_at: new Date().toISOString(),
-          videoTitle: '', actorName: '',
-        })));
-      }
+      if (count && count > 0) setBadgeCount(count);
     })();
   }, [userId]);
 
   async function markAllRead() {
-    setNotifs(ns => ns.map(n => ({ ...n, read: true })));
+    // §139-B — same optimistic mark-as-read as before, now via the cache.
+    void mutateNotifs(ns => (ns ?? []).map(n => ({ ...n, read: true })), { revalidate: false });
+    setBadgeCount(0);
     await supabase.from('katube_notifications').update({ read: true }).eq('recipient_id', userId).eq('read', false);
   }
 

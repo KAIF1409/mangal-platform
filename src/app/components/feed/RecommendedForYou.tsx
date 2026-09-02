@@ -11,12 +11,12 @@
 // Zero new dependencies: horizontal scroll-snap carousels + next/image.
 // Auth is best-effort — anonymous readers simply get the trending rails.
 
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Sparkles, TrendingUp, BookOpen } from 'lucide-react';
 
 import { supabase } from '../../lib/supabase';
+import { useCachedQuery } from '../../lib/swrCache';
 
 interface SeriesCard {
   id: string;
@@ -109,37 +109,28 @@ function Rail({
 }
 
 export default function RecommendedForYou() {
-  const [data, setData] = useState<ApiShape | null>(null);
-  const [failed, setFailed] = useState(false);
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    const load = async () => {
+  // §139-B — cached at the catalog tier (personalised recs barely change
+  // between visits): repeat home visits paint the rails instantly from cache
+  // and revalidate in the background instead of re-scoring on every mount.
+  const { data, error } = useCachedQuery<ApiShape>(
+    ['wm-recommendations'],
+    async () => {
+      const headers: Record<string, string> = {};
       try {
-        const headers: Record<string, string> = {};
-        try {
-          const { data: sess } = await supabase.auth.getSession();
-          const token = sess.session?.access_token;
-          if (token) headers.Authorization = `Bearer ${token}`;
-        } catch {
-          /* anonymous is fine */
-        }
-        const res = await fetch('/api/recommendations', { headers });
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const json = (await res.json()) as ApiShape;
-        if (mounted.current) setData(json);
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token;
+        if (token) headers.Authorization = `Bearer ${token}`;
       } catch {
-        if (mounted.current) setFailed(true);
+        /* anonymous is fine */
       }
-    };
-    void load();
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+      const res = await fetch('/api/recommendations', { headers });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      return (await res.json()) as ApiShape;
+    },
+    'catalog',
+  );
 
-  if (failed || !data) return null;
+  if (error || !data) return null;
 
   const showBecause = data.becauseYouRead.seed && data.becauseYouRead.items.length > 0;
 

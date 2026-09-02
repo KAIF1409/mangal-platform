@@ -26,6 +26,7 @@
     "razorpay": "^2.9.8",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "swr": "^2.5.1",
     "wrangler": "^4.86.0"
   },
   "devDependencies": {
