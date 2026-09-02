@@ -17,6 +17,10 @@ import { useUiLanguage, LANGUAGES } from '../lib/i18n';
 import Link from 'next/link';
 import { Flame, User, Coffee } from 'lucide-react';
 import { getRazorpayPublicKey, openRazorpayCheckout } from '../lib/payments/razorpayClient';
+import { GLOBAL_PAYMENTS_ENABLED } from '../lib/payments/featureFlags';
+import { hasCreatorAccess } from '../lib/auth/roles';
+import DirectUpiPay from '../components/shared/DirectUpiPay';
+import CreatorUpiSettings from '../components/shared/CreatorUpiSettings';
 
 const PLATFORM_NAME = 'MANGAL';
 
@@ -56,6 +60,22 @@ export default function SettingsPage() {
   const [adsRemoved, setAdsRemoved] = useState(false);
   const [adsRemovedLoaded, setAdsRemovedLoaded] = useState(false);
   const [removeAdsState, setRemoveAdsState] = useState<'idle' | 'processing' | 'error'>('idle');
+  // §141 — direct-UPI flow is a separate inline panel rather than the
+  // Razorpay redirect handleRemoveAds() below does, so it gets its own
+  // toggle instead of reusing removeAdsState.
+  const [showAdsUpiFlow, setShowAdsUpiFlow] = useState(false);
+  const [adsPendingConfirmation, setAdsPendingConfirmation] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
+
+  useEffect(() => {
+    const loadRole = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { data } = await supabase.from('profiles').select('role').eq('id', userData.user.id).single();
+      if (hasCreatorAccess(data?.role)) setIsCreator(true);
+    };
+    loadRole();
+  }, []);
   const [removeAdsError, setRemoveAdsError] = useState('');
 
   useEffect(() => {
@@ -356,13 +376,30 @@ export default function SettingsPage() {
         {/* Remove Ads — §95, one-time ₹99 unlock (payment infra only for
             now; no ad slots exist on the platform yet — see CONTEXT.md).
             Same visibility rule as the rest of this page: nothing here
-            claims to work until it actually does. */}
+            claims to work until it actually does.
+            §141 — direct-UPI is now the default way to pay this; the old
+            Razorpay button only shows once NEXT_PUBLIC_ENABLE_GLOBAL_PAYMENTS
+            is flipped on and a real merchant account exists. */}
         <div className={sectionCardClass} style={sectionCard}>
           <h2 style={sectionTitle}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Coffee size={16} strokeWidth={2} /> Remove Ads</span></h2>
           {adsRemoved ? (
             <p style={{ ...bodyText, marginBottom: 0, color: '#059669', fontWeight: 700 }}>
               ✓ You&apos;ve unlocked ad-free — thank you for supporting MANGAL.
             </p>
+          ) : adsPendingConfirmation ? (
+            <p style={{ ...bodyText, marginBottom: 0, color: '#d97706', fontWeight: 700 }}>
+              Payment noted — pending confirmation. This flips to ad-free once it&apos;s
+              reconciled (usually within a few hours).
+            </p>
+          ) : showAdsUpiFlow ? (
+            <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '16px' }}>
+              <DirectUpiPay
+                amountPaise={9900}
+                purpose="remove_ads"
+                description="Remove Ads — lifetime"
+                onPending={() => { setAdsPendingConfirmation(true); setShowAdsUpiFlow(false); }}
+              />
+            </div>
           ) : (
             <>
               <p style={bodyText}>
@@ -370,23 +407,39 @@ export default function SettingsPage() {
                 shows ads yet — this just unlocks your ad-free status ahead of time.)
               </p>
               <button
-                onClick={handleRemoveAds}
-                disabled={!adsRemovedLoaded || removeAdsState === 'processing' || !getRazorpayPublicKey()}
+                onClick={() => setShowAdsUpiFlow(true)}
+                disabled={!adsRemovedLoaded}
                 style={{
                   ...buttonBase,
-                  background: getRazorpayPublicKey() ? 'rgba(217,119,6,0.1)' : 'var(--bg-input)',
-                  border: getRazorpayPublicKey() ? '1px solid rgba(217,119,6,0.3)' : '1px solid var(--border-color)',
-                  color: getRazorpayPublicKey() ? '#d97706' : 'var(--text-faint)',
-                  opacity: removeAdsState === 'processing' ? 0.6 : 1,
-                  cursor: getRazorpayPublicKey() ? 'pointer' : 'not-allowed',
+                  background: 'rgba(217,119,6,0.1)',
+                  border: '1px solid rgba(217,119,6,0.3)',
+                  color: '#d97706',
+                  cursor: 'pointer',
                 }}
               >
-                {removeAdsState === 'processing'
-                  ? 'Processing...'
-                  : getRazorpayPublicKey()
-                    ? 'Remove Ads — ₹99'
-                    : 'Remove Ads — coming soon'}
+                Remove Ads — ₹99 via UPI
               </button>
+              {GLOBAL_PAYMENTS_ENABLED && (
+                <button
+                  onClick={handleRemoveAds}
+                  disabled={removeAdsState === 'processing' || !getRazorpayPublicKey()}
+                  style={{
+                    ...buttonBase,
+                    marginTop: '10px',
+                    background: getRazorpayPublicKey() ? 'rgba(217,119,6,0.1)' : 'var(--bg-input)',
+                    border: getRazorpayPublicKey() ? '1px solid rgba(217,119,6,0.3)' : '1px solid var(--border-color)',
+                    color: getRazorpayPublicKey() ? '#d97706' : 'var(--text-faint)',
+                    opacity: removeAdsState === 'processing' ? 0.6 : 1,
+                    cursor: getRazorpayPublicKey() ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  {removeAdsState === 'processing'
+                    ? 'Processing...'
+                    : getRazorpayPublicKey()
+                      ? 'Remove Ads — ₹99 via Card/Netbanking'
+                      : 'Remove Ads — coming soon'}
+                </button>
+              )}
               {removeAdsState === 'error' && (
                 <p style={{ ...bodyText, color: '#ef4444', marginTop: '10px', marginBottom: 0 }}>
                   {removeAdsError}
@@ -395,6 +448,15 @@ export default function SettingsPage() {
             </>
           )}
         </div>
+
+        {/* Payout UPI — §141, creators only. Where a creator tells us where
+            their tip money should go; verified via a code emailed to their
+            account address before it's trusted for actual payouts. */}
+        {isCreator && (
+          <div className={sectionCardClass} style={sectionCard}>
+            <CreatorUpiSettings />
+          </div>
+        )}
 
         {/* Download My Data */}
         <div className={sectionCardClass} style={sectionCard}>

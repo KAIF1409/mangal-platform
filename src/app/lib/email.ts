@@ -247,3 +247,69 @@ export async function sendNewChapterEmail(
     return { ok: false, error: String(err) };
   }
 }
+// ── §141 — Creator UPI Payout Verification ───────────────────────────────
+//
+// Called from app/api/creator/upi/request-code/route.ts. Confirms the
+// creator can read email sent to the address on their own account before
+// their upi_id is trusted for tip payouts — see the §141 migration header
+// for the scope of what this verification does and doesn't prove.
+
+export async function sendUpiVerificationCodeEmail(
+  toEmail: string,
+  code: string
+): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error('[email] RESEND_API_KEY is not set');
+    return { ok: false, error: 'Email service not configured' };
+  }
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /></head>
+<body style="margin:0;padding:0;background:#07070a;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#07070a;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;background:#0d0d14;border:1px solid #1a1a26;border-radius:16px;padding:40px 36px;">
+        <tr><td>
+          <div style="text-align:center;margin-bottom:28px;">
+            <span style="font-size:32px;">&#9889;</span>
+            <h1 style="font-size:28px;font-weight:900;color:#fff;margin:8px 0 4px;letter-spacing:-0.03em;">MANGAL</h1>
+          </div>
+          <div style="height:1px;background:linear-gradient(to right,transparent,#dc2626,transparent);margin-bottom:28px;"></div>
+          <h2 style="font-size:18px;font-weight:800;color:#fff;margin:0 0 12px;">Confirm your payout UPI ID</h2>
+          <p style="font-size:13px;color:#9ca3af;line-height:1.75;margin:0 0 24px;">
+            Enter this code back on MANGAL to confirm the UPI ID you just entered for receiving tips.
+            If you didn't request this, you can ignore this email — nothing changes without the code.
+          </p>
+          <div style="text-align:center;margin-bottom:24px;">
+            <span style="display:inline-block;padding:16px 28px;background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.3);border-radius:10px;color:#d97706;font-size:28px;font-weight:900;letter-spacing:0.12em;">${code}</span>
+          </div>
+          <p style="font-size:11px;color:#6b7280;line-height:1.6;margin:0;">This code expires once you request a new one or successfully verify.</p>
+          <div style="height:1px;background:#1a1a26;margin:28px 0 20px;"></div>
+          <p style="font-size:10px;color:#374151;text-align:center;margin:0;">© 2026 MANGAL Corp</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    const res = await fetch(RESEND_API_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: FROM_ADDRESS, to: [toEmail], subject: 'Your MANGAL UPI verification code', html }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error('[email] Resend error:', body);
+      return { ok: false, error: body };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('[email] fetch error:', err);
+    return { ok: false, error: String(err) };
+  }
+}

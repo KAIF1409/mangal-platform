@@ -20,6 +20,8 @@ import Navbar from '../../../components/shared/Navbar';
 import Footer from '../../../components/shared/Footer';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import { openRazorpayCheckout } from '../../../lib/payments/razorpayClient';
+import { GLOBAL_PAYMENTS_ENABLED } from '../../../lib/payments/featureFlags';
+import DirectUpiPay from '../../../components/shared/DirectUpiPay';
 import {
   BookOpen, FileText, ArrowLeft, Loader2, Lock, PlayCircle,
 } from 'lucide-react';
@@ -41,6 +43,8 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: s
   const [hasAccess, setHasAccess] = useState(false);
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState<string | null>(null);
+  const [showUpiFlow, setShowUpiFlow] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -235,24 +239,59 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: s
                     >
                       <PlayCircle size={19} /> Read now
                     </Link>
+                  ) : pendingConfirmation ? (
+                    <p style={{ fontSize: '13px', color: '#d97706', fontWeight: 700 }}>
+                      Payment noted — pending confirmation. Access unlocks once it&apos;s reconciled.
+                    </p>
+                  ) : showUpiFlow ? (
+                    <div style={{ maxWidth: '380px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '16px' }}>
+                      <DirectUpiPay
+                        amountPaise={book.price_paise ?? 0}
+                        purpose="book_purchase"
+                        purposeRefId={book.id}
+                        description={`Buy "${book.title}"`}
+                        onPending={() => { setPendingConfirmation(true); setShowUpiFlow(false); }}
+                      />
+                    </div>
                   ) : (
                     <>
                       <button
-                        onClick={handleBuy}
-                        disabled={buying}
+                        onClick={() => {
+                          if (!user) {
+                            setPostLoginRedirect(window.location.pathname);
+                            window.location.href = '/login';
+                            return;
+                          }
+                          setShowUpiFlow(true);
+                        }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: '9px',
-                          padding: '13px 26px', borderRadius: '10px', cursor: buying ? 'wait' : 'pointer',
+                          padding: '13px 26px', borderRadius: '10px', cursor: 'pointer',
                           border: 'none', background: 'var(--accent)', color: '#fff',
-                          fontWeight: 800, fontSize: '15px', opacity: buying ? 0.75 : 1,
+                          fontWeight: 800, fontSize: '15px',
                         }}
                       >
-                        {buying ? <Loader2 size={17} className="book-spin" /> : <Lock size={16} />}
-                        {buying ? 'Opening checkout…' : `Buy ${book.price_paise ? formatPaise(book.price_paise) : ''}`}
+                        <Lock size={16} /> Buy {book.price_paise ? formatPaise(book.price_paise) : ''} via UPI
                       </button>
                       <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '10px', lineHeight: 1.6, maxWidth: '420px' }}>
-                        Includes a free preview of the first pages in the reader. Payments are processed securely by Razorpay.
+                        Includes a free preview of the first pages in the reader. Pays directly by UPI — confirmation
+                        may take a little while since it isn&apos;t processed by a payment gateway yet.
                       </p>
+                      {GLOBAL_PAYMENTS_ENABLED && (
+                        <button
+                          onClick={handleBuy}
+                          disabled={buying}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '9px', marginTop: '10px',
+                            padding: '13px 26px', borderRadius: '10px', cursor: buying ? 'wait' : 'pointer',
+                            border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)',
+                            fontWeight: 800, fontSize: '15px', opacity: buying ? 0.75 : 1,
+                          }}
+                        >
+                          {buying ? <Loader2 size={17} className="book-spin" /> : <Lock size={16} />}
+                          {buying ? 'Opening checkout…' : `Buy ${book.price_paise ? formatPaise(book.price_paise) : ''} via Card/Netbanking`}
+                        </button>
+                      )}
                     </>
                   )}
                   {buyError && (

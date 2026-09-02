@@ -4,22 +4,27 @@ import { useState } from 'react';
 import { X, Coffee, Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { openRazorpayCheckout, getRazorpayPublicKey } from '../../lib/payments/razorpayClient';
+import { GLOBAL_PAYMENTS_ENABLED } from '../../lib/payments/featureFlags';
+import DirectUpiPay from './DirectUpiPay';
 
 // §94 — first real payment feature built on top of §48/§49's Razorpay
 // infra (see CONTEXT.md). "Buy Me a Coffee" style one-time tip: fixed
 // amount presets, no subscription, no unlock logic — just a `payments`
 // row with purpose='tip' and purpose_ref_id = the recipient's user_id.
 //
-// Two rails, shown side by side:
-//   - Razorpay (UPI/cards/netbanking) for India — covers PhonePe/Google
-//     Pay/Paytm automatically, since those are UPI apps, not separate
-//     gateways; whichever app is on the payer's phone shows up inside
-//     Razorpay's own UPI intent flow. Nothing extra to integrate per app.
-//   - PayPal for everyone else — a plain paypal.me link (no PayPal API
-//     keys needed), opens in a new tab with the amount prefilled.
-// Both are gated the same way the rest of this payments layer already
-// is: if the relevant env var isn't set yet, that rail shows "coming
-// soon" instead of a broken button. Nothing fakes readiness.
+// §141 update — the founder doesn't have a Razorpay merchant account or
+// global (non-India) customers yet, so the primary/only rail shown by
+// default is now direct-UPI (DirectUpiPay): pays straight into the
+// recipient's own UPI ID, no gateway account needed. That's the founder's
+// own Paytm VPA for tips with no purposeRefId, or a creator's verified
+// upi_id (see CreatorUpiSettings.tsx) when tipping a specific creator.
+//
+// The original Razorpay (UPI/cards/netbanking) + PayPal rails are kept
+// exactly as they were, just gated behind
+// NEXT_PUBLIC_ENABLE_GLOBAL_PAYMENTS — nothing deleted, so flipping that
+// env var back on brings back full multi-method + international support
+// once there's a real Razorpay account and/or global clients, without
+// touching this file again.
 
 const AMOUNT_PRESETS_INR = [
   { label: '₹49', paise: 4900 },
@@ -177,9 +182,47 @@ export default function TipJarModal({
               A small one-time tip — no account or subscription needed.
             </p>
 
+            {/* §141 — direct-to-VPA UPI, the default (and for now, only)
+                rail. Amount fixed to the ₹ preset selected below; tipping
+                a specific creator resolves to their own verified UPI ID,
+                a bare "support the platform" tip falls back to the
+                founder's. */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '14px' }}>
+              {AMOUNT_PRESETS_INR.map((p) => {
+                const active = selectedInr.paise === p.paise;
+                return (
+                  <button
+                    key={p.paise}
+                    onClick={() => setSelectedInr(p)}
+                    style={{
+                      padding: '12px 0', borderRadius: '11px', cursor: 'pointer', fontWeight: 800, fontSize: '14px',
+                      border: active ? '1.5px solid var(--accent)' : '1px solid var(--border-color)',
+                      background: active ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'var(--bg-input)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{
+              background: 'var(--bg-input)', border: '1px solid var(--border-color)',
+              borderRadius: '14px', padding: '16px', marginBottom: GLOBAL_PAYMENTS_ENABLED ? '20px' : 0,
+            }}>
+              <DirectUpiPay
+                amountPaise={selectedInr.paise}
+                purpose="tip"
+                purposeRefId={recipientUserId}
+                description={`Tip for ${recipientLabel}`}
+              />
+            </div>
+
+            {GLOBAL_PAYMENTS_ENABLED && (
+            <>
             {/* India rail — Razorpay (covers UPI, PhonePe, Google Pay, Paytm, cards, netbanking) */}
             <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.06em', marginBottom: '10px' }}>
-              INDIA — UPI / CARDS / NETBANKING
+              INDIA — CARD / NETBANKING (VIA RAZORPAY)
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '10px' }}>
               {AMOUNT_PRESETS_INR.map((p) => {
@@ -263,6 +306,8 @@ export default function TipJarModal({
                 'PayPal — coming soon'
               )}
             </button>
+            </>
+            )}
 
             {state === 'error' && (
               <div style={{
