@@ -10,7 +10,12 @@ import { Lock, Flag, Inbox, Bot, CheckCircle2, Check, AlertTriangle, Trash2, Ban
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 interface Report {
   id: string;
-  target_type: 'series' | 'chapter' | 'comment' | 'video';
+  // §144 — 'song' + 'kcircle_post' added: ReportButton emits both from the
+  // Songs / Kalpana Circle (K Circle) features, and the DB constraint now
+  // accepts them (20260902120000_reports_allow_song_target.sql). The admin
+  // page previously omitted them — song/kcircle_post reports fell through
+  // remove/ban resolution to the wrong tables.
+  target_type: 'series' | 'chapter' | 'comment' | 'video' | 'song' | 'kcircle_post';
   target_id: string;
   reporter_id: string;
   reason: string;
@@ -27,12 +32,18 @@ interface ActionState {
   banning: boolean;
   removed: boolean;
   banned: boolean;
+  // §144 — unban support: remembers which account this card's ban targeted
+  // so the same card can reverse it (same developer-verified RPC, p_active
+  // flipped to true). unbanning guards the in-flight request.
+  bannedUserId: string | null;
+  unbanning: boolean;
 }
 
 const defaultActionState = (): ActionState => ({
   removeConfirm: false, banConfirm: false,
   removing: false, banning: false,
   removed: false, banned: false,
+  bannedUserId: null, unbanning: false,
 });
 
 // §139-A11 — page size for the §82 `.range()` + "Load more" pattern. The
@@ -49,11 +60,14 @@ export default function AdminReportsPage() {
   // §139-A11 — true total (count:'exact') + load-more flag.
   const [reportsTotal, setReportsTotal] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  // §144 — the signed-in developer's id, for the self-ban guard rail.
+  const [viewerId, setViewerId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
+      setViewerId(u.user.id);
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -126,10 +140,16 @@ export default function AdminReportsPage() {
     }
     patchAction(r.id, { removing: true });
 
+    // §144 — explicit per-type table map. 'song' + 'kcircle_post' previously
+    // fell through to 'comments' (wrong table — the delete silently hit
+    // nothing or the wrong row). 'comment' intentionally remains the final
+    // fallthrough since it is the only remaining type.
     const table =
       r.target_type === 'series' ? 'series'
       : r.target_type === 'chapter' ? 'chapters'
       : r.target_type === 'video' ? 'videos'
+      : r.target_type === 'song' ? 'songs'
+      : r.target_type === 'kcircle_post' ? 'kcircle_posts'
       : 'comments';
 
     const { error } = await supabase.from(table).delete().eq('id', r.target_id);
@@ -200,11 +220,36 @@ export default function AdminReportsPage() {
         .eq('id', r.target_id)
         .single();
       userId = data?.creator_id ?? null;
+    } else if (r.target_type === 'song') {
+      // §144 — Songs reports resolve to the song's creator (same ownership
+      // column the songs pages already select).
+      const { data } = await supabase
+        .from('songs')
+        .select('creator_id')
+        .eq('id', r.target_id)
+        .single();
+      userId = data?.creator_id ?? null;
+    } else if (r.target_type === 'kcircle_post') {
+      // §144 — Kalpana Circle (K Circle) posts resolve to the post author.
+      const { data } = await supabase
+        .from('kcircle_posts')
+        .select('author_id')
+        .eq('id', r.target_id)
+        .single();
+      userId = data?.author_id ?? null;
     }
 
     if (!userId) {
       patchAction(r.id, { banning: false, banConfirm: false });
       alert('Could not find the user to ban — they may have already been deleted.');
+      return;
+    }
+
+    // §144 — guard rail: an admin could previously ban their own account
+    // from a report card, signing themselves out mid-moderation.
+    if (viewerId && userId === viewerId) {
+      patchAction(r.id, { banning: false, banConfirm: false });
+      alert('You cannot ban your own account.');
       return;
     }
 
@@ -224,7 +269,30 @@ export default function AdminReportsPage() {
 
     await supabase.from('reports').update({ status: 'reviewed' }).eq('id', r.id);
     setReports(rs => rs.map(rep => rep.id === r.id ? { ...rep, status: 'reviewed' } : rep));
-    patchAction(r.id, { banning: false, banConfirm: false, banned: true });
+    patchAction(r.id, { banning: false, banConfirm: false, banned: true, bannedUserId: userId });
+  };
+
+  // §144 — the unban half of user management: re-activates the account the
+  // admin just banned on this card, via the same developer-verified RPC with
+  // p_active flipped to true. Only offered on cards banned in this session
+  // (the card knows the resolved user id); nothing else about the report
+  // changes — status stays 'reviewed'.
+  const handleUnbanUser = async (r: Report) => {
+    const userId = actionStates[r.id]?.bannedUserId;
+    if (!userId) return;
+    patchAction(r.id, { unbanning: true });
+
+    const { error } = await supabase.rpc('admin_set_account_active', {
+      p_target_user_id: userId,
+      p_active: true,
+    });
+
+    if (error) {
+      patchAction(r.id, { unbanning: false });
+      alert(`Failed to unban user: ${error.message}`);
+      return;
+    }
+    patchAction(r.id, { unbanning: false, banned: false, bannedUserId: null });
   };
 
   const filtered = filter === 'all' ? reports : reports.filter(r => r.status === filter);
@@ -418,6 +486,27 @@ export default function AdminReportsPage() {
                         }}
                       >
                         {as.banning ? 'Banning…' : as.banConfirm ? (<><AlertTriangle size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Confirm Ban</>) : (<><Ban size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Ban User</>)}
+                      </button>
+                    )}
+
+                    {/* §144 — unban: offered on cards the admin banned this
+                        session; reverses via the same developer-verified RPC. */}
+                    {as.banned && as.bannedUserId && (
+                      <button
+                        onClick={() => handleUnbanUser(r)}
+                        disabled={as.unbanning}
+                        style={{
+                          padding: '6px 12px', borderRadius: '7px', fontSize: '11px', fontWeight: 700,
+                          cursor: as.unbanning ? 'not-allowed' : 'pointer',
+                          background: 'rgba(16,185,129,0.08)',
+                          border: '1px solid rgba(16,185,129,0.3)',
+                          color: '#10b981',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {as.unbanning
+                          ? (<><Ban size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Unbanning…</>)
+                          : (<><CheckCircle2 size={12} strokeWidth={2} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />Unban User</>)}
                       </button>
                     )}
 

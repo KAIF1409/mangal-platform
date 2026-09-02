@@ -61,3 +61,13 @@ export const PARENT_CONSENT_PENDING_COPY = {
 };
 
 export type ParentConsentStatus = 'not_required' | 'pending' | 'confirmed';
+
+/** §144 — Human-readable copy shown on the "account suspended" screen.
+ *  Deliberately distinct from PARENT_CONSENT_PENDING_COPY: banned users were
+ *  previously (wrongly) shown the parent-consent screen, because the login
+ *  page mapped every account_active=false profile to the 'pending' mode. */
+export const BANNED_ACCOUNT_COPY = {
+  title: 'This account has been suspended',
+  body:
+    'Your MANGAL account was suspended by our moderation team and can no longer be used. If you believe this is a mistake, you can appeal through our Grievance Officer page — include the email address this account was registered with, and our team will review it.',
+};

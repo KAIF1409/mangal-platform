@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
   const text = typeof body.text === 'string' ? body.text : '';
   if (!text.trim()) {
     return NextResponse.json(
-      { error: 'Nothing to polish — the page is empty.', code: 'empty_text' },
+      { error: 'Nothing to process — the text is empty.', code: 'empty_text' },
       { status: 400 },
     );
   }
@@ -273,8 +273,13 @@ export async function POST(req: NextRequest) {
       { status: 413 },
     );
   }
+  // §144 — 'translate' must be whitelisted explicitly or translation runs
+  // would silently downgrade to 'auto' (polish) at the proxy.
   const mode: AssistMode =
-    body.mode === 'polish' || body.mode === 'hinglish' || body.mode === 'auto'
+    body.mode === 'polish' ||
+    body.mode === 'hinglish' ||
+    body.mode === 'auto' ||
+    body.mode === 'translate'
       ? body.mode
       : 'auto';
 

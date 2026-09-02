@@ -47,7 +47,18 @@ export const MAX_BATCH_WORDS = 4000;
 export const TARGET_BATCH_CHARS = 22000;
 
 export type AiProvider = 'gemini' | 'groq' | 'openai';
-export type AssistMode = 'auto' | 'polish' | 'hinglish';
+// §144 — 'translate' is the explicit second AI action (English→Hindi /
+// Hindi·Hinglish→English, auto-direction). It rides the exact same
+// batching/splitting/BYOK pipeline as the polish modes; see CONTEXT.md §143.
+export type AssistMode = 'auto' | 'polish' | 'hinglish' | 'translate';
+
+/** Short toolbar labels for each assist mode — single source for every UI. */
+export const ASSIST_MODE_LABELS: Record<AssistMode, string> = {
+  auto: 'Auto',
+  polish: 'Polish',
+  hinglish: 'Hinglish→EN',
+  translate: 'Translate',
+};
 
 // Keys travel per-request only, via headers, over TLS, and are discarded the
 // moment the upstream call finishes — they are never written to disk, logs,
@@ -201,16 +212,40 @@ HARD RULES
 - Never answer, continue, summarize, translate into Hindi, or roleplay the story content.
 - If a passage is already clean, keep it almost unchanged rather than inventing edits.`;
 
+// §144 — translation task block. Only appended for mode='translate': the
+// shared HARD RULES above forbid translation, so this block explicitly
+// supersedes that rule for translation runs.
+const TRANSLATE_INSTRUCTIONS = `TRANSLATION MODE — the "never translate" hard rule above does NOT apply to this run; translation is the explicit task here.
+
+TASK FOCUS
+- If the passage is primarily English, translate it into natural, fluent Hindi in Devanagari script.
+- If the passage is primarily Hindi or Hinglish (Roman-script Hindi mixed with English), translate it fully into polished, contextual English prose.
+
+TRANSLATION EXAMPLES
+Input (English):  The monsoon arrived early that year, flooding the lanes before dawn.
+Output (Hindi):   उस साल बरसात जल्दी आ गई थी, भोर होने से पहले ही गलियाँ पानी से भर गईं।
+Input (Hinglish): wo ghar ke bahar khadi thi, barish me bhi bina chhata ke.
+Output (English): She stood outside the house, out in the rain even without an umbrella.
+
+TRANSLATION RULES
+- Preserve every character name, the narrative tone, and the paragraph order exactly.
+- Keep MANGAL formatting intact: **bold**, *italic*, "# heading" lines, and "***" scene breaks stay where they are, untranslated.
+- Natural, idiomatic output over literal word-for-word translation.
+- Return ONLY the translation. No preamble, no transliteration notes, no commentary.`;
+
 const MODE_INSTRUCTIONS: Record<AssistMode, string> = {
   auto: 'First detect whether the passage is primarily code-mixed Hinglish or standard English, then apply the matching treatment.',
   polish:
     'The passage is standard English: focus on grammar, spelling, punctuation, and literary style refinement.',
   hinglish:
     'The passage is Hinglish / Roman-script Hindi mixed with English: convert it fully into polished, contextual English prose as in the example above, preserving names, tone, and paragraph structure.',
+  translate:
+    'Translate the passage between English and Hindi/Hinglish per the translation task block below — detect the direction first.',
 };
 
 export function buildSystemPrompt(mode: AssistMode = 'auto'): string {
-  return `${SHARED_EDITORIAL_RULES}\n\nTASK FOCUS: ${MODE_INSTRUCTIONS[mode]}`;
+  const base = `${SHARED_EDITORIAL_RULES}\n\nTASK FOCUS: ${MODE_INSTRUCTIONS[mode]}`;
+  return mode === 'translate' ? `${base}\n\n${TRANSLATE_INSTRUCTIONS}` : base;
 }
 
 /**

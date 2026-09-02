@@ -20,9 +20,10 @@
 // integrations that build their own surfaces around the same engine.
 
 import { useEffect, useRef, useState } from 'react';
-import { CircleAlert, Cloud, Cpu, LoaderCircle, RefreshCw, Settings, Sparkles, X } from 'lucide-react';
+import { CircleAlert, Cloud, Cpu, Languages, LoaderCircle, RefreshCw, Settings, Sparkles, X } from 'lucide-react';
 
 import {
+  ASSIST_MODE_LABELS,
   MIN_POLISH_CHARS,
   MIN_POLISH_WORDS,
   type AssistMode,
@@ -61,11 +62,8 @@ export const FEATURE_THRESHOLDS: Record<AiFeature, { minWords: number; minChars:
   script: { minWords: MIN_POLISH_WORDS, minChars: MIN_POLISH_CHARS },
 };
 
-const MODE_LABELS: Record<AssistMode, string> = {
-  auto: 'Auto',
-  polish: 'Polish',
-  hinglish: 'Hinglish→EN',
-};
+// §144 — labels moved to ASSIST_MODE_LABELS in lib/ai/editorAssist.ts so the
+// engine (diff-review header) and every toolbar render the same wording.
 
 interface Props {
   value: string;
@@ -192,7 +190,7 @@ export default function WebMangalAiEditor({
         </div>
 
         <div role="group" aria-label="Assist focus" style={{ display: 'inline-flex', gap: '5px' }}>
-          {(['auto', 'polish', 'hinglish'] as AssistMode[]).map((m) => (
+          {(['auto', 'polish', 'hinglish', 'translate'] as AssistMode[]).map((m) => (
             <button
               key={m}
               type="button"
@@ -208,7 +206,7 @@ export default function WebMangalAiEditor({
                 color: engine.mode === m ? 'var(--accent)' : 'var(--text-tertiary)',
               }}
             >
-              {MODE_LABELS[m]}
+              {ASSIST_MODE_LABELS[m]}
             </button>
           ))}
         </div>
@@ -272,6 +270,7 @@ export default function WebMangalAiEditor({
             type="button"
             onClick={() => void engine.runAssist()}
             disabled={busy}
+            title="AI assistant: batched grammar/style polish, Hinglish → English conversion"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '6px',
               padding: '8px 15px', borderRadius: '9px', border: 'none',
@@ -281,8 +280,41 @@ export default function WebMangalAiEditor({
               opacity: busy || !engine.thresholdMet ? 0.55 : 1,
             }}
           >
-            {busy ? <LoaderCircle size={13} className="mangal-spin" /> : <Sparkles size={13} />}
-            {busy ? 'Polishing…' : '✨ Polish & Hinglish Convert'}
+            {busy && engine.runningMode !== 'translate' ? (
+              <LoaderCircle size={13} className="mangal-spin" />
+            ) : (
+              <Sparkles size={13} />
+            )}
+            {busy && engine.runningMode !== 'translate'
+              ? 'Polishing…'
+              : '✨ Polish & Hinglish Convert'}
+          </button>
+
+          {/* §144 — the explicit SECOND AI action: full translation. Rides the
+              same batching/splitting/BYOK pipeline; forces mode='translate'
+              for this run via the engine's override param. */}
+          <button
+            type="button"
+            onClick={() => void engine.runAssist('translate')}
+            disabled={busy}
+            title="AI translation: English → Hindi, or Hindi/Hinglish → English (auto-detected)"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '7px 14px', borderRadius: '9px',
+              border: '1px solid var(--accent)',
+              background: busy && engine.runningMode === 'translate' ? 'var(--border-color)' : 'transparent',
+              color: busy && engine.runningMode === 'translate' ? 'var(--text-muted)' : 'var(--accent)',
+              fontWeight: 800, fontSize: '12px',
+              cursor: busy ? 'wait' : 'pointer',
+              opacity: busy || !engine.thresholdMet ? 0.55 : 1,
+            }}
+          >
+            {busy && engine.runningMode === 'translate' ? (
+              <LoaderCircle size={13} className="mangal-spin" />
+            ) : (
+              <Languages size={13} />
+            )}
+            {busy && engine.runningMode === 'translate' ? 'Translating…' : '🌐 AI Translation'}
           </button>
         </div>
 

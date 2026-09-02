@@ -21,6 +21,7 @@ import { countWords } from '../../lib/novelEditor';
 import {
   AI_KEY_HEADER,
   AI_PROVIDER_HEADER,
+  ASSIST_MODE_LABELS,
   buildSystemPrompt,
   MAX_BATCH_WORDS,
   MIN_POLISH_CHARS,
@@ -74,6 +75,9 @@ export function useAiAssistEngine({
   const [status, setStatus] = useState<AssistStatus>('idle');
   const [statusDetail, setStatusDetail] = useState('');
   const [mode, setMode] = useState<AssistMode>('auto');
+  // §144 — mode of the active/most recent run. Drives per-button busy labels
+  // now that the toolbar has TWO actions (assistant + AI translation).
+  const [runningMode, setRunningMode] = useState<AssistMode | null>(null);
   const [engineMode, setEngineMode] = useState<EngineMode>('local');
   const [webGpuOk, setWebGpuOk] = useState<boolean | null>(null);
   const [cloudReady, setCloudReady] = useState(false);
@@ -85,6 +89,9 @@ export function useAiAssistEngine({
 
   const toastId = useRef(0);
   const activeRunRef = useRef(0);
+  // §144 — mode used by the last run so "Retry" repeats the SAME action
+  // (e.g. a translation) even if the pill selection changed meanwhile.
+  const lastRunModeRef = useRef<AssistMode | null>(null);
 
   const pushToast = useCallback((kind: ToastMsg['kind'], toastText: string) => {
     setToasts((t) => [...t.slice(-3), { id: ++toastId.current, kind, text: toastText }]);
@@ -111,18 +118,30 @@ export function useAiAssistEngine({
     await clearAiKeys();
     setCloudReady(false);
     setStatus('idle');
+    setRunningMode(null);
     setStatusDetail('');
     pushToast('error', 'API key expired or invalid. Please re-verify your key.');
     setSettingsOpen(true);
   }, [pushToast]);
 
-  /** The ONE explicit assist trigger — shared by every surface. */
-  const runAssist = useCallback(async (): Promise<void> => {
+  /**
+   * The ONE explicit assist trigger — shared by every surface.
+   * §144: `modeOverride` lets a dedicated action button (e.g. AI
+   * Translation) force a mode for this run without touching the pill
+   * selection. Batching policy is mode-independent by design.
+   */
+  const runAssist = useCallback(async (modeOverride?: AssistMode): Promise<void> => {
     if (status !== 'idle') return;
+    const activeMode: AssistMode = modeOverride ?? mode;
+    lastRunModeRef.current = activeMode;
+    setRunningMode(activeMode);
+    const verb = activeMode === 'translate' ? 'translating' : 'polishing';
+    const Verb = activeMode === 'translate' ? 'Translating' : 'Polishing';
     const plainText = text;
 
     if (!meetsBatchThresholdWith(plainText, minWords, minChars)) {
       setShowThresholdPopover(true);
+      setRunningMode(null);
       return;
     }
 
@@ -151,11 +170,11 @@ export function useAiAssistEngine({
           setStatus('running');
           setStatusDetail(
             batches.length > 1
-              ? `✨ On-device polishing block ${i + 1} of ${batches.length}…`
-              : '✨ WebMangal AI polishing full page (on-device)…',
+              ? `✨ On-device ${verb} block ${i + 1} of ${batches.length}…`
+              : `✨ WebMangal AI ${verb} full page (on-device)…`,
           );
           const out = await engine.complete([
-            { role: 'system', content: buildSystemPrompt(mode) },
+            { role: 'system', content: buildSystemPrompt(activeMode) },
             { role: 'user', content: batches[i] },
           ]);
           if (runId !== activeRunRef.current) return;
@@ -173,6 +192,7 @@ export function useAiAssistEngine({
             'Cloud mode needs your own free API key and consent. Open AI settings to add one — or switch to on-device polishing.',
           );
           setSettingsOpen(true);
+          setRunningMode(null);
           return;
         }
         const apiKey = await decryptApiKey();
@@ -186,8 +206,8 @@ export function useAiAssistEngine({
           setStatus('running');
           setStatusDetail(
             batches.length > 1
-              ? `✨ Polishing block ${i + 1} of ${batches.length} via ${providerName} (your key)…`
-              : `✨ WebMangal AI polishing full page via ${providerName} (your key)…`,
+              ? `✨ ${Verb} block ${i + 1} of ${batches.length} via ${providerName} (your key)…`
+              : `✨ WebMangal AI ${verb} full page via ${providerName} (your key)…`,
           );
 
           let data: { text?: string; model?: string } | EditorAssistErrorResponse | null = null;
@@ -199,7 +219,7 @@ export function useAiAssistEngine({
                 [AI_PROVIDER_HEADER]: meta.provider,
                 [AI_KEY_HEADER]: apiKey,
               },
-              body: JSON.stringify({ text: batches[i], mode }),
+              body: JSON.stringify({ text: batches[i], mode: activeMode }),
             });
             data = (await res.json().catch(() => null)) as
               | { text?: string; model?: string }
@@ -222,6 +242,7 @@ export function useAiAssistEngine({
             return;
           }
           setStatus('idle');
+          setRunningMode(null);
           setStatusDetail('');
           if (errCode === 'rate_limited') {
             setCloudAlert({
@@ -245,17 +266,19 @@ export function useAiAssistEngine({
           });
           return;
         }
-        label = `${providerName} · BYOK`;
+        label = `${providerName} · ${ASSIST_MODE_LABELS[activeMode]}`;
       }
 
       const polished = polishedParts.join('\n\n');
       if (!polished.trim()) throw new Error('Empty response from the model.');
 
       setStatus('idle');
+      setRunningMode(null);
       setStatusDetail('');
       setDiffState({ original: plainText, polished, label });
     } catch (err) {
       setStatus('idle');
+      setRunningMode(null);
       setStatusDetail('');
       pushToast(
         'error',
@@ -288,7 +311,8 @@ export function useAiAssistEngine({
 
   const retryAfterServerAlert = useCallback(() => {
     setCloudAlert(null);
-    void runAssist();
+    // §144 — repeat the SAME action that failed (translation stays translation).
+    void runAssist(lastRunModeRef.current ?? undefined);
   }, [runAssist]);
 
   const switchToLocalEngine = useCallback(() => {
@@ -304,6 +328,7 @@ export function useAiAssistEngine({
     busy: status !== 'idle',
     mode,
     setMode,
+    runningMode,
     engineMode,
     setEngineMode,
     webGpuOk,

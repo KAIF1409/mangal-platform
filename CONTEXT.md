@@ -9454,3 +9454,190 @@ or `/studio/books` clones exist anywhere in `src/`.
   maps on load (`lastPage > 0 ? ceil`) — chosen to avoid a schema change on a table
   with RLS on books/payments; both paths restore correctly via `read/page.tsx`'s
   existing `initialProgress` fetch.
+## §143 — Phase 0 audit: AI translation split · about page · signup/auth fixes · admin reports (2026-09-02)
+
+Pre-work audit for the five-phase modular feature pass. Baselines re-verified
+this session: `npx tsc --noEmit` → 0 errors; `npm run lint` → 0 errors /
+53 warnings (§140/§141 baseline unchanged); `.open-next/server-functions/
+default/handler.mjs` = 8,110,309 B raw (§142 baseline), wrangler gzip
+2,173.17 KiB vs the 3,072 KiB free-plan ceiling. Web research for admin-panel
+feature patterns returned only generic marketing content (Two Hat/Modulate,
+Reddit blocked) — the admin workstream below is grounded in the audit's own
+findings plus the platform's existing §82/§139 patterns instead.
+
+### Workstream 1 — AI Translation (currently missing)
+
+- `lib/ai/editorAssist.ts` `AssistMode` is exactly `'auto' | 'polish' |
+  'hinglish'` — there is NO translation option anywhere in the product. The
+  only AI text action is the batched "Polish & Hinglish Convert" (Hinglish→EN)
+  pass. "Translate to Hindi" is explicitly FORBIDDEN in the shared HARD RULES.
+- Consumers of `AssistMode`: `WebMangalAiEditor.tsx` (`MODE_LABELS` Record —
+  TS-exhaustive, adding a mode forces an update there), `useAiAssistEngine.ts`
+  (state `mode`, `runAssist` closure-reads it; body sends `{ text, mode }` to
+  `/api/ai/editor-assist` and `buildSystemPrompt(mode)` on the local lane),
+  `AiWritingEditor.tsx` (own pills + its own local `runAssist` wrapper — must
+  be checked separately), and the API route's mode whitelist at
+  `route.ts:276-279` (`body.mode === 'polish' || 'hinglish' || 'auto'` else
+  forced `'auto'`) — a new mode MUST be added there or it silently downgrades.
+- Plan: add `'translate'` mode (auto-direction: EN→Hindi Devanagari when the
+  passage is English, Hindi/Hinglish→polished EN otherwise), explicit mode
+  override param on the engine's `runAssist(override?)`, a second toolbar
+  button "AI Translation" beside "Polish & Hinglish Convert", a Translate pill
+  in the studio writer, and the route whitelist entry. Keep batching policy,
+  splitting, BYOK, recovery matrix untouched — translation rides the exact
+  same §133/§134 pipeline.
+
+### Workstream 2 — Company / About page
+
+- `src/app/about/page.tsx` (95 lines) describes only "comics and web novels",
+  Navbar `variant="legal"`, dark-mode CSS-var inline styles, STATS + VALUES
+  cards, help/grievance links. It does not mention KaTube (video), K Circle /
+  Kalpana Circle (community), the AI writing tools, or the DPDP compliance
+  posture. Rewrite in place (no new route, no route duplication) keeping the
+  same inline-style convention and Navbar/Footer chrome.
+
+### Workstream 3 — Signup / auth compatibility fixes
+
+- **Banned-user screen bug (confirmed):** `login/page.tsx` maps
+  `account_active === false` to `setMode('pending')` in BOTH `checkSession`
+  (~line 502) and `handleLogin` (~line 586) — a banned user sees the
+  "waiting for parent consent" DPDP screen. `account_active=false` is ALSO
+  what parent-consent-pending minors have, so the fix must branch on
+  `is_minor`/`parent_consent_status` (both exist on `profiles`:
+  `is_minor` is the generated column behind `compute_is_minor()`;
+  `parent_consent_status` is owned by `send-parent-consent` /
+  `confirm-parent-consent` service-role routes).
+- **No `?code=` handler:** email-confirmation links that land on
+  `/login?code=...` (Site-URL redirects) are never exchanged — `/auth/callback`
+  only serves the Google OAuth redirect. Plan: a mount effect on /login that
+  captures `code` (and `error_description`), cleans the URL, calls
+  `supabase.auth.getSession()` first (awaiting supabase-js auto-detect), then
+  explicitly `exchangeCodeForSession` if still session-less, then reuses the
+  same post-auth routing helper (onboarded → nextPath, else dob/role, minor →
+  pending, banned → banned screen).
+- `authRedirect` cookie flow (POST_LOGIN_REDIRECT_COOKIE) is consistent — no
+  changes needed there. `safeNextPath` validation already open-redirect-safe.
+
+### Workstream 4 — Admin reports gaps (founder-reported)
+
+- **DB constraint blocks song reports:** `reports_target_type_check` (latest
+  rebuild in `20260823090000_reports_allow_kcircle_post_target.sql`) allows
+  `series/chapter/comment/video/kcircle_post` but NOT `'song'`, while
+  `ReportButton.tsx` emits `target_type: 'song'` from WebMangal Songs — every
+  song report fails at insert. Migration required: idempotent constraint
+  rebuild adding `'song'` (DO-block guard on `pg_get_constraintdef`).
+- **Admin page target resolution broken for new types:**
+  `admin/reports/page.tsx` `Report.target_type` union omits both;
+  `handleRemoveContent`'s table map falls through song/kcircle_post to
+  `'comments'` (wrong table delete), and `handleBanUser`'s owner lookup has no
+  song (`songs.creator_id` — table per `20260818120000_webmangal_songs.sql`)
+  or kcircle_post (`kcircle_posts.author_id`, caption text) branch.
+- **Ban/unban management:** ban works via the `admin_set_account_active(uuid,
+  boolean)` service-verified RPC (`20260821110000...`); there is no unban and
+  no self-ban guard. Plan: Unban action on cards the admin just banned
+  (store resolved user id in ActionState), viewer self-ban guard, `p_active:
+  true` for unban. No new RLS/roles touched — the same RPC.
+
+### Constraints carried into implementation
+
+- Do NOT touch books/payments tables, the novel/manga reader, or the prior
+  Books section work (§133/§141 surfaces stay as-is).
+- Migrations: idempotent, additive-only, no RLS changes.
+- Hard gates before each commit: `npx tsc --noEmit` → 0; `npm run lint` → no
+  new errors (53-warning baseline tolerated); `npm run build` → exit 0;
+  re-measure handler.mjs + wrangler dry-run gzip < 3,072 KiB.
+- Pushes (if requested) need the PAT header form:
+  `git -c http.extraHeader="AUTHORIZATION: Bearer <GITHUB_PAT>" push origin main`.
+
+## §144 — Implementation: AI translation split · ecosystem about page · auth fixes · admin reports (2026-09-02)
+
+All four §143 workstreams implemented in one pass. No new dependencies; no
+RLS changes; books/payments/reader surfaces untouched, as required.
+
+### 1. AI Translation split (the explicit second AI action)
+
+- `lib/ai/editorAssist.ts` — `AssistMode` gains `'translate'` (auto-direction:
+  English → natural Hindi (Devanagari); Hindi/Hinglish → polished English).
+  New single-source `ASSIST_MODE_LABELS`; `buildSystemPrompt('translate')`
+  appends a dedicated `TRANSLATE_INSTRUCTIONS` block that explicitly
+  supersedes the shared "never translate" hard rule (direction detection,
+  two few-shot examples, formatting-dialect + names preservation, no preamble).
+- `useAiAssistEngine.ts` — `runAssist(modeOverride?)` lets a dedicated button
+  force a mode without touching the pill selection; new `runningMode` state
+  (cleared at every exit: threshold guard, invalid key, no-key, rate-limit,
+  server-error, success, catch) drives per-button busy labels; mode-aware
+  status strings ("Translating/Polishing block i of n…"); diff-review label
+  now includes the mode (`Gemini · Translate`); `lastRunModeRef` makes
+  "Retry" repeat the SAME action. Batching/splitting/BYOK/recovery untouched.
+- `WebMangalAiEditor.tsx` — toolbar now has BOTH actions: the existing
+  "✨ Polish & Hinglish Convert" (assistant) and a new outlined
+  "🌐 AI Translation" button (`runAssist('translate')`), plus a fourth
+  `Translate` focus pill. All WebMangalAiEditor consumers (chapters,
+  synopsis, author notes, book descriptions, lyrics, codex character/lore)
+  inherit translation with zero per-surface changes.
+- `AiWritingEditor.tsx` — studio writer gets the `Translate` pill; CTA label
+  flips to "✨ Check & Translate Page" when that mode is selected.
+- `api/ai/editor-assist/route.ts` — `'translate'` added to the mode whitelist
+  (without it translation runs would silently downgrade to `'auto'`).
+
+### 2. Company / About page (`src/app/about/page.tsx`)
+
+- Rewritten in place (same route, same dark-mode CSS-var inline-style
+  convention, Navbar `legal` + Footer). New "The MANGAL ecosystem" section:
+  WebMangal (comics/web novels/songs + AI studio tools), KaTube (video),
+  Kalpana Circle/K Circle (community). Stats strip gains
+  "Products, one account: 3"; values gain "Privacy by default" (DPDP Act
+  2023 posture: parental confirmation, no profiling of minors).
+
+### 3. Signup/auth compatibility fixes (`login/page.tsx`, `lib/compliance/dpdp.ts`)
+
+- **Banned-user screen:** `account_active=false` no longer unconditionally
+  shows the parent-consent screen. New shared `routeAfterSession` (used by
+  session restore AND password login; login's own profile query now also
+  selects `is_minor, parent_consent_status`) branches: minor +
+  `parent_consent_status='pending'` → consent screen; anything else inactive
+  → new `'banned'` mode rendering a dedicated suspension card
+  (`BANNED_ACCOUNT_COPY` in dpdp.ts, inline IconBan glyph, "Appeal via the
+  Grievance Officer" CTA → /grievance, back-to-sign-in).
+- **`?code=` email-link handling:** email-confirmation/recovery links landing
+  on `/login?code=...` are now consumed. The mount effect captures the href,
+  cleans the URL (replay-safe), calls `getSession()` first (awaiting
+  supabase-js's own URL detection), falls back to an explicit
+  `exchangeCodeForSession(linkHref)`, then reuses `routeAfterSession` for
+  onboarding/ban/consent routing. `useCallback` import added; session-restore
+  effect deferred via `setTimeout(0)` — same pattern as the existing
+  `?error=` effect — to satisfy the `react-hooks/set-state-in-effect` rule
+  (flagged once during lint; fixed, not suppressed).
+
+### 4. Admin reports (`src/app/admin/reports/page.tsx` + migration)
+
+- Migration `20260902120000_reports_allow_song_target.sql` — idempotent
+  DO-block rebuild of `reports_target_type_check` adding `'song'` (guarded on
+  `pg_get_constraintdef` so re-runs are no-ops; constraint created fresh if
+  missing). Fixes founder-reported insert failures for every song report.
+- `Report.target_type` union extended with `'song' | 'kcircle_post'`;
+  `handleRemoveContent` now maps song→`songs`, kcircle_post→`kcircle_posts`
+  (both previously fell through to a `comments` delete); `handleBanUser`
+  resolves owners via `songs.creator_id` / `kcircle_posts.author_id`.
+- User management: `ActionState` gains `bannedUserId`/`unbanning`; ban
+  success records the resolved id and the card offers "Unban User" (same
+  developer-verified `admin_set_account_active` RPC with `p_active: true`).
+  New guard rail: an admin cannot ban their own account (`viewerId` check).
+
+### Bundle-size verification (HARD GATE)
+
+| Metric | §142 baseline | §144 after | Δ |
+|---|---|---|---|
+| handler.mjs raw | 8,110,309 B | **8,120,264 B** | +9,955 B |
+| wrangler Total Upload | 11,114.32 KiB | **11,125.63 KiB** | +11.31 KiB |
+| wrangler gzip | 2,173.17 KiB | **2,176.04 KiB** | +2.87 KiB — ~896 KiB under the 3,072 KiB free-plan ceiling |
+
+### Gates (final tree)
+
+`npx tsc --noEmit` → 0; `npm run lint` → 0 errors / **53 warnings (exact
+§140/§141 baseline)**; `npm run build` → exit 0; OpenNext build → complete;
+wrangler dry-run gzip as above. One lint regression (set-state-in-effect on
+the new session-restore effect) was fixed via the page's existing
+`setTimeout(0)` deferral pattern — no rule suppressions added.
+
+

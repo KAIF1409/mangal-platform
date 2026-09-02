@@ -493,6 +493,7 @@ export default function AiWritingEditor({ initialText, onChange, creatorEmail }:
           <button onClick={() => setMode('auto')} style={modeBtn('auto')}>Auto-detect</button>
           <button onClick={() => setMode('polish')} style={modeBtn('polish')}>Polish English</button>
           <button onClick={() => setMode('hinglish')} style={modeBtn('hinglish')}>Hinglish → English</button>
+          <button onClick={() => setMode('translate')} style={modeBtn('translate')}>Translate</button>
         </div>
 
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
@@ -592,7 +593,9 @@ export default function AiWritingEditor({ initialText, onChange, creatorEmail }:
             ? engineMode === 'local'
               ? 'Polishing on-device…'
               : 'Polishing via your key…'
-            : '✨ Check & Polish Page'}
+            : mode === 'translate'
+              ? '✨ Check & Translate Page'
+              : '✨ Check & Polish Page'}
         </button>
         </div>
 

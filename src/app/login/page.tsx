@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
-import { isMinor, isPlausibleDateOfBirth, PARENT_CONSENT_PENDING_COPY } from '../lib/compliance/dpdp';
+import {
+  isMinor,
+  isPlausibleDateOfBirth,
+  PARENT_CONSENT_PENDING_COPY,
+  BANNED_ACCOUNT_COPY,
+} from '../lib/compliance/dpdp';
 import { setPostLoginRedirect, consumePostLoginRedirect } from '../lib/auth/authRedirect';
 import { ArrowLeft } from 'lucide-react';
 
 // 'dob'     = Google OAuth new users — skipped register form so no DOB yet
 // 'pending' = minor whose parent hasn't confirmed yet
-type Mode = 'login' | 'register' | 'dob' | 'role' | 'pending';
+// 'banned'  = suspended account (account_active=false, not a consent-pending minor) — §144
+type Mode = 'login' | 'register' | 'dob' | 'role' | 'pending' | 'banned';
 
 // ── Full-screen background image layer ──────────────────────────────────────
 // Drop your generated image at /public/bg-aryavarta.jpg (any name works,
@@ -133,6 +139,13 @@ const IconClock = ({ size = 26 }: { size?: number }) => (
   <IconBase size={size}>
     <circle cx="12" cy="12" r="9" />
     <path d="M12 7.5V12l3 2" />
+  </IconBase>
+);
+// §144 — suspended-account glyph for the dedicated banned screen.
+const IconBan = ({ size = 26 }: { size?: number }) => (
+  <IconBase size={size}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M5.8 5.8l12.4 12.4" />
   </IconBase>
 );
 const IconBook = ({ size = 22 }: { size?: number }) => (
@@ -488,27 +501,74 @@ export default function AuthPage() {
     return () => clearTimeout(t);
   }, []);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) return;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('onboarded, account_active, date_of_birth')
-        .eq('id', data.session.user.id)
-        .single();
-      if (!profile) return;
-      // Minor blocked — parent hasn't confirmed yet
-      if (profile.account_active === false) { setMode('pending'); return; }
-      if (!profile.onboarded) {
-        // Google OAuth users land here without a DOB — collect it first
-        setMode(profile.date_of_birth ? 'role' : 'dob');
-        return;
-      }
-      window.location.href = nextPath;
-    };
-    checkSession();
+  // §144 — shared post-auth routing, used by session restore, email-link code
+  // exchange, and password login. account_active=false is shared by TWO
+  // states: a minor whose parent hasn't confirmed yet (DPDP flow → 'pending'
+  // screen) and a suspended/banned account (→ 'banned' screen). Previously
+  // EVERY inactive account was shown the parent-consent screen.
+  const routeAfterSession = useCallback(async () => {
+    const { data } = await supabase.auth.getSession();
+    const session = data.session;
+    if (!session) return;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarded, account_active, date_of_birth, is_minor, parent_consent_status')
+      .eq('id', session.user.id)
+      .single();
+    if (!profile) return;
+    if (profile.account_active === false) {
+      setMode(
+        profile.is_minor === true && profile.parent_consent_status === 'pending'
+          ? 'pending'
+          : 'banned',
+      );
+      return;
+    }
+    if (!profile.onboarded) {
+      // Google OAuth users land here without a DOB — collect it first
+      setMode(profile.date_of_birth ? 'role' : 'dob');
+      return;
+    }
+    window.location.href = nextPath;
   }, [nextPath]);
+
+  useEffect(() => {
+    // Deferred via setTimeout(0) — same pattern as the ?error= effect above:
+    // the lint rule forbids a synchronous setState path kicked off directly
+    // in an effect body, and the deferral also lets supabase-js's own URL
+    // detection settle before we route.
+    const t = setTimeout(() => { void routeAfterSession(); }, 0);
+    return () => clearTimeout(t);
+  }, [routeAfterSession]);
+
+  // §144 — email-confirmation / password-recovery links land on
+  // /login?code=... (Supabase's Site-URL redirect) and were never consumed:
+  // the user just saw the login form again as if the link was dead.
+  // /auth/callback only serves the Google OAuth redirect, so this page owns
+  // the PKCE exchange for email links. getSession() runs first because it
+  // awaits supabase-js's own URL detection — if the client already consumed
+  // the code we simply route; otherwise we redeem the captured URL
+  // explicitly. The URL is cleaned BEFORE any await so a refresh can't
+  // replay the code.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (!code) return;
+    const linkHref = window.location.href;
+    window.history.replaceState({}, '', '/login');
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        const { error } = await supabase.auth.exchangeCodeForSession(linkHref);
+        if (error) {
+          setError('That email link has expired or was already used — just log in below instead.');
+          return;
+        }
+      }
+      setMessage('Email confirmed — you\u2019re signed in.');
+      await routeAfterSession();
+    })();
+  }, [routeAfterSession]);
 
   const handleRegister = async () => {
     if (!email || !password || !name) {
@@ -584,11 +644,22 @@ export default function AuthPage() {
       setLoading(false);
       return;
     }
-    const { data: profile } = await supabase.from('profiles').select('onboarded, account_active').eq('id', data.user.id).single();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarded, account_active, is_minor, parent_consent_status')
+      .eq('id', data.user.id)
+      .single();
     if (profile && profile.account_active === false) {
       await supabase.auth.signOut();
       setLoading(false);
-      setMode('pending');
+      // §144 — inactive ≠ minor. Banned users were wrongly shown the
+      // "waiting for parent consent" DPDP screen; only a consent-pending
+      // minor (is_minor + parent_consent_status='pending') gets that screen.
+      setMode(
+        profile.is_minor === true && profile.parent_consent_status === 'pending'
+          ? 'pending'
+          : 'banned',
+      );
       return;
     }
     if (profile && !profile.onboarded) setMode('role');
@@ -712,6 +783,53 @@ export default function AuthPage() {
                   No targeted ads. No behavioural profiling. This account is protected under the DPDP Act, 2023.
                 </p>
               </div>
+              <button
+                onClick={() => switchMode('login')}
+                style={{ background: 'none', border: 'none', color: 'rgba(226,220,209,0.55)', fontSize: '12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                <ArrowLeft size={12} strokeWidth={2} /> Back to sign in
+              </button>
+            </div>
+          </GlassCard>
+        </main>
+        <Footer />
+      </div>
+    );
+
+  // ── BANNED / SUSPENDED SCREEN (§144) ──────────────────────────────────────
+  // Distinct from the parent-consent screen: suspended users previously
+  // landed on the DPDP "waiting for parent" card, which was confusing and
+  // wrong. This screen states the situation plainly and routes appeals to
+  // the Grievance Officer page (IT Rules grievance redressal path).
+  if (mode === 'banned')
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <CosmicBackground />
+        <CosmicOverlay />
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', zIndex: 1 }}>
+          <GlassCard maxWidth={480} visible={cardVisible}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: '#ef4444', marginBottom: '18px', display: 'flex', justifyContent: 'center' }}>
+                <IconBan size={30} />
+              </div>
+              <h2 style={{ fontSize: '21px', fontWeight: 800, color: '#fff', margin: '0 0 14px', letterSpacing: '-0.01em' }}>
+                {BANNED_ACCOUNT_COPY.title}
+              </h2>
+              <p style={{ fontSize: '13px', color: 'rgba(226,220,209,0.78)', lineHeight: 1.75, margin: '0 0 24px' }}>
+                {BANNED_ACCOUNT_COPY.body}
+              </p>
+              <a
+                href="/grievance"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  width: '100%', padding: '12px', marginBottom: '12px', boxSizing: 'border-box',
+                  background: 'linear-gradient(135deg, #6b1d1d 0%, #7d2a1c 55%, #a1650f 100%)',
+                  border: 'none', borderRadius: '10px', color: '#fff',
+                  fontSize: '13.5px', fontWeight: 600, textDecoration: 'none',
+                }}
+              >
+                Appeal via the Grievance Officer
+              </a>
               <button
                 onClick={() => switchMode('login')}
                 style={{ background: 'none', border: 'none', color: 'rgba(226,220,209,0.55)', fontSize: '12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
