@@ -9740,3 +9740,215 @@ the new session-restore effect) was fixed via the page's existing
   run the repair with the DB password first or rely on the idempotent DO-block.
 
 
+---
+
+## §145 — Landing-page features section: per-platform capability grid on /about (2026-09-03)
+
+> **Numbering note:** the session brief asked for this entry to be written as
+> "§144", but §144 was already consumed by the 2026-09-02 implementation log.
+> This file is append-sequential working memory, so the new entry continues as
+> §145 instead of overwriting an existing section. Scope per the brief: the
+> landing/official page only — Books section, admin panel and signup flow are
+> untouched.
+
+### Phase 0 — audit: what /about has now, what each platform actually ships
+
+**State of `src/app/about/page.tsx` after §144 (not placeholder, but summary-level):**
+h1 "About MANGAL" + intro, stats strip (Free to read · 0% creator cut · 3 products,
+one account · Made in 🇮🇳 Bharat), "The MANGAL ecosystem" — three one-paragraph
+product cards (WebMangal / KaTube / Kalpana Circle, `var(--accent)` top border,
+lucide icons), "What we care about" values (incl. DPDP posture), "Get in touch".
+Navbar `variant="legal"` + Footer. There is NO per-platform feature breakdown —
+this session adds one as a new section between the ecosystem cards and the values,
+without rebuilding anything above it. Accent check: `--accent` is `#d97706` dark /
+`#b45309` light (globals.css:30,59) — the brief said "maroon accent" but no maroon
+exists anywhere in src; the section uses the page's existing `var(--accent)` token
+so the page stays on one palette.
+
+**Confirmed shipped features (verified against code this session, not the spec):**
+
+WebMangal — reader side (`/WebMangal/*`):
+- **Reader** (`read/[chapterId]/page.tsx`): one reader for comics and novels —
+  `reading_mode 'scroll' | 'page'`, `content_type 'mangal' | 'novel'`,
+  `reading_direction ltr|rtl`, fullscreen, reader settings, emoji chapter
+  reactions (❤️🔥😂😲😢), ranked comments (`lib/commentRanking.ts`);
+  bookmarks/history/library/rankings/tags routes.
+- **Books** (`books/page.tsx`, `books/[bookId]/read/page.tsx`): catalog with
+  category filters, free/paid access (Razorpay/UPI), reader = `BookReader` over
+  **pdfjs-dist + epubjs** (PDF/EPUB — dynamic import `ssr:false` per §142), §142
+  theme/typography engine, saved reading progress resume.
+- **Songs** (`songs/page.tsx`, `songs/[songId]/page.tsx`): browse by genre;
+  detail page = "full block-by-block lyric sheet" (SongBlock block_type/label/
+  content), "based on" linked-series badge, songwriter's K Circle profile link;
+  `songs/upload` for creators.
+
+WebMangal — writer side (nav labels verbatim, `WebMangalStudioShell.tsx:28-33`):
+Overview · Analytics · Reviews · **AI Writer** · **Storyboard** · **Codex**.
+- **AI Writer** (`mangal-studio/webmangal/write`): drafting editor
+  (`AiWritingEditor`: autosave, word-count goal slider, read-time estimate) + the
+  two §144 AI actions — "✨ Polish & Hinglish Convert" (the "AI Assistant") and
+  "🌐 AI Translation" (EN↔Hindi auto-direction). Batched, on-device WebGPU default
+  (`lib/ai/webllmEngine.ts`), BYOK vault fallback (`byokStorage.ts`).
+- **Metadata manager** (`/dashboard/books`, §142): cover upload+preview, synopsis,
+  genre-tags multi-select, mature flag, scheduled publish (`books.genre_tags`,
+  `is_mature`, `publish_at`).
+- **Codex** (`mangal-studio/webmangal/codex`: CharacterPane/LorePane) + read-only
+  `CodexSidebar` mounted inside writing surfaces (§142).
+- **Storyboard Converter** (`mangal-studio/webmangal/convert`, heading "Storyboard
+  Converter"): text→panel splitter, drag-drop panel board, JSON + scene-script
+  export.
+- **Analytics** (`mangal-studio/webmangal/analytics`): Reading Time Distribution,
+  Views by Country, gender donut, reader stats (§126 port).
+
+KaTube (`/katube/*`):
+- **Watch** (`watch/[videoId]`): real YouTube IFrame player, likes, comments
+  drawer, share, `AddToPlaylistButton`, "Review Hub — accuracy to source" star
+  reviews, "Watch with Friends" hand-off into K Circle watch-together.
+- **Shorts** (`shorts`, `shorts/[shortId]`): vertical shorts player, real IFrame
+  API per short with swipe navigation; home sidebar modes "Fast Tap"/"Slow tap";
+  Shorts row on home (`is_short` split of `videos`).
+- **Playlists** (`katube_playlists`/`katube_playlist_videos`; `/katube/playlists`
+  + `[playlistId]`).
+- **Channels / feeds** (`channel/[username]`; sidebar: Home · Fast Tap · Slow tap ·
+  Saved · Trending · Following).
+- **Upload flow**: paste a YouTube link, mark Short or full video, optionally link
+  a series you own (`katube/page.tsx` header comment).
+- **Creator studio** (`mangal-studio/katube`): analytics (views/likes totals +
+  per-video), content table, comments, channel-setup.
+- **Mangal Ideas** (`MangalIdeasRow` on KaTube home): story-demand cards for
+  WebMangal stories with no adaptation yet, inviting creator collaboration (§0).
+
+K Circle (`/kalpana-circle/*`):
+- **Feed** (`page.tsx` header: "Instagram-style social layer for MANGAL"): posts +
+  likes + comments + stories (with **close-friends** audience, `close-friends`
+  page) + **polls** (PollOption).
+- **Broadcast Channels** (`broadcasts`, `broadcast/[username]`): one announcement
+  channel per creator — creator posts, fans like/comment only
+  (`20260813120000_kcircle_broadcast_channels.sql`).
+- **Chat** (`chat/page.tsx` "DMs + group chats"): realtime via Supabase Realtime.
+- **Watch Together** (`watch-together`, `watch-together/shorts/[roomId]`):
+  host-authoritative playback sync over ephemeral Realtime broadcast channels;
+  long-video rooms + "Fast Tap" shorts rooms with side-by-side chat
+  (`20260815063915_kcircle_fast_tap_watch_together.sql`).
+- **Mangal of the Week** (`mangal-of-the-week` + admin console): weekly
+  audience-voted leaderboard.
+- Saved posts, profiles, notifications, settings.
+
+**Explicitly NOT built — must not appear in copy:**
+- K Circle "servers / channels / roles" (the brief's list) — the icon rail is
+  "Discord-style" cosmetically (`Shell.tsx` comment) but there are NO servers or
+  roles anywhere; described by the real capability set above instead.
+- **Nova** (`dashboard/nova`) AI assistant — its own header says "still fully
+  'coming soon' (no AI backend wired up yet for any product)". Never claim it.
+- KaTube "Live" — tab label only; no live streaming exists.
+
+**Stop-and-wait case: NOT triggered** — every platform can be described accurately
+from shipped features alone; the mismatches above are documented here rather than
+papered over with invented copy.
+
+### Phase 1 — research: the pattern professional feature sections use
+
+**Provenance:** fetches made this session — linear.app (full marketing page,
+reachable), notion.com/product (reachable), spotify.com (returned the web-player
+shell only, no marketing content — not usable as a reference). Pattern extracted
+from the two usable sources:
+
+- **Linear:** features clustered into named groups ("Intake", "Plan", "Build",
+  "Insights"); top value props are three-word heads with ONE sentence each
+  ("Purpose-built — Linear is shaped by the practices and principles of
+  world-class product teams."); feature entries are a 2-5 word bold title + one
+  sentence + "Learn more →".
+- **Notion product page:** the canonical grid — per item a 2-4 word imperative
+  title + exactly ONE short sentence naming the concrete capability, e.g.
+  "Capture knowledge — Bring everything into one system of record.", "Find
+  answers — Get answers, instantly—with citations.", "Automate busywork — Keep
+  work moving 24/7 with agents." Grouped by job-to-be-done, small visual per
+  item, arrow link out.
+
+**Pattern adopted, and why:** per feature a 2-5 word title + one sentence that
+names the actual feature and what it does on THIS platform; grouped by user
+segment where the split is real (WebMangal reader/writer, KaTube viewer/creator)
+or by capability where it isn't (K Circle); a small meaningful lucide icon per
+card (same convention as the page's existing PRODUCTS/VALUES cards); and a
+ONE-TIME scroll-triggered fade + slight rise per card — entrance happens once as
+the section scrolls into view and never loops, because looping motion competes
+with reading on a text-dense section. Implemented with a plain
+IntersectionObserver + CSS transition, no animation library added: framer-motion
+exists in the repo for the homepage hero/cursor, but this brief's gate 4 requires
+any animation library to be dynamically imported client-only with ssr:false — an
+IO reveal needs neither a dependency nor that machinery, so none was added.
+`prefers-reduced-motion: reduce` → cards render visible with no animation at all
+(both a JS matchMedia check and a `no-preference` media-query wrapper on the CSS).
+
+### Phase 2 — built: /about features section
+
+- `src/app/about/FeaturesSection.tsx` (new, 'use client') + `src/app/about/page.tsx`
+  (h2 "What each product does" + one-line intro + `<FeaturesSection />` between the
+  ecosystem cards and "What we care about" — nothing else on the page touched;
+  Books section, admin panel and signup flow untouched, as scoped).
+- **Final feature list per platform** (2-5 word titles + one sentence each,
+  grouping rationale inline):
+  - **WebMangal — For readers** (Manga & novel reader · Books, PDF & EPUB · Songs ·
+    Your reading, tracked) **/ For writers** (AI Writer covering BOTH §144 AI
+    actions · Metadata manager · Codex · Storyboard converter · Analytics).
+    Rationale: the reader/writer split is real — distinct reader surfaces
+    (`/WebMangal/*`) vs studio surfaces (`/mangal-studio/webmangal`,
+    `/dashboard/books`).
+  - **KaTube — For viewers** (Shorts · Playlists · Trending & Following)
+    **/ For creators** (Upload flow · Channel pages · Creator analytics ·
+    Mangal Ideas). Rationale: split is real — consumption (`/katube/*`) vs
+    publishing/studio (`/katube/upload`, `/mangal-studio/katube`).
+  - **K Circle — single capability group "What you can do"** (Feed, stories &
+    polls · Broadcast channels · Realtime chat · Watch together · Mangal of the
+    Week), with the rationale shown next to the group label in the UI: K Circle
+    is peer-to-peer — the same person posts, chats and watches — so a
+    reader/writer split would be artificial. The brief's "servers/channels/
+    roles" is not built (Phase 0) and was not described.
+- **Animation:** IntersectionObserver + CSS transition; one-time fade + 14px
+  rise per card with a ≤60ms-per-card stagger inside each group; isomorphic
+  `useLayoutEffect` arms cards before first client paint (no flash); no-JS =
+  visible; reduced-motion = visible, no animation. **No animation library
+  added** (package.json unchanged) — gate 4's dynamic-import/ssr:false clause
+  therefore has nothing to apply to, verified explicitly.
+- **Visual identity:** existing CSS-var tokens only (`--bg-card`,
+  `--border-color`, `--text-*`, `--accent`), inline styles + one `<style>`
+  block for the reveal classes (same pattern as K Circle's `KC_SHELL_CSS`).
+  No Tailwind, no CSS modules. The brief said "maroon accent" but no maroon
+  exists in src — the page's existing `--accent` token (#d97706 dark /
+  #b45309 light) was kept so the page stays on one palette.
+- **SSR verification:** `.next/server/app/about.html` (prerendered static)
+  contains the section header, every feature title, the three "Open" links
+  (with correct hrefs — React text-node comment markers between "Open" and the
+  name), 3× `min-height:48px`, 5× the grid track definition, and the reveal CSS
+  — and NO `feat-armed` class on any card (arming is client-only, so the
+  no-JS default is fully visible).
+
+### Phase 3 — mobile check (320–768px, scoped to this section)
+
+- **Single-column stacking:** grid is `repeat(auto-fill, minmax(min(100%,
+  300px), 1fr))`; content width = viewport − 48px (page container pads 24px a
+  side): 320px → 272px → 1 column; 375px → 327px → 1 column; 768px → 720px →
+  2 columns (2×354px). Deterministic from the track definition that ships in
+  the prerendered HTML (verified above).
+- **No horizontal overflow from animations:** the reveal transform is
+  `translateY(14px)` only (1 occurrence, inside the reveal CSS); transforms
+  don't affect layout; every grid child carries `minWidth: 0`; the platform
+  header wraps (`flexWrap: 'wrap'`) — nothing fixed-width anywhere in the
+  section.
+- **Touch targets:** the section's only interactive elements are the three
+  "Open {platform}" links — `min-height: 48px` inline (3× in the built HTML)
+  plus horizontal padding; feature cards are non-interactive.
+- Unrelated mobile work (KaTube compact nav, K Circle rail, Navbar scroll
+  strips) untouched.
+
+### Gates (final tree) + bundle size
+
+`npx tsc --noEmit` → exit 0. `npm run lint` → 0 errors / 53 warnings (exact
+§140/§141/§144 baseline; no warnings from the new files). `npm run build` →
+exit 0 (`/about` prerendered static). `npx opennextjs-cloudflare build` →
+complete. handler.mjs raw = **8,105,639 B** (§144: 8,120,264 B — Δ −4,625 B);
+wrangler dry-run Total Upload 11,103.17 KiB, **gzip 2,167.62 KiB vs the
+3,072 KiB free-plan ceiling (~904 KiB headroom)** — under 3 MiB as required.
+Metric note: the raw handler.mjs has been ~8.1 MB since §142 (normal for the
+OpenNext Workers bundle); the 3 MiB limit that matters is Cloudflare's gzipped
+upload ceiling, which is the number §143/§144 also checked.

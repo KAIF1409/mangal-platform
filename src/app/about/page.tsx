@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
+import FeaturesSection from './FeaturesSection';
 import {
   ScrollText,
   PenLine,
@@ -125,6 +126,19 @@ export default function AboutPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+          What each product does
+        </h2>
+        <p style={{ fontSize: '13.5px', color: 'var(--text-tertiary)', lineHeight: 1.6, margin: '0 0 20px' }}>
+          Every feature below is live today — grouped by who it&apos;s for.
+        </p>
+        <div style={{ marginBottom: '48px' }}>
+          {/* §145 — per-platform features grid. Client component: one-time
+              scroll-reveal per card, prefers-reduced-motion aware. Copy is
+              grounded in the §145 Phase 0 audit — shipped features only. */}
+          <FeaturesSection />
         </div>
 
         <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 20px', letterSpacing: '-0.02em' }}>
