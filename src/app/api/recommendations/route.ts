@@ -163,13 +163,21 @@ export async function GET(req: NextRequest) {
       topGenre ? pool.filter((s) => s.genre === topGenre) : pool
     ).slice(0, 8);
 
-    return NextResponse.json({
-      personalized,
-      topGenre,
-      forYou,
-      becauseYouRead: { seed: seedSeries, items: becauseYouReadItems },
-      trendingInGenre,
-    });
+    return NextResponse.json(
+      {
+        personalized,
+        topGenre,
+        forYou,
+        becauseYouRead: { seed: seedSeries, items: becauseYouReadItems },
+        trendingInGenre,
+      },
+      // §139-C — responses are personalized per Bearer token, so they must
+      // never land in a SHARED cache; a short browser-private window is safe
+      // (the underlying pool is the stable published top-300). Combined with
+      // the §139-B SWR catalog tier on the client, repeat home visits skip
+      // re-scoring entirely.
+      { headers: { 'Cache-Control': 'private, max-age=300' } },
+    );
   } catch (err) {
     console.error('[recommendations] failed:', err instanceof Error ? err.message : err);
     return NextResponse.json({ error: 'Recommendation engine failure.' }, { status: 500 });

@@ -1,0 +1,48 @@
+# §139-C — Cloudflare Workers Static Assets headers. Production serves
+# public/ straight from the asset binding (before the Next worker runs), so
+# next.config headers() never applies to these files — this file is the
+# mechanism that actually reaches them. Same policy as the next.config rule:
+# one fresh day + a week of stale-while-revalidate. public/ filenames have no
+# content hash, so immutable would pin replaced files for the max-age window.
+# /_next/static is not listed — Next marks those immutable already.
+/*.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.jpg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.jpeg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.webp
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.avif
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.gif
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.ico
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.mp4
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.webm
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.woff2
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.woff
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.ttf
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*.otf
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

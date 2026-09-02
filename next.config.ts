@@ -124,6 +124,21 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      {
+        // §139-C — public/ static assets carry no content hash in their
+        // filenames, so they can't be `immutable` (a re-deployed logo would
+        // then serve stale for a year): one fresh day plus a week of
+        // stale-while-revalidate keeps repeat visits fast without pinning
+        // replaced files. /_next/static chunks are deliberately NOT matched
+        // here — Next already emits them as immutable. Note: in production
+        // Cloudflare Workers serve public/ straight from the asset binding
+        // before this code runs, so public/_headers carries the same policy
+        // for that path; this rule covers dev/other-hosting serving.
+        source: "/:path*.(png|jpg|jpeg|webp|avif|gif|svg|ico|mp4|webm|woff2|woff|ttf|otf)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
     ];
   },
 
