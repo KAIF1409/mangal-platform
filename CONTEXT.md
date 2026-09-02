@@ -9010,3 +9010,161 @@ source bytes ship as-is. Worst offenders in `public/`:
 410KB, `mangal-flame-icon.png` 361KB, `webmangal-logo.png` 354KB,
 `bg-aryavarta.jpg` 345KB; `videos/katube-door-preview.mp4` 3.5MB.
 
+## 140. Performance/architecture hardening pass — fix summary (§139 categories 1–7, all closed)
+
+> Companion to §139. Each category was committed separately (one commit per category,
+> no unrelated fixes bundled), and the three hard gates were re-run before every commit:
+> `npx tsc --noEmit` → exit 0; `npm run lint` → 0 errors / 53 warnings (the pre-existing
+> ceiling — matched, never exceeded; the one moment an intermediate edit tripped
+> `react-hooks/set-state-in-effect` it was fixed before committing, not suppressed);
+> `npm run build` → success. **The stop-and-wait case never triggered:** nothing in this
+> pass touched books/book_purchases/book_reading_progress or payments tables/RLS, and no
+> API response shape changed — every fix is client-side, asset-side, or an index/RPC
+> addition. All commits below pushed to origin/main at session end; remote HEAD verified
+> matching local.
+
+### Category 1 — pagination / infinite scroll (commit `0c16acc`)
+One consistent pattern everywhere: the §82 `.range()` + "Load More" offset pattern for
+grids/lists, plus a `created_at` cursor (`loadEarlier`) for chat threads where offset
+pagination would corrupt a live-appending timeline.
+- **A1 chat list:** fetched EVERY `kcircle_messages` row in every conversation on every
+  open just to render one preview line → single `kcircle_latest_messages` DISTINCT-ON
+  RPC (exactly one row per conversation; SECURITY INVOKER so RLS still applies), with a
+  graceful fallback to the old bounded fetch if the RPC isn't deployed.
+- **A2 thread view:** whole DM/group history shipped → latest page only (desc fetch
+  flipped to chronological), older pages via `loadEarlier()` cursor; Realtime INSERT
+  channel appends new rows (no polling, no full refetch).
+- **A3 broadcasts previews:** same `kcircle_latest_messages` RPC as A1.
+- **A4 kcircle stories / A5 comments expand / A7 katube subscriptions / A8 watch-page
+  comments + accuracy reviews / A9 chapter comments / A10 series reviews / A11 admin
+  reports / A12 watch-together room + thread messages:** all unbounded → page size +
+  Load More.
+- **A6 profile grid:** all posts of a user AND every like/comment row across them
+  shipped to compute header stats → paginated grid + `kcircle_profile_stats` aggregate
+  RPC (exact counts server-side, zero row shipping).
+- Both RPCs ship in `20260901000000_perf_pagination_rpcs.sql` (idempotent
+  `create or replace`), **applied + verified live** this pass (`pg_proc` introspection).
+- Already-bounded lists (feed posts limit 30, notifications limit 20, MangalIdeas RPC,
+  §82 home/songs) deliberately untouched.
+
+### Category 2 — single SWR client caching layer (commits `f6c3704` + `314cfb6`)
+New `src/app/lib/swrCache.ts` — the ONE data-fetching hook (`useCachedQuery`) for
+read-mostly surfaces, with freshness expressed as a TIER, not ad-hoc flags:
+`realtime` (2s dedupe + refocus), `feed` (30s + refocus), `catalog` (5min, no refocus),
+`analytics` (10min) — so a live chat feed is never staler than needed while analytics
+can sit for 10 minutes.
+- Round 1 (`f6c3704`): reading history, K Circle saved, RecommendedForYou, both
+  NotificationBells (realtime tier — the hot one).
+- Round 2 (`314cfb6`, this session): **WebMangal browse/search (`View.tsx`)** — the
+  single worst repeat-visit offender: every visit to /WebMangal or /WebMangal/search
+  re-shipped the ENTIRE published-series `select(*)` + all creator profiles + 200 songs
+  + 200 books; now three cached entries at catalog tier, shared keys across
+  browse/search so switching routes paints instantly. **KaTube home** — videos grid +
+  shorts + New Voices + weekly-winner ranks folded into one cached entry (repeat visit
+  costs one deduped request instead of four; Map derived from plain entries so the
+  cache holds plain data) + continue-watching panel keyed per viewer. **WebMangal
+  bookmarks + library** — follows list + profile role + followed songs now ONE cached
+  query keyed on the reader (was: auth → role → follows → chapters → songs chain every
+  visit; songs ran as a second independent effect); unfollow is now an optimistic
+  `mutate(..., { revalidate: false })` exactly like the established kcircle/saved
+  pattern. Before/after in one line: repeat navigation re-ran 3–5 identical queries
+  against the DB every time; now it paints from cache and revalidates in the background.
+- Deliberately NOT cached (documented convention in swrCache.ts): mutation-heavy
+  interactive surfaces — K Circle feed/profile/chat, comments/likes/polls — stay on
+  their bespoke optimistic-update state models; caching there adds invalidation
+  complexity with no read-path benefit.
+
+### Category 3 — HTTP cache headers (commit `c527e96`)
+- `next.config.ts` `headers()`: `public, max-age=86400, stale-while-revalidate=604800`
+  on all static asset extensions (png/jpg/webp/avif/gif/svg/ico/mp4/webm/woff2/…).
+  One fresh day + a week of SWR instead of `immutable` because `public/` filenames
+  carry no content hash — immutable would pin a replaced file for the whole max-age.
+- `public/_headers`: the SAME policy, because production serves `public/` straight
+  from the Cloudflare Workers static-asset binding BEFORE the Next worker runs —
+  next.config headers never reach those files; this file is the mechanism that
+  actually does. (`/_next/static` untouched — Next already marks those immutable.)
+- `/api/recommendations`: `Cache-Control: private, max-age=300` — the anonymous pool
+  is stable for minutes (§135 scoring runs per request otherwise); `private` so a
+  signed-in user's personalized variant can never be served from a shared cache.
+
+### Category 4 — memoization of per-render recompute (commit `658a97f`)
+Only where the audit showed real repeated cost — nothing memoized reflexively:
+- `kalpana-circle/page.tsx`: `instagramPreviewComments(...)` re-sorted each post's
+  comments inside the render body on EVERY state change of the feed page → memoized.
+- `WebMangal/read/[chapterId]/page.tsx`: per-render recompute on the reader page →
+  memoized.
+- Audit-cleared as fine, left alone: recommendation scoring (server-side per request
+  over a ≤300 pool — addressed via the cat-3 cache header instead), dashboard
+  analytics aggregation (once per tab-open, not per render), `rankShorts` (pool ≤ 50).
+
+### Category 5 — DB indexes (commit `1f297ff`)
+`20260901000100_perf_indexes.sql` — 10 genuinely-missing hot-path indexes, idempotent
+(`create index if not exists`, same contract as the §136 books hotfix), applied via
+`supabase db query --linked -f` and verified live, followed by `analyze` so the planner
+picks them up immediately: `series(creator_id)`, `series(status, created_at desc)`,
+`follows(series_id)`, `reading_progress(series_id)`, `reading_progress(chapter_id)`,
+`kcircle_saved_posts(post_id)`, `kcircle_story_views(viewer_id)`,
+`kcircle_conversation_participants(user_id)` (THE chat-list lookup),
+`katube_playlist_videos(video_id)`, `reports(created_at desc)`.
+Reconciliation note (in-file): §139-E's static pass listed 24 candidates; live
+`pg_indexes` introspection showed 14 already covered (composite-PK leading columns,
+existing indexes, or redundant DESC twins) — deliberately not recreated. Nothing
+touches books/payments tables.
+
+### Category 6 — N+1 fixes (verification outcome; no new code needed)
+The audit's true N+1s (A1/A3 — loop-equivalent fetch-all to compute per-group maxima
+client-side) were already *batched* as part of category 1: one `kcircle_latest_messages`
+DISTINCT-ON RPC replaces the fetch-everything derivation, and `kcircle_profile_stats`
+replaces shipping every like/comment row for profile header counts. Both confirmed
+**live** this session (`select proname from pg_proc where proname in (...)` returned
+both) and wired with fallbacks. The bookmarks/library chapter enrichment was already
+batched (one `.in('series_id', ...)` query for all followed series — the pages' own
+"Perf fix — this used to fire 2 queries per followed series, i.e. N+1" comments). The
+remaining loop patterns from §139-F stay as audited: `upload/page.tsx` tag upsert +
+page reorder (deliberate, tiny N, unique-constraint workaround) and the per-chapter
+cleanup in `handleDeleteSeries` (rare owner/admin action).
+
+### Category 7 — asset optimization (commit `3a5f6b7`)
+All recompression done IN PLACE (same filename, same format — zero code reference
+changes), sized against actual render dimensions; unreferenced assets verified via a
+correct recursive src sweep (an earlier `**` glob had silently skipped top-level
+`src/app/*.tsx` — re-checked before deleting anything):
+
+| Asset | Before | After | Why safe |
+|---|---|---|---|
+| `kcircle-door.png` (941×1672) | 2955KB | 466KB | door card renders ≤~420px wide; palette PNG |
+| `webmangal-door.png` (936×1120) | 1856KB | 250KB | same |
+| `kcommunity-preview.jpg` (819×1456) | 1994KB | 187KB | dims kept; was absurd encoder quality |
+| `comics.jpg` | 451KB | 146KB | resized 1200w, mozjpeg |
+| `hero-bg.jpg` / `bg-aryavarta.jpg` | 410 / 345KB | 237 / 196KB | full-bleed bgs, q72 mozjpeg |
+| `katube/kcircle/webmangal-logo.png` | 789/781/354KB | 8/5/10KB | rendered at 20–42px; resized 128, alpha kept |
+| `public/icon.png` (1254²) | 855KB | 14KB | the umbrella logo, rendered ~30px; resized 256 |
+| `src/app/apple-icon.png` | 781KB | 44KB | aspect kept (no crop — visual-identical letterbox) |
+
+Deleted after confirming zero references anywhere in `src/`: `kalpanaverse-logo.png`
+(2116KB), `logo-icon.png` (855KB), `logo-wordmark.png` (781KB),
+`mangal-flame-icon.png` (361KB — only `-black.jpg` is used), `videos/katube-preview.mp4`
+(618KB). Net: ≈11.5MB of referenced images → ≈1.46MB, plus 4.7MB of dead weight gone.
+Landing-page `og-image.jpg` (207KB, 1200×630) was under audit threshold — untouched.
+
+**Lazy-loading:** the KaTube door's `katube-door-preview.mp4` (3.5MB — heaviest asset
+on the landing page) used to mount and autoplay-download on every landing render even
+though the doors grid sits below the fold. New `DoorPreviewVideo` mounts the
+`<video src>` only once the card approaches the viewport (IntersectionObserver,
+400px rootMargin; deferred fallback for engines without IO). Visual behavior once
+visible is identical.
+
+### Deferred / known limits (not silently skipped)
+- **Videos not transcoded**: no ffmpeg/ImageMagick on this machine, so
+  `katube-door-preview.mp4` remains 3.5MB on disk — mitigated by the lazy-mount above
+  (bytes fetched only when scrolled near). `login-dragon-hero.mp4` (929KB) already had
+  `preload="metadata"` + poster. A one-time `ffmpeg -crf 28` re-encode of the door
+  video is the remaining follow-up.
+- The two §139-F loops listed above stay for documented reasons.
+- K Circle interactive surfaces intentionally uncached (see category 2).
+
+### Session gates ledger
+Every commit `0c16acc` → `3a5f6b7` (+ the §140 docs commit): `tsc --noEmit` exit 0;
+`eslint` 0 errors / 53 warnings (baseline ceiling 53, established before any change);
+`next build` success. No check was weakened, skipped, or forced green.
+
