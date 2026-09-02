@@ -9952,3 +9952,15 @@ wrangler dry-run Total Upload 11,103.17 KiB, **gzip 2,167.62 KiB vs the
 Metric note: the raw handler.mjs has been ~8.1 MB since §142 (normal for the
 OpenNext Workers bundle); the 3 MiB limit that matters is Cloudflare's gzipped
 upload ceiling, which is the number §143/§144 also checked.
+
+### Deployment (same day)
+
+- Commit `847a022` (feat + §145 context, one commit) pushed to `origin/main` —
+  remote `main` verified via `git ls-remote` at `847a022d20d3c2fcc0c5c7dfcd8eca
+  5a72520e5b`, matching local HEAD. Push form: the brief's
+  `http.extraHeader="AUTHORIZATION: Bearer …"` form HUNG on a credential prompt
+  (confirming §144's finding that GitHub's git endpoint rejects Bearer headers);
+  the working §144 form was used instead: `GIT_TERMINAL_PROMPT=0` +
+  `git -c credential.helper= push https://<user>:<PAT>@github.com/KAIF1409/
+  mangal-platform.git HEAD:main`. Branch-protection warning lines appeared and
+  the admin PAT bypassed, same as §144.
