@@ -135,6 +135,54 @@ const DOORS = [
   },
 ];
 
+/* ── §139-G — LAZY DOOR VIDEO ──
+   The KaTube door's preview video is 3.5MB — by far the heaviest single
+   asset on the landing page — and it used to mount (and autoplay-download)
+   the moment the page rendered, even though the doors grid sits below the
+   fold. This mounts the <video> element's src only once the card approaches
+   the viewport (400px rootMargin), so the bytes are fetched only when a
+   visitor is actually about to see the door. Browsers without
+   IntersectionObserver (none of the supported ones, but as a guard) get the
+   old load-immediately behavior. Visual behavior once visible is identical:
+   same autoplaying, looping, muted inline video. */
+function DoorPreviewVideo({ src }: { src: string }) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const [nearViewport, setNearViewport] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      // Guard for engines without IntersectionObserver: load immediately, but
+      // deferred out of the effect body (synchronous setState here trips the
+      // cascading-render rule and can batch badly during hydration).
+      const t = setTimeout(() => setNearViewport(true), 0);
+      return () => clearTimeout(t);
+    }
+    const io = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) {
+        setNearViewport(true);
+        io.disconnect();
+      }
+    }, { rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <video
+      ref={ref}
+      src={nearViewport ? src : undefined}
+      autoPlay={nearViewport}
+      loop
+      muted
+      playsInline
+      preload={nearViewport ? 'auto' : 'none'}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+    />
+  );
+}
+
 /* ── SPLASH SCREEN ── */
 function SplashScreen({ onDone }: { onDone: () => void }) {
   // Phase: 0=symbol drop, 1=text slide, 2=hold, 3=fade out
@@ -813,12 +861,7 @@ export default function LandingPage() {
                 }}
               >
                 {door.image && <Image src={door.image} alt={door.title} fill style={{ objectFit: 'cover' }} />}
-                {door.video && (
-                  <video
-                    src={door.video} autoPlay loop muted playsInline
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                )}
+                {door.video && <DoorPreviewVideo src={door.video} />}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)' }} />
                 <div style={{ position: 'absolute', left: '20px', right: '20px', bottom: '20px', zIndex: 2 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
