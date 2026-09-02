@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
+import { useCachedQuery } from '../../lib/swrCache';
 import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../../components/shared/ProfileMenu';
 import Navbar from '../../components/shared/Navbar';
@@ -54,75 +55,69 @@ const LIBRARY_SORT_OPTIONS: { value: LibrarySortOption; label: string }[] = [
 ];
 
 export default function LibraryPage() {
-  const [series, setSeries] = useState<FollowedSeries[]>([]);
-  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-  const [isCreator, setIsCreator] = useState(false);
-  const [isDeveloper, setIsDeveloper] = useState(false);
   const [sortBy, setSortBy] = useState<LibrarySortOption>('recent');
-  // §85 continued — followed songs, separate from the series list above
-  // (song_follows is its own table, not part of `follows`/series content
-  // type). Own loading flag so a slow songs query never blocks the
-  // existing series library from rendering.
-  const [followedSongs, setFollowedSongs] = useState<(SongCardData & { creator_id: string })[]>([]);
-  const [songUsernames, setSongUsernames] = useState<Record<string, string>>({});
-  const [songsLoading, setSongsLoading] = useState(true);
 
-  useEffect(() => {
-    const loadSongs = async (readerId: string) => {
-      const { data: followRows } = await supabase
-        .from('song_follows')
-        .select('created_at, songs(id, title, genre, cover_url, views, blocks, creator_id, linked_series_id)')
-        .eq('reader_id', readerId)
-        .order('created_at', { ascending: false });
-      const songs = (followRows ?? [])
-        .map(r => (Array.isArray(r.songs) ? r.songs[0] : r.songs))
-        .filter((s): s is NonNullable<typeof s> => !!s);
-      if (songs.length === 0) { setSongsLoading(false); return; }
-
-      const creatorIds = Array.from(new Set(songs.map(s => s.creator_id)));
-      const linkedSeriesIds = Array.from(new Set(songs.map(s => s.linked_series_id).filter(Boolean))) as string[];
-      const [usernameRes, seriesRes] = await Promise.all([
-        supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
-        linkedSeriesIds.length > 0
-          ? supabase.from('series').select('id, title').in('id', linkedSeriesIds)
-          : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-      ]);
-      setSongUsernames(Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username])));
-      const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
-
-      setFollowedSongs(songs.map(s => ({
-        id: s.id, title: s.title, genre: s.genre, cover_url: s.cover_url, views: s.views,
-        block_count: Array.isArray(s.blocks) ? s.blocks.length : 0,
-        linked_series_title: s.linked_series_id ? seriesTitleMap[s.linked_series_id] ?? null : null,
-        creator_id: s.creator_id,
-      })));
-      setSongsLoading(false);
-    };
-    supabase.auth.getUser().then(({ data }) => { if (data.user) loadSongs(data.user.id); else setSongsLoading(false); });
-  }, []);
-
-  useEffect(() => {
-    const load = async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
-      setUser(u.user);
-
-      // Perf fix — profile role and the follows list only depend on
-      // u.user.id, not on each other, so fetch them together.
-      const [profileRes, followsRes] = await Promise.all([
-        supabase.from('profiles').select('role').eq('id', u.user.id).single(),
+  // §139-B — the follows list, profile role, and followed songs now ride in
+  // ONE cached query keyed on the reader ('feed' tier): revisiting Library
+  // paints instantly from cache and revalidates in the background instead of
+  // re-running the auth → role → follows → chapters → songs chain on every
+  // navigation. The songs section previously ran as its own separate effect
+  // with its own loading flag — folding it in costs one deduped request
+  // instead of three on a repeat visit, with the same end-state data.
+  const { data: libraryData, isLoading, mutate: mutateLibrary } = useCachedQuery(
+    user ? ['wm-library', user.id] : null,
+    async () => {
+      // Perf fix — profile role, the follows list, and song follows only
+      // depend on user.id, not on each other, so they run together instead
+      // of one after another.
+      const [profileRes, followsRes, songFollowRes] = await Promise.all([
+        supabase.from('profiles').select('role').eq('id', user!.id).single(),
         supabase
           .from('follows')
           .select('created_at, series(id, title, synopsis, genre, language, cover_url, reading_mode, status)')
-          .eq('reader_id', u.user.id)
+          .eq('reader_id', user!.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('song_follows')
+          .select('created_at, songs(id, title, genre, cover_url, views, blocks, creator_id, linked_series_id)')
+          .eq('reader_id', user!.id)
           .order('created_at', { ascending: false }),
       ]);
-      if (hasCreatorAccess(profileRes.data?.role)) setIsCreator(true);
-      setIsDeveloper(isDeveloperRole(profileRes.data?.role));
+      const isCreator = hasCreatorAccess(profileRes.data?.role);
+      const isDeveloper = isDeveloperRole(profileRes.data?.role);
+
+      // §85 continued — followed songs, separate from the series list below
+      // (song_follows is its own table, not part of `follows`/series content
+      // type). Same mapping the old standalone loadSongs effect used.
+      const songRows = (songFollowRes.data ?? [])
+        .map(r => (Array.isArray(r.songs) ? r.songs[0] : r.songs))
+        .filter((s): s is NonNullable<typeof s> => !!s);
+      let followedSongs: (SongCardData & { creator_id: string })[] = [];
+      let songUsernames: Record<string, string> = {};
+      if (songRows.length > 0) {
+        const creatorIds = Array.from(new Set(songRows.map(s => s.creator_id)));
+        const linkedSeriesIds = Array.from(new Set(songRows.map(s => s.linked_series_id).filter(Boolean))) as string[];
+        const [usernameRes, seriesRes] = await Promise.all([
+          supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
+          linkedSeriesIds.length > 0
+            ? supabase.from('series').select('id, title').in('id', linkedSeriesIds)
+            : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+        ]);
+        songUsernames = Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username]));
+        const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
+        followedSongs = songRows.map(s => ({
+          id: s.id, title: s.title, genre: s.genre, cover_url: s.cover_url, views: s.views,
+          block_count: Array.isArray(s.blocks) ? s.blocks.length : 0,
+          linked_series_title: s.linked_series_id ? seriesTitleMap[s.linked_series_id] ?? null : null,
+          creator_id: s.creator_id,
+        }));
+      }
 
       const follows = followsRes.data;
-      if (!follows || follows.length === 0) { setLoading(false); return; }
+      if (!follows || follows.length === 0) {
+        return { isCreator, isDeveloper, series: [] as FollowedSeries[], followedSongs, songUsernames };
+      }
 
       const seriesIds = follows
         .map((f: FollowRow) => (Array.isArray(f.series) ? f.series[0] : f.series)?.id)
@@ -162,8 +157,26 @@ export default function LibraryPage() {
         } as FollowedSeries;
       });
 
-      setSeries(enriched.filter(Boolean) as FollowedSeries[]);
-      setLoading(false);
+      return { isCreator, isDeveloper, series: enriched.filter(Boolean) as FollowedSeries[], followedSongs, songUsernames };
+    },
+    'feed',
+  );
+
+  // Derived via useMemo so the sortedSeries useMemo below sees a stable
+  // dependency identity (SWR data only changes on actual (re)validation).
+  const series = useMemo(() => libraryData?.series ?? [], [libraryData]);
+  const followedSongs = libraryData?.followedSongs ?? [];
+  const songUsernames = libraryData?.songUsernames ?? {};
+  const isCreator = libraryData?.isCreator ?? false;
+  const isDeveloper = libraryData?.isDeveloper ?? false;
+  const loading = !user || isLoading;
+  const songsLoading = isLoading;
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
+      setUser(u.user);
     };
     load();
   }, []);
@@ -171,7 +184,8 @@ export default function LibraryPage() {
   const unfollow = async (seriesId: string) => {
     if (!user) return;
     await supabase.from('follows').delete().eq('reader_id', user.id).eq('series_id', seriesId);
-    setSeries(prev => prev.filter(s => s.id !== seriesId));
+    // §139-B — same optimistic local removal as before, now via the cache.
+    void mutateLibrary(prev => (prev ? { ...prev, series: prev.series.filter(s => s.id !== seriesId) } : prev), { revalidate: false });
   };
 
   // Step 28 — sort control

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
+import { useCachedQuery } from '../../lib/swrCache';
 import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../../components/shared/ProfileMenu';
 import Navbar from '../../components/shared/Navbar';
@@ -69,52 +70,19 @@ const BOOKMARK_SORT_OPTIONS: { value: BookmarkSortOption; label: string }[] = [
 ];
 
 export default function BookmarksPage() {
-  const [series, setSeries] = useState<BookmarkedSeries[]>([]);
-  const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [isCreator, setIsCreator] = useState(false);
-  const [isDeveloper, setIsDeveloper] = useState(false);
   const [activeContentType, setActiveContentType] = useState<'all' | 'mangal' | 'novel'>('all');
   const [sortBy, setSortBy] = useState<BookmarkSortOption>('added');
-  // §85 continued — followed songs, same song_follows-backed section as
-  // /library (see that file for the query/mapping comment).
-  const [followedSongs, setFollowedSongs] = useState<(SongCardData & { creator_id: string })[]>([]);
-  const [songUsernames, setSongUsernames] = useState<Record<string, string>>({});
-  const [songsLoading, setSongsLoading] = useState(true);
 
   useEffect(() => {
-    const loadSongs = async (readerId: string) => {
-      const { data: followRows } = await supabase
-        .from('song_follows')
-        .select('created_at, songs(id, title, genre, cover_url, views, blocks, creator_id, linked_series_id)')
-        .eq('reader_id', readerId)
-        .order('created_at', { ascending: false });
-      const songs = (followRows ?? [])
-        .map(r => (Array.isArray(r.songs) ? r.songs[0] : r.songs))
-        .filter((s): s is NonNullable<typeof s> => !!s);
-      if (songs.length === 0) { setSongsLoading(false); return; }
-
-      const creatorIds = Array.from(new Set(songs.map(s => s.creator_id)));
-      const linkedSeriesIds = Array.from(new Set(songs.map(s => s.linked_series_id).filter(Boolean))) as string[];
-      const [usernameRes, seriesRes] = await Promise.all([
-        supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
-        linkedSeriesIds.length > 0
-          ? supabase.from('series').select('id, title').in('id', linkedSeriesIds)
-          : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-      ]);
-      setSongUsernames(Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username])));
-      const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
-
-      setFollowedSongs(songs.map(s => ({
-        id: s.id, title: s.title, genre: s.genre, cover_url: s.cover_url, views: s.views,
-        block_count: Array.isArray(s.blocks) ? s.blocks.length : 0,
-        linked_series_title: s.linked_series_id ? seriesTitleMap[s.linked_series_id] ?? null : null,
-        creator_id: s.creator_id,
-      })));
-      setSongsLoading(false);
+    const load = async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
+      setUserId(u.user.id);
+      setUser(u.user);
     };
-    supabase.auth.getUser().then(({ data }) => { if (data.user) loadSongs(data.user.id); else setSongsLoading(false); });
+    load();
   }, []);
 
   useEffect(() => {
@@ -130,29 +98,65 @@ export default function BookmarksPage() {
     localStorage.setItem(CONTENT_TYPE_STORAGE_KEY, next);
   };
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { setPostLoginRedirect(window.location.pathname); window.location.href = '/login'; return; }
-      setUserId(u.user.id);
-      setUser(u.user);
-
-      // Perf fix — profile role and the follows list only depend on
-      // u.user.id, not on each other, so they can run together instead of
-      // one after another.
-      const [profileRes, followsRes] = await Promise.all([
-        supabase.from('profiles').select('role').eq('id', u.user.id).single(),
+  // §139-B — the follows list, profile role, and followed songs now ride in
+  // ONE cached query keyed on the reader ('feed' tier): revisiting Bookmarks
+  // paints instantly from cache and revalidates in the background instead of
+  // re-running the auth → role → follows → chapters → songs chain on every
+  // navigation. The songs section previously ran as its own separate effect —
+  // folding it in costs one deduped request instead of three on a repeat
+  // visit, with the same end-state data.
+  const { data: bookmarkData, isLoading, mutate: mutateBookmarks } = useCachedQuery(
+    userId ? ['wm-bookmarks', userId] : null,
+    async () => {
+      // Perf fix — profile role, the follows list, and song follows only
+      // depend on userId, not on each other, so they run together instead
+      // of one after another.
+      const [profileRes, followsRes, songFollowRes] = await Promise.all([
+        supabase.from('profiles').select('role').eq('id', userId!).single(),
         supabase
           .from('follows')
           .select('created_at, series(id, title, synopsis, genre, cover_url, completion_status, content_type)')
-          .eq('reader_id', u.user.id)
+          .eq('reader_id', userId!)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('song_follows')
+          .select('created_at, songs(id, title, genre, cover_url, views, blocks, creator_id, linked_series_id)')
+          .eq('reader_id', userId!)
           .order('created_at', { ascending: false }),
       ]);
-      if (hasCreatorAccess(profileRes.data?.role)) setIsCreator(true);
-      setIsDeveloper(isDeveloperRole(profileRes.data?.role));
+      const isCreator = hasCreatorAccess(profileRes.data?.role);
+      const isDeveloper = isDeveloperRole(profileRes.data?.role);
+
+      // §85 continued — followed songs, same song_follows-backed section as
+      // /library (mapping preserved from that page's loadSongs).
+      const songRows = (songFollowRes.data ?? [])
+        .map(r => (Array.isArray(r.songs) ? r.songs[0] : r.songs))
+        .filter((s): s is NonNullable<typeof s> => !!s);
+      let followedSongs: (SongCardData & { creator_id: string })[] = [];
+      let songUsernames: Record<string, string> = {};
+      if (songRows.length > 0) {
+        const creatorIds = Array.from(new Set(songRows.map(s => s.creator_id)));
+        const linkedSeriesIds = Array.from(new Set(songRows.map(s => s.linked_series_id).filter(Boolean))) as string[];
+        const [usernameRes, seriesRes] = await Promise.all([
+          supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
+          linkedSeriesIds.length > 0
+            ? supabase.from('series').select('id, title').in('id', linkedSeriesIds)
+            : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+        ]);
+        songUsernames = Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username]));
+        const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
+        followedSongs = songRows.map(s => ({
+          id: s.id, title: s.title, genre: s.genre, cover_url: s.cover_url, views: s.views,
+          block_count: Array.isArray(s.blocks) ? s.blocks.length : 0,
+          linked_series_title: s.linked_series_id ? seriesTitleMap[s.linked_series_id] ?? null : null,
+          creator_id: s.creator_id,
+        }));
+      }
 
       const follows = followsRes.data;
-      if (!follows || follows.length === 0) { setLoading(false); return; }
+      if (!follows || follows.length === 0) {
+        return { isCreator, isDeveloper, series: [] as BookmarkedSeries[], followedSongs, songUsernames };
+      }
 
       const seriesIds = follows.map((f: FollowRow) => {
         const s = Array.isArray(f.series) ? f.series[0] : f.series;
@@ -198,16 +202,26 @@ export default function BookmarksPage() {
         };
       }).filter(Boolean) as BookmarkedSeries[];
 
-      setSeries(enriched);
-      setLoading(false);
-    };
-    load();
-  }, []);
+      return { isCreator, isDeveloper, series: enriched, followedSongs, songUsernames };
+    },
+    'feed',
+  );
+
+  // Derived via useMemo so the filteredSeries useMemo below sees a stable
+  // dependency identity (SWR data only changes on actual (re)validation).
+  const series = useMemo(() => bookmarkData?.series ?? [], [bookmarkData]);
+  const followedSongs = bookmarkData?.followedSongs ?? [];
+  const songUsernames = bookmarkData?.songUsernames ?? {};
+  const isCreator = bookmarkData?.isCreator ?? false;
+  const isDeveloper = bookmarkData?.isDeveloper ?? false;
+  const loading = !userId || isLoading;
+  const songsLoading = isLoading;
 
   const unfollow = async (seriesId: string) => {
     if (!userId) return;
     await supabase.from('follows').delete().eq('reader_id', userId).eq('series_id', seriesId);
-    setSeries(prev => prev.filter(s => s.id !== seriesId));
+    // §139-B — same optimistic local removal as before, now via the cache.
+    void mutateBookmarks(prev => (prev ? { ...prev, series: prev.series.filter(s => s.id !== seriesId) } : prev), { revalidate: false });
   };
 
   const statusColor = (s: string | null) => {

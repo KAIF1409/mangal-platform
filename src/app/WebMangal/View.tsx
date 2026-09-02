@@ -5,6 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
+import { useCachedQuery } from '../lib/swrCache';
 import type { BookRow } from '../lib/database.types';
 import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../components/shared/ProfileMenu';
@@ -12,7 +13,7 @@ import Navbar from '../components/shared/Navbar';
 import Footer from '../components/shared/Footer';
 import CrossProductLinks from '../components/shared/CrossProductLinks';
 import SharedSeriesCard from '../components/webmangal/SeriesCard';
-import SongCard, { type SongCardData } from '../components/webmangal/SongCard';
+import SongCard from '../components/webmangal/SongCard';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
 import {
   Trophy, Bell, Bookmark, Wrench, X, Menu, Search, Sparkles, BookOpen,
@@ -116,25 +117,105 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
   // dedicated search route. Reading it here too would make the browse page
   // filter by a leftover ?keyword= from before a route rename/back-nav.
   const [query, setQuery] = useState(mode === 'search' ? (searchParams.get('keyword') ?? '') : '');
-  const [series, setSeries] = useState<Series[]>([]);
-  const [creatorUsernames, setCreatorUsernames] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  // §85 continued (4) — Songs in search. Own state, own fetch, entirely
-  // independent of the series list/loading above so a slow or failed
-  // songs fetch can never affect the existing series search. Search-route
-  // only (see fetch effect below) — the browse route already has its own
-  // dedicated Songs entry point on the home page toggle.
-  const [songs, setSongs] = useState<(SongCardData & { creator_id: string })[]>([]);
-  const [songUsernames, setSongUsernames] = useState<Record<string, string>>({});
-  const [songsLoading, setSongsLoading] = useState(true);
+  // §139-B — the browse/search catalog is read-mostly published data, so all
+  // three fetches below moved from mount-effects to the SWR layer ('catalog'
+  // tier): a repeat visit to /WebMangal or /WebMangal/search paints instantly
+  // from cache and revalidates in the background instead of re-shipping the
+  // entire published-series list + all creator profiles + songs + books on
+  // every navigation. Keys are shared across browse/search since both routes
+  // render the same data through this one component.
+  const { data: catalogData, isLoading: catalogLoading } = useCachedQuery(
+    ['wm-browse-catalog'],
+    async () => {
+      // Fetch published series + creator usernames in parallel.
+      // Username search is done client-side via this map since `series` has no username column itself.
+      const [seriesRes, creatorsRes] = await Promise.all([
+        supabase
+          .from('series')
+          .select('*')
+          .eq('status', 'published')
+          .order('created_at', { ascending: false }),
+        supabase.from('creator_profiles').select('user_id, username'),
+      ]);
+      const map: Record<string, string> = {};
+      ((creatorsRes.data ?? []) as { user_id: string; username: string }[]).forEach(c => {
+        map[c.user_id] = c.username;
+      });
+      return { series: (seriesRes.data ?? []) as Series[], creatorUsernames: map };
+    },
+    'catalog',
+  );
+  // Derived via useMemo so downstream useMemo deps see a stable identity
+  // (the SWR data object only changes on actual (re)validation).
+  const series = useMemo(() => catalogData?.series ?? [], [catalogData]);
+  const creatorUsernames = useMemo(() => catalogData?.creatorUsernames ?? {}, [catalogData]);
+  const loading = catalogLoading;
+  // §85 continued (4) — Songs. Own cache entry, entirely independent of the
+  // series catalog above so a slow or failed songs fetch can never affect
+  // the existing series search (historical note: this was search-route-only
+  // once — now both routes, see the Books comment below).
+  const { data: songsData, isLoading: songsLoading } = useCachedQuery(
+    ['wm-songs'],
+    async () => {
+      const { data } = await supabase
+        .from('songs')
+        .select('id, title, genre, cover_url, views, blocks, creator_id, linked_series_id')
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      const rows = (data ?? []) as { id: string; title: string; genre: string | null; cover_url: string | null; views: number; blocks: unknown[]; creator_id: string; linked_series_id: string | null }[];
+      if (rows.length === 0) return { songs: [], songUsernames: {} };
+      const creatorIds = Array.from(new Set(rows.map(r => r.creator_id)));
+      const linkedSeriesIds = Array.from(new Set(rows.map(r => r.linked_series_id).filter(Boolean))) as string[];
+      const [usernameRes, seriesRes] = await Promise.all([
+        supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
+        linkedSeriesIds.length > 0
+          ? supabase.from('series').select('id, title').in('id', linkedSeriesIds)
+          : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+      ]);
+      const usernameMap = Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username]));
+      const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
+      return {
+        songs: rows.map(r => ({
+          id: r.id, title: r.title, genre: r.genre, cover_url: r.cover_url, views: r.views,
+          block_count: Array.isArray(r.blocks) ? r.blocks.length : 0,
+          linked_series_title: r.linked_series_id ? seriesTitleMap[r.linked_series_id] ?? null : null,
+          creator_id: r.creator_id,
+        })),
+        songUsernames: usernameMap,
+      };
+    },
+    'catalog',
+  );
+  const songs = useMemo(() => songsData?.songs ?? [], [songsData]);
+  const songUsernames = useMemo(() => songsData?.songUsernames ?? {}, [songsData]);
 
-  // Books — own state/loading, same shape as Songs above. Fetched
-  // unconditionally (both browse and search) since, per founder's ask,
-  // the Books pill now behaves exactly like Mangal/Novel: it switches
-  // what this page shows rather than navigating to /WebMangal/books.
-  const [books, setBooks] = useState<BookRow[]>([]);
-  const [bookAuthors, setBookAuthors] = useState<Record<string, string>>({});
-  const [booksLoading, setBooksLoading] = useState(true);
+  // Books — same shape as Songs above. Fetched unconditionally (both browse
+  // and search) since, per founder's ask, the Books pill now behaves exactly
+  // like Mangal/Novel: it switches what this page shows rather than
+  // navigating to /WebMangal/books.
+  const { data: booksData, isLoading: booksLoading } = useCachedQuery(
+    ['wm-books'],
+    async () => {
+      const { data } = await supabase
+        .from('books')
+        .select('id, title, cover_image_url, file_type, pricing_type, price_paise, category, author_id, views, created_at')
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      const rows = (data ?? []) as BookRow[];
+      if (rows.length === 0) return { books: [] as BookRow[], bookAuthors: {} };
+      const authorIds = Array.from(new Set(rows.map(b => b.author_id)));
+      const { data: profiles } = await supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds);
+      return {
+        books: rows,
+        bookAuthors: Object.fromEntries((profiles ?? []).map(p => [p.user_id, p.username])),
+      };
+    },
+    'catalog',
+  );
+  const books = useMemo(() => booksData?.books ?? [], [booksData]);
+  const bookAuthors = useMemo(() => booksData?.bookAuthors ?? {}, [booksData]);
 
   const [genreFilter, setGenreFilter] = useState(searchParams.get('genre') ?? 'All');
   const [languageFilter, setLanguageFilter] = useState(searchParams.get('language') ?? 'All');
@@ -176,83 +257,6 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
         setIsDeveloper(isDeveloperRole(profile?.role));
       }
     });
-
-    // Fetch published series + creator usernames in parallel.
-    // Username search is done client-side via this map since `series` has no username column itself.
-    Promise.all([
-      supabase
-        .from('series')
-        .select('*')
-        .eq('status', 'published')
-        .order('created_at', { ascending: false }),
-      supabase.from('creator_profiles').select('user_id, username'),
-    ]).then(([seriesRes, creatorsRes]) => {
-      if (seriesRes.data) setSeries(seriesRes.data as Series[]);
-      if (creatorsRes.data) {
-        const map: Record<string, string> = {};
-        (creatorsRes.data as { user_id: string; username: string }[]).forEach(c => {
-          map[c.user_id] = c.username;
-        });
-        setCreatorUsernames(map);
-      }
-      setLoading(false);
-    });
-  }, []);
-
-  // §85 continued (4) — Songs fetch. Was search-route-only (comment
-  // below is historical); now runs on both routes since the Songs pill
-  // needs a full listing to show when browsing too, not just a search
-  // preview.
-  useEffect(() => {
-    supabase
-      .from('songs')
-      .select('id, title, genre, cover_url, views, blocks, creator_id, linked_series_id')
-      .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(200)
-      .then(async ({ data }) => {
-        const rows = (data ?? []) as { id: string; title: string; genre: string | null; cover_url: string | null; views: number; blocks: unknown[]; creator_id: string; linked_series_id: string | null }[];
-        if (rows.length === 0) { setSongsLoading(false); return; }
-        const creatorIds = Array.from(new Set(rows.map(r => r.creator_id)));
-        const linkedSeriesIds = Array.from(new Set(rows.map(r => r.linked_series_id).filter(Boolean))) as string[];
-        const [usernameRes, seriesRes] = await Promise.all([
-          supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
-          linkedSeriesIds.length > 0
-            ? supabase.from('series').select('id, title').in('id', linkedSeriesIds)
-            : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-        ]);
-        const usernameMap = Object.fromEntries((usernameRes.data ?? []).map(u => [u.user_id, u.username]));
-        setSongUsernames(usernameMap);
-        const seriesTitleMap = Object.fromEntries((seriesRes.data ?? []).map(s => [s.id, s.title]));
-        setSongs(rows.map(r => ({
-          id: r.id, title: r.title, genre: r.genre, cover_url: r.cover_url, views: r.views,
-          block_count: Array.isArray(r.blocks) ? r.blocks.length : 0,
-          linked_series_title: r.linked_series_id ? seriesTitleMap[r.linked_series_id] ?? null : null,
-          creator_id: r.creator_id,
-        })));
-        setSongsLoading(false);
-      });
-  }, []);
-
-  // Books fetch — published only (RLS enforces it too), same two-step
-  // author-name resolution pattern as /WebMangal/books/page.tsx.
-  useEffect(() => {
-    supabase
-      .from('books')
-      .select('id, title, cover_image_url, file_type, pricing_type, price_paise, category, author_id, views, created_at')
-      .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(200)
-      .then(async ({ data }) => {
-        const rows = (data ?? []) as BookRow[];
-        setBooks(rows);
-        if (rows.length > 0) {
-          const authorIds = Array.from(new Set(rows.map(b => b.author_id)));
-          const { data: profiles } = await supabase.from('creator_profiles').select('user_id, username').in('user_id', authorIds);
-          setBookAuthors(Object.fromEntries((profiles ?? []).map(p => [p.user_id, p.username])));
-        }
-        setBooksLoading(false);
-      });
   }, []);
 
   // Keep the URL in sync (shareable/bookmarkable search), without a full page reload

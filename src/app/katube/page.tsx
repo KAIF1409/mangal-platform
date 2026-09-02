@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, type CSSProperties, type TouchEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, type CSSProperties, type TouchEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ import MangalOfTheWeekBanner from './components/MangalOfTheWeekBanner';
 import WriterOfTheMonthBanner from './components/WriterOfTheMonthBanner';
 import { MangalWeekBadge } from './components/VideoGridCard';
 import { supabase } from '../lib/supabase';
+import { useCachedQuery } from '../lib/swrCache';
 import { Home, Zap, Play, Bookmark, ArrowUp, Search, BookOpen, Ghost, TreePine, Building2, Backpack, ArrowLeft, Users, Flame, ListVideo, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -543,9 +544,80 @@ function RealVideoCard({ video, winnerRank }: { video: RealVideo; winnerRank?: n
 
 export default function KaTubePage() {
   const router = useRouter();
-  const [videos, setVideos] = useState<RealVideo[]>([]);
-  const [shorts, setShorts] = useState<RealShort[]>([]);
-  const [loading, setLoading] = useState(true);
+  // §139-B — the home grid is read-mostly catalog data (videos/shorts change
+  // on upload cadence, not per request): repeat visits now paint from cache
+  // and revalidate on focus ('feed' tier) instead of re-shipping every video
+  // row + shorts + New Voices + weekly-winner ranks on every navigation.
+  // Weekly-winner ranks + New Voices ride along in the same cache entry so a
+  // repeat visit costs one deduped request instead of four.
+  const { data: homeData, isLoading: homeLoading } = useCachedQuery(
+    ['katube-home'],
+    async () => {
+      const [videosRes, shortsRes] = await Promise.all([
+        supabase.from('videos').select('id, title, youtube_id, views, likes, created_at, category, ai_tool, creator_id, series_id, duration_seconds')
+          .eq('is_short', false).order('created_at', { ascending: false }),
+        supabase.from('videos').select('id, title, youtube_id, views')
+          .eq('is_short', true).order('created_at', { ascending: false }).limit(12),
+      ]);
+
+      const shortsRows = (shortsRes.data || []) as RealShort[];
+      const rows = videosRes.data;
+
+      let mapped: RealVideo[] = [];
+      if (rows && rows.length > 0) {
+        const creatorIds = [...new Set(rows.map(r => r.creator_id))];
+        const seriesIds = [...new Set(rows.map(r => r.series_id).filter(Boolean))];
+
+        const [creatorsRes, seriesRes] = await Promise.all([
+          supabase.from('creator_profiles').select('user_id, username, avatar_url').in('user_id', creatorIds),
+          seriesIds.length ? supabase.from('series').select('id, title').in('id', seriesIds) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+        ]);
+        const creatorMap = new Map((creatorsRes.data || []).map(c => [c.user_id, c.username]));
+        const creatorAvatarMap = new Map((creatorsRes.data || []).map(c => [c.user_id, c.avatar_url]));
+        const seriesMap = new Map((seriesRes.data || []).map(s => [s.id, s.title]));
+
+        mapped = rows.map(r => ({
+          id: r.id,
+          title: r.title,
+          youtube_id: r.youtube_id,
+          views: r.views,
+          likes: r.likes,
+          created_at: r.created_at,
+          category: r.category,
+          ai_tool: r.ai_tool,
+          creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
+          creatorId: r.creator_id,
+          creatorAvatar: creatorAvatarMap.get(r.creator_id) || null,
+          basedOn: r.series_id ? (seriesMap.get(r.series_id) || null) : null,
+          durationSeconds: r.duration_seconds ?? null,
+        }));
+      }
+
+      // §27 item 6 — New Voices: most recently-joined creators, ordered by
+      // creator_profiles.joined_at desc rather than by views/popularity —
+      // gives a brand-new creator a guaranteed discovery slot instead of
+      // always losing to whoever already has the most views. Same pattern
+      // just shipped on WebMangal's home page.
+      const { data: voices } = await supabase.from('creator_profiles').select('user_id, joined_at').order('joined_at', { ascending: false }).limit(20);
+
+      // Phase 2 "Unique for Mangal" (CONTEXT.md §0c) — same RPC the K Circle
+      // voting page and the KaTube home banner both read, so all three stay
+      // in sync. Stored as plain [video_id, rank] entries so the SWR cache
+      // holds plain data (the Map is derived below).
+      const { data: weekly } = await supabase.rpc('get_mangal_of_the_week');
+
+      return {
+        videos: mapped,
+        shorts: shortsRows,
+        newVoiceOrder: (voices ?? []).map(c => c.user_id),
+        weeklyWinners: ((weekly ?? []) as { video_id: string; rank: number }[]).map(w => [w.video_id, w.rank] as [string, number]),
+      };
+    },
+    'feed',
+  );
+  const videos = homeData?.videos ?? [];
+  const shorts = homeData?.shorts ?? [];
+  const loading = homeLoading;
   // ── Sidebar open state (Aug 2026 mobile-compat fix) ──
   // Two independent booleans instead of one `isMobile`-branching value:
   // `desktopSidebarOpen` is the persistent collapse toggle desktop users
@@ -571,8 +643,9 @@ export default function KaTubePage() {
   const [activeDurationBucket, setActiveDurationBucket] = useState(0);
   const [activeUploadDateBucket, setActiveUploadDateBucket] = useState(0);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
-  // §27 item 6 — New Voices: ordered list of recently-joined creator user_ids
-  const [newVoiceOrder, setNewVoiceOrder] = useState<string[]>([]);
+  // §27 item 6 — New Voices: ordered list of recently-joined creator user_ids.
+  // §139-B — now fetched inside the cached ['katube-home'] payload (hook
+  // above) instead of its own mount effect; derived from the cache below.
   // §28a — snapshot "now" once per mount rather than calling Date.now()
   // inline in the filter chain below (that trips React's purity rule,
   // since it'd produce a different value on every render). Good enough for
@@ -600,7 +673,9 @@ export default function KaTubePage() {
   // show a trophy badge on winning videos wherever they appear in the
   // grid (Home, New Voices row, etc). Same RPC the K Circle voting page
   // and the KaTube home banner both read, so all three stay in sync.
-  const [weeklyWinnerRanks, setWeeklyWinnerRanks] = useState<Map<string, number>>(new Map());
+  // §139-B — both of these now derive from the cached ['katube-home'] payload.
+  const newVoiceOrder = useMemo(() => homeData?.newVoiceOrder ?? [], [homeData]);
+  const weeklyWinnerRanks = useMemo(() => new Map(homeData?.weeklyWinners ?? []), [homeData]);
 
   // Dashboard hero redesign (reference: gaming-dashboard screenshot) —
   // right-panel "In Library"-equivalent list. Real Continue Watching data
@@ -612,18 +687,19 @@ export default function KaTubePage() {
   // history yet (logged out, or nothing in progress) so the panel is
   // never empty, matching the reference always showing 4 populated rows.
   interface LibraryPanelItem { id: string; title: string; youtube_id: string; pct: number }
-  const [continueItems, setContinueItems] = useState<LibraryPanelItem[]>([]);
-  useEffect(() => {
-    if (!userId) return;
-    (async () => {
+  // §139-B — cached per viewer at the feed tier: revisiting KaTube paints the
+  // panel from cache instantly and revalidates in the background.
+  const { data: continueData } = useCachedQuery(
+    userId ? ['katube-continue-watching', userId] : null,
+    async () => {
       const { data: rows } = await supabase.from('katube_watch_progress')
         .select('video_id, position_seconds, duration_seconds, updated_at')
-        .eq('viewer_id', userId).order('updated_at', { ascending: false }).limit(8);
-      if (!rows || rows.length === 0) { setContinueItems([]); return; }
+        .eq('viewer_id', userId!).order('updated_at', { ascending: false }).limit(8);
+      if (!rows || rows.length === 0) return [];
       const ids = rows.map(r => r.video_id);
       const { data: vids } = await supabase.from('videos').select('id, title, youtube_id').in('id', ids);
       const vmap = new Map((vids || []).map(v => [v.id, v]));
-      const built = rows
+      return rows
         .map(r => {
           const v = vmap.get(r.video_id);
           if (!v) return null;
@@ -632,17 +708,10 @@ export default function KaTubePage() {
         })
         .filter((x): x is LibraryPanelItem => x !== null && x.pct < 92)
         .slice(0, 4);
-      setContinueItems(built);
-    })();
-  }, [userId]);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.rpc('get_mangal_of_the_week');
-      if (!data) return;
-      setWeeklyWinnerRanks(new Map((data as { video_id: string; rank: number }[]).map(w => [w.video_id, w.rank])));
-    })();
-  }, []);
+    },
+    'feed',
+  );
+  const continueItems = continueData ?? [];
 
   // Mobile drawer: lock background scroll while it's open. Previously the
   // drawer/backdrop were just an overlay on top of the normal page — the
@@ -666,58 +735,6 @@ export default function KaTubePage() {
       setUserName(name);
       setUserId(data.user?.id || null);
     })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      const [videosRes, shortsRes] = await Promise.all([
-        supabase.from('videos').select('id, title, youtube_id, views, likes, created_at, category, ai_tool, creator_id, series_id, duration_seconds')
-          .eq('is_short', false).order('created_at', { ascending: false }),
-        supabase.from('videos').select('id, title, youtube_id, views')
-          .eq('is_short', true).order('created_at', { ascending: false }).limit(12),
-      ]);
-
-      setShorts(shortsRes.data || []);
-
-      const rows = videosRes.data;
-      if (!rows || rows.length === 0) { setLoading(false); return; }
-
-      const creatorIds = [...new Set(rows.map(r => r.creator_id))];
-      const seriesIds = [...new Set(rows.map(r => r.series_id).filter(Boolean))];
-
-      const [creatorsRes, seriesRes] = await Promise.all([
-        supabase.from('creator_profiles').select('user_id, username, avatar_url').in('user_id', creatorIds),
-        seriesIds.length ? supabase.from('series').select('id, title').in('id', seriesIds) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
-      ]);
-      const creatorMap = new Map((creatorsRes.data || []).map(c => [c.user_id, c.username]));
-      const creatorAvatarMap = new Map((creatorsRes.data || []).map(c => [c.user_id, c.avatar_url]));
-      const seriesMap = new Map((seriesRes.data || []).map(s => [s.id, s.title]));
-
-      setVideos(rows.map(r => ({
-        id: r.id,
-        title: r.title,
-        youtube_id: r.youtube_id,
-        views: r.views,
-        likes: r.likes,
-        created_at: r.created_at,
-        category: r.category,
-        ai_tool: r.ai_tool,
-        creator: creatorMap.get(r.creator_id) || 'MANGAL Creator',
-        creatorId: r.creator_id,
-        creatorAvatar: creatorAvatarMap.get(r.creator_id) || null,
-        basedOn: r.series_id ? (seriesMap.get(r.series_id) || null) : null,
-        durationSeconds: r.duration_seconds ?? null,
-      })));
-      setLoading(false);
-    })();
-
-    // §27 item 6 — New Voices: most recently-joined creators, ordered by
-    // creator_profiles.joined_at desc rather than by views/popularity —
-    // gives a brand-new creator a guaranteed discovery slot instead of
-    // always losing to whoever already has the most views. Same pattern
-    // just shipped on WebMangal's home page.
-    supabase.from('creator_profiles').select('user_id, joined_at').order('joined_at', { ascending: false }).limit(20)
-      .then(({ data }) => { if (data) setNewVoiceOrder(data.map(c => c.user_id)); });
   }, []);
 
   // Popular = views desc, New = created_at desc, Rankings = likes desc
