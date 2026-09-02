@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { openRazorpayCheckout } from '../../lib/payments/razorpayClient';
+import BookPurchaseModal from '../shared/BookPurchaseModal';
 
 export interface ReaderBookInfo {
   id: string;
@@ -176,6 +177,8 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const [isMobile, setIsMobile] = useState(false);
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState<string | null>(null);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [purchasePending, setPurchasePending] = useState(false);
   const [access, setAccess] = useState(hasAccess);
   const rootRef = useRef<HTMLDivElement>(null);
   const flippingRef = useRef(false);
@@ -592,6 +595,18 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     }
   }
 
+  // §141 — all three lock-screen buttons below open the same direct-UPI
+  // modal instead of calling handleBuy() (Razorpay) directly; handleBuy
+  // itself is still here and still works, just as the modal's secondary
+  // "Card/Netbanking" option, gated behind NEXT_PUBLIC_ENABLE_GLOBAL_PAYMENTS.
+  function openBuyFlow() {
+    if (!userId) {
+      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
+    setShowBuyModal(true);
+  }
+
   // ── derived page images ───────────────────────────────────────────────
   const cache = pageCacheRef.current;
   const zoom = ZOOM_STEPS[zoomIdx];
@@ -639,7 +654,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         <AlertCircle size={38} style={{ color: '#ef4444' }} />
         <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', maxWidth: '420px', lineHeight: 1.6 }}>{loadError}</p>
         {!access && book.pricing_type === 'PAID' && (
-          <button onClick={handleBuy} disabled={buying} style={{
+          <button onClick={openBuyFlow} disabled={buying} style={{
             display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px',
             borderRadius: '10px', border: 'none', background: 'var(--accent)', color: '#fff',
             fontWeight: 800, fontSize: '14px', cursor: buying ? 'wait' : 'pointer',
@@ -672,7 +687,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
             This book is paid, and EPUB previews cannot be partially unlocked. Purchase it once to read the
             full book here — your progress will be saved automatically.
           </p>
-          <button onClick={handleBuy} disabled={buying} style={{
+          <button onClick={openBuyFlow} disabled={buying} style={{
             display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 26px',
             borderRadius: '10px', border: 'none', background: 'var(--accent)', color: '#fff',
             fontWeight: 800, fontSize: '14.5px', cursor: buying ? 'wait' : 'pointer',
@@ -884,7 +899,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 18px' }}>
                 Unlock the full book — read it here anytime, on any device, with your progress saved.
               </p>
-              <button onClick={handleBuy} disabled={buying} style={{
+              <button onClick={openBuyFlow} disabled={buying} style={{
                 width: '100%', padding: '13px', borderRadius: '10px', border: 'none',
                 background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: '14.5px',
                 cursor: buying ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -937,6 +952,32 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
           Next <ArrowRight size={15} />
         </button>
       </div>
+
+      {/* §141 — direct-UPI purchase modal + its "pending confirmation"
+          banner. purchasePending stays true for the rest of this reader
+          session once the payer self-reports "I've paid" — there's no
+          instant unlock for a raw UPI transfer, so this is deliberately
+          not the same as `access` flipping true. */}
+      {purchasePending && !access && (
+        <div style={{
+          padding: '10px 14px', textAlign: 'center', fontSize: '12.5px', fontWeight: 700,
+          color: '#d97706', background: 'rgba(217,119,6,0.1)', borderTop: '1px solid rgba(217,119,6,0.3)',
+        }}>
+          Payment reported — we&apos;ll confirm and unlock this book shortly.
+        </div>
+      )}
+
+      {showBuyModal && book.price_paise && (
+        <BookPurchaseModal
+          bookId={book.id}
+          bookTitle={book.title}
+          pricePaise={book.price_paise}
+          onClose={() => setShowBuyModal(false)}
+          onPending={() => { setPurchasePending(true); setShowBuyModal(false); }}
+          onRazorpayBuy={() => { setShowBuyModal(false); handleBuy(); }}
+          razorpayBuying={buying}
+        />
+      )}
     </div>
   );
 }

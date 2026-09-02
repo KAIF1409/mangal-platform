@@ -9168,7 +9168,6 @@ Every commit `0c16acc` → `3a5f6b7` (+ the §140 docs commit): `tsc --noEmit` e
 `eslint` 0 errors / 53 warnings (baseline ceiling 53, established before any change);
 `next build` success. No check was weakened, skipped, or forced green.
 
-
 ## §141 — deploy-blocking Worker bundle (round 2): web-llm / jspdf / tiptap out of the server bundle
 
 **Symptom.** Cloudflare Workers Builds deploys failing on the free-plan
@@ -9204,6 +9203,10 @@ emits hashed node_modules junctions
 node_modules), and OpenNext's copyTracedFiles re-creates them with
 `symlinkSync` → `EPERM: operation not permitted, symlink` on Windows
 (§123's sharp crash; sharp only survives because it is in OpenNext's own
+EXCLUDED_PACKAGES). `outputFileTracingExcludes` was verified NOT to filter
+these packages from the Turbopack trace (8 files still listed web-llm while
+the excludes were active). The real fix is making the modules unreachable
+from every server graph in the first place.
 
 **Fixes applied (zero functionality removed — every affected feature is
 browser-only and ships complete in the client bundle):**
@@ -9238,16 +9241,18 @@ browser-only and ships complete in the client bundle):**
 
 **Before / after (verified, not assumed):**
 
-| Metric | Before (HEAD 48a6506, fresh build) | After (fresh build) |
+| Metric | Before (HEAD 48a6506, fresh build) | After (fresh build, merged §141 payments tree) |
 |---|---|---|
-| handler.mjs raw | 15,548,356 B | **7,970,529 B** (−49%) |
-| handler.mjs gzip | — (deploy failed before measuring) | **1,883,960 B** |
-| `wrangler deploy --dry-run --outdir` Total Upload | — | **10,934.66 KiB / gzip 2,139.01 KiB < 3,072 KiB free-plan limit** ✔ |
+| handler.mjs raw | 15,548,356 B | **8,099,706 B** (−48%) |
+| handler.mjs gzip | — (deploy failed before measuring) | **1,890,039 B** |
+| `wrangler deploy --dry-run --outdir` Total Upload | — | **11,100.96 KiB / gzip 2,170.09 KiB < 3,072 KiB free-plan limit** ✔ |
 | largest SSR chunk in the bundle | 6,026,493 B (web-llm) | 216,421 B (app code) |
 | .nft.json files listing web-llm / jspdf | 8 / 2 | **0 / 0** |
 
 For scale: §123's last known-good deploy measured gzip 2,795 KiB — this fix
-lands ~656 KiB BELOW the previous passing state.
+lands ~625 KiB BELOW the previous passing state (even with the merged
+direct-UPI payments feature, which added only ~129 KB raw to the server
+handler across a 23-file merge — `qrcode.react` is a tiny client-only lib).
 
 **On the "handler.mjs < 3 MiB raw" reading of the gate:** the raw size of
 any Next 16 server bundle is floored by the framework runtime itself
@@ -9268,10 +9273,106 @@ book forms), on-device WebGPU inference, BYOK cloud fallback and the
 **Session gates ledger:** `npx opennextjs-cloudflare build` exit 0;
 `npx tsc --noEmit` exit 0; `npm run lint` 0 errors / 53 warnings (exactly
 the §140 baseline ceiling — no new warnings); `npx wrangler deploy
---dry-run --outdir .wrangler-dry` pass above. Books/payments tables and all
-other features untouched — 10 files changed (9 modified + 1 vendored
-asset), all bundling-related.
-EXCLUDED_PACKAGES). `outputFileTracingExcludes` was verified NOT to filter
-these packages from the Turbopack trace (8 files still listed web-llm while
-the excludes were active). The real fix is making the modules unreachable
-from every server graph in the first place.
+--dry-run --outdir .wrangler-dry` pass above. **All four re-verified on the
+merged tree** (after integrating the remote `60f7a12` direct-UPI payments
+commit via `git merge`): build exit 0; tsc exit 0; lint 0 errors / 53
+warnings; wrangler Total Upload gzip 2,170.09 KiB < 3,072 KiB. This
+session's OWN scope was bundling-only — 10 bundling files changed (9
+modified + 1 vendored asset); the books/payments rows and tables are
+untouched by it (the direct-UPI code present in the tree is the merged
+remote feature, not this session's work). CONTEXT.md §141 conflict (two
+independent §141 sections, bundle + payments) resolved by keeping both.
+
+---
+
+## §141 — Direct-to-VPA UPI payments (no gateway account needed)
+
+Founder still has no live Razorpay merchant account (RAZORPAY_KEY_ID/SECRET unset —
+§48/§49), so every checkout in the app showed "coming soon". Rather than wait on that,
+added a second payment rail that works today with zero gateway account: pay straight to
+a personal UPI ID (the founder's own Paytm VPA, or a creator's own once verified), shown
+as a QR code + `upi://pay` deep link — same as scanning the founder's real Paytm QR.
+
+**Limitation stated plainly, not faked:** a raw UPI transfer has no webhook/callback. A
+direct-UPI payment can only ever be self-reported by the payer (`pending_manual_
+verification`) until a developer-role account reconciles it against their own bank/UPI
+app statement and confirms it via `/api/admin/payments/verify-upi`. This is the same
+trust model real solo-founder UPI businesses use pre-gateway, not a shortcut unique to
+this feature — and it's why "Remove Ads" / book unlocks say "pending confirmation"
+rather than unlocking instantly the way the Razorpay flow (once configured) will.
+
+**DB (migration `20260901120000_direct_upi_payments.sql`):** `payments` gets
+`reference_note` (human-readable code embedded in the UPI intent's `tn=` field, e.g.
+`MANGAL-A1B2C3`, for matching a row to a bank/UPI-app statement line) and
+`paid_reported_at`; its status check now also allows `pending_manual_verification`.
+`creator_profiles` gets `upi_id` / `upi_phone` / `upi_verification_code` /
+`upi_verification_sent_at` / `upi_verified_at` — same pending-code → confirmed shape as
+the existing YouTube channel verification (§6). A `get_creator_payout_vpa()` SECURITY
+DEFINER RPC exposes just `(upi_id, display_name)` for a *verified* creator, without
+opening up the rest of creator_profiles' PII-locked-down columns (§ 2026-08-21).
+
+**Code:**
+- `lib/payments/upi.ts` — VPA/phone format validation, `upi://pay` URI builder,
+  6-char reference-code generator (excludes 0/O/1/I for readability off a phone screen).
+- `lib/payments/grantPayment.ts` — the "what does a captured payment unlock"
+  logic (flip `profiles.ads_removed`, upsert a `book_purchases` row) extracted out of
+  `/api/payments/verify` so both that route (Razorpay signature path) and the new
+  `/api/admin/payments/verify-upi` (manual reconciliation path) apply the exact same
+  grant instead of two copies drifting apart.
+- `lib/payments/featureFlags.ts` — `GLOBAL_PAYMENTS_ENABLED` reads
+  `NEXT_PUBLIC_ENABLE_GLOBAL_PAYMENTS`. Everything Razorpay-multi-method/PayPal stays in
+  the codebase exactly as built (§94/§95), just gated behind this flag (default off) —
+  flipping it back on once there's a real merchant account and/or global clients needs
+  no code changes at any call site.
+- `api/payments/create-upi-intent` — resolves the recipient VPA (a tipped creator's
+  verified `upi_id` via the RPC, or `FOUNDER_UPI_ID`/`FOUNDER_UPI_NAME` env vars for
+  remove_ads/book_purchase/founder-directed tips) and inserts a `payments` row using a
+  `upi_direct_<uuid>` placeholder in `razorpay_order_id` (same placeholder trick
+  `create-order` already used, since that column is NOT NULL UNIQUE and there's no real
+  gateway order here).
+- `api/payments/mark-upi-paid` — payer self-report only; moves `created` →
+  `pending_manual_verification`, grants nothing.
+- `api/admin/payments/verify-upi` (GET lists pending rows, POST captures one) —
+  developer-role gated exactly like `/api/admin/migrate-media` (`isDeveloperRole`).
+- `api/creator/upi/request-code` + `.../verify` — creator UPI payout setup: format-
+  validate, email a 6-digit code to the address on the creator's own auth account via
+  Resend (`sendUpiVerificationCodeEmail` in `lib/email.ts`), confirm it back. Scope is
+  deliberately just "this creator can read mail sent to their own account" — no bank-
+  identity check, no KYC pipeline exists yet to do more than that.
+- `components/shared/DirectUpiPay.tsx` — the reusable QR + deep-link + "I've paid"
+  panel every checkout point now renders. Uses `qrcode.react` (new dependency).
+- `components/shared/CreatorUpiSettings.tsx` — the Payout UPI section, shown on
+  `/settings` only for creator/developer roles (`hasCreatorAccess`).
+- `components/shared/BookPurchaseModal.tsx` — wraps `DirectUpiPay` for the two book-
+  purchase call sites (`BookReader.tsx`'s three lock-screen buttons, and the WebMangal
+  book detail page), with the old Razorpay `handleBuy()` kept as a secondary button
+  behind `GLOBAL_PAYMENTS_ENABLED`.
+- `TipJarModal.tsx` (§94) — direct-UPI is now the default/only visible rail; the
+  original Razorpay INDIA rail + PayPal international rail are unchanged code, just
+  wrapped in `{GLOBAL_PAYMENTS_ENABLED && (...)}`.
+- `settings/page.tsx` Remove Ads — same pattern: a `showAdsUpiFlow` toggle renders
+  `DirectUpiPay` inline; the old Razorpay button only renders behind the flag.
+- `globals.css` — `.mangal-spin` keyframe moved here from being locally defined
+  inside `TipJarModal`'s `styled-jsx global` block, since `DirectUpiPay` needed it
+  standalone (Remove Ads / book-purchase screens don't mount `TipJarModal`).
+
+**New env vars (`.env.example`):** `FOUNDER_UPI_ID`, `FOUNDER_UPI_NAME` (server-only,
+never `NEXT_PUBLIC_` — the API response carries the value to the client, nothing about
+it needs to ship in the bundle), `NEXT_PUBLIC_ENABLE_GLOBAL_PAYMENTS`.
+
+**Gates:** `npx tsc --noEmit` → 0 (one fix needed: the `get_creator_payout_vpa` RPC
+result came back typed `{}` with no `Database` generic on this project's Supabase
+client — resolved with an explicit `.maybeSingle<{...}>()` type argument rather than
+adding a full generated-types file). `npm run lint` → 0 errors, 54 warnings (pre-existing
+baseline; six `react/no-unescaped-entities` errors from apostrophes in new copy — "it's",
+"we'll", "isn't" — fixed to `&apos;`). `npm run build` — blocked in this sandbox only by
+egress to fonts.googleapis.com (Turbopack's next/font Google-Fonts fetch, 403), unrelated
+to this feature; unaffected in a real deploy environment with normal internet access.
+
+**Not built (out of scope for this pass):** an admin UI for the
+`/api/admin/payments/verify-upi` GET list (curl/API only for now, same as
+`migrate-media`); a way for a creator to edit/re-verify an already-verified `upi_id`
+without going through "unset" first (re-entering while `pending` works, but there's no
+"change UPI ID" affordance once verified — would need a small addition to
+`CreatorUpiSettings.tsx` if the founder wants creators to update it later without a
+support request).

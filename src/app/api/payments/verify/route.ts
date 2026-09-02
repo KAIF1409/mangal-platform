@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireUser } from '../../../lib/auth/authedServerClient';
 import { verifyPaymentSignature } from '../../../lib/payments/razorpay';
+import { applyPaymentGrant } from '../../../lib/payments/grantPayment';
 
 // Service-role client — used ONLY for the book_purchase grant below.
 // book_purchases has no client-side insert policy on purpose (a purchase row
@@ -75,53 +76,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  // §95 — remove_ads is a one-time flag flip on `profiles`, applied here
-  // (the client-facing verify path) same as the webhook does below for
-  // defense in depth — whichever fires first wins, the other is a no-op
-  // since the row is already `captured` by then in the webhook's case,
-  // or this update is simply idempotent (`ads_removed = true` twice is
-  // harmless). Never trust `purpose` from the client — it's read from
-  // the DB row here, not from the request body.
-  if (row.purpose === 'remove_ads') {
-    await auth.supabase.from('profiles').update({ ads_removed: true }).eq('id', auth.userId);
-  }
+  // §141 — grant side effects (remove_ads flag, book_purchase row) now
+  // live in one shared place (lib/payments/grantPayment.ts) so the manual
+  // direct-UPI verify route applies the exact same logic instead of a
+  // second, possibly-drifting copy. Defense-in-depth is unchanged: purpose
+  // is read from the DB row, never the request body, and every grant here
+  // is idempotent (safe if the webhook already ran first).
+  const { data: paymentRow } = await auth.supabase
+    .from('payments')
+    .select('amount_paise')
+    .eq('id', row.id)
+    .maybeSingle();
 
-  // Books module — a captured book_purchase payment grants access to the
-  // book referenced by purpose_ref_id. Same defense-in-depth shape as the
-  // remove_ads branch: purpose is read from the DB row (never the request
-  // body), and the grant itself is validated server-side — the book must
-  // exist, actually be PAID, and the captured amount must cover its price.
-  // Idempotent via the (book_id, user_id) unique constraint, so a retry or
-  // the webhook firing first is a harmless no-op.
-  if (row.purpose === 'book_purchase' && row.purpose_ref_id) {
-    const { data: book } = await supabaseAdmin
-      .from('books')
-      .select('id, pricing_type, price_paise')
-      .eq('id', row.purpose_ref_id)
-      .maybeSingle();
-
-    if (book && book.pricing_type === 'PAID') {
-      const { data: paymentRow } = await auth.supabase
-        .from('payments')
-        .select('amount_paise')
-        .eq('id', row.id)
-        .maybeSingle();
-
-      if (paymentRow && paymentRow.amount_paise >= (book.price_paise ?? 0)) {
-        await supabaseAdmin
-          .from('book_purchases')
-          .upsert(
-            {
-              book_id: book.id,
-              user_id: auth.userId,
-              payment_id: row.id,
-              amount_paid_paise: paymentRow.amount_paise,
-            },
-            { onConflict: 'book_id,user_id' }
-          );
-      }
-    }
-  }
+  await applyPaymentGrant(auth.supabase, supabaseAdmin, {
+    id: row.id,
+    user_id: auth.userId,
+    purpose: row.purpose,
+    purpose_ref_id: row.purpose_ref_id,
+    amount_paise: paymentRow?.amount_paise ?? 0,
+  });
 
   return NextResponse.json({ verified: true });
 }

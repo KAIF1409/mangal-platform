@@ -164,3 +164,12 @@ a[style*="gradient"]:active,
 @media (max-width: 420px) {
   .mangal-shared-nav-brand-text { display: none; }
 }
+
+/* §96 — shared spin keyframe for loading spinners (DirectUpiPay,
+   TipJarModal, etc). Was previously only defined locally inside
+   TipJarModal's styled-jsx global block, so anything rendering
+   .mangal-spin without TipJarModal mounted (e.g. DirectUpiPay used
+   standalone on the Remove Ads / book-purchase screens) spun without
+   animation. Defining it once here fixes that for every caller. */
+.mangal-spin { animation: mangal-spin-rotate 0.8s linear infinite; }
+@keyframes mangal-spin-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
