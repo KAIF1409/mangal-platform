@@ -9,7 +9,19 @@
 // Portrait is placeholder-only (upload/serve wiring out of scope) — no <img>.
 
 import { ImagePlus, Loader2, Plus, Save, Trash2, UserRound, X } from 'lucide-react';
-import WebMangalAiEditor from '../../../components/editor/WebMangalAiEditor';
+import dynamic from 'next/dynamic';
+
+// §141 — client-only boundary; see dashboard/books/page.tsx for the full
+// note (WebMangalAiEditor pulls the 6 MB web-llm engine into the SSR graph
+// through any static import of it).
+const WebMangalAiEditor = dynamic(() => import('../../../components/editor/WebMangalAiEditor'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ padding: '10px 0', color: 'var(--text-tertiary)', fontSize: '13px' }}>
+      Loading editor…
+    </div>
+  ),
+});
 import { type CharacterDraft, type CharacterRow } from './codexTypes';
 
 const fieldLabel: React.CSSProperties = {

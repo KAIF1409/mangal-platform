@@ -13,10 +13,27 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { ArrowLeft, Copy, Download, Trash2 } from 'lucide-react';
 
 import { useStudioAuth } from '../../katube/lib/useStudioAuth';
-import AiWritingEditor from '../../../components/editor/AiWritingEditor';
+
+// §141 — loaded client-side only. AiWritingEditor statically imports
+// @tiptap/* (ProseMirror), a browser-only rich-text engine that was being
+// traced into the SSR/server bundle through this page's static import and
+// inlined by OpenNext into the Worker (409 KB there, on top of the 6 MB
+// web-llm / 874 KB jspdf leaks externalized in next.config.ts §141 note).
+// ssr:false keeps the whole editor subtree out of the server bundle — the
+// editor is interactive-only anyway (see BookReader's identical pattern in
+// WebMangal/books/[bookId]/read/page.tsx).
+const AiWritingEditor = dynamic(() => import('../../../components/editor/AiWritingEditor'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px' }}>
+      Loading editor…
+    </div>
+  ),
+});
 
 const DRAFT_KEY = 'wm_ai_writer_draft_v1';
 

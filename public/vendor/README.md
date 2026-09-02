@@ -15,11 +15,19 @@ limit) when the Books module first shipped.
 | `epub.min.js` | `node_modules/epubjs/dist/epub.min.js` (UMD build, dependencies bundled) → exposes `window.ePub` | epubjs 0.3.93 |
 | `gsap.min.js` | `node_modules/gsap/dist/gsap.min.js` (UMD) → exposes `window.gsap` | gsap 3.x |
 | `ScrollTrigger.min.js` | `node_modules/gsap/dist/ScrollTrigger.min.js` (UMD; must load AFTER gsap.min.js) | gsap 3.x |
+| `jspdf.umd.min.js` | `node_modules/jspdf/dist/jspdf.umd.min.js` (UMD) → exposes `window.jspdf.jsPDF` | jspdf 4.2.1 |
 | `/pdf.worker.min.mjs` (repo root `public/`) | `node_modules/pdfjs-dist/build/pdf.worker.min.mjs` | pdfjs-dist 6.2.108 |
 
 gsap is still a package.json dependency (its types are used by the landing
 page's loader), but it must never be imported as a module anywhere — same
 rule as the reader engines.
+
+jspdf joined this folder in §141 for the same reason: it is loaded at
+runtime by `lib/bookPdf.ts`'s `loadJspdf()` ("Write here" → PDF pipeline).
+Its npm package also stays a dependency FOR TYPES ONLY (`import type` —
+erased at compile time, never traced into any bundle). Even a dynamic
+`import('jspdf')` from a 'use client' page got traced into the OpenNext
+server bundle / NFT trace and blew the Worker size budget again.
 
 ## Refreshing after an upgrade
 

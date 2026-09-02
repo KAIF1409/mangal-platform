@@ -76,7 +76,42 @@ const nextConfig: NextConfig = {
   // serverExternalPackages tells Next's server compiler to leave these
   // two packages out of the server bundle entirely (require()'d, never
   // actually reached at runtime server-side) instead of inlining them.
-  serverExternalPackages: ["pdfjs-dist", "epubjs"],
+  // §141 (deploy-blocking again, Sept 2026): after §134-138 wired the AI
+  // editor stack into many SSR'd pages, the same leak class re-appeared with
+  // three more browser-only libraries — a fresh handler.mjs was 14.8 MB
+  // (15,548,356 B raw; Cloudflare's Workers Builds deploy failed):
+  //   1. @mlc-ai/web-llm  → 6,026,493 B, the single largest module in the
+  //      server bundle. lib/ai/webllmEngine.ts already dynamic-imports it,
+  //      but webllmEngine is statically imported by §134's useAiAssistEngine
+  //      / WebMangalAiEditor, mounted on many SSR'd pages — so the 6 MB
+  //      browser-only WebGPU engine was traced into those SSR graphs and
+  //      inlined by OpenNext. Fix: every WebMangalAiEditor consumer (and the
+  //      AiWritingEditor route) now loads the editor via
+  //      next/dynamic({ ssr: false }) — the BookReader pattern — so the
+  //      whole engine subtree is unreachable from every server graph. (For
+  //      the record, externalizing alone was NOT enough: the NFT trace
+  //      still listed web-llm, which made OpenNext re-create Next 16's
+  //      hashed standalone junctions — `EPERM ... symlink` on Windows —
+  //      and copied ~6 MB of dead files into the deploy.)
+  //   2. @tiptap/*        → 409,094 B. STATICALLY imported (and executed at
+  //      SSR module scope) by AiWritingEditor.tsx, so it can't be
+  //      externalized — it left the server graph via the same ssr:false
+  //      boundary in mangal-studio/webmangal/write/page.tsx.
+  //   3. jspdf            → 874,355 B (jsPDF + Adam7/canvg/dompurify).
+  //      lib/bookPdf.ts dynamic-imports it, but bookPdf is statically
+  //      imported by dashboard/books/page.tsx → same SSR-graph pull-in.
+  //      Fix: vendored like the reader engines (public/vendor/jspdf.umd.min.js,
+  //      loaded at runtime by a script tag — the gsap convention in
+  //      public/vendor/README.md), so no bundle contains it at all.
+  // Client behavior unchanged: the AI assistant, Tiptap editor and the
+  // "Write here" PDF pipeline are browser-only and ship complete client-side
+  // (the on-device WebGPU engine can never run on a Worker anyway). The two
+  // new entries below are now defense-in-depth — if anyone ever re-imports
+  // these packages from server-reachable code they'll stay externalized
+  // instead of silently inlining into the Worker. Full analysis: §141.
+
+
+  serverExternalPackages: ["pdfjs-dist", "epubjs", "@mlc-ai/web-llm", "jspdf"],
 
   // §123 follow-up: keep sharp (and its @img/* native binaries) out of the
   // SERVER FILE TRACE as well. Images are served unoptimized (see images

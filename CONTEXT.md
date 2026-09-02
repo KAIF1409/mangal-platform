@@ -9168,3 +9168,110 @@ Every commit `0c16acc` → `3a5f6b7` (+ the §140 docs commit): `tsc --noEmit` e
 `eslint` 0 errors / 53 warnings (baseline ceiling 53, established before any change);
 `next build` success. No check was weakened, skipped, or forced green.
 
+
+## §141 — deploy-blocking Worker bundle (round 2): web-llm / jspdf / tiptap out of the server bundle
+
+**Symptom.** Cloudflare Workers Builds deploys failing on the free-plan
+Worker size gate again (user-reported: handler.mjs 19.2 MB uncompressed on
+the failing CI build). A fresh local `npx opennextjs-cloudflare build` at
+HEAD `48a6506` measured **handler.mjs = 15,548,356 B raw (14.8 MB)** — the
+§134–138 AI-editor rollout re-created the §133 leak class with three MORE
+browser-only libraries reachable from server-rendered module graphs.
+
+**Diagnosis (measured, not guessed).** Fresh build, then: sizes of
+`.open-next/server-functions/default/.next/server/chunks/ssr/*` (OpenNext
+inlines every SSR chunk into handler.mjs — no lazy loading at the edge);
+token scans of handler.mjs; `.nft.json` server-trace scans (what OpenNext's
+copyTracedFiles copies/symlinks into the deploy).
+
+| Library | Server-bundle evidence | Reachability chain |
+|---|---|---|
+| `@mlc-ai/web-llm` | **6,026,493 B** SSR chunk (`node_modules_@mlc-ai_web-llm_lib_index_*.js`) — the single largest module in the whole bundle; `CreateMLCEngine`×4 / `MLCEngine`×21 in handler.mjs; listed in **8 route .nft.json files** | `lib/ai/webllmEngine.ts` `import('@mlc-ai/web-llm')` (already dynamic!) ← statically imported by §134's `useAiAssistEngine.ts` and `AiWritingEditor.tsx` ← `WebMangalAiEditor` (SSR'd on `dashboard/books`, `WebMangal/upload`, `WebMangal/songs/upload`, codex CharacterPane/LorePane) and `AiWritingEditor` (`mangal-studio/webmangal/write`). Turbopack traces dynamic-import targets into the SSR graph of any SSR'd importer — a dynamic import alone does NOT keep a lib out of the server bundle (same §133 lesson). |
+| `jspdf` | **874,355 B** SSR chunk (`[root-of-the-server]__0rpg71e._.js`; jsPDF×88 + its Adam7/canvg/dompurify modules); listed in **2 route .nft.json files** | `lib/bookPdf.ts` `import('jspdf')` (dynamic!) ← statically imported by `dashboard/books/page.tsx`. |
+| `@tiptap/*` (ProseMirror) | **409,094 B** SSR chunk (`_0p2-ilp._.js`; ProseMirror×50) | STATIC import in `AiWritingEditor.tsx` (§132 AI Writer) ← `mangal-studio/webmangal/write/page.tsx` — executed at SSR module scope, so externalizing it would have crashed SSR. |
+
+Checked per the brief and CLEARED: BookReader's pdf.js/epub.js — 0 tokens,
+0 trace entries (§119 vendoring + §133 ssr:false held); the "image encoding"
+lead — the Adam7 interlace code inside the 874 KB chunk is jsPDF's own PNG
+module, not a separate image library; `supabase` (1,162 tokens) is
+legitimate server-side usage; lucide-react tree-shakes; razorpay is small.
+
+**Windows build crash discovered en route (recorded so nobody re-tries this
+dead end):** `serverExternalPackages` alone keeps web-llm/jspdf out of
+handler.mjs but NOT out of the NFT trace — Next 16's standalone output then
+emits hashed node_modules junctions
+(`.next/standalone/.next/node_modules/@mlc-ai/web-llm-<hash>` → project
+node_modules), and OpenNext's copyTracedFiles re-creates them with
+`symlinkSync` → `EPERM: operation not permitted, symlink` on Windows
+(§123's sharp crash; sharp only survives because it is in OpenNext's own
+
+**Fixes applied (zero functionality removed — every affected feature is
+browser-only and ships complete in the client bundle):**
+1. `next/dynamic({ ssr: false })` for `AiWritingEditor` in
+   `mangal-studio/webmangal/write/page.tsx` — Tiptap (and its whole subtree
+   incl. webllmEngine) leaves the server graph. Same BookReader pattern as
+   `WebMangal/books/[bookId]/read/page.tsx` (§133).
+2. The same boundary for `WebMangalAiEditor` in all five consumers:
+   `dashboard/books/page.tsx`, `WebMangal/upload/page.tsx`,
+   `WebMangal/songs/upload/page.tsx`,
+   `mangal-studio/webmangal/codex/CharacterPane.tsx`, `.../LorePane.tsx` —
+   `@mlc-ai/web-llm` becomes unreachable from every server graph (0
+   .nft.json mentions afterwards). SSR of these editors was always a no-op
+   render (interactive-only components; the pages already show loading
+   placeholders until client-side auth resolves), so nothing degrades.
+3. `lib/bookPdf.ts` — jsPDF now loads at runtime from
+   `/vendor/jspdf.umd.min.js` (copied from
+   `node_modules/jspdf/dist/jspdf.umd.min.js`, 420,165 B) via script-tag
+   injection (`loadJspdf()` singleton), exactly the reader-engine/gsap
+   convention recorded in `public/vendor/README.md` (updated). The npm dep
+   stays FOR TYPES ONLY (`import type` is erased at compile time and never
+   traced) — the gsap rule. The client bundle drops jspdf entirely too; the
+   server-compiled copy of bookPdf.ts now contains a literal browser-only
+   rejected-promise stub where the jsPDF import used to be, so it cannot
+   load PDF code on the server even if something ever called it there.
+4. `next.config.ts` — `serverExternalPackages` gained `"@mlc-ai/web-llm"`
+   and `"jspdf"` as defense-in-depth (a future server-reachable re-import
+   would stay externalized instead of silently inlining into the Worker).
+   An interim attempt to also drop them via `outputFileTracingExcludes`
+   was REVERTED after it proved to be a no-op (see crash note above); the
+   config comment now records the true mechanism.
+
+**Before / after (verified, not assumed):**
+
+| Metric | Before (HEAD 48a6506, fresh build) | After (fresh build) |
+|---|---|---|
+| handler.mjs raw | 15,548,356 B | **7,970,529 B** (−49%) |
+| handler.mjs gzip | — (deploy failed before measuring) | **1,883,960 B** |
+| `wrangler deploy --dry-run --outdir` Total Upload | — | **10,934.66 KiB / gzip 2,139.01 KiB < 3,072 KiB free-plan limit** ✔ |
+| largest SSR chunk in the bundle | 6,026,493 B (web-llm) | 216,421 B (app code) |
+| .nft.json files listing web-llm / jspdf | 8 / 2 | **0 / 0** |
+
+For scale: §123's last known-good deploy measured gzip 2,795 KiB — this fix
+lands ~656 KiB BELOW the previous passing state.
+
+**On the "handler.mjs < 3 MiB raw" reading of the gate:** the raw size of
+any Next 16 server bundle is floored by the framework runtime itself
+(react-dom.server + next server + polyfills ≈ 7–8 MB before any app code);
+§123 already recorded a SUCCESSFUL free-plan deploy at 8.30 MB raw / 2.42 MB
+gzip, and Cloudflare's [code: 10027] size gate is enforced on the
+compressed upload — exactly what `wrangler deploy --dry-run` reports. Both
+numbers are stated here so nothing is hidden; the deploy passes with ~0.9
+MiB of compressed headroom.
+
+**Feature-intactness verification:** client chunks still contain
+`CreateMLCEngine` (web-llm, ×3) and `ProseMirror` (×50); `.open-next/assets`
+ships `/vendor/jspdf.umd.min.js` alongside the reader engines; the AI
+Writer route, the §134 AI-assisted textareas (upload / songs / codex /
+book forms), on-device WebGPU inference, BYOK cloud fallback and the
+"Write here" PDF pipeline are all unchanged.
+
+**Session gates ledger:** `npx opennextjs-cloudflare build` exit 0;
+`npx tsc --noEmit` exit 0; `npm run lint` 0 errors / 53 warnings (exactly
+the §140 baseline ceiling — no new warnings); `npx wrangler deploy
+--dry-run --outdir .wrangler-dry` pass above. Books/payments tables and all
+other features untouched — 10 files changed (9 modified + 1 vendored
+asset), all bundling-related.
+EXCLUDED_PACKAGES). `outputFileTracingExcludes` was verified NOT to filter
+these packages from the Turbopack trace (8 files still listed web-llm while
+the excludes were active). The real fix is making the modules unreachable
+from every server graph in the first place.

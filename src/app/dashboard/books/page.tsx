@@ -1,6 +1,22 @@
 'use client';
 
-import WebMangalAiEditor from '../../components/editor/WebMangalAiEditor';
+import dynamic from 'next/dynamic';
+
+// §141 — client-only. WebMangalAiEditor pulls the §134 AI pipeline
+// (useAiAssistEngine → lib/ai/webllmEngine → import('@mlc-ai/web-llm')):
+// through this static import the 6 MB browser-only WebGPU engine was traced
+// into this page's SSR graph — the single biggest item in the Cloudflare
+// Worker bundle. The editor is interactive-only, so nothing is lost
+// server-side (same pattern as BookReader in
+// WebMangal/books/[bookId]/read/page.tsx). Full analysis: §141.
+const WebMangalAiEditor = dynamic(() => import('../../components/editor/WebMangalAiEditor'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ padding: '10px 0', color: 'var(--text-tertiary)', fontSize: '13px' }}>
+      Loading editor…
+    </div>
+  ),
+});
 
 // Books module — creator-side management under the Studio sidebar.
 // Create (draft or publish), publish/unpublish, and delete books. The book

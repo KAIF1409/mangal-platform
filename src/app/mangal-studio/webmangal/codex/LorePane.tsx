@@ -8,7 +8,19 @@
 // §134 AI pipeline comes with it; this file adds no AI logic of its own.
 
 import { Loader2, Plus, Save, ScrollText, Trash2, X } from 'lucide-react';
-import WebMangalAiEditor from '../../../components/editor/WebMangalAiEditor';
+import dynamic from 'next/dynamic';
+
+// §141 — client-only boundary; see dashboard/books/page.tsx for the full
+// note (WebMangalAiEditor pulls the 6 MB web-llm engine into the SSR graph
+// through any static import of it).
+const WebMangalAiEditor = dynamic(() => import('../../../components/editor/WebMangalAiEditor'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ padding: '10px 0', color: 'var(--text-tertiary)', fontSize: '13px' }}>
+      Loading editor…
+    </div>
+  ),
+});
 import { LORE_CATEGORIES, type LoreDraft, type LoreRow } from './codexTypes';
 
 const fieldLabel: React.CSSProperties = {

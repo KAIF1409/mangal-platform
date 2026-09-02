@@ -15,17 +15,65 @@
 // novel chapter writer already uses — so a creator who's used one editor
 // already knows the other, and both surfaces share one parser.
 //
-// jsPDF is dynamically imported (never a static top-level import) so it
-// never gets pulled into the server-rendered bundle for this ('use client')
-// page — same reasoning BookReader.tsx documents for why pdf.js/epub.js are
-// loaded as runtime script tags instead of static imports: a static import
-// of a browser-only library still gets bundled into the OpenNext Cloudflare
-// Worker during SSR unless it's excluded from the module graph some way.
-// A dynamic import() inside an async function that only ever runs from a
-// click handler is naturally code-split into its own chunk and is never
-// evaluated during render, so it never enters the server bundle at all.
+// jsPDF is NOT bundled — not into the client chunks and critically not into
+// the OpenNext server bundle. This lib is imported by 'use client' pages,
+// which are still server-compiled for SSR, so even a dynamic
+// `import('jspdf')` here got traced into the server module graph and either
+// inlined into or externalized-onto the Cloudflare Worker (§141: 874 KB of
+// dead weight + a Windows build crash on Next 16's hashed standalone
+// junctions). Same reasoning BookReader.tsx documents for pdf.js/epub.js:
+// the library lives as a static asset under /vendor/
+// (public/vendor/README.md) and is loaded at runtime by injecting a script
+// tag — loadJspdf() below. The npm package stays a dependency for TYPES
+// ONLY (type-only imports are erased at compile time and never traced) —
+// exactly the gsap convention recorded in public/vendor/README.md.
+
+import type { jsPDF } from 'jspdf';
 
 import { parseChapterContent } from './novelEditor';
+
+// ── Runtime loader for the vendored UMD build ────────────────────────────
+// The UMD build exposes `window.jspdf = { jsPDF }` (standard jsPDF usage).
+// Singleton promise: one script tag no matter how many PDFs get generated.
+
+interface JspdfGlobal {
+  jsPDF: typeof jsPDF;
+}
+
+declare global {
+  interface Window {
+    jspdf?: JspdfGlobal;
+  }
+}
+
+let jspdfPromise: Promise<JspdfGlobal> | null = null;
+
+function loadJspdf(): Promise<JspdfGlobal> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('PDF generation is browser-only.'));
+  }
+  if (window.jspdf?.jsPDF) return Promise.resolve(window.jspdf);
+  if (!jspdfPromise) {
+    jspdfPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = '/vendor/jspdf.umd.min.js';
+      script.async = true;
+      script.onload = () => {
+        if (window.jspdf?.jsPDF) {
+          resolve(window.jspdf);
+        } else {
+          reject(new Error('The PDF engine loaded but did not initialise.'));
+        }
+      };
+      script.onerror = () => {
+        jspdfPromise = null; // allow a retry on the next attempt
+        reject(new Error('Could not load the PDF engine. Check your connection and try again.'));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return jspdfPromise;
+}
 
 const PAGE_MARGIN = 56; // pt
 const BODY_FONT_SIZE = 12;
@@ -46,7 +94,7 @@ export async function generateBookPdfBlob(
   authorName: string | null,
   content: string
 ): Promise<Blob> {
-  const { jsPDF } = await import('jspdf');
+  const { jsPDF } = await loadJspdf();
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
