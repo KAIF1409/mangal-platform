@@ -9964,3 +9964,45 @@ upload ceiling, which is the number §143/§144 also checked.
   `git -c credential.helper= push https://<user>:<PAT>@github.com/KAIF1409/
   mangal-platform.git HEAD:main`. Branch-protection warning lines appeared and
   the admin PAT bypassed, same as §144.
+
+## §146 — Landing page: door descriptions always visible (2026-09-03)
+
+Founder looked at the deployed landing page
+(https://mangal-platform.mangak.workers.dev/) and asked for descriptions on the
+three product doors (WebMangal / KaTube / K Circle) — all first-time users land
+there, and the cards showed only a name (+ COMING SOON tag).
+
+**What was actually wrong:** the copy already existed (the `DOORS` array in
+`src/app/page.tsx` has a `blurb` per door) and was already in the served HTML —
+but it rendered inside `.mangal-tilt-overlay`, a full-card amber overlay with
+`opacity: 0` that only faded in on `:hover` of the card. Desktop visitors who
+never hovered saw nothing, and touch/mobile visitors (the majority of
+first-time traffic) can never trigger `:hover` at all. Not a stale-deploy
+problem — a UI-visibility bug.
+
+**The fix (`src/app/page.tsx` only):**
+- Moved the blurb into the always-visible bottom overlay, directly under the
+  title + COMING SOON tag row (`fontSize: clamp(12.5px,1.4vw,14.5px)`,
+  lineHeight 1.6, white with a text-shadow for legibility over artwork).
+- Deleted the hover-only `.mangal-tilt-overlay` div and its two CSS rules
+  (nothing referenced the class in JS — GSAP only animates `#mangal-card-grid`).
+- Strengthened the bottom scrim gradient
+  (`rgba(0,0,0,0.92) 0% → 0.55 @42% → 0.12 @78% → transparent`) so the 3–6
+  lines of white text stay readable over the door artwork; the old gradient
+  was tuned for a single title line.
+- The 3D tilt-on-hover (`rotate3d` on `.mangal-tilt-card`) is kept — only the
+  amber content overlay is gone.
+- Blurb copy unchanged — already audit-accurate per §145 (no servers/roles
+  claims for K Circle, no Nova claims, KaTube described as a discovery space).
+
+**Gates:** `npx tsc --noEmit` exit 0; `npm run lint` 0 errors / 53 warnings
+(exact baseline); `npm run build` exit 0.
+
+**Deployment (same session):** `npm run deploy` (opennextjs-cloudflare build +
+deploy) exit 0 — Total Upload 11,102.99 KiB / **gzip 2,167.63 KiB vs the
+3,072 KiB free-plan ceiling** (~904 KiB headroom), Worker Startup Time 42 ms,
+Version `a1d4e234-b07b-4cc4-a67f-c8f7d2e1544f`. Live HTML re-fetched after
+deploy: `mangal-tilt-overlay` 0 occurrences, new gradient ×3 (one per door),
+each blurb `<p>` verified as a sibling of the title inside the bottom overlay
+— nothing opacity-hidden; descriptions render in the default state on desktop
+and mobile.

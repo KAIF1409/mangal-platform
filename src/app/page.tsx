@@ -528,11 +528,11 @@ export default function LandingPage() {
           .mangal-marquee-in span:hover { color: #d97706; }
           @keyframes mangal-marquee { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 
-          /* Tilt cards — 3D rotate + amber overlay reveal on hover */
+          /* Door cards — 3D rotate on hover. §146: the product description is
+             always visible under the title now (it used to live in a
+             hover-only overlay, which touch users could never trigger). */
           .mangal-tilt-card { transition: transform 0.5s ease; transform-style: preserve-3d; }
           .mangal-tilt-card:hover { transform: rotate3d(-1, 1, 0, 8deg) translateY(-6px); }
-          .mangal-tilt-overlay { opacity: 0; transition: opacity 0.4s ease; }
-          .mangal-tilt-card:hover .mangal-tilt-overlay { opacity: 1; }
 
           /* Hover-reveal trending panels */
           .mangal-elem img { transition: all 0.5s ease; scale: 1.15; }
@@ -862,7 +862,7 @@ export default function LandingPage() {
               >
                 {door.image && <Image src={door.image} alt={door.title} fill style={{ objectFit: 'cover' }} />}
                 {door.video && <DoorPreviewVideo src={door.video} />}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 42%, rgba(0,0,0,0.12) 78%, transparent 100%)' }} />
                 <div style={{ position: 'absolute', left: '20px', right: '20px', bottom: '20px', zIndex: 2 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 'clamp(20px,2.6vw,28px)', fontWeight: 900, color: '#fff' }}>{door.title}</span>
@@ -870,13 +870,15 @@ export default function LandingPage() {
                       <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '20px', background: 'rgba(217,119,6,0.22)', border: '1px solid rgba(217,119,6,0.5)', color: '#fbbf24' }}>{door.tag}</span>
                     )}
                   </div>
-                </div>
-                <div className="mangal-tilt-overlay" style={{
-                  position: 'absolute', inset: 0, zIndex: 3,
-                  background: 'linear-gradient(135deg, rgba(127,29,29,0.94), rgba(217,119,6,0.9))',
-                  padding: 'clamp(20px,4vw,36px)', display: 'flex', alignItems: 'center',
-                }}>
-                  <p style={{ color: '#fff', fontSize: 'clamp(13px,1.6vw,16px)', lineHeight: 1.7, fontWeight: 600, margin: 0 }}>
+                  {/* §146 — description always visible. It used to live in a
+                      hover-only full-card overlay (.mangal-tilt-overlay,
+                      opacity 0 until :hover), which first-time mobile visitors
+                      — the majority here — could never trigger. */}
+                  <p style={{
+                    margin: '10px 0 0', color: '#fff',
+                    fontSize: 'clamp(12.5px,1.4vw,14.5px)', lineHeight: 1.6, fontWeight: 600,
+                    textShadow: '0 1px 10px rgba(0,0,0,0.9)',
+                  }}>
                     {door.blurb}
                   </p>
                 </div>
