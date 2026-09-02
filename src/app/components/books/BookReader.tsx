@@ -5,9 +5,24 @@
 //   PDF  → pdf.js renders pages to canvases (cached as dataURLs); desktop
 //          gets a two-page spread with a CSS-3D page-turn animation, mobile
 //          gets a clean single page with slide transitions + swipe/tap zones.
-//   EPUB → epub.js paginated rendition into a container div; spreads come
-//          from epub.js itself (`spread: 'auto'`), font-size is real
-//          reflowable text sizing.
+//   EPUB → epub.js rendition into a container div; spreads come from epub.js
+//          itself (`spread: 'auto'`), font-size/family/line-height are real
+//          reflowable text styling.
+//
+// §142 reader upgrades (all in THIS component — no parallel reader exists):
+//   • 4-theme engine: light / sepia / dark / midnight (OLED — pure-black desk,
+//     near-black paper).
+//   • Typography controls: font family (serif/sans/mono), 12–24px size slider,
+//     1.2–2.0 line-height slider, narrow/normal/wide margins (EPUB text is
+//     reflowable; margins also pad the stage for PDF pages).
+//   • Continuous scroll vs paginated toggle, per engine: PDF gets a vertical
+//     lazy-rendered page list; EPUB re-creates its rendition with
+//     flow:'scrolled-doc' (no new dependencies — same vendored epub.js).
+//   • Collapsible reading dock: settings panel (theme/mode/typography/zoom),
+//     TOC drawer (EPUB navigation + PDF page directory), focus mode.
+//   • Scroll-% progress mirrored to localStorage (book_reader_progress_<id>)
+//     next to the existing book_reading_progress DB upsert — works signed-out.
+//   • Mobile thumb-zone floating next/prev buttons (≥48px targets).
 //
 // Access control mirrors the gated file route: this component receives
 // `hasAccess` from the page, and the file fetch itself is enforced again
@@ -30,8 +45,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft, ArrowRight, Maximize, Minimize, Moon, Sun, Sunset,
-  Type, ZoomIn, ZoomOut, Lock, Loader2, X, AlertCircle,
+  ArrowLeft, ArrowRight, Maximize, Minimize, Moon, MoonStar, Sun, Sunset,
+  Type, ZoomIn, ZoomOut, Lock, Loader2, X, AlertCircle, List, Eye, EyeOff,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { openRazorpayCheckout } from '../../lib/payments/razorpayClient';
@@ -53,7 +68,10 @@ interface Props {
   initialProgress?: { lastPage: number; lastLocation: string | null } | null;
 }
 
-type ThemeName = 'light' | 'sepia' | 'dark';
+type ThemeName = 'light' | 'sepia' | 'dark' | 'midnight';
+type FontFamily = 'serif' | 'sans' | 'mono';
+type ReadingMode = 'paginated' | 'scroll';
+type MarginSize = 'narrow' | 'normal' | 'wide';
 
 const PREVIEW_PAGES = 5;
 
@@ -61,15 +79,78 @@ const THEME_DESK: Record<ThemeName, string> = {
   light: '#e8e4da',
   sepia: '#cbb894',
   dark: '#101014',
+  midnight: '#000000',
 };
 
 const THEME_PAPER: Record<ThemeName, string> = {
   light: '#fdfcf9',
   sepia: '#f4ecd8',
   dark: '#191921',
+  midnight: '#0a0a0d',
 };
 
-const FONT_SIZES = ['90%', '100%', '112%', '125%', '140%'];
+// Reflowable EPUB text colors — midnight uses high-contrast dim-white ink on
+// near-black paper (OLED power shape without crushed-grey text).
+const THEME_INK: Record<ThemeName, string> = {
+  light: '#1a1a1a',
+  sepia: '#3b2f1e',
+  dark: '#d8d4cc',
+  midnight: '#e8e8ee',
+};
+
+// PDF pages are bitmap images; themes shade them via a CSS filter.
+const THEME_PAPER_FILTER: Record<ThemeName, string | undefined> = {
+  light: undefined,
+  sepia: 'sepia(0.42) saturate(0.88)',
+  dark: 'invert(0.9) hue-rotate(185deg) brightness(0.94)',
+  midnight: 'invert(0.93) hue-rotate(185deg) brightness(0.85) contrast(1.08)',
+};
+
+const THEME_ICONS: Record<ThemeName, typeof Sun> = {
+  light: Sun,
+  sepia: Sunset,
+  dark: Moon,
+  midnight: MoonStar,
+};
+
+const FONT_STACKS: Record<FontFamily, string> = {
+  serif: 'Georgia, "Times New Roman", serif',
+  sans: '"Segoe UI", system-ui, -apple-system, Arial, sans-serif',
+  mono: '"Cascadia Mono", "Courier New", monospace',
+};
+
+const FONT_SIZE_MIN = 12;
+const FONT_SIZE_MAX = 24;
+const FONT_SIZE_DEFAULT = 17;
+const LINE_HEIGHT_MIN = 1.2;
+const LINE_HEIGHT_MAX = 2;
+const LINE_HEIGHT_DEFAULT = 1.6;
+
+const MARGIN_PX: Record<MarginSize, number> = { narrow: 8, normal: 28, wide: 64 };
+const MARGIN_LABELS: Record<MarginSize, string> = { narrow: 'Narrow', normal: 'Normal', wide: 'Wide' };
+
+// localStorage keys — `book_reader_theme` predates §142; the rest follow the
+// same book_reader_* namespace. Progress mirrors book_reading_progress.
+const THEME_KEY = 'book_reader_theme';
+const TYPOGRAPHY_KEY = 'book_reader_typography';
+const READING_MODE_KEY = 'book_reader_mode';
+const progressKey = (bookId: string) => `book_reader_progress_${bookId}`;
+
+interface LocalProgress { lastPage?: number; lastLocation?: string | null; percent?: number | null; ts?: number }
+
+/** localStorage progress mirror — DB row (if any) always wins on conflict. */
+function readLocalProgress(bookId: string): LocalProgress | null {
+  try {
+    const raw = localStorage.getItem(progressKey(bookId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LocalProgress;
+    if (parsed && typeof parsed === 'object') return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 const ZOOM_STEPS = [0.85, 1, 1.25, 1.5, 1.9];
 
 function formatPaise(paise: number): string {
@@ -112,10 +193,19 @@ interface EpubRendition {
   on(event: string, cb: (loc: EpubLocation) => void): void;
   next(): void;
   prev(): void;
+  // Re-measures the rendition after its container's geometry changes (margins).
+  resize?(width?: number | string, height?: number | string): void;
   destroy(): void;
+}
+interface EpubTocItem {
+  label?: string;
+  title?: string;
+  href?: string;
+  subitems?: EpubTocItem[];
 }
 interface EpubBook {
   ready: Promise<unknown>;
+  loaded?: { navigation?: Promise<{ toc?: EpubTocItem[] }> };
   renderTo(el: HTMLElement, opts: Record<string, unknown>): EpubRendition;
   destroy(): void;
 }
@@ -183,6 +273,22 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const rootRef = useRef<HTMLDivElement>(null);
   const flippingRef = useRef(false);
 
+  // ── §142 reading-dock state ────────────────────────────────────────────
+  const [dockOpen, setDockOpen] = useState(false);
+  const [tocOpen, setTocOpen] = useState(false);
+  const [tocItems, setTocItems] = useState<EpubTocItem[] | null>(null); // EPUB navigation
+  const [focusMode, setFocusMode] = useState(false); // session-only by design
+  const [readingMode, setReadingMode] = useState<ReadingMode>('paginated');
+  const [fontFamily, setFontFamily] = useState<FontFamily>('serif');
+  const [fontSizePx, setFontSizePx] = useState(FONT_SIZE_DEFAULT);
+  const [lineHeight, setLineHeight] = useState(LINE_HEIGHT_DEFAULT);
+  const [marginSize, setMarginSize] = useState<MarginSize>('normal');
+  const [scrollPct, setScrollPct] = useState(0); // PDF continuous-scroll progress 0..1
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollRafRef = useRef<number | null>(null);
+  const ioRef = useRef<IntersectionObserver | null>(null);
+  const lastEpubCfiRef = useRef<string | null>(initialProgress?.lastLocation ?? null);
+
   // ── PDF state ─────────────────────────────────────────────────────────
   const [pdfDoc, setPdfDoc] = useState<PdfDocumentProxy | null>(null);
   // The teardown method lives on the loading task, not the document proxy —
@@ -203,7 +309,6 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   // ── EPUB state ────────────────────────────────────────────────────────
   const epubContainerRef = useRef<HTMLDivElement>(null);
   const [epubReady, setEpubReady] = useState(false);
-  const [fontIdx, setFontIdx] = useState(1);
   const [epubPercent, setEpubPercent] = useState<number | null>(null);
   const epubRefs = useRef<{ book: EpubBook; rendition: EpubRendition } | null>(null);
 
@@ -212,14 +317,51 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   // ── persisted prefs ───────────────────────────────────────────────────
   useEffect(() => {
     try {
-      const t = localStorage.getItem('book_reader_theme');
-      if (t === 'light' || t === 'sepia' || t === 'dark') setTheme(t);
+      const t = localStorage.getItem(THEME_KEY);
+      if (t === 'light' || t === 'sepia' || t === 'dark' || t === 'midnight') setTheme(t);
+    } catch { /* private mode */ }
+    try {
+      const raw = localStorage.getItem(TYPOGRAPHY_KEY);
+      if (raw) {
+        const p = JSON.parse(raw) as Partial<{ fontFamily: FontFamily; fontSizePx: number; lineHeight: number; marginSize: MarginSize }>;
+        if (p.fontFamily === 'serif' || p.fontFamily === 'sans' || p.fontFamily === 'mono') setFontFamily(p.fontFamily);
+        if (typeof p.fontSizePx === 'number' && p.fontSizePx >= FONT_SIZE_MIN && p.fontSizePx <= FONT_SIZE_MAX) setFontSizePx(Math.round(p.fontSizePx));
+        if (typeof p.lineHeight === 'number' && p.lineHeight >= LINE_HEIGHT_MIN && p.lineHeight <= LINE_HEIGHT_MAX) setLineHeight(Math.round(p.lineHeight * 10) / 10);
+        if (p.marginSize === 'narrow' || p.marginSize === 'normal' || p.marginSize === 'wide') setMarginSize(p.marginSize);
+      }
+    } catch { /* corrupted prefs — defaults */ }
+    try {
+      const m = localStorage.getItem(READING_MODE_KEY);
+      if (m === 'paginated' || m === 'scroll') setReadingMode(m);
     } catch { /* private mode */ }
   }, []);
 
   function applyTheme(t: ThemeName) {
     setTheme(t);
-    try { localStorage.setItem('book_reader_theme', t); } catch { /* ignore */ }
+    try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
+  }
+
+  function applyTypography(patch: Partial<{ fontFamily: FontFamily; fontSizePx: number; lineHeight: number; marginSize: MarginSize }>) {
+    if (patch.fontFamily !== undefined) setFontFamily(patch.fontFamily);
+    if (patch.fontSizePx !== undefined) setFontSizePx(Math.round(patch.fontSizePx));
+    if (patch.lineHeight !== undefined) setLineHeight(Math.round(patch.lineHeight * 10) / 10);
+    if (patch.marginSize !== undefined) setMarginSize(patch.marginSize);
+    // Persist the merged next values.
+    try {
+      const merged = {
+        fontFamily: patch.fontFamily ?? fontFamily,
+        fontSizePx: patch.fontSizePx !== undefined ? Math.round(patch.fontSizePx) : fontSizePx,
+        lineHeight: patch.lineHeight !== undefined ? Math.round(patch.lineHeight * 10) / 10 : lineHeight,
+        marginSize: patch.marginSize ?? marginSize,
+      };
+      localStorage.setItem(TYPOGRAPHY_KEY, JSON.stringify(merged));
+    } catch { /* ignore */ }
+  }
+
+  function applyReadingMode(m: ReadingMode) {
+    setReadingMode(m);
+    setFlip(null);
+    try { localStorage.setItem(READING_MODE_KEY, m); } catch { /* ignore */ }
   }
 
   // ── responsive mode ───────────────────────────────────────────────────
@@ -230,6 +372,15 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
   }, []);
+
+  // ── drawer scroll-lock (dock/TOC open) ────────────────────────────────
+  const overlayOpen = dockOpen || tocOpen;
+  useEffect(() => {
+    if (!overlayOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [overlayOpen]);
 
   // ── fullscreen ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -281,8 +432,16 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         setTotalPages(doc.numPages);
         setPdfDoc(doc);
 
-        // Resume: map saved page → spread (spread 0 = page 1 alone).
-        const saved = initialProgress?.lastPage ?? 1;
+        // Resume: DB row wins; localStorage mirror is the signed-out fallback.
+        const local = initialProgress?.lastPage ? null : readLocalProgress(book.id);
+        const saved = initialProgress?.lastPage ?? local?.lastPage ?? 1;
+        if (readingMode === 'scroll') {
+          // Continuous scroll: jump straight to the saved page element once the
+          // lazy page list lays out (the scroll-mode effect handles it).
+          setMobilePage(Math.min(Math.max(saved, 1), doc.numPages));
+          return;
+        }
+        // Paginated: map saved page → spread (spread 0 = page 1 alone).
         const startSpread = saved <= 1 ? 0 : Math.min(Math.floor(saved / 2), Math.floor(doc.numPages / 2));
         setSpread(startSpread);
         setMobilePage(Math.min(Math.max(saved, 1), doc.numPages));
@@ -343,9 +502,10 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     return url;
   }, [pdfDoc, zoomIdx]);
 
-  // Pre-render the pages around the current position.
+  // Pre-render the pages around the current position (paginated mode only —
+  // continuous scroll lazy-renders via its own IntersectionObserver).
   useEffect(() => {
-    if (!pdfDoc) return;
+    if (!pdfDoc || readingMode === 'scroll') return;
     if (isMobile) {
       void getPageImage(mobilePage);
       void getPageImage(mobilePage + 1);
@@ -357,14 +517,67 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         if (p && p >= 1 && p <= pdfDoc.numPages) void getPageImage(p);
       }
     }
-  }, [pdfDoc, spread, mobilePage, isMobile, zoomIdx, getPageImage]);
+  }, [pdfDoc, spread, mobilePage, isMobile, zoomIdx, getPageImage, readingMode]);
 
   // Evict the whole cache when zoom changes so stale scales disappear.
   useEffect(() => {
     pageCacheRef.current.clear();
   }, [zoomIdx]);
 
+  // ── continuous-scroll lazy rendering (PDF) ─────────────────────────────
+  const scrollPageCount = previewOnly
+    ? Math.min(PREVIEW_PAGES, totalPages || PREVIEW_PAGES)
+    : totalPages;
+
+  // IntersectionObserver renders pages as they approach the viewport, for any
+  // scroll/jump position — not just the ones adjacent to the last seen page.
+  useEffect(() => {
+    if (!pdfDoc || readingMode !== 'scroll') {
+      ioRef.current?.disconnect();
+      ioRef.current = null;
+      return;
+    }
+    const rootEl = scrollContainerRef.current;
+    if (!rootEl) return;
+    const queued = new Set<number>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const n = Number((entry.target as HTMLElement).dataset.page);
+          if (!Number.isFinite(n) || n < 1 || queued.has(n)) continue;
+          queued.add(n);
+          void getPageImage(n).finally(() => queued.delete(n));
+        }
+      },
+      { root: rootEl, rootMargin: '900px 0px' },
+    );
+    ioRef.current = io;
+    rootEl.querySelectorAll<HTMLElement>('[data-page]').forEach((el) => io.observe(el));
+    return () => {
+      io.disconnect();
+      if (ioRef.current === io) ioRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfDoc, readingMode, scrollPageCount, zoomIdx]);
+
+  // rAF-throttled scroll handler — computes % + nearest page.
+  const handlePdfScroll = useCallback(() => {
+    if (scrollRafRef.current !== null) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      const el = scrollContainerRef.current;
+      if (!el) return;
+      const max = el.scrollHeight - el.clientHeight;
+      const pct = max > 0 ? Math.min(1, Math.max(0, el.scrollTop / max)) : 0;
+      setScrollPct(pct);
+    });
+  }, []);
+
   // ── EPUB engine ───────────────────────────────────────────────────────
+  // Recreated when the book changes OR when the reading mode toggles —
+  // epub.js fixes its flow at renderTo() time, so paginated ⇄ scroll needs a
+  // fresh rendition. `lastEpubCfiRef` carries the position across recreations.
   useEffect(() => {
     if (book.file_type !== 'epub') return;
     // A truncated zip cannot be parsed — don't attempt it for previews.
@@ -383,27 +596,40 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         const rendition = epubBook.renderTo(epubContainerRef.current!, {
           width: '100%',
           height: '100%',
-          flow: 'paginated',
-          spread: 'auto',
+          flow: readingMode === 'scroll' ? 'scrolled-doc' : 'paginated',
+          spread: readingMode === 'scroll' ? 'none' : 'auto',
           allowScriptedContent: false,
         });
 
         epubRefs.current = { book: epubBook, rendition };
 
-        const themes = rendition.themes;
-        themes.register('light', { body: { background: THEME_PAPER.light, color: '#1a1a1a' } });
-        themes.register('sepia', { body: { background: THEME_PAPER.sepia, color: '#3b2f1e' } });
-        themes.register('dark', { body: { background: THEME_PAPER.dark, color: '#d8d4cc' } });
-        themes.select(theme);
-        themes.fontSize(FONT_SIZES[fontIdx]);
+        // TOC for the chapter drawer — epub.js exposes the navigation document.
+        epubBook.loaded?.navigation
+          ?.then((nav) => { if (!cancelled) setTocItems(nav.toc ?? []); })
+          .catch(() => { if (!cancelled) setTocItems(null); });
 
-        await rendition.display(initialProgress?.lastLocation || undefined);
+        const themes = rendition.themes;
+        (Object.keys(THEME_PAPER) as ThemeName[]).forEach((t) => {
+          themes.register(t, {
+            body: {
+              background: THEME_PAPER[t],
+              color: THEME_INK[t],
+              'font-family': FONT_STACKS[fontFamily],
+              'line-height': String(lineHeight),
+            },
+          });
+        });
+        themes.select(theme);
+        themes.fontSize(`${fontSizePx}px`);
+
+        await rendition.display(lastEpubCfiRef.current || undefined);
         if (cancelled) { rendition.destroy(); return; }
 
         rendition.on('relocated', (loc: EpubLocation) => {
           const pct = loc.start?.percentage ?? null;
           setEpubPercent(pct);
-          if (userId && loc.start?.cfi) {
+          if (loc.start?.cfi) lastEpubCfiRef.current = loc.start.cfi;
+          if (loc.start?.cfi) {
             saveProgress({ lastLocation: loc.start.cfi, percent: pct });
           }
         });
@@ -426,20 +652,46 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [book.id, book.file_type]);
+  }, [book.id, book.file_type, readingMode]);
 
-  // Live-apply theme/font changes to a mounted EPUB rendition.
+  // Live-apply theme/typography changes to a mounted EPUB rendition.
   useEffect(() => {
     const themes = epubRefs.current?.rendition.themes;
     if (themes) {
+      (Object.keys(THEME_PAPER) as ThemeName[]).forEach((t) => {
+        themes.register(t, {
+          body: {
+            background: THEME_PAPER[t],
+            color: THEME_INK[t],
+            'font-family': FONT_STACKS[fontFamily],
+            'line-height': String(lineHeight),
+          },
+        });
+      });
       themes.select(theme);
-      themes.fontSize(FONT_SIZES[fontIdx]);
+      themes.fontSize(`${fontSizePx}px`);
     }
-  }, [theme, fontIdx, epubReady]);
+    // Margins change the container geometry — re-measure the rendition.
+    try { epubRefs.current?.rendition.resize?.(); } catch { /* ignore */ }
+  }, [theme, fontFamily, lineHeight, fontSizePx, marginSize, epubReady, readingMode]);
 
-  // ── progress persistence (PDF) ────────────────────────────────────────
+  // ── progress persistence ────────────────────────────────────────────────
+  // localStorage mirror ALWAYS (works signed-out, survives re-opens); the
+  // book_reading_progress upsert runs only for signed-in users, exactly as
+  // before §142.
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   function saveProgress(payload: { lastPage?: number; lastLocation?: string; percent?: number | null }) {
+    try {
+      localStorage.setItem(
+        progressKey(book.id),
+        JSON.stringify({
+          lastPage: payload.lastPage,
+          lastLocation: payload.lastLocation ?? null,
+          percent: payload.percent ?? null,
+          ts: Date.now(),
+        } satisfies LocalProgress),
+      );
+    } catch { /* private mode / storage full — non-fatal */ }
     if (!userId) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
@@ -458,12 +710,22 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     }, 700);
   }
 
+  // Paginated PDF progress — page-turn driven (existing behavior).
   useEffect(() => {
     if (book.file_type !== 'pdf' || !totalPages) return;
+    if (readingMode === 'scroll') return;
     const page = isMobile ? mobilePage : (spread === 0 ? 1 : 2 * spread);
     saveProgress({ lastPage: page });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spread, mobilePage, isMobile, totalPages]);
+  }, [spread, mobilePage, isMobile, totalPages, readingMode]);
+
+  // Continuous-scroll PDF progress — scroll-% driven.
+  useEffect(() => {
+    if (book.file_type !== 'pdf' || readingMode !== 'scroll' || !scrollPageCount) return;
+    const nearPage = Math.min(Math.max(1, Math.round(scrollPct * (scrollPageCount - 1)) + 1), scrollPageCount);
+    saveProgress({ lastPage: nearPage, percent: scrollPct });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollPct, scrollPageCount, readingMode]);
 
   // ── navigation ────────────────────────────────────────────────────────
   const maxSpread = totalPages
@@ -481,6 +743,13 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
       epubRefs.current?.rendition.next();
       return;
     }
+    // Continuous scroll: a thumb-zone/keyboard "page turn" scrolls ~85% of a
+    // viewport, like a native reader. Flips/steps don't apply here.
+    if (readingMode === 'scroll') {
+      const el = scrollContainerRef.current;
+      if (el) el.scrollBy({ top: el.clientHeight * 0.85, behavior: 'smooth' });
+      return;
+    }
     if (isMobile) {
       if (mobilePage >= maxMobilePage) { if (previewOnly) setLockOpen(true); return; }
       setSlideDir('next');
@@ -490,12 +759,17 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     if (spread >= maxSpread) { if (previewOnly) setLockOpen(true); return; }
     flippingRef.current = true;
     setFlip({ dir: 'next' });
-  }, [book.file_type, isMobile, mobilePage, maxMobilePage, spread, maxSpread, previewOnly]);
+  }, [book.file_type, isMobile, mobilePage, maxMobilePage, spread, maxSpread, previewOnly, readingMode]);
 
   const goPrev = useCallback(() => {
     if (flippingRef.current) return;
     if (book.file_type === 'epub') {
       epubRefs.current?.rendition.prev();
+      return;
+    }
+    if (readingMode === 'scroll') {
+      const el = scrollContainerRef.current;
+      if (el) el.scrollBy({ top: -el.clientHeight * 0.85, behavior: 'smooth' });
       return;
     }
     if (isMobile) {
@@ -507,7 +781,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     if (spread <= 0) return;
     flippingRef.current = true;
     setFlip({ dir: 'prev' });
-  }, [book.file_type, isMobile, mobilePage, spread]);
+  }, [book.file_type, isMobile, mobilePage, spread, readingMode]);
 
   function handleFlipEnd() {
     setFlip((f) => {
@@ -523,19 +797,32 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
       if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+      if (e.key === 'Escape') {
+        setFocusMode(false);
+        setDockOpen(false);
+        setTocOpen(false);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, goPrev]);
 
-  // Touch swipe (single-page mode).
-  const touchStartX = useRef<number | null>(null);
-  function onTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0]?.clientX ?? null; }
+  // Touch swipe (single-page mode). In continuous scroll the gesture is
+  // native scrolling — and a vertical-dominant swipe is never a page turn.
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStart.current = t ? { x: t.clientX, y: t.clientY } : null;
+  }
   function onTouchEnd(e: React.TouchEvent) {
-    if (touchStartX.current === null) return;
-    const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
-    touchStartX.current = null;
-    if (Math.abs(dx) < 40) return;
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || readingMode === 'scroll') return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx)) return;
     if (dx < 0) goNext(); else goPrev();
   }
 
@@ -625,10 +912,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const flipFrontLeft = spread === 0 ? 1 : 2 * spread;            // prev-flip front face
   const flipBackRight = spread === 0 ? null : 2 * spread - 1;     // prev-flip back face
 
-  const paperFilter =
-    theme === 'sepia' ? 'sepia(0.42) saturate(0.88)' :
-    theme === 'dark' ? 'invert(0.9) hue-rotate(185deg) brightness(0.94)' :
-    undefined;
+  const paperFilter = THEME_PAPER_FILTER[theme];
 
   const iconBtnStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -636,6 +920,304 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     border: '1px solid var(--border-color)', background: 'var(--bg-card)',
     color: 'var(--text-secondary)', flexShrink: 0,
   };
+  // Stage side padding from the margins control (halved on small screens).
+  const stagePad = isMobile ? Math.round(MARGIN_PX[marginSize] / 2) : MARGIN_PX[marginSize];
+
+  // Current page for the PDF bottom bar, per mode.
+  const paginatedCurrentPage = isMobile
+    ? mobilePage
+    : (shownSpread === 0 ? 1 : 2 * shownSpread);
+  const scrollCurrentPage = Math.min(
+    Math.max(1, Math.round(scrollPct * (scrollPageCount - 1)) + 1),
+    scrollPageCount || 1,
+  );
+  const bottomBarVisible = !focusMode;
+
+  // ── §142 overlays: settings dock / TOC drawer / focus pill / thumb buttons ──
+  function ReadingDock() {
+    if (!dockOpen) return null;
+    const seg = (active: boolean): React.CSSProperties => ({
+      flex: 1, minHeight: '44px', borderRadius: '9px', cursor: 'pointer',
+      fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      border: active ? '1px solid var(--accent)' : '1px solid var(--border-color)',
+      background: active ? 'rgba(var(--accent-rgb), 0.12)' : 'transparent',
+      color: active ? 'var(--accent)' : 'var(--text-secondary)',
+    });
+    return (
+      <div style={{ position: 'absolute', inset: 0, zIndex: 40 }} role="dialog" aria-label="Reading settings">
+        {/* click-away layer (blurred backdrop on small screens) */}
+        <button
+          aria-label="Close reading settings"
+          onClick={() => setDockOpen(false)}
+          style={{
+            position: 'absolute', inset: 0, border: 'none', cursor: 'default', padding: 0,
+            background: isMobile ? 'rgba(5,5,8,0.45)' : 'transparent',
+            backdropFilter: isMobile ? 'blur(3px)' : undefined,
+            WebkitBackdropFilter: isMobile ? 'blur(3px)' : undefined,
+          }}
+        />
+        <div
+          className="book-reader-dock"
+          style={{
+            position: 'absolute', right: '12px', top: '58px', width: 'min(340px, calc(100vw - 24px))',
+            maxHeight: 'calc(100% - 120px)', overflowY: 'auto', background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)', borderRadius: '14px',
+            boxShadow: '0 16px 44px rgba(0,0,0,0.45)', padding: '14px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Reading settings</strong>
+            <button aria-label="Close settings" onClick={() => setDockOpen(false)} style={{ ...iconBtnStyle, width: '32px', height: '32px' }}>
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Theme */}
+          <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: '6px' }}>Theme</div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+            {(Object.keys(THEME_PAPER) as ThemeName[]).map((t) => {
+              const Icon = THEME_ICONS[t];
+              const active = t === theme;
+              return (
+                <button
+                  key={t}
+                  onClick={() => applyTheme(t)}
+                  title={t}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px', padding: '0 12px',
+                    borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 800,
+                    border: active ? '2px solid var(--accent)' : '1px solid var(--border-color)',
+                    background: active ? 'rgba(var(--accent-rgb), 0.1)' : 'transparent',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: THEME_PAPER[t], border: '1px solid var(--border-color)', flexShrink: 0 }} />
+                  <Icon size={13} /> {t === 'midnight' ? 'Midnight' : t[0].toUpperCase() + t.slice(1)}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Reading mode */}
+          <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: '6px' }}>Layout</div>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+            <button style={seg(readingMode === 'paginated')} onClick={() => applyReadingMode('paginated')}>Pages</button>
+            <button style={seg(readingMode === 'scroll')} onClick={() => applyReadingMode('scroll')}>Continuous scroll</button>
+          </div>
+
+          {/* Typography — meaningful for reflowable EPUB text */}
+          {book.file_type === 'epub' ? (
+            <>
+              <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: '6px' }}>Font</div>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                {(Object.keys(FONT_STACKS) as FontFamily[]).map((f) => (
+                  <button key={f} style={{ ...seg(fontFamily === f), fontFamily: FONT_STACKS[f] }} onClick={() => applyTypography({ fontFamily: f })}>
+                    {f === 'serif' ? 'Serif' : f === 'sans' ? 'Sans' : 'Mono'}
+                  </button>
+                ))}
+              </div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                Text size · {fontSizePx}px
+              </label>
+              <input
+                type="range" min={FONT_SIZE_MIN} max={FONT_SIZE_MAX} step={1} value={fontSizePx}
+                onChange={(e) => applyTypography({ fontSizePx: Number(e.target.value) })}
+                aria-label="Text size"
+                style={{ width: '100%', height: '40px', accentColor: 'var(--accent)', cursor: 'pointer', marginBottom: '10px' }}
+              />
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                Line height · {lineHeight.toFixed(1)}
+              </label>
+              <input
+                type="range" min={LINE_HEIGHT_MIN} max={LINE_HEIGHT_MAX} step={0.1} value={lineHeight}
+                onChange={(e) => applyTypography({ lineHeight: Number(e.target.value) })}
+                aria-label="Line height"
+                style={{ width: '100%', height: '40px', accentColor: 'var(--accent)', cursor: 'pointer', marginBottom: '14px' }}
+              />
+            </>
+          ) : (
+            <p style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', margin: '0 0 14px', lineHeight: 1.5 }}>
+              PDF pages have fixed layout — use zoom instead of typography.
+            </p>
+          )}
+
+          {/* Margins — pads the stage for both engines */}
+          <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: '6px' }}>Margins</div>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+            {(Object.keys(MARGIN_PX) as MarginSize[]).map((m) => (
+              <button key={m} style={seg(marginSize === m)} onClick={() => applyTypography({ marginSize: m })}>
+                {MARGIN_LABELS[m]}
+              </button>
+            ))}
+          </div>
+
+          {/* Zoom — PDF only */}
+          {book.file_type === 'pdf' && (
+            <>
+              <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: '6px' }}>Zoom</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button style={iconBtnStyle} aria-label="Zoom out" onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}><ZoomOut size={15} /></button>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', minWidth: '44px', textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
+                <button style={iconBtnStyle} aria-label="Zoom in" onClick={() => setZoomIdx((i) => Math.min(ZOOM_STEPS.length - 1, i + 1))}><ZoomIn size={15} /></button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function TocDrawer() {
+    if (!tocOpen) return null;
+    const isPdf = book.file_type === 'pdf';
+    const jumpPdfPage = (n: number) => {
+      if (previewOnly && n > scrollPageCount) return;
+      setTocOpen(false);
+      if (readingMode === 'scroll') {
+        // Wait for the drawer scroll-lock to release, then jump.
+        requestAnimationFrame(() => {
+          document.getElementById(`br-page-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      } else if (isMobile) {
+        setSlideDir(n >= mobilePage ? 'next' : 'prev');
+        setMobilePage(n);
+      } else {
+        setSpread(n <= 1 ? 0 : Math.min(Math.floor(n / 2), maxSpread));
+      }
+    };
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }} role="dialog" aria-label="Table of contents">
+        <button
+          aria-label="Close contents"
+          onClick={() => setTocOpen(false)}
+          style={{
+            position: 'absolute', inset: 0, border: 'none', cursor: 'default', padding: 0,
+            background: 'rgba(5,5,8,0.55)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+          }}
+        />
+        <div
+          className="book-reader-toc"
+          style={{
+            position: 'relative', zIndex: 1, width: 'min(360px, 100vw)', maxWidth: '100vw', height: '100%',
+            display: 'flex', flexDirection: 'column', background: 'var(--bg-card)',
+            borderRight: '1px solid var(--border-color)', boxShadow: '14px 0 36px rgba(0,0,0,0.4)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border-color)' }}>
+            <strong style={{ fontSize: '13.5px', color: 'var(--text-primary)' }}>Contents</strong>
+            <button aria-label="Close contents" onClick={() => setTocOpen(false)} style={{ ...iconBtnStyle, width: '36px', height: '36px' }}>
+              <X size={15} />
+            </button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '10px', minWidth: 0 }}>
+            {isPdf ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))', gap: '8px' }}>
+                  {Array.from({ length: scrollPageCount }, (_, i) => i + 1).map((n) => {
+                    const active = readingMode === 'scroll' ? n === scrollCurrentPage : n === paginatedCurrentPage;
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => jumpPdfPage(n)}
+                        style={{
+                          minHeight: '48px', borderRadius: '10px', cursor: 'pointer', fontSize: '12.5px', fontWeight: 800,
+                          border: active ? '1px solid var(--accent)' : '1px solid var(--border-color)',
+                          background: active ? 'rgba(var(--accent-rgb), 0.12)' : 'transparent',
+                          color: active ? 'var(--accent)' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {n}
+                      </button>
+                    );
+                  })}
+                </div>
+                {previewOnly && (
+                  <p style={{ fontSize: '11.5px', color: 'var(--text-tertiary)', margin: '12px 4px 0' }}>
+                    Preview is capped at {scrollPageCount} pages — buy to see the rest.
+                  </p>
+                )}
+              </>
+            ) : tocItems && tocItems.length > 0 ? (
+              tocItems.map((item, i) => {
+                const label = item.label ?? item.title ?? 'Untitled';
+                const href = item.href;
+                return (
+                  <button
+                    key={`${label}-${i}`}
+                    disabled={!href}
+                    onClick={() => {
+                      if (!href) return;
+                      setTocOpen(false);
+                      void epubRefs.current?.rendition.display(href);
+                    }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left', minHeight: '48px', padding: '11px 12px',
+                      borderRadius: '10px', cursor: href ? 'pointer' : 'default', fontSize: '12.5px', fontWeight: 700,
+                      color: href ? 'var(--text-primary)' : 'var(--text-faint)', background: 'transparent',
+                      border: 'none', borderBottom: '1px solid var(--border-color)',
+                    }}
+                  >
+                    {label}
+                    {Array.isArray(item.subitems) && item.subitems.length > 0 && (
+                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600, marginTop: '2px' }}>
+                        {item.subitems.length} section{item.subitems.length === 1 ? '' : 's'}
+                      </span>
+                    )}
+                  </button>
+                );
+              })
+            ) : (
+              <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)', padding: '12px 6px', lineHeight: 1.6 }}>
+                This book doesn&apos;t expose a table of contents. Use the Pages slider or continuous scroll to navigate.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function FocusPill() {
+    if (!focusMode) return null;
+    return (
+      <button
+        onClick={() => setFocusMode(false)}
+        aria-label="Exit focus mode"
+        style={{
+          position: 'fixed', bottom: 'calc(16px + env(safe-area-inset-bottom))', left: '50%',
+          transform: 'translateX(-50%)', zIndex: 60, display: 'flex', alignItems: 'center', gap: '7px',
+          minHeight: '48px', padding: '0 18px', borderRadius: '999px', cursor: 'pointer',
+          border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(20,20,26,0.72)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          color: 'rgba(255,255,255,0.85)', fontSize: '12.5px', fontWeight: 800,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        }}
+      >
+        <Eye size={15} /> Show controls
+      </button>
+    );
+  }
+
+  function ThumbButtons() {
+    if (!isMobile || focusMode) return null;
+    const thumb: React.CSSProperties = {
+      position: 'fixed', bottom: 'calc(64px + env(safe-area-inset-bottom))', zIndex: 55,
+      width: '52px', height: '52px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
+      background: 'rgba(20,20,26,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+      boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+    };
+    return (
+      <>
+        <button onClick={goPrev} aria-label="Previous page" style={{ ...thumb, left: '14px' }}>
+          <ArrowLeft size={22} />
+        </button>
+        <button onClick={goNext} aria-label="Next page" style={{ ...thumb, right: '14px' }}>
+          <ArrowRight size={22} />
+        </button>
+      </>
+    );
+  }
 
   // ── loading / error screens ───────────────────────────────────────────
   if (loading) {
@@ -702,9 +1284,10 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
 
   // ── top bar (shared by both engines) ──────────────────────────────────
   function ReaderTopBar() {
+    const ThemeIcon = THEME_ICONS[theme];
     return (
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px',
+        display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px',
         borderBottom: '1px solid var(--border-color)', background: 'var(--nav-bg)',
         backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 30,
       }}>
@@ -721,29 +1304,34 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
             </span>
           )}
         </div>
-        {/* Font size — EPUB only */}
-        {book.file_type === 'epub' && !previewOnly && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <button style={iconBtnStyle} title="Smaller text" onClick={() => setFontIdx((i) => Math.max(0, i - 1))}><Type size={14} /></button>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', minWidth: '34px', textAlign: 'center' }}>{FONT_SIZES[fontIdx]}</span>
-            <button style={iconBtnStyle} title="Larger text" onClick={() => setFontIdx((i) => Math.min(FONT_SIZES.length - 1, i + 1))}><Type size={17} /></button>
-          </div>
+        {/* TOC / page directory */}
+        <button style={iconBtnStyle} title="Contents" aria-label="Open contents" onClick={() => { setDockOpen(false); setTocOpen(true); }}>
+          <List size={16} />
+        </button>
+        {/* Reading dock: theme, mode, typography, zoom */}
+        <button
+          style={{ ...iconBtnStyle, ...(dockOpen ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : null) }}
+          title="Reading settings"
+          aria-label="Open reading settings"
+          aria-expanded={dockOpen}
+          onClick={() => { setTocOpen(false); setDockOpen((v) => !v); }}
+        >
+          <Type size={16} />
+        </button>
+        {/* Focus mode */}
+        {!previewOnly && (
+          <button style={iconBtnStyle} title="Focus mode" aria-label="Enter focus mode" onClick={() => { setFocusMode(true); setDockOpen(false); setTocOpen(false); }}>
+            <EyeOff size={16} />
+          </button>
         )}
-        {/* Zoom — PDF only */}
-        {book.file_type === 'pdf' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <button style={iconBtnStyle} title="Zoom out" onClick={() => setZoomIdx((i) => Math.max(0, i - 1))}><ZoomOut size={15} /></button>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', minWidth: '38px', textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
-            <button style={iconBtnStyle} title="Zoom in" onClick={() => setZoomIdx((i) => Math.min(ZOOM_STEPS.length - 1, i + 1))}><ZoomIn size={15} /></button>
-          </div>
-        )}
-        {/* Reading theme cycle */}
+        {/* Reading theme cycle — 4 themes since §142 */}
         <button
           style={iconBtnStyle}
           title={`Theme: ${theme}`}
-          onClick={() => applyTheme(theme === 'light' ? 'sepia' : theme === 'sepia' ? 'dark' : 'light')}
+          aria-label={`Reading theme: ${theme}`}
+          onClick={() => applyTheme((theme === 'light' ? 'sepia' : theme === 'sepia' ? 'dark' : theme === 'dark' ? 'midnight' : 'light') as ThemeName)}
         >
-          {theme === 'light' ? <Sun size={16} /> : theme === 'sepia' ? <Sunset size={16} /> : <Moon size={16} />}
+          <ThemeIcon size={16} />
         </button>
         <button style={iconBtnStyle} title="Fullscreen" onClick={toggleFullscreen}>
           {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
@@ -757,24 +1345,34 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     return (
       <div ref={rootRef} style={{ minHeight: '100vh', background: THEME_DESK[theme], display: 'flex', flexDirection: 'column' }}>
         <ReaderTopBar />
-        <div
-          ref={epubContainerRef}
-          style={{ flex: 1, minHeight: 0 }}
-        />
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 14px', borderTop: '1px solid var(--border-color)', background: 'var(--nav-bg)',
-        }}>
-          <button onClick={goPrev} style={{ ...iconBtnStyle, width: 'auto', padding: '0 14px', gap: '6px', fontSize: '12.5px', fontWeight: 700 }}>
-            <ArrowLeft size={15} /> Prev
-          </button>
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-            {epubPercent !== null ? `${Math.round(epubPercent * 100)}% read` : '—'}
-          </span>
-          <button onClick={goNext} style={{ ...iconBtnStyle, width: 'auto', padding: '0 14px', gap: '6px', fontSize: '12.5px', fontWeight: 700 }}>
-            Next <ArrowRight size={15} />
-          </button>
+        {/* Margins control pads the reflowable area (desktop paginated only —
+            epub.js scrolled-doc manages its own chrome-less flow on mobile). */}
+        <div style={{ flex: 1, minHeight: 0, padding: !isMobile && readingMode === 'paginated' ? `0 ${stagePad}px` : 0 }}>
+          <div
+            ref={epubContainerRef}
+            style={{ width: '100%', height: '100%' }}
+          />
         </div>
+        {bottomBarVisible && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 14px', borderTop: '1px solid var(--border-color)', background: 'var(--nav-bg)',
+          }}>
+            <button onClick={goPrev} style={{ ...iconBtnStyle, width: 'auto', minHeight: '44px', padding: '0 14px', gap: '6px', fontSize: '12.5px', fontWeight: 700 }}>
+              <ArrowLeft size={15} /> Prev
+            </button>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              {epubPercent !== null ? `${Math.round(epubPercent * 100)}% read` : '—'}
+            </span>
+            <button onClick={goNext} style={{ ...iconBtnStyle, width: 'auto', minHeight: '44px', padding: '0 14px', gap: '6px', fontSize: '12.5px', fontWeight: 700 }}>
+              Next <ArrowRight size={15} />
+            </button>
+          </div>
+        )}
+        <ReadingDock />
+        <TocDrawer />
+        <FocusPill />
+        <ThumbButtons />
       </div>
     );
   }
@@ -796,9 +1394,55 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
 
       <ReaderTopBar />
 
-      {/* Stage */}
+      {/* Stage — paginated: spreads; continuous scroll: vertical page list */}
+      {readingMode === 'scroll' ? (
+        <div
+          ref={scrollContainerRef}
+          onScroll={handlePdfScroll}
+          style={{ flex: 1, minHeight: 0, position: 'relative', overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch' }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: `${stagePad}px ${stagePad}px 32px` }}>
+            {Array.from({ length: scrollPageCount }, (_, i) => i + 1).map((n) => {
+              const img = imgFor(n);
+              return (
+                <div
+                  key={n}
+                  data-page={n}
+                  id={`br-page-${n}`}
+                  style={{
+                    width: `${Math.round(zoom * 100)}%`, maxWidth: '860px', minWidth: '240px',
+                    minHeight: 'calc(min(100vw, 860px) * 1.2)', background: THEME_PAPER[theme],
+                    borderRadius: '4px', boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
+                    overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  {img
+                    // eslint-disable-next-line @next/next/no-img-element -- dynamic client-rendered page bitmap (data: URL from pdf.js/epub.js, variable intrinsic size per page); next/image cannot optimize or take static dimensions for these, same justification as the vendored reader engines ignored in eslint.config.mjs.
+                    ? <img src={img} alt={`Page ${n}`} style={{ width: '100%', height: 'auto', display: 'block', filter: paperFilter, transition: 'filter 0.25s' }} draggable={false} />
+                    : <Loader2 size={24} style={{ animation: 'book-reader-spin 0.9s linear infinite', color: 'var(--text-secondary)' }} />}
+                </div>
+              );
+            })}
+            {previewOnly && (
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px 22px', maxWidth: '400px', width: '100%', textAlign: 'center' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(var(--accent-rgb), 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                  <Lock size={22} style={{ color: 'var(--accent)' }} />
+                </div>
+                <h3 style={{ fontSize: '15.5px', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 6px' }}>End of the free preview</h3>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 14px' }}>
+                  Unlock the full book to keep reading.
+                </p>
+                <button onClick={() => setLockOpen(true)} disabled={buying} style={{ width: '100%', minHeight: '48px', borderRadius: '10px', border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>
+                  {buying ? 'Opening checkout…' : `Buy now · ${book.price_paise ? formatPaise(book.price_paise) : ''}`}
+                </button>
+                {buyError && <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '8px' }}>{buyError}</p>}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
       <div
-        style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '0' : '18px' }}
+        style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? `${Math.max(4, Math.round(stagePad / 2))}px` : `${stagePad}px` }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
@@ -918,19 +1562,43 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
           </div>
         )}
       </div>
+      )}
 
-      {/* Bottom bar */}
+      {/* Bottom bar — mode-aware, hidden in focus mode */}
+      {bottomBarVisible && (
       <div style={{
         display: 'flex', alignItems: 'center', gap: '12px', padding: '9px 14px',
         borderTop: '1px solid var(--border-color)', background: 'var(--nav-bg)',
       }}>
-        <button onClick={goPrev} style={{ ...iconBtnStyle, width: 'auto', padding: '0 13px', gap: '6px', fontSize: '12.5px', fontWeight: 700 }}>
+        <button onClick={goPrev} style={{ ...iconBtnStyle, width: 'auto', minHeight: '44px', padding: '0 13px', gap: '6px', fontSize: '12.5px', fontWeight: 700 }}>
           <ArrowLeft size={15} /> Prev
         </button>
 
-        {isMobile ? (
+        {readingMode === 'scroll' ? (
+          /* Continuous scroll: slider IS the scroll position. */
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.001}
+              value={scrollPct}
+              onChange={(e) => {
+                const el = scrollContainerRef.current;
+                if (!el) return;
+                const max = el.scrollHeight - el.clientHeight;
+                el.scrollTo({ top: max * Number(e.target.value) });
+              }}
+              aria-label="Scroll position"
+              style={{ flex: 1, minWidth: 0, height: '44px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', minWidth: '96px', textAlign: 'center', flexShrink: 0 }}>
+              {Math.round(scrollPct * 100)}% · p.{scrollCurrentPage}{totalPages ? `/${previewOnly ? scrollPageCount : totalPages}` : ''}
+            </span>
+          </div>
+        ) : isMobile ? (
           <div style={{ flex: 1, textAlign: 'center', fontSize: '12.5px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-            Page {mobilePage}{totalPages ? ` of ${previewOnly ? Math.min(PREVIEW_PAGES, totalPages) : totalPages}` : ''}
+            Page {paginatedCurrentPage}{totalPages ? ` of ${previewOnly ? Math.min(PREVIEW_PAGES, totalPages) : totalPages}` : ''}
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -940,7 +1608,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
               max={maxSpread}
               value={shownSpread}
               onChange={(e) => { if (!flippingRef.current) setSpread(Number(e.target.value)); }}
-              style={{ flex: 1, accentColor: 'var(--accent)', cursor: 'pointer' }}
+              style={{ flex: 1, height: '44px', accentColor: 'var(--accent)', cursor: 'pointer' }}
             />
             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', minWidth: '86px', textAlign: 'center' }}>
               {curLeft}{curRight && curRight <= totalPages ? `–${curRight}` : ''} / {totalPages || '—'}
@@ -948,10 +1616,11 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
           </div>
         )}
 
-        <button onClick={goNext} style={{ ...iconBtnStyle, width: 'auto', padding: '0 13px', gap: '6px', fontSize: '12.5px', fontWeight: 700 }}>
+        <button onClick={goNext} style={{ ...iconBtnStyle, width: 'auto', minHeight: '44px', padding: '0 13px', gap: '6px', fontSize: '12.5px', fontWeight: 700 }}>
           Next <ArrowRight size={15} />
         </button>
       </div>
+      )}
 
       {/* §141 — direct-UPI purchase modal + its "pending confirmation"
           banner. purchasePending stays true for the rest of this reader
@@ -966,6 +1635,11 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
           Payment reported — we&apos;ll confirm and unlock this book shortly.
         </div>
       )}
+
+      <ReadingDock />
+      <TocDrawer />
+      <FocusPill />
+      <ThumbButtons />
 
       {showBuyModal && book.price_paise && (
         <BookPurchaseModal

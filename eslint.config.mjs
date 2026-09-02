@@ -17,6 +17,9 @@ const eslintConfig = defineConfig([
     // OOMs Node's default heap when swept.
     ".open-next/**",
     ".wrangler/**",
+    // `wrangler deploy --dry-run --outdir .wrangler-dry` expands the worker
+    // bundle (multiple MB of minified JS) here — same OOM hazard as above.
+    ".wrangler-dry/**",
     ".vercel/**",
     // One-off local maintenance scripts at the repo root (e.g. dependency
     // fixups) — CommonJS on purpose, never shipped, never app code.

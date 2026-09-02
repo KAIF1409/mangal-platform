@@ -9376,3 +9376,81 @@ without going through "unset" first (re-entering while `pending` works, but ther
 "change UPI ID" affordance once verified — would need a small addition to
 `CreatorUpiSettings.tsx` if the founder wants creators to update it later without a
 support request).
+---
+
+## §142 — Books section professional upgrade: reader theme/typography engine, writer metadata manager, codex sidebar
+
+**Scope (per the §141-follow-up brief).** This pass upgrades the EXISTING Books
+section only — nothing was scaffolded in parallel. Working surfaces: the books
+reader (`src/app/WebMangal/books/[bookId]/read` + `components/books/BookReader.tsx`),
+the creator book manager (`src/app/dashboard/books/page.tsx`), and the
+`/mangal-studio/webmangal/write` AI-writer page. The novel/manga reader
+(`WebMangal/read/[chapterId]`) and all books/payments RLS were NOT touched.
+
+**Phase 0 audit — what already existed vs. what was missing:**
+
+| Surface | Already built at session start | Added in this pass |
+|---|---|---|
+| Books reader route | `WebMangal/books/[bookId]/read/page.tsx` (client wrapper, `dynamic({ssr:false})` → `BookReader`) | — |
+| Theme engine | — (hardcoded dark parchment) | 4-theme engine: `light / sepia / dark / midnight` (OLED-true black), desk chrome + paper colors per theme, persisted in localStorage, default dark |
+| Typography controls | — | `serif/sans/mono` font family, size slider 12–24 px (default 17), line-height 1.2–2.0 (default 1.7), margin 0–96 px, letter-spacing + word-spacing, all persisted per theme |
+| Continuous scroll vs paginated | — (paginated only) | `readingMode: 'paginated' \| 'scroll'` toggle; scroll mode renders a vertical page list with per-page lazy `imgFor()`, zoom % preserved; thumb-zone next/prev still wired to page index in both modes |
+| Reading dock | — | Collapsible settings dock (bottom-left on mobile, left column on desktop): theme swatches, typography sliders, reading-mode toggle, focus mode (chrome + preview-freeze off), chapter drawer, EPUB TOC drawer (from the epub package's `loadNavigation`), back-to-catalog, stay-dark-on-exit |
+| Progress persistence | `book_reading_progress` table only (server, per logged-in user) | Scroll-% progress mirrored to the SAME table (`last_page %` ratio for scroll mode) AND a local mirror `book_reader_progress_<bookId>` so reading position survives before-login too; prev/next buttons save progress on every flip |
+| Mobile thumb-zone | — | Floating bottom-thumb prev/next buttons (48+ px touch targets) with fade-in/out on scroll + per-mode placement |
+| Cover in reader | `book.cover_image_url` flat | Uses it in the reader top bar (first page)
+| WYSIWYG writer editor | `AiWritingEditor` (already rich: word/char counts, `estimateReadTime`, autosave `savedAt`, threshold-batched AI polish via `lib/ai/editorAssist.ts`) | — |
+| Writer stats | — | Word-count goal (persisted per-browser, slider 100–1,000,000), % progress bar, `current / goal · pct%`, "reads in ~X min" via `estimateReadTime`, autosave indicator (debounced localStorage, `manuscriptDraftKey`) |
+| Metadata manager (dashboard) | — | Cover upload+preview (existing `uploadMediaFile`), synopsis, genre tags multi-select, mature-content flag, scheduling toggle (`publish_at`), all written to the new `books.*` columns; row list now shows status + 18+ + first 3 genre tags as chips |
+| Codex sidebar | `mangal-studio/webmangal/codex` (own feature) | Read-only `CodexSidebar` component (new) mounted on BOTH the dashboard books write form and the `/mangal-studio/webmangal/write` page — reads the SAME `character_profiles`/`lore_entries` tables, `dynamic({ssr:false})`; no second codex created |
+| AI polish toolbar | already wired in `AiWritingEditor` via `lib/ai/editorAssist.ts` | unchanged — confirmed existing |
+| Scheduling | — | `publish_at` future-date = "pending" copy in manager + helper `bookIsScheduled` in `lib/booksMetadata.ts` |
+
+**New files.**
+- `src/app/lib/booksMetadata.ts` — shared metadata column list + graceful-fallback
+  helpers (`runBooksQueryWithMetadataFallback`, `bookGenreTags`, `bookIsMature`,
+  `bookIsScheduled`, `formatScheduleAt`). Books surfaces fall back to the legacy
+  column list if the DB hasn't run the migration yet (PGRST204 guard) — RLS untouched.
+- `src/app/components/editor/CodexSidebar.tsx` — read-only character/lore reference drawer.
+- `supabase/migrations/20260902090000_books_metadata.sql` — adds `genre_tags text[]`,
+  `is_mature boolean`, `publish_at timestamptz` to `public.books` (no RLS change).
+
+**Design-research reflex (Phase 1).** Patterns referenced but deliberately NOT
+imported: Readium/Epub.js (theme `sepia/dark` swatches + font scaling), Kindle Web
+(continuous-scroll + progress-%), RoyalRoad/Wattpad (word-count goal + read-time),
+MangaDex (OLED reader dark). No new third-party dependency was added — every new
+interaction is inline-styled CSS + the already-vendored engines (pdf.js/epub.js
+stay in `public/vendor/`, loaded client-side only).
+
+**Bundle-size verification (HARD GATE 4).** Fresh `next build` + `npx
+opennextjs-cloudflare build` + `wrangler deploy --dry-run`:
+
+| Metric | §141 baseline (pre-pass) | §142 after | Δ |
+|---|---|---|---|
+| handler.mjs raw | 8,099,706 B | **8,110,309 B** | +10,603 B (client-only UI) |
+| wrangler Total Upload | 11,100.96 KiB | **11,114.32 KiB** | +13.36 KiB |
+| wrangler gzip | 2,170.09 KiB | **2,173.17 KiB** | +3.08 KiB — still ~0.9 MiB under the 3,072 KiB free-plan ceiling |
+
+No new server-reachable library was introduced; the only new client component
+(`CodexSidebar`) and the reader/writer additions sit behind `dynamic({ssr:false})`
+boundaries inherited from §133/§141, so the server bundle grew only by app code.
+
+**Gates (final commit-able tree):** `npx tsc --noEmit` → 0; `npm run lint` → 0
+errors / **53 warnings (exactly the §140/§141 baseline — no new warnings)**;
+`npm run build` → exit 0; wrangler dry-run gzip as above.
+
+**No duplicate/parallel routes created.** Confirmed: only the three existing
+surfaces (`WebMangal/books/[bookId]/read`, `dashboard/books`, and
+`mangal-studio/webmangal/write`) carry this work; no `read/[novelSlug]/[chapterId]`
+or `/studio/books` clones exist anywhere in `src/`.
+
+**Operational notes for future sessions.**
+- `wrangler deploy --dry-run --outdir .wrangler-dry` emits multi-MB minified JS into
+  `.wrangler-dry/`; that path is now `.gitignore`d AND added to `eslint.config.mjs`
+  ignores (same rationale as `.open-next/**` — sweeping it OOMs Node's default heap,
+  observed twice this session as exit 134).
+- Scroll-mode progress: `book_reading_progress.last_page` stores a 0–100 float
+  (scroll %) in the SAME numeric column PDF mode uses for a 0-based page index, then
+  maps on load (`lastPage > 0 ? ceil`) — chosen to avoid a schema change on a table
+  with RLS on books/payments; both paths restore correctly via `read/page.tsx`'s
+  existing `initialProgress` fetch.

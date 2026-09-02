@@ -36,12 +36,26 @@ import Footer from '../../components/shared/Footer';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import type { BookRow } from '../../lib/database.types';
+import { bookGenreTags, bookIsMature, isMissingMetadataColumnError } from '../../lib/booksMetadata';
 import { countWords, estimateReadTime, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { generateBookPdfBlob, bookPdfBlobToFile } from '../../lib/bookPdf';
 import {
   BookOpen, Plus, Trash2, Eye, EyeOff, Loader2, FileText,
-  IndianRupee, CheckCircle2, X, Upload, PenLine, Expand, Edit3,
+  IndianRupee, CheckCircle2, X, Upload, PenLine, Expand, Edit3, BookMarked, Save,
 } from 'lucide-react';
+
+// §142 — read-only codex reference sidebar. Loaded client-only (same boundary
+// convention as the editor itself); it reads the SAME character_profiles /
+// lore_entries tables the /mangal-studio/webmangal/codex tab owns — no second
+// codex feature is created here.
+const CodexSidebar = dynamic(() => import('../../components/editor/CodexSidebar'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px' }}>
+      Loading codex…
+    </div>
+  ),
+});
 
 // Minimum length before a "Write here" manuscript can be published — same
 // bar as a single novel chapter (see lib/novelEditor.ts / WebMangal/upload),
@@ -49,6 +63,42 @@ import {
 // obviously longer than one chapter but there's no existing "book-length"
 // convention to anchor to instead.
 const MIN_WORDS_PER_WRITTEN_BOOK = 300;
+
+// §142 word-count goal — a personal writing target, not a platform rule.
+// Persisted per browser like the other writer prefs; the book row itself is
+// untouched by it.
+const WORD_GOAL_KEY = 'book_write_goal';
+const WORD_GOAL_DEFAULT = 50000;
+const WORD_GOAL_MIN = 100;
+const WORD_GOAL_MAX = 1000000;
+
+// §142 metadata-manager columns live in the DB (20260902090000_books_metadata.sql).
+// Everything below degrades gracefully when the migration hasn't run yet: the
+// probe at mount flips `metadataAvailable` off and the new controls hide
+// themselves behind an explanatory banner instead of erroring.
+const GENRE_TAG_OPTIONS = [
+  'Slow Burn', 'Enemies to Lovers', 'Found Family', 'Mythology Retelling',
+  'Dark Academia', 'Court Intrigue', 'Heist', 'Reincarnation', 'Desi Fantasy',
+  'Slice of Life', 'Coming of Age', 'Political Thriller', 'Folk Horror',
+  'Space Opera', 'Detective', 'Humor', 'Tragedy', 'Hopepunk',
+];
+
+// Local manuscript draft — mirrors the studio AI Writer's local-only autosave
+// posture (mangal-studio/webmangal/write): manuscripts never leave the browser
+// except through the explicit submit path.
+const manuscriptDraftKey = (editingId: string | null) => `book_manuscript_draft_${editingId ?? 'new'}`;
+interface ManuscriptDraft { title?: string; content?: string; savedAt?: string }
+
+function loadManuscriptDraft(key: string): ManuscriptDraft | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ManuscriptDraft;
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 // BookRow comes from lib/database.types.ts — one shared definition across the
 // dashboard, catalog, detail page and View rails, mirroring public.books.
@@ -142,6 +192,21 @@ export default function DashboardBooksPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busyBookId, setBusyBookId] = useState<string | null>(null);
 
+  // ── §142 metadata-manager state ────────────────────────────────────────
+  const [genreTags, setGenreTags] = useState<string[]>([]);
+  const [customTag, setCustomTag] = useState('');
+  const [isMature, setIsMature] = useState(false);
+  const [scheduleOn, setScheduleOn] = useState(false);
+  const [publishAt, setPublishAt] = useState(''); // datetime-local string
+  const [metadataAvailable, setMetadataAvailable] = useState<boolean | null>(null); // null = probing
+
+  // ── §142 writer-tooling state ──────────────────────────────────────────
+  const [wordGoal, setWordGoal] = useState(WORD_GOAL_DEFAULT);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [codexOpen, setCodexOpen] = useState(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -164,6 +229,77 @@ export default function DashboardBooksPage() {
       setLoading(false);
     })();
   }, []);
+
+  // ── §142 capability probe — do the metadata columns exist yet? ──────────
+  // One cheap head-query at mount. PGRST204 (or the plain-message variant)
+  // means the 20260902090000_books_metadata.sql migration hasn't been applied;
+  // the UI then hides the new fields behind a banner instead of failing every
+  // save with "could not find the column".
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase
+        .from('books')
+        .select('id, genre_tags, is_mature, publish_at')
+        .limit(1);
+      if (!cancelled) setMetadataAvailable(!isMissingMetadataColumnError(error));
+    })();
+    return () => { cancelled = true; };
+    }, []);
+
+  // ── §142 word-goal persistence ──────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(WORD_GOAL_KEY);
+      const n = raw ? Number(raw) : NaN;
+      if (Number.isFinite(n) && n >= WORD_GOAL_MIN && n <= WORD_GOAL_MAX) {
+        queueMicrotask(() => setWordGoal(Math.round(n)));
+      }
+    } catch { /* private mode */ }
+  }, []);
+
+  function applyWordGoal(n: number) {
+    const clamped = Math.min(WORD_GOAL_MAX, Math.max(WORD_GOAL_MIN, Math.round(n || 0)));
+    setWordGoal(clamped);
+    try { localStorage.setItem(WORD_GOAL_KEY, String(clamped)); } catch { /* ignore */ }
+  }
+
+  // ── §142 manuscript autosave (write mode) — local-only, debounced ───────
+  // Restores on form open when the in-memory content is still empty, then
+  // keeps { title, content, savedAt } fresh as the creator types. Cleared on
+  // a successful submit (the book now exists server-side).
+  useEffect(() => {
+    if (!showForm || bookSourceMode !== 'write') return;
+    const draft = loadManuscriptDraft(manuscriptDraftKey(null));
+    if (draft && !bookContent.trim() && draft.content && draft.content.trim()) {
+      queueMicrotask(() => {
+        setBookContent(draft.content || '');
+        if (!title.trim() && draft.title) setTitle(draft.title);
+        setDraftSavedAt(draft.savedAt ?? null);
+        setDraftRestored(true);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showForm, bookSourceMode]);
+
+  useEffect(() => {
+    if (bookSourceMode !== 'write') return;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      if (!bookContent.trim()) return;
+      const now = new Date().toISOString();
+      try {
+        localStorage.setItem(
+          manuscriptDraftKey(null),
+          JSON.stringify({ title, content: bookContent, savedAt: now } satisfies ManuscriptDraft),
+        );
+        setDraftSavedAt(now);
+      } catch { /* storage full/blocked — non-fatal */ }
+    }, 800);
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  }, [bookContent, title, bookSourceMode]);
 
   async function loadBooks(userId: string) {
     const { data, error } = await supabase
@@ -189,6 +325,17 @@ export default function DashboardBooksPage() {
     setBookContent('');
     setWritePreviewMode(false);
     setWriteFocusMode(false);
+    // §142 metadata manager + writer tooling
+    setGenreTags([]);
+    setCustomTag('');
+    setIsMature(false);
+    setScheduleOn(false);
+    setPublishAt('');
+    setDraftSavedAt(null);
+    setDraftRestored(false);
+    // The local manuscript draft survives resets deliberately — it's the
+    // safety net this autosave exists for. It is cleared only on a
+    // successful submit, below.
   }
 
   function handleCoverPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -316,6 +463,24 @@ export default function DashboardBooksPage() {
       setFormError('Write something before saving.');
       return;
     }
+    // §142 scheduling — a scheduled publish needs a real, future moment.
+    let publishAtIso: string | null = null;
+    if (metadataAvailable && scheduleOn && status === 'published') {
+      if (!publishAt) {
+        setFormError('Pick a date and time for the scheduled publish.');
+        return;
+      }
+      const at = new Date(publishAt);
+      if (Number.isNaN(at.getTime())) {
+        setFormError('The scheduled publish date is not a valid date.');
+        return;
+      }
+      if (at.getTime() <= Date.now()) {
+        setFormError('The scheduled publish date must be in the future.');
+        return;
+      }
+      publishAtIso = at.toISOString();
+    }
 
     setSubmitting(true);
     try {
@@ -352,7 +517,9 @@ export default function DashboardBooksPage() {
       }
 
       // 3. Row insert. file_type comes back sniffed server-side — never
-      // trusted from the client's filename.
+      // trusted from the client's filename. The §142 metadata fields are only
+      // sent when the probe confirmed the columns exist (pre-migration DBs
+      // reject unknown columns outright).
       const { error: insertError } = await supabase.from('books').insert({
         author_id: user!.id,
         title: title.trim(),
@@ -365,9 +532,19 @@ export default function DashboardBooksPage() {
         pricing_type: pricingType,
         price_paise: pricePaise,
         status,
+        ...(metadataAvailable
+          ? {
+              genre_tags: genreTags.length > 0 ? genreTags : [],
+              is_mature: isMature,
+              publish_at: publishAtIso,
+            }
+          : {}),
       });
       if (insertError) throw new Error(insertError.message);
 
+      // Success — the book exists server-side now, so the local safety
+      // manuscript can go.
+      try { localStorage.removeItem(manuscriptDraftKey(null)); } catch { /* ignore */ }
       resetForm();
       setShowForm(false);
       await loadBooks(user!.id);
@@ -543,12 +720,15 @@ export default function DashboardBooksPage() {
                       </p>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                         <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Manuscript</span>
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           <button type="button" onClick={() => setWriteFocusMode(true)} title="Focus mode — distraction-free full screen" style={toolbarBtnStyle}>
                             <Expand size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Focus
                           </button>
                           <button type="button" onClick={() => setWritePreviewMode((p) => !p)} title="Toggle live preview" style={{ ...toolbarBtnStyle, ...(writePreviewMode ? toolbarBtnActiveStyle : {}) }}>
                             {writePreviewMode ? <><Edit3 size={13} style={{ verticalAlign: 'middle' }} /> Edit</> : <><Eye size={13} style={{ verticalAlign: 'middle' }} /> Preview</>}
+                          </button>
+                          <button type="button" onClick={() => setCodexOpen(true)} title="Your codex — characters & lore reference" style={toolbarBtnStyle}>
+                            <BookMarked size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Codex
                           </button>
                         </div>
                       </div>
@@ -610,19 +790,59 @@ export default function DashboardBooksPage() {
                         </div>
                       )}
 
-                      <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px',
-                        padding: '10px 14px', borderRadius: '8px',
-                        background: countWords(bookContent) >= MIN_WORDS_PER_WRITTEN_BOOK ? 'rgba(16,185,129,0.1)' : 'rgba(217,119,6,0.1)',
-                        border: `1px solid ${countWords(bookContent) >= MIN_WORDS_PER_WRITTEN_BOOK ? 'rgba(16,185,129,0.3)' : 'rgba(217,119,6,0.3)'}`,
-                      }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: countWords(bookContent) >= MIN_WORDS_PER_WRITTEN_BOOK ? '#10b981' : '#d97706' }}>
-                          {countWords(bookContent)} / {MIN_WORDS_PER_WRITTEN_BOOK} words minimum
-                        </span>
-                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          {estimateReadTime(countWords(bookContent))}
-                        </span>
-                      </div>
+                      {/* §142 writer stats: word-count goal, read time, autosave */}
+                      {(() => {
+                        const words = countWords(bookContent);
+                        const pct = wordGoal > 0 ? Math.min(100, Math.round((words / wordGoal) * 100)) : 0;
+                        const atMin = words >= MIN_WORDS_PER_WRITTEN_BOOK;
+                        return (
+                          <div style={{ marginTop: '8px' }}>
+                            <div style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap',
+                              padding: '10px 14px', borderRadius: '8px',
+                              background: atMin ? 'rgba(16,185,129,0.1)' : 'rgba(217,119,6,0.1)',
+                              border: `1px solid ${atMin ? 'rgba(16,185,129,0.3)' : 'rgba(217,119,6,0.3)'}`,
+                            }}>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: atMin ? '#10b981' : '#d97706' }}>
+                                {words.toLocaleString('en-IN')} / {MIN_WORDS_PER_WRITTEN_BOOK} words minimum
+                              </span>
+                              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                {estimateReadTime(words)}
+                              </span>
+                              <span style={{ fontSize: '11px', color: 'var(--text-faint)', display: 'inline-flex', alignItems: 'center', gap: '5px' }} title={draftSavedAt ?? undefined}>
+                                <Save size={11} />
+                                {draftSavedAt
+                                  ? `Autosaved locally · ${new Date(draftSavedAt).toLocaleTimeString()}${draftRestored ? ' (restored)' : ''}`
+                                  : 'Autosaves to this browser as you type'}
+                              </span>
+                            </div>
+                            {/* Word-count goal — personal target, not a platform rule */}
+                            <div style={{ marginTop: '8px', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                <label htmlFor="book-word-goal" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                  Goal
+                                </label>
+                                <input
+                                  id="book-word-goal"
+                                  type="number"
+                                  min={WORD_GOAL_MIN}
+                                  max={WORD_GOAL_MAX}
+                                  step={100}
+                                  value={wordGoal}
+                                  onChange={(e) => applyWordGoal(Number(e.target.value))}
+                                  style={{ ...inputStyle, width: '120px', padding: '7px 10px', fontSize: '13px' }}
+                                />
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: pct >= 100 ? '#10b981' : 'var(--text-secondary)' }}>
+                                  {words.toLocaleString('en-IN')} / {wordGoal.toLocaleString('en-IN')} · {pct}%
+                                </span>
+                              </div>
+                              <div style={{ marginTop: '8px', height: '6px', borderRadius: '999px', background: 'var(--divider)', overflow: 'hidden' }}>
+                                <div style={{ width: `${pct}%`, height: '100%', borderRadius: '999px', background: pct >= 100 ? '#10b981' : 'var(--accent)', transition: 'width 0.3s ease' }} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </>
                   )}
                 </div>
@@ -661,6 +881,120 @@ export default function DashboardBooksPage() {
                     </div>
                   )}
                 </div>
+
+                {/* ── §142 Metadata manager ─────────────────────────────── */}
+                {metadataAvailable === false && (
+                  <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.4)', color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.55 }}>
+                    Genre tags, the mature-content flag and scheduling are hidden because the database
+                    is missing the <code>books_metadata</code> migration. Ask the admin to run{' '}
+                    <code>supabase/migrations/20260902090000_books_metadata.sql</code> — everything else works normally.
+                  </div>
+                )}
+                {metadataAvailable !== false && (
+                  <div>
+                    <label style={labelStyle}>Genre tags</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                      {GENRE_TAG_OPTIONS.map((tag) => {
+                        const active = genreTags.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setGenreTags((tags) => (active ? tags.filter((t) => t !== tag) : tags.length < 12 ? [...tags, tag] : tags))}
+                            style={{
+                              minHeight: '44px', padding: '0 12px', borderRadius: '999px', cursor: 'pointer',
+                              fontSize: '12px', fontWeight: 700,
+                              border: active ? '1px solid var(--accent)' : '1px solid var(--border-color)',
+                              background: active ? 'rgba(var(--accent-rgb), 0.12)' : 'transparent',
+                              color: active ? 'var(--accent)' : 'var(--text-secondary)',
+                            }}
+                          >
+                            #{tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <input
+                        style={{ ...inputStyle, flex: 1, minWidth: '160px' }}
+                        value={customTag}
+                        onChange={(e) => setCustomTag(e.target.value)}
+                        placeholder="Add your own tag…"
+                        aria-label="Add a custom genre tag"
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter') return;
+                          e.preventDefault();
+                          const t = customTag.trim();
+                          if (t && !genreTags.includes(t) && genreTags.length < 12) setGenreTags((tags) => [...tags, t]);
+                          setCustomTag('');
+                        }}
+                      />
+                      {genreTags.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', width: '100%' }}>
+                          {genreTags.map((t) => (
+                            <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11.5px', fontWeight: 700, color: 'var(--accent)', background: 'rgba(var(--accent-rgb), 0.1)', borderRadius: '999px', padding: '5px 10px' }}>
+                              #{t}
+                              <button
+                                type="button"
+                                aria-label={`Remove tag ${t}`}
+                                onClick={() => setGenreTags((tags) => tags.filter((x) => x !== t))}
+                                style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, display: 'flex' }}
+                              >
+                                <X size={11} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Mature-content flag */}
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '14px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={isMature}
+                        onChange={(e) => setIsMature(e.target.checked)}
+                        style={{ width: '20px', height: '20px', marginTop: '2px', accentColor: 'var(--accent)', flexShrink: 0, cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: '12.5px', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>Mature content (18+)</strong> — violence, explicit themes or
+                        graphic content. Shown as an <strong style={{ color: 'var(--accent)' }}>18+</strong> badge on the catalog and
+                        detail page so readers know before they open the book.
+                      </span>
+                    </label>
+
+                    {/* Scheduling */}
+                    <div style={{ marginTop: '14px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={scheduleOn}
+                          onChange={(e) => setScheduleOn(e.target.checked)}
+                          style={{ width: '20px', height: '20px', accentColor: 'var(--accent)', flexShrink: 0, cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          Schedule publish
+                        </span>
+                      </label>
+                      {scheduleOn && (
+                        <div style={{ marginTop: '10px' }}>
+                          <input
+                            type="datetime-local"
+                            value={publishAt}
+                            onChange={(e) => setPublishAt(e.target.value)}
+                            aria-label="Scheduled publish date and time"
+                            style={{ ...inputStyle, colorScheme: 'dark' }}
+                          />
+                          <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '6px 0 0', lineHeight: 1.5 }}>
+                            Publishing with a future date keeps the book hidden from readers — catalog, detail page and
+                            downloads all stay locked until that moment. “Save Draft” ignores the schedule.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {formError && (
                   <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444', fontSize: '13px', fontWeight: 600 }}>
@@ -761,6 +1095,20 @@ export default function DashboardBooksPage() {
                       {book.pricing_type === 'PAID' && book.price_paise ? formatPaise(book.price_paise) : 'Free'}
                     </span>
                     {book.category && <span>{book.category}</span>}
+                    {bookIsMature(book) && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 800, color: '#f43f5e', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        18+
+                      </span>
+                    )}
+                    {bookGenreTags(book).slice(0, 3).map((tag) => (
+                      <span key={tag} style={{
+                        display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px',
+                        background: 'rgba(166,32,41,0.10)', border: '1px solid rgba(166,32,41,0.18)', color: 'var(--accent)',
+                        fontSize: '10.5px', fontWeight: 700,
+                      }}>
+                        {tag}
+                      </span>
+                    ))}
                     <span>{book.views.toLocaleString('en-IN')} views</span>
                   </div>
                 </div>
@@ -796,7 +1144,12 @@ export default function DashboardBooksPage() {
             ))}
           </div>
         )}
-      </div>
+            </div>
+      {/* §142 — codex reference sidebar for the Write-here manuscript editor.
+          Mounted at page level so it overlays the full surface; reads the
+          same character_profiles / lore_entries the /mangal-studio/webmangal/codex
+          tab owns (no second codex feature). */}
+      <CodexSidebar open={codexOpen} onClose={() => setCodexOpen(false)} />
       <style>{`
         @media (max-width: 720px) {
           .books-form-grid { grid-template-columns: 1fr !important; }

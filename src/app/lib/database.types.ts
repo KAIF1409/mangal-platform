@@ -38,6 +38,13 @@ export interface Database {
           pricing_type: BookPricingType;
           price_paise: number | null;
           category: string | null;
+          // §142 metadata-manager columns (20260902090000_books_metadata.sql).
+          // Hand-mirrored here per this file's header rule. Clients reading a
+          // pre-migration DB see these as undefined at runtime — every reader
+          // goes through the optional-field helpers in lib/booksMetadata.ts.
+          genre_tags: string[];
+          is_mature: boolean;
+          publish_at: string | null;
           status: BookStatus;
           views: number;
           created_at: string;
@@ -55,6 +62,9 @@ export interface Database {
           pricing_type?: BookPricingType;
           price_paise?: number | null;
           category?: string | null;
+          genre_tags?: string[] | null;
+          is_mature?: boolean | null;
+          publish_at?: string | null;
           status?: BookStatus;
           views?: number;
           created_at?: string;
@@ -72,6 +82,9 @@ export interface Database {
           pricing_type?: BookPricingType;
           price_paise?: number | null;
           category?: string | null;
+          genre_tags?: string[] | null;
+          is_mature?: boolean | null;
+          publish_at?: string | null;
           status?: BookStatus;
           views?: number;
           created_at?: string;

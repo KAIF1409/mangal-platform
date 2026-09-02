@@ -14,9 +14,22 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Copy, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookMarked, Copy, Download, Trash2 } from 'lucide-react';
 
 import { useStudioAuth } from '../../katube/lib/useStudioAuth';
+
+// §142 — read-only codex reference sidebar. Loaded client-only (same boundary
+// convention as the editor itself); reads the SAME character_profiles /
+// lore_entries tables the /mangal-studio/webmangal/codex tab owns — no second
+// codex feature is created here.
+const CodexSidebar = dynamic(() => import('../../../components/editor/CodexSidebar'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px' }}>
+      Loading codex…
+    </div>
+  ),
+});
 
 // §141 — loaded client-side only. AiWritingEditor statically imports
 // @tiptap/* (ProseMirror), a browser-only rich-text engine that was being
@@ -46,6 +59,7 @@ export default function WebMangalStudioAiWriter() {
   const [draftText, setDraftText] = useState('');
   const [title, setTitle] = useState('');
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [codexOpen, setCodexOpen] = useState(false);
 
   useEffect(() => {
     // Local draft preload — browser-only APIs, deferred to a microtask so
@@ -200,7 +214,16 @@ export default function WebMangalStudioAiWriter() {
         >
           <Trash2 size={12} /> Clear draft
         </button>
+        <button
+          onClick={() => setCodexOpen(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-secondary)', fontWeight: 700, cursor: 'pointer' }}
+        >
+          <BookMarked size={12} /> Codex reference
+        </button>
       </div>
+      {/* §142 — read-only codex reference sidebar. Reads the SAME character_profiles /
+          lore_entries tables the /mangal-studio/webmangal/codex tab owns. */}
+      <CodexSidebar open={codexOpen} onClose={() => setCodexOpen(false)} />
     </div>
   );
 }
