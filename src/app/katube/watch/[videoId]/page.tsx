@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -13,7 +13,7 @@ import { AddToPlaylistButton, timeAgo } from '../../components/VideoGridCard';
 import VideoGridCard from '../../components/VideoGridCard';
 import KaTubePlayer from '../../components/KaTubePlayer';
 import KatubeShareSheet from '../../components/KatubeShareSheet';
-import { youtubeCommentScore, sortByScore, COMMENT_PAGE_SIZE } from '../../../lib/commentRanking';
+import { youtubeCommentScore, sortByScore, COMMENT_PAGE_SIZE, REVIEW_PAGE_SIZE } from '../../../lib/commentRanking';
 import { formatViews } from '../../../lib/format';
 
 // ── KaTube — Step 3: watch page ──
@@ -212,6 +212,16 @@ export default function KaTubeWatchPage() {
   const [commentSort, setCommentSort] = useState<'top' | 'newest'>('top');
   const [commentsVisibleCount, setCommentsVisibleCount] = useState<number>(COMMENT_PAGE_SIZE.katube);
   const commentLikeLockRef = useRef<Set<string>>(new Set());
+  // §139-A8 — comments fetch pagination: only the newest page loads with the
+  // video; "Load older comments" fetches the next `.range()` window. The true
+  // total (count:'exact') drives the count badges; the client-side 'Top
+  // comments' ranking runs over the loaded window, consistent with the
+  // pre-existing reveal cap below it.
+  const [commentTotal, setCommentTotal] = useState(0);
+  const [olderCommentsLoading, setOlderCommentsLoading] = useState(false);
+  // §139-A8 — accuracy reviews paginate the same way (REVIEW_PAGE_SIZE.katube).
+  const [accuracyTotal, setAccuracyTotal] = useState(0);
+  const [olderReviewsLoading, setOlderReviewsLoading] = useState(false);
 
   // ── Review Hub — Step 27 ──
   const [accuracyReviews, setAccuracyReviews] = useState<AccuracyReview[]>([]);
@@ -352,15 +362,62 @@ export default function KaTubeWatchPage() {
   // need to wait on auth). Commenter usernames joined client-side the same
   // way the recommended-videos creator names are (single batched `in()`
   // query rather than N+1 per-comment lookups).
+  // §139-A8 — shared enrichment for one fetched window of comment rows:
+  // batched usernames + like counts (same no-N+1 pattern as before, just
+  // scoped to the page instead of the whole comment section).
+  const hydrateCommentRows = useCallback(async (rows: { id: string; comment_text: string; created_at: string; commenter_id: string }[]) => {
+    const commenterIds = [...new Set(rows.map(r => r.commenter_id))];
+    const commentIds = rows.map(r => r.id);
+    const [{ data: profiles }, { data: likeRows }] = await Promise.all([
+      supabase.from('creator_profiles').select('user_id, username').in('user_id', commenterIds),
+      supabase.from('video_comment_likes').select('comment_id, liker_id').in('comment_id', commentIds),
+    ]);
+    const nameMap = new Map((profiles || []).map(p => [p.user_id, p.username]));
+    const likeCounts = new Map<string, number>();
+    (likeRows || []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) || 0) + 1));
+    const myLikedIds = new Set((likeRows || []).filter(l => l.liker_id === userId).map(l => l.comment_id));
+    return rows.map(r => ({
+      ...r,
+      commenterName: nameMap.get(r.commenter_id) || 'MANGAL Viewer',
+      likes: likeCounts.get(r.id) || 0,
+      likedByMe: myLikedIds.has(r.id),
+    }));
+  }, [userId]);
+
+  // §139-A8 — next older window of comments. Offset windows can shift if new
+  // comments land mid-view, so the append de-dupes by id.
+  const loadOlderComments = async () => {
+    if (!videoId || olderCommentsLoading || comments.length >= commentTotal) return;
+    setOlderCommentsLoading(true);
+    const { data: rows } = await supabase
+      .from('video_comments')
+      .select('id, comment_text, created_at, commenter_id')
+      .eq('video_id', videoId)
+      .order('created_at', { ascending: false })
+      .range(comments.length, comments.length + COMMENT_PAGE_SIZE.katube - 1);
+    if (rows && rows.length > 0) {
+      const hydrated = await hydrateCommentRows(rows);
+      setComments(prev => {
+        const known = new Set(prev.map(c => c.id));
+        return [...prev, ...hydrated.filter(c => !known.has(c.id))];
+      });
+    }
+    setOlderCommentsLoading(false);
+  };
+
   useEffect(() => {
     if (!videoId) return;
     (async () => {
       setCommentsLoading(true);
-      const { data: rows } = await supabase
+      // §139-A8 — newest page only (this fetch used to ship EVERY comment on
+      // the video); older windows load on demand via loadOlderComments().
+      const { data: rows, count } = await supabase
         .from('video_comments')
-        .select('id, comment_text, created_at, commenter_id')
+        .select('id, comment_text, created_at, commenter_id', { count: 'exact' })
         .eq('video_id', videoId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(0, COMMENT_PAGE_SIZE.katube - 1);
+      setCommentTotal(count ?? 0);
 
       if (!rows || rows.length === 0) {
         setComments([]);
@@ -368,39 +425,28 @@ export default function KaTubeWatchPage() {
         return;
       }
 
-      const commenterIds = [...new Set(rows.map(r => r.commenter_id))];
-      const commentIds = rows.map(r => r.id);
-      const [{ data: profiles }, { data: likeRows }] = await Promise.all([
-        supabase.from('creator_profiles').select('user_id, username').in('user_id', commenterIds),
-        supabase.from('video_comment_likes').select('comment_id, liker_id').in('comment_id', commentIds),
-      ]);
-      const nameMap = new Map((profiles || []).map(p => [p.user_id, p.username]));
-      const likeCounts = new Map<string, number>();
-      (likeRows || []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) || 0) + 1));
-      const myLikedIds = new Set((likeRows || []).filter(l => l.liker_id === userId).map(l => l.comment_id));
-
-      setComments(rows.map(r => ({
-        ...r,
-        commenterName: nameMap.get(r.commenter_id) || 'MANGAL Viewer',
-        likes: likeCounts.get(r.id) || 0,
-        likedByMe: myLikedIds.has(r.id),
-      })));
+      setComments(await hydrateCommentRows(rows));
       setCommentsLoading(false);
     })();
-  }, [videoId, userId]);
+  }, [videoId, userId, hydrateCommentRows]);
 
   // Accuracy reviews — public read, same batched-username-join pattern as
   // comments. Only fetched once we know the video is tied to a series
   // (video?.seriesId), since the section doesn't render otherwise.
+  // §139-A8 — paginated: newest REVIEW_PAGE_SIZE.katube window first
+  // (used to fetch every accuracy review on the video), older windows load
+  // on demand. The avg badge covers the loaded window.
   useEffect(() => {
     if (!videoId || !video?.seriesId) return;
     (async () => {
       setAccuracyLoading(true);
-      const { data: rows } = await supabase
+      const { data: rows, count } = await supabase
         .from('video_accuracy_reviews')
-        .select('id, stars, review_text, created_at, reviewer_id')
+        .select('id, stars, review_text, created_at, reviewer_id', { count: 'exact' })
         .eq('video_id', videoId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(0, REVIEW_PAGE_SIZE.katube - 1);
+      setAccuracyTotal(count ?? 0);
 
       if (!rows || rows.length === 0) {
         setAccuracyReviews([]);
@@ -422,6 +468,33 @@ export default function KaTubeWatchPage() {
       setAccuracyLoading(false);
     })();
   }, [videoId, video?.seriesId]);
+
+  // §139-A8 — next older window of accuracy reviews (de-duped by id, same as
+  // the comments loader above).
+  const loadOlderReviews = async () => {
+    if (!videoId || olderReviewsLoading || accuracyReviews.length >= accuracyTotal) return;
+    setOlderReviewsLoading(true);
+    const { data: rows } = await supabase
+      .from('video_accuracy_reviews')
+      .select('id, stars, review_text, created_at, reviewer_id')
+      .eq('video_id', videoId)
+      .order('created_at', { ascending: false })
+      .range(accuracyReviews.length, accuracyReviews.length + REVIEW_PAGE_SIZE.katube - 1);
+    if (rows && rows.length > 0) {
+      const reviewerIds = [...new Set(rows.map(r => r.reviewer_id))];
+      const { data: profiles } = await supabase
+        .from('creator_profiles')
+        .select('user_id, username')
+        .in('user_id', reviewerIds);
+      const nameMap = new Map((profiles || []).map(p => [p.user_id, p.username]));
+      const mapped = rows.map(r => ({ ...r, reviewerName: nameMap.get(r.reviewer_id) || 'MANGAL Viewer' }));
+      setAccuracyReviews(prev => {
+        const known = new Set(prev.map(r => r.id));
+        return [...prev, ...mapped.filter(r => !known.has(r.id))];
+      });
+    }
+    setOlderReviewsLoading(false);
+  };
 
   // Pre-fill the star picker with the viewer's own existing review, if any.
   // Deferred via Promise.resolve().then(...) — same pattern as the
@@ -516,6 +589,7 @@ export default function KaTubeWatchPage() {
       const { data: profile } = await supabase
         .from('creator_profiles').select('username').eq('user_id', userId).single();
       setComments(cs => [{ ...row, commenterName: profile?.username || 'You', likes: 0, likedByMe: false }, ...cs]);
+      setCommentTotal(t => t + 1);
       setCommentText('');
     }
     commentLockRef.current = false;
@@ -708,7 +782,7 @@ export default function KaTubeWatchPage() {
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
         <h2 style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-          {comments.length > 0 ? `${comments.length.toLocaleString()} Comments` : 'Comments'}
+          {commentTotal > 0 ? `${commentTotal.toLocaleString()} Comments` : 'Comments'}
         </h2>
         {/* YouTube-style Top comments / Newest first toggle */}
         {comments.length > 1 && (
@@ -810,6 +884,20 @@ export default function KaTubeWatchPage() {
               }}
             >
               Show {Math.min(COMMENT_PAGE_SIZE.katube, rankedComments.length - commentsVisibleCount)} more comments
+            </button>
+          )}
+          {comments.length < commentTotal && (
+            <button
+              onClick={loadOlderComments}
+              disabled={olderCommentsLoading}
+              style={{
+                marginTop: '10px', fontSize: '12.5px', fontWeight: 700,
+                cursor: olderCommentsLoading ? 'default' : 'pointer',
+                color: 'var(--text-secondary)', background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)', borderRadius: '20px', padding: '9px 18px',
+              }}
+            >
+              {olderCommentsLoading ? 'Loading…' : `Load older comments (${comments.length}/${commentTotal.toLocaleString()})`}
             </button>
           )}
         </>
@@ -1150,7 +1238,7 @@ export default function KaTubeWatchPage() {
                           padding: '9px 16px', cursor: 'pointer', alignItems: 'center', gap: '8px',
                         }}
                       >
-                        <MessageCircle size={15} /> {comments.length > 0 ? comments.length.toLocaleString() : ''} Comments
+                        <MessageCircle size={15} /> {commentTotal > 0 ? commentTotal.toLocaleString() : ''} Comments
                       </button>
                     </div>
                   </div>
@@ -1349,7 +1437,7 @@ export default function KaTubeWatchPage() {
                         padding: '9px 16px', cursor: 'pointer', alignItems: 'center', gap: '8px',
                       }}
                     >
-                      <MessageCircle size={15} /> {comments.length > 0 ? comments.length.toLocaleString() : ''} Comments
+                      <MessageCircle size={15} /> {commentTotal > 0 ? commentTotal.toLocaleString() : ''} Comments
                     </button>
                   </div>
                 </div>
@@ -1439,6 +1527,20 @@ export default function KaTubeWatchPage() {
                           </div>
                         ))}
                       </div>
+                    )}
+                    {!accuracyLoading && accuracyReviews.length < accuracyTotal && (
+                      <button
+                        onClick={loadOlderReviews}
+                        disabled={olderReviewsLoading}
+                        style={{
+                          marginTop: '12px', fontSize: '12px', fontWeight: 700,
+                          cursor: olderReviewsLoading ? 'default' : 'pointer',
+                          color: 'var(--text-secondary)', background: 'var(--bg-card)',
+                          border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 16px',
+                        }}
+                      >
+                        {olderReviewsLoading ? 'Loading…' : `Load older reviews (${accuracyReviews.length}/${accuracyTotal.toLocaleString()})`}
+                      </button>
                     )}
                   </div>
                 )}

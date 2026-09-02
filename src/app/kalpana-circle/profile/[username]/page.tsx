@@ -26,6 +26,9 @@ import {
 
 const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
 const PURPLE = '#7c3aed';
+// §139-A6 — grid page size for the §82 `.range()` + "Load more" pattern; 24
+// tiles = 8 rows of 3, matching the browse/songs pages' page size.
+const PROFILE_PAGE_SIZE = 24;
 
 interface ProfileRow {
   user_id: string;
@@ -91,6 +94,12 @@ export default function KCircleProfilePage() {
 
   const [posts, setPosts] = useState<GridPost[]>([]);
   const [likeTotal, setLikeTotal] = useState(0);
+  // §139-A6 — pagination state: true post total (count:'exact'), load-more
+  // flag, and whether likeTotal came from the exact aggregate RPC (when it
+  // didn't — RPC not deployed — later pages must keep adding their likes up).
+  const [postsTotal, setPostsTotal] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [likeTotalIsExact, setLikeTotalIsExact] = useState(false);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [lightbox, setLightbox] = useState<GridPost | null>(null);
@@ -111,6 +120,8 @@ export default function KCircleProfilePage() {
     if (!username) return;
     setLoaded(false);
     setNotFound(false);
+    setPostsTotal(null);
+    setLikeTotalIsExact(false);
 
     const { data: prof } = await supabase
       .from('creator_profiles')
@@ -126,16 +137,20 @@ export default function KCircleProfilePage() {
     }
     setProfile(prof);
 
-    const { data: postRows } = await supabase
+    // §139-A6 — first page of the grid only (used to fetch ALL of a user's
+    // posts, no limit). `count: 'exact'` returns the true posts total for the
+    // header stat in the same round trip.
+    const { data: postRows, count } = await supabase
       .from('kcircle_posts')
-      .select('id, image_url, image_urls, caption, created_at')
+      .select('id, image_url, image_urls, caption, created_at', { count: 'exact' })
       .eq('author_id', prof.user_id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(0, PROFILE_PAGE_SIZE - 1);
+    setPostsTotal(count ?? null);
 
     const ids = (postRows ?? []).map(p => p.id);
     const likesByPost = new Map<string, number>();
     const commentsByPost = new Map<string, number>();
-    let totalLikes = 0;
 
     if (ids.length) {
       const [{ data: likeRows }, { data: commentRows }] = await Promise.all([
@@ -144,11 +159,24 @@ export default function KCircleProfilePage() {
       ]);
       for (const r of likeRows ?? []) {
         likesByPost.set(r.post_id, (likesByPost.get(r.post_id) ?? 0) + 1);
-        totalLikes++;
       }
       for (const r of commentRows ?? []) {
         commentsByPost.set(r.post_id, (commentsByPost.get(r.post_id) ?? 0) + 1);
       }
+    }
+
+    // §139-A6 — header "Likes" stat: exact account-wide number via one
+    // aggregate RPC instead of shipping every kcircle_post_likes row for every
+    // post. If the RPC isn't deployed yet, fall back to summing the loaded
+    // pages' like counts (undercounts until more pages load).
+    let totalLikes: number;
+    const { data: statsRows, error: statsErr } = await supabase.rpc('kcircle_profile_stats', { p_user_id: prof.user_id });
+    const stats = Array.isArray(statsRows) ? (statsRows[0] as { like_count: number } | undefined) : undefined;
+    if (!statsErr && stats) {
+      totalLikes = Number(stats.like_count) || 0;
+      setLikeTotalIsExact(true);
+    } else {
+      totalLikes = [...likesByPost.values()].reduce((s, n) => s + n, 0);
     }
 
     setPosts((postRows ?? []).map(p => ({
@@ -159,6 +187,53 @@ export default function KCircleProfilePage() {
     setLikeTotal(totalLikes);
     setLoaded(true);
   }, [username]);
+
+  // §139-A6 — next grid page via the §82 `.range()` + "Load more" pattern.
+  // Offsets can shift when new posts land mid-view, so the append de-dupes by id.
+  const loadMorePosts = async () => {
+    if (!profile || loadingMore) return;
+    const total = postsTotal ?? posts.length;
+    if (posts.length >= total) return;
+    setLoadingMore(true);
+    const { data: postRows } = await supabase
+      .from('kcircle_posts')
+      .select('id, image_url, image_urls, caption, created_at')
+      .eq('author_id', profile.user_id)
+      .order('created_at', { ascending: false })
+      .range(posts.length, posts.length + PROFILE_PAGE_SIZE - 1);
+
+    const ids = (postRows ?? []).map(p => p.id);
+    const likesByPost = new Map<string, number>();
+    const commentsByPost = new Map<string, number>();
+    let pageLikes = 0;
+    if (ids.length) {
+      const [{ data: likeRows }, { data: commentRows }] = await Promise.all([
+        supabase.from('kcircle_post_likes').select('post_id').in('post_id', ids),
+        supabase.from('kcircle_post_comments').select('post_id').in('post_id', ids),
+      ]);
+      for (const r of likeRows ?? []) {
+        likesByPost.set(r.post_id, (likesByPost.get(r.post_id) ?? 0) + 1);
+        pageLikes++;
+      }
+      for (const r of commentRows ?? []) {
+        commentsByPost.set(r.post_id, (commentsByPost.get(r.post_id) ?? 0) + 1);
+      }
+    }
+
+    const known = new Set(posts.map(p => p.id));
+    setPosts(prev => [
+      ...prev,
+      ...(postRows ?? []).filter(p => !known.has(p.id)).map(p => ({
+        ...p,
+        likeCount: likesByPost.get(p.id) ?? 0,
+        commentCount: commentsByPost.get(p.id) ?? 0,
+      })),
+    ]);
+    // Fallback-stats mode only: the exact-RPC number already covers the whole
+    // account, so adding page likes on top of it would double-count.
+    if (!likeTotalIsExact) setLikeTotal(t => t + pageLikes);
+    setLoadingMore(false);
+  };
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetch on username change, same pattern as app/kalpana-circle/page.tsx's userId-driven fetch effects
   useEffect(() => { load(); }, [load]);
@@ -292,7 +367,7 @@ export default function KCircleProfilePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
             <Avatar name={profile.username} avatarUrl={profile.avatar_url} size={76} />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: '20px' }}>
-              <Stat value={posts.length} label="Posts" />
+              <Stat value={postsTotal ?? posts.length} label="Posts" />
               <Stat value={likeTotal} label="Likes" />
             </div>
           </div>
@@ -376,6 +451,21 @@ export default function KCircleProfilePage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+          {postsTotal !== null && posts.length < postsTotal && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '18px 0 8px' }}>
+              <button
+                onClick={loadMorePosts}
+                disabled={loadingMore}
+                style={{
+                  fontSize: '12px', fontWeight: 700, cursor: loadingMore ? 'default' : 'pointer',
+                  color: 'var(--text-secondary)', background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)', borderRadius: '20px', padding: '9px 18px',
+                }}
+              >
+                {loadingMore ? 'Loading…' : `Load more posts (${posts.length}/${postsTotal})`}
+              </button>
             </div>
           )}
         </div>

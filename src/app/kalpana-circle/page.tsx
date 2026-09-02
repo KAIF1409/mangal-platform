@@ -177,6 +177,9 @@ function KalpanaCircleInner() {
 
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, KComment[]>>({});
+  // §139-A5 — true comment count per post (from the page query's count:'exact'),
+  // so "View all N comments" stays accurate while only one page of comments ships.
+  const [commentTotals, setCommentTotals] = useState<Record<string, number>>({});
   const [commentDraft, setCommentDraft] = useState('');
   // Instagram-style: collapsed view shows only the most-liked preview
   // comment(s); tapping "View all N comments" expands to the full
@@ -375,10 +378,17 @@ function KalpanaCircleInner() {
   // ── load stories ──
   const loadStories = useCallback(async () => {
     setLoadingStories(true);
-    const { data: rows } = await supabase
+    // §139-A4 — the stories table has no expiry job, so it grows forever, and
+    // this fetch used to ship every row ever posted. Cap it at the 200 most
+    // recent stories (fetched newest-first), then flip back to chronological
+    // so the per-author grouping below is unchanged. 200 is far beyond any
+    // sane 24h story ring — this only bounds the pathological case.
+    const { data: rowsDesc } = await supabase
       .from('kcircle_stories').select('id, author_id, image_url, created_at, close_friends_only')
-      .order('created_at', { ascending: true });
-    if (!rows || rows.length === 0) { setStories([]); setLoadingStories(false); return; }
+      .order('created_at', { ascending: false })
+      .limit(200);
+    const rows = (rowsDesc ?? []).slice().reverse();
+    if (rows.length === 0) { setStories([]); setLoadingStories(false); return; }
 
     const authorIds = Array.from(new Set(rows.map(r => r.author_id)));
     const [profilesRes, viewsRes] = await Promise.all([
@@ -620,37 +630,65 @@ function KalpanaCircleInner() {
   };
 
   // ── comments ──
+  // §139-A5 — per-post comment pagination. Opening a post's comments used to
+  // fetch EVERY kcircle_post_comments row for that post; now the first
+  // COMMENT_PAGE_SIZE.kcircle rows load (newest page first, flipped to
+  // chronological) and "Load more" pulls the next older window via the §82
+  // `.range()` + "Load more" pattern. `count: 'exact'` on the same query
+  // keeps the true total for the "View all N comments" line.
+  const fetchCommentPage = useCallback(async (postId: string, from: number) => {
+    const { data: rows, count } = await supabase.from('kcircle_post_comments')
+      .select('id, post_id, author_id, text, created_at', { count: 'exact' })
+      .eq('post_id', postId)
+      .order('created_at', { ascending: false })
+      .range(from, from + COMMENT_PAGE_SIZE.kcircle - 1);
+    const chronological = (rows ?? []).slice().reverse();
+    const authorIds = Array.from(new Set(chronological.map(r => r.author_id)));
+    const commentIds = chronological.map(r => r.id);
+    const [profsRes, likesRes] = await Promise.all([
+      authorIds.length
+        ? supabase.from('creator_profiles').select('user_id, username, avatar_url').in('user_id', authorIds)
+        : Promise.resolve({ data: [] as { user_id: string; username: string; avatar_url: string | null }[] }),
+      commentIds.length
+        ? supabase.from('kcircle_post_comment_likes').select('comment_id, liker_id').in('comment_id', commentIds)
+        : Promise.resolve({ data: [] as { comment_id: string; liker_id: string }[] }),
+    ]);
+    const usernameMap = new Map((profsRes.data ?? []).map(p => [p.user_id, p.username]));
+    const avatarMap = new Map((profsRes.data ?? []).map(p => [p.user_id, p.avatar_url as string | null]));
+    const likeCounts = new Map<string, number>();
+    (likesRes.data ?? []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) ?? 0) + 1));
+    const myLikedIds = new Set((likesRes.data ?? []).filter(l => l.liker_id === userId).map(l => l.comment_id));
+    const mapped: KComment[] = chronological.map(r => ({
+      ...r,
+      author: { username: usernameMap.get(r.author_id) ?? 'dreamer', avatar_url: avatarMap.get(r.author_id) ?? null },
+      likes: likeCounts.get(r.id) ?? 0,
+      likedByMe: myLikedIds.has(r.id),
+    }));
+    return { mapped, total: count ?? chronological.length };
+  }, [userId]);
+
   const toggleComments = async (postId: string) => {
     if (openComments === postId) { setOpenComments(null); return; }
     setOpenComments(postId);
     if (!comments[postId]) {
-      const { data: rows } = await supabase.from('kcircle_post_comments')
-        .select('id, post_id, author_id, text, created_at').eq('post_id', postId).order('created_at', { ascending: true });
-      const authorIds = Array.from(new Set((rows ?? []).map(r => r.author_id)));
-      const commentIds = (rows ?? []).map(r => r.id);
-      const [profsRes, likesRes] = await Promise.all([
-        authorIds.length
-          ? supabase.from('creator_profiles').select('user_id, username, avatar_url').in('user_id', authorIds)
-          : Promise.resolve({ data: [] as { user_id: string; username: string; avatar_url: string | null }[] }),
-        commentIds.length
-          ? supabase.from('kcircle_post_comment_likes').select('comment_id, liker_id').in('comment_id', commentIds)
-          : Promise.resolve({ data: [] as { comment_id: string; liker_id: string }[] }),
-      ]);
-      const usernameMap = new Map((profsRes.data ?? []).map(p => [p.user_id, p.username]));
-      const avatarMap = new Map((profsRes.data ?? []).map(p => [p.user_id, p.avatar_url as string | null]));
-      const likeCounts = new Map<string, number>();
-      (likesRes.data ?? []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) ?? 0) + 1));
-      const myLikedIds = new Set((likesRes.data ?? []).filter(l => l.liker_id === userId).map(l => l.comment_id));
-      setComments(prev => ({
-        ...prev,
-        [postId]: (rows ?? []).map(r => ({
-          ...r,
-          author: { username: usernameMap.get(r.author_id) ?? 'dreamer', avatar_url: avatarMap.get(r.author_id) ?? null },
-          likes: likeCounts.get(r.id) ?? 0,
-          likedByMe: myLikedIds.has(r.id),
-        })),
-      }));
+      const { mapped, total } = await fetchCommentPage(postId, 0);
+      setComments(prev => ({ ...prev, [postId]: mapped }));
+      setCommentTotals(prev => ({ ...prev, [postId]: total }));
     }
+  };
+
+  // §139-A5 — next step for an expanded thread: fetch the next older window
+  // if any remains, and always widen the reveal window. Offset windows can
+  // overlap if new comments land mid-view, so the append de-dupes by id.
+  const loadMoreComments = async (postId: string) => {
+    const loaded = comments[postId] ?? [];
+    const total = commentTotals[postId] ?? loaded.length;
+    if (loaded.length < total) {
+      const { mapped } = await fetchCommentPage(postId, loaded.length);
+      const known = new Set(loaded.map(c => c.id));
+      setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), ...mapped.filter(c => !known.has(c.id))] }));
+    }
+    setCommentsVisibleCount(prev => ({ ...prev, [postId]: (prev[postId] ?? COMMENT_PAGE_SIZE.kcircle) + COMMENT_PAGE_SIZE.kcircle }));
   };
 
   const submitComment = async (postId: string) => {
@@ -663,6 +701,7 @@ function KalpanaCircleInner() {
     if (!error && data) {
       setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), { ...data, author: { username: myUsername ?? 'you', avatar_url: myAvatarUrl }, likes: 0, likedByMe: false }] }));
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p));
+      setCommentTotals(prev => ({ ...prev, [postId]: (prev[postId] ?? 0) + 1 }));
       const owner = posts.find(p => p.id === postId)?.author_id;
       if (owner) notify(owner, 'comment', { post_id: postId, preview: text.slice(0, 80) });
     }
@@ -1596,17 +1635,20 @@ function KalpanaCircleInner() {
                   const postComments = comments[post.id] ?? [];
                   const isExpanded = expandedComments.has(post.id);
                   const visibleCount = commentsVisibleCount[post.id] ?? COMMENT_PAGE_SIZE.kcircle;
+                  // §139-A5 — only one page of comments is fetched at a time;
+                  // the true total lives in commentTotals, so counts stay right.
+                  const totalComments = commentTotals[post.id] ?? postComments.length;
                   const shown = isExpanded
                     ? postComments.slice(0, visibleCount)
                     : instagramPreviewComments(postComments, c => c.likes, c => c.created_at, 2);
                   return (
                     <>
-                      {!isExpanded && postComments.length > shown.length && (
+                      {!isExpanded && totalComments > shown.length && (
                         <button
                           onClick={() => setExpandedComments(prev => new Set(prev).add(post.id))}
                           style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '8px', display: 'block' }}
                         >
-                          View all {postComments.length} comments
+                          View all {totalComments} comments
                         </button>
                       )}
                       {shown.map(c => (
@@ -1630,9 +1672,9 @@ function KalpanaCircleInner() {
                           </div>
                         </div>
                       ))}
-                      {isExpanded && postComments.length > visibleCount && (
+                      {isExpanded && shown.length < totalComments && (
                         <button
-                          onClick={() => setCommentsVisibleCount(prev => ({ ...prev, [post.id]: visibleCount + COMMENT_PAGE_SIZE.kcircle }))}
+                          onClick={() => loadMoreComments(post.id)}
                           style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '8px', display: 'block' }}
                         >
                           Load more comments

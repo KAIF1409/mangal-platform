@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, use } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, use } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { parseChapterContent, estimateReadTime } from '../../../lib/novelEditor';
@@ -633,52 +633,104 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     setReactionLoading(false);
   };
 
-  // Step 5 — Load all comments + replies in one query, then nest replies under parents.
-  useEffect(() => {
-    let cancelled = false;
-    const loadComments = async () => {
-      setCommentsLoading(true);
-      const { data } = await supabase
-        .from('comments')
-        .select('id, reader_id, body, created_at, parent_id, profiles(full_name)')
-        .eq('chapter_id', chapterId)
-        .order('created_at', { ascending: true });
-      if (cancelled) return;
-      if (data) {
-        const commentIds = data.map((r: CommentQueryRow) => r.id);
-        const { data: likeRows } = commentIds.length
-          ? await supabase.from('chapter_comment_likes').select('comment_id, liker_id').in('comment_id', commentIds)
-          : { data: [] as { comment_id: string; liker_id: string }[] };
-        const likeCounts = new Map<string, number>();
-        (likeRows || []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) || 0) + 1));
-        const myLikedIds = new Set((likeRows || []).filter(l => l.liker_id === userId).map(l => l.comment_id));
+  // Step 5 — Load comments: newest page of top-level comments + their replies
+  // (joined in one batched query), nested one level deep.
+  // §139-A9 — this used to fetch EVERY comment + reply row for the chapter in
+  // one unbounded query. It now pages top-level comments via the §82
+  // `.range()` + "Load more" pattern (COMMENT_PAGE_SIZE.webmangal per page,
+  // newest page first), each page's replies joined in a single batched
+  // `in('parent_id', …)` query. Older pages load via loadOlderComments().
+  // Because pages are fetched per-parent, a reply always arrives on the same
+  // page as its parent — the old "orphan reply" problem can't occur.
+  const [topLevelTotal, setTopLevelTotal] = useState(0);
+  const [olderCommentsLoading, setOlderCommentsLoading] = useState(false);
 
-        const flat: CommentRow[] = data.map((r: CommentQueryRow) => ({
-          id: r.id,
-          reader_id: r.reader_id,
-          body: r.body,
-          created_at: r.created_at,
-          parent_id: r.parent_id || null,
-          full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader',
-          replies: [],
-          likes: likeCounts.get(r.id) || 0,
-          likedByMe: myLikedIds.has(r.id),
-        }));
-        // Nest replies one level deep
-        const topLevel: CommentRow[] = [];
-        const byId: Record<string, CommentRow> = {};
-        flat.forEach(c => { byId[c.id] = c; });
-        flat.forEach(c => {
-          if (c.parent_id && byId[c.parent_id]) byId[c.parent_id].replies!.push(c);
-          else topLevel.push(c);
-        });
-        setComments(topLevel);
-      }
-      setCommentsLoading(false);
-    };
-    loadComments();
-    return () => { cancelled = true; };
+  const loadCommentPage = useCallback(async (from: number): Promise<{ threads: CommentRow[]; count: number | null }> => {
+    const { data: parentRows, count } = await supabase
+      .from('comments')
+      .select('id, reader_id, body, created_at, parent_id, profiles(full_name)', { count: 'exact' })
+      .eq('chapter_id', chapterId)
+      .is('parent_id', null)
+      .order('created_at', { ascending: false })
+      .range(from, from + COMMENT_PAGE_SIZE.webmangal - 1);
+    const parents = (parentRows ?? []) as CommentQueryRow[];
+    const parentIds = parents.map(r => r.id);
+
+    const { data: replyRows } = parentIds.length
+      ? await supabase
+          .from('comments')
+          .select('id, reader_id, body, created_at, parent_id, profiles(full_name)')
+          .in('parent_id', parentIds)
+          .order('created_at', { ascending: true })
+      : { data: [] as CommentQueryRow[] | null };
+    const replies = (replyRows ?? []) as CommentQueryRow[];
+
+    const allIds = [...parentIds, ...replies.map(r => r.id)];
+    const { data: likeRows } = allIds.length
+      ? await supabase.from('chapter_comment_likes').select('comment_id, liker_id').in('comment_id', allIds)
+      : { data: [] as { comment_id: string; liker_id: string }[] };
+    const likeCounts = new Map<string, number>();
+    (likeRows || []).forEach(l => likeCounts.set(l.comment_id, (likeCounts.get(l.comment_id) || 0) + 1));
+    const myLikedIds = new Set((likeRows || []).filter(l => l.liker_id === userId).map(l => l.comment_id));
+
+    const toRow = (r: CommentQueryRow): CommentRow => ({
+      id: r.id,
+      reader_id: r.reader_id,
+      body: r.body,
+      created_at: r.created_at,
+      parent_id: r.parent_id || null,
+      full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader',
+      replies: [],
+      likes: likeCounts.get(r.id) || 0,
+      likedByMe: myLikedIds.has(r.id),
+    });
+
+    const threads = parents.map(toRow);
+    const repliesByParent = new Map<string, CommentRow[]>();
+    replies.forEach(r => {
+      if (!r.parent_id) return;
+      const list = repliesByParent.get(r.parent_id) ?? [];
+      list.push(toRow(r));
+      repliesByParent.set(r.parent_id, list);
+    });
+    threads.forEach(p => { p.replies = repliesByParent.get(p.id) ?? []; });
+
+    return { threads, count: typeof count === 'number' ? count : null };
   }, [chapterId, userId]);
+
+  const applyCommentPage = useCallback((page: { threads: CommentRow[]; count: number | null }, append: boolean) => {
+    if (append) {
+      // Offset windows can shift if new comments land mid-view — de-dupe by id.
+      setComments(prev => {
+        const known = new Set(prev.map(c => c.id));
+        return [...prev, ...page.threads.filter(p => !known.has(p.id))];
+      });
+    } else {
+      setComments(page.threads);
+    }
+    if (page.count !== null) setTopLevelTotal(page.count);
+  }, []);
+
+  useEffect(() => {
+    let stale = false;
+    (async () => {
+      setCommentsLoading(true);
+      const page = await loadCommentPage(0);
+      if (stale) return;
+      applyCommentPage(page, false);
+      setCommentsLoading(false);
+    })();
+    return () => { stale = true; };
+  }, [loadCommentPage, applyCommentPage]);
+
+  // §139-A9 — next older page of top-level comments (+ their replies).
+  const loadOlderComments = async () => {
+    if (olderCommentsLoading || comments.length >= topLevelTotal) return;
+    setOlderCommentsLoading(true);
+    const page = await loadCommentPage(comments.length);
+    applyCommentPage(page, true);
+    setOlderCommentsLoading(false);
+  };
 
   // Step 4 — Submit a top-level comment.
   const handleCommentSubmit = async () => {
@@ -698,6 +750,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader', replies: [],
         likes: 0, likedByMe: false,
       }]);
+      setTopLevelTotal(t => t + 1);
       setCommentBody('');
     }
     setCommentSubmitting(false);
@@ -2313,6 +2366,20 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 </button>
               ) : null;
             })()}
+            {!commentsLoading && topLevelTotal > comments.length && (
+              <button
+                onClick={loadOlderComments}
+                disabled={olderCommentsLoading}
+                style={{
+                  marginTop: '10px', fontSize: '12px', fontWeight: 700,
+                  cursor: olderCommentsLoading ? 'default' : 'pointer',
+                  color: 'var(--text-secondary)', background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)', borderRadius: '20px', padding: '9px 18px',
+                }}
+              >
+                {olderCommentsLoading ? 'Loading…' : `Load older comments (${comments.length}/${topLevelTotal})`}
+              </button>
+            )}
           </div>
         </div>
       )}

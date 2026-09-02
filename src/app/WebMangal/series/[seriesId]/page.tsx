@@ -9,6 +9,7 @@ import ProfileMenu from '../../../components/shared/ProfileMenu';
 import ReportButton from '../../../components/webmangal/ReportButton';
 import ShareButton from '../../../components/webmangal/ShareButton';
 import { canManageSeries, isDeveloperRole } from '../../../lib/auth/roles';
+import { REVIEW_PAGE_SIZE } from '../../../lib/commentRanking';
 import { estimateReadTime } from '../../../lib/novelEditor';
 import { deleteMediaFiles } from '../../../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
@@ -108,6 +109,10 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
     review_helpful_votes: { count: number }[] | { count: number } | null;
   }
   const [reviews, setReviews] = useState<Review[]>([]);
+  // §139-A10 — written-review pagination state: true total (count:'exact')
+  // + load-more flag. The list used to fetch every review ever written.
+  const [reviewsTotal, setReviewsTotal] = useState<number | null>(null);
+  const [loadingMoreReviews, setLoadingMoreReviews] = useState(false);
   const [myVotedHelpful, setMyVotedHelpful] = useState<Set<string>>(new Set());
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewText, setReviewText] = useState('');
@@ -230,12 +235,17 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         // Step 26 — Written reviews: only rows with actual review text, newest
         // first. Helpful count via embedded aggregate, same no-N+1 pattern used
         // for chapter counts and tag counts elsewhere.
+        // §139-A10 — paginated: newest REVIEW_PAGE_SIZE.webmangal window only
+        // (this used to fetch every review ever written for the series);
+        // older windows load on demand. count:'exact' keeps the header total
+        // true in the same round trip.
         supabase
           .from('ratings')
-          .select('id, reader_id, stars, review_title, review_text, created_at, profiles(full_name), review_helpful_votes(count)')
+          .select('id, reader_id, stars, review_title, review_text, created_at, profiles(full_name), review_helpful_votes(count)', { count: 'exact' })
           .eq('series_id', seriesId)
           .not('review_text', 'is', null)
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .range(0, REVIEW_PAGE_SIZE.webmangal - 1),
         // Step 27 — Readers Also Liked
         supabase.rpc('related_series', { target_series_id: seriesId, result_limit: 6 }),
       ]);
@@ -268,6 +278,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           helpful_count: Array.isArray(r.review_helpful_votes) ? (r.review_helpful_votes[0]?.count ?? 0) : 0,
         }));
         setReviews(mapped);
+        if (typeof reviewRowsRes.count === 'number') setReviewsTotal(reviewRowsRes.count);
       }
 
       if (relatedRes.data) setRelatedSeries(relatedRes.data as Series[]);
@@ -480,6 +491,45 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   };
 
   // Step 26 — Written Reviews
+  // §139-A10 — shared page fetcher so the initial load, the post-submit
+  // refetch and "Load more" all use the same paginated query shape.
+  const mapReviewRows = (rows: ReviewQueryRow[]): Review[] => rows.map((r: ReviewQueryRow) => ({
+    id: r.id,
+    reader_id: r.reader_id,
+    stars: r.stars,
+    review_title: r.review_title,
+    review_text: r.review_text,
+    created_at: r.created_at,
+    full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader',
+    helpful_count: Array.isArray(r.review_helpful_votes) ? (r.review_helpful_votes[0]?.count ?? 0) : 0,
+  }));
+
+  const fetchReviewsPage = async (from: number): Promise<{ reviews: Review[]; count: number | null }> => {
+    const { data, count } = await supabase
+      .from('ratings')
+      .select('id, reader_id, stars, review_title, review_text, created_at, profiles(full_name), review_helpful_votes(count)', { count: 'exact' })
+      .eq('series_id', seriesId)
+      .not('review_text', 'is', null)
+      .order('created_at', { ascending: false })
+      .range(from, from + REVIEW_PAGE_SIZE.webmangal - 1);
+    return { reviews: mapReviewRows((data ?? []) as ReviewQueryRow[]), count: typeof count === 'number' ? count : null };
+  };
+
+  const loadMoreReviews = async () => {
+    if (loadingMoreReviews) return;
+    const total = reviewsTotal ?? reviews.length;
+    if (reviews.length >= total) return;
+    setLoadingMoreReviews(true);
+    const page = await fetchReviewsPage(reviews.length);
+    setReviews(prev => {
+      // Offset windows can shift if new reviews land mid-view — de-dupe by id.
+      const known = new Set(prev.map(r => r.id));
+      return [...prev, ...page.reviews.filter(r => !known.has(r.id))];
+    });
+    if (page.count !== null) setReviewsTotal(page.count);
+    setLoadingMoreReviews(false);
+  };
+
   const submitReview = async () => {
     if (!user) { setPostLoginRedirect(window.location.pathname); window.location.assign('/login'); return; }
     if (!myRating) return; // must rate before/along with reviewing
@@ -498,25 +548,11 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
     setReviewSubmitting(false);
     if (!error) {
       setShowReviewForm(false);
-      const { data: reviewRows } = await supabase
-        .from('ratings')
-        .select('id, reader_id, stars, review_title, review_text, created_at, profiles(full_name), review_helpful_votes(count)')
-        .eq('series_id', seriesId)
-        .not('review_text', 'is', null)
-        .order('created_at', { ascending: false });
-      if (reviewRows) {
-        const mapped: Review[] = reviewRows.map((r: ReviewQueryRow) => ({
-          id: r.id,
-          reader_id: r.reader_id,
-          stars: r.stars,
-          review_title: r.review_title,
-          review_text: r.review_text,
-          created_at: r.created_at,
-          full_name: (Array.isArray(r.profiles) ? r.profiles[0]?.full_name : r.profiles?.full_name) || 'Reader',
-          helpful_count: Array.isArray(r.review_helpful_votes) ? (r.review_helpful_votes[0]?.count ?? 0) : 0,
-        }));
-        setReviews(mapped);
-      }
+      // §139-A10 — refetch just the newest page (this used to refetch every
+      // review ever written for the series).
+      const page = await fetchReviewsPage(0);
+      setReviews(page.reviews);
+      if (page.count !== null) setReviewsTotal(page.count);
     }
   };
 
@@ -1438,7 +1474,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         <section style={{ padding: '48px 0 40px', borderTop: '1px solid var(--border-color)', marginTop: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: '10px', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-              Reviews {reviews.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({reviews.length})</span>}
+              Reviews {(reviewsTotal ?? reviews.length) > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({reviewsTotal ?? reviews.length})</span>}
             </h2>
             {user && !showReviewForm && (
               <button
@@ -1545,6 +1581,20 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   </button>
                 </div>
               ))}
+              {reviewsTotal !== null && reviews.length < reviewsTotal && (
+                <button
+                  onClick={loadMoreReviews}
+                  disabled={loadingMoreReviews}
+                  style={{
+                    alignSelf: 'center', marginTop: '4px', fontSize: '12px', fontWeight: 700,
+                    cursor: loadingMoreReviews ? 'default' : 'pointer',
+                    color: 'var(--text-secondary)', background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)', borderRadius: '20px', padding: '9px 18px',
+                  }}
+                >
+                  {loadingMoreReviews ? 'Loading…' : `Load more reviews (${reviews.length}/${reviewsTotal})`}
+                </button>
+              )}
             </div>
           )}
         </section>

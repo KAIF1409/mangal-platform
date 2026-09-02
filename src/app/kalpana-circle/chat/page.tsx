@@ -26,6 +26,10 @@ import { Camera, X, Paperclip, ArrowLeft, ArrowRight, Lock } from 'lucide-react'
 
 const RADIANT = 'linear-gradient(135deg, #71717a 0%, #d4d4d8 45%, #f4f4f5 60%, #a1a1aa 100%)';
 const MAX_GROUP_MEMBERS = 20;
+// §139-A2 — how many messages a thread loads initially / per "Load earlier"
+// click. Same page size across chat surfaces (chat page, watch-together
+// threads) so the cursor pattern stays consistent.
+const THREAD_MESSAGE_PAGE = 50;
 
 function initials(name: string) { return name.slice(0, 2).toUpperCase(); }
 
@@ -122,6 +126,14 @@ function KCircleChatPageInner() {
   const [loadingList, setLoadingList] = useState(true);
   const [active, setActive] = useState<ConversationRow | null>(null);
   const [messages, setMessages] = useState<MessageRow[]>([]);
+  // §139-A2 — thread pagination. Threads used to load EVERY message on open
+  // (unbounded — the Creator Lounge group chat grows forever). Now the latest
+  // THREAD_MESSAGE_PAGE load on open, older pages load on demand via the
+  // "Load earlier messages" button (cursor = created_at of the oldest row
+  // currently held; Realtime only ever APPENDS new rows at the tail, so the
+  // cursor stays valid as the view is open).
+  const [hasEarlier, setHasEarlier] = useState(false);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [draft, setDraft] = useState('');
   const [attachFile, setAttachFile] = useState<File | null>(null);
   const [attachPreview, setAttachPreview] = useState<string | null>(null);
@@ -209,13 +221,26 @@ function KCircleChatPageInner() {
       : { data: [] as { user_id: string; username: string }[] };
     const usernameMap = new Map((profiles ?? []).map(p => [p.user_id, p.username]));
 
-    const { data: lastMessages } = await supabase.from('kcircle_messages').select('conversation_id, text, attachment_url, created_at').in('conversation_id', convoIds).order('created_at', { ascending: false });
+    // §139-A1 — used to fetch EVERY kcircle_messages row in every conversation
+    // the user belongs to (`.in(...)` + no limit) just to derive each thread's
+    // latest-message preview — the whole DM/group history shipped on every
+    // chat open, forever growing. Now a single DISTINCT-ON RPC returns exactly
+    // one row per conversation. If the RPC isn't deployed yet (older DB),
+    // fall back to the old client-side derivation so the page keeps working.
     const lastByConvo = new Map<string, { text: string; created_at: string }>();
-    (lastMessages ?? []).forEach(m => {
-      if (!lastByConvo.has(m.conversation_id)) {
+    const { data: latestRows, error: latestErr } = await supabase.rpc('kcircle_latest_messages', { p_conversation_ids: convoIds });
+    if (!latestErr && latestRows) {
+      (latestRows as { conversation_id: string; text: string | null; attachment_url: string | null; created_at: string }[]).forEach(m => {
         lastByConvo.set(m.conversation_id, { text: m.text ?? (m.attachment_url ? 'Photo' : ''), created_at: m.created_at });
-      }
-    });
+      });
+    } else {
+      const { data: lastMessages } = await supabase.from('kcircle_messages').select('conversation_id, text, attachment_url, created_at').in('conversation_id', convoIds).order('created_at', { ascending: false });
+      (lastMessages ?? []).forEach(m => {
+        if (!lastByConvo.has(m.conversation_id)) {
+          lastByConvo.set(m.conversation_id, { text: m.text ?? (m.attachment_url ? 'Photo' : ''), created_at: m.created_at });
+        }
+      });
+    }
 
     const rows: ConversationRow[] = convoIds.map(id => {
       const meta = metaById.get(id);
@@ -258,10 +283,37 @@ function KCircleChatPageInner() {
   }, [loadingList, conversations, searchParams]);
 
   const loadMessages = useCallback(async (conversationId: string) => {
-    const { data } = await supabase.from('kcircle_messages').select('id, conversation_id, sender_id, text, attachment_url, attachment_type, short_ref_id, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: true });
-    setMessages(data ?? []);
+    // §139-A2 — latest page only (desc fetch flipped to chronological order)
+    // instead of the whole thread; older pages come in via loadEarlier().
+    const { data } = await supabase.from('kcircle_messages').select('id, conversation_id, sender_id, text, attachment_url, attachment_type, short_ref_id, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: false }).limit(THREAD_MESSAGE_PAGE);
+    const rows = (data ?? []).slice().reverse();
+    setMessages(rows);
+    setHasEarlier((data ?? []).length === THREAD_MESSAGE_PAGE);
     setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
   }, []);
+
+  // §139-A2 — fetch the next older page of the open thread. Cursor is the
+  // created_at of the oldest message currently held (new rows only ever append
+  // after it via Realtime, so it never shifts underneath this fetch). Rows
+  // come back newest-first and are flipped before prepending; scroll anchor
+  // keeps the viewport on the same messages instead of jumping.
+  const loadEarlier = useCallback(async () => {
+    if (!active || loadingEarlier || messages.length === 0) return;
+    const oldest = messages[0];
+    setLoadingEarlier(true);
+    const { data } = await supabase.from('kcircle_messages').select('id, conversation_id, sender_id, text, attachment_url, attachment_type, short_ref_id, created_at')
+      .eq('conversation_id', active.id)
+      .lt('created_at', oldest.created_at)
+      .order('created_at', { ascending: false })
+      .limit(THREAD_MESSAGE_PAGE);
+    const rows = (data ?? []).slice().reverse();
+    const el = scrollRef.current;
+    const prevHeight = el?.scrollHeight ?? 0;
+    setMessages(prev => [...rows, ...prev]);
+    setHasEarlier((data ?? []).length === THREAD_MESSAGE_PAGE);
+    setLoadingEarlier(false);
+    setTimeout(() => { if (el) el.scrollTo({ top: el.scrollHeight - prevHeight }); }, 50);
+  }, [active, loadingEarlier, messages]);
 
   // ── open-thread messages: Supabase Realtime, not polling ──
   // Was `setInterval(() => loadMessages(active.id), 3000)` — up to 3s of
@@ -818,6 +870,18 @@ function KCircleChatPageInner() {
       ) : (
         <>
           <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '14px', maxWidth: '640px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+            {hasEarlier && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
+                <button
+                  onClick={loadEarlier}
+                  disabled={loadingEarlier}
+                  style={{
+                    fontSize: '11.5px', fontWeight: 700, padding: '6px 14px', borderRadius: '999px', cursor: loadingEarlier ? 'default' : 'pointer',
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)',
+                  }}
+                >{loadingEarlier ? 'Loading…' : 'Load earlier messages'}</button>
+              </div>
+            )}
             {messages.map(m => {
               const mine = m.sender_id === userId;
               return (

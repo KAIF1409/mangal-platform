@@ -81,3 +81,13 @@ export const COMMENT_PAGE_SIZE = {
   // unbounded — increases by the same amount on further "Load more" taps
   webmangal: 15, // Webnovel-style review/comment pages load in small pages
 } as const;
+
+// §139-A8/A10 — fetch page sizes for the two *review* lists (KaTube accuracy
+// reviews, WebMangal written reviews). These were unbounded fetches like the
+// comment sections above; they now use the same §82 `.range()` + "Load more"
+// pattern as the browse/songs lists, so they get their own size constants.
+export const REVIEW_PAGE_SIZE = {
+  katube: 20,
+  webmangal: 10,
+} as const;
+

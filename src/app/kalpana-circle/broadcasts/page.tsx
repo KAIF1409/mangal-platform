@@ -90,18 +90,27 @@ export default function BroadcastDiscoveryPage() {
     const creatorIds = Array.from(new Set(convos.map(c => c.created_by)));
     const convoIds = convos.map(c => c.id);
 
-    const [profilesRes, messagesRes] = await Promise.all([
-      supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds),
-      supabase.from('kcircle_messages').select('conversation_id, text, created_at')
-        .in('conversation_id', convoIds).order('created_at', { ascending: false }),
-    ]);
+    // §139-A3 — same fix as the chat list (§139-A1): every kcircle_messages
+    // row in every broadcast channel used to ship just to render one preview
+    // line per channel. One DISTINCT-ON RPC instead, with the same fallback
+    // for deployments that don't have the RPC yet.
+    let latestRows: { conversation_id: string; text: string | null; created_at: string }[] | null = null;
+    const { data: rpcRows, error: rpcErr } = await supabase.rpc('kcircle_latest_messages', { p_conversation_ids: convoIds });
+    if (!rpcErr && rpcRows) {
+      latestRows = rpcRows as { conversation_id: string; text: string | null; created_at: string }[];
+    } else {
+      const { data } = await supabase.from('kcircle_messages').select('conversation_id, text, created_at')
+        .in('conversation_id', convoIds).order('created_at', { ascending: false });
+      latestRows = data;
+    }
 
-    const usernameMap = new Map((profilesRes.data ?? []).map(p => [p.user_id, p.username]));
+    const { data: profileRows } = await supabase.from('creator_profiles').select('user_id, username').in('user_id', creatorIds);
+    const usernameMap = new Map((profileRows ?? []).map(p => [p.user_id, p.username]));
 
     // Keep only the newest message per conversation — rows are already
     // sorted newest-first, so the first hit for a conversation id wins.
-    const latestByConvo = new Map<string, { text: string; created_at: string }>();
-    (messagesRes.data ?? []).forEach(m => {
+    const latestByConvo = new Map<string, { text: string | null; created_at: string }>();
+    (latestRows ?? []).forEach(m => {
       if (!latestByConvo.has(m.conversation_id)) {
         latestByConvo.set(m.conversation_id, { text: m.text, created_at: m.created_at });
       }

@@ -23,6 +23,10 @@ import {
 // here instead.
 
 const RADIANT_SOLID = '#7c3aed';
+// §139-A12 — watch-thread history pagination size (same pattern/page size as
+// the chat page's THREAD_MESSAGE_PAGE — kept local since the two files are
+// separate route modules; the value matches so both surfaces behave alike).
+const THREAD_MESSAGE_PAGE = 50;
 
 type RoomMode = 'video' | 'shorts';
 
@@ -527,25 +531,59 @@ function WatchThreadModal({ threadId, userId, onClose }: { threadId: string; use
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // §139-A12 — same thread pagination as the chat page (§139-A2): latest page
+  // on open, older pages on demand. This modal is labelled "full history", so
+  // the older page loader keeps that true — just on demand instead of all at
+  // once on every open.
+  const [hasEarlier, setHasEarlier] = useState(false);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
+
+  // Shared per-page assembly: filter hidden rows, resolve sender names, map
+  // to ThreadMessage. Used by both the initial load and loadEarlier().
+  const assemble = useCallback(async (rows: { id: string; sender_id: string; text: string | null; short_ref_id: string | null; created_at: string }[], hiddenIds: Set<string>) => {
+    const visible = rows.filter(r => !hiddenIds.has(r.id));
+    const senderIds = [...new Set(visible.map(r => r.sender_id))];
+    const { data: profiles } = senderIds.length > 0 ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', senderIds) : { data: [] as { user_id: string; username: string }[] };
+    const nameMap = new Map((profiles ?? []).map(p => [p.user_id, p.username]));
+    return visible.map(r => ({ ...r, senderName: r.sender_id === userId ? 'You' : (nameMap.get(r.sender_id) ?? 'someone') }));
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const [{ data: rows }, { data: hidden }] = await Promise.all([
-        supabase.from('kcircle_messages').select('id, sender_id, text, short_ref_id, created_at').eq('conversation_id', threadId).order('created_at', { ascending: true }),
+        supabase.from('kcircle_messages').select('id, sender_id, text, short_ref_id, created_at').eq('conversation_id', threadId).order('created_at', { ascending: false }).limit(THREAD_MESSAGE_PAGE),
         supabase.from('kcircle_message_hidden_for').select('message_id').eq('user_id', userId),
       ]);
       if (cancelled || !rows) return;
       const hiddenIds = new Set((hidden ?? []).map(h => h.message_id));
-      const visible = rows.filter(r => !hiddenIds.has(r.id));
-      const senderIds = [...new Set(visible.map(r => r.sender_id))];
-      const { data: profiles } = senderIds.length > 0 ? await supabase.from('creator_profiles').select('user_id, username').in('user_id', senderIds) : { data: [] as { user_id: string; username: string }[] };
-      const nameMap = new Map((profiles ?? []).map(p => [p.user_id, p.username]));
-      if (!cancelled) setMessages(visible.map(r => ({ ...r, senderName: r.sender_id === userId ? 'You' : (nameMap.get(r.sender_id) ?? 'someone') })));
+      const mapped = await assemble(rows, hiddenIds);
+      if (!cancelled) setMessages(mapped);
+      // Page-emptied-by-hides edge: a full page of hidden rows would set
+      // hasEarlier=false despite older messages existing. Acceptable — the
+      // "Load earlier" button just won't show for that extreme case.
+      if (!cancelled) setHasEarlier(rows.length === THREAD_MESSAGE_PAGE);
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [threadId, userId]);
+  }, [threadId, userId, assemble]);
+
+  async function loadEarlier() {
+    if (loadingEarlier || messages.length === 0) return;
+    const oldest = messages[0];
+    setLoadingEarlier(true);
+    const [{ data: rows }, { data: hidden }] = await Promise.all([
+      supabase.from('kcircle_messages').select('id, sender_id, text, short_ref_id, created_at').eq('conversation_id', threadId).lt('created_at', oldest.created_at).order('created_at', { ascending: false }).limit(THREAD_MESSAGE_PAGE),
+      supabase.from('kcircle_message_hidden_for').select('message_id').eq('user_id', userId),
+    ]);
+    if (rows) {
+      const hiddenIds = new Set((hidden ?? []).map(h => h.message_id));
+      const mapped = await assemble(rows, hiddenIds);
+      setMessages(prev => [...mapped, ...prev]);
+      setHasEarlier(rows.length === THREAD_MESSAGE_PAGE);
+    }
+    setLoadingEarlier(false);
+  }
 
   async function deleteForMe(messageId: string) {
     setBusyId(messageId);
@@ -573,7 +611,19 @@ function WatchThreadModal({ threadId, userId, onClose }: { threadId: string; use
             <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>Loading...</p>
           ) : messages.length === 0 ? (
             <p style={{ fontSize: '12.5px', color: 'var(--text-tertiary)' }}>No messages here.</p>
-          ) : messages.map(m => (
+          ) : (
+            <>
+              {hasEarlier && (
+                <button
+                  onClick={loadEarlier}
+                  disabled={loadingEarlier}
+                  style={{
+                    fontSize: '11.5px', fontWeight: 700, padding: '6px 14px', borderRadius: '999px', cursor: loadingEarlier ? 'default' : 'pointer',
+                    background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', alignSelf: 'center',
+                  }}
+                >{loadingEarlier ? 'Loading…' : 'Load earlier messages'}</button>
+              )}
+              {messages.map(m => (
             <div key={m.id} style={{ fontSize: '13px' }}>
               {m.short_ref_id && (
                 <Link href={`/katube/shorts/${m.short_ref_id}`} style={{ display: 'block', fontSize: '10.5px', color: 'var(--text-tertiary)', marginBottom: '2px', textDecoration: 'none' }}>
@@ -588,6 +638,8 @@ function WatchThreadModal({ threadId, userId, onClose }: { threadId: string; use
               </div>
             </div>
           ))}
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -35,12 +35,20 @@ const defaultActionState = (): ActionState => ({
   removed: false, banned: false,
 });
 
+// §139-A11 — page size for the §82 `.range()` + "Load more" pattern. The
+// reports table only ever grows, and this page used to fetch every report
+// ever filed on every visit; admin-only doesn't make that unbounded list OK.
+const REPORTS_PAGE_SIZE = 50;
+
 export default function AdminReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [filter, setFilter] = useState<'all' | 'open' | 'reviewed' | 'dismissed'>('open');
   const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
+  // §139-A11 — true total (count:'exact') + load-more flag.
+  const [reportsTotal, setReportsTotal] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -60,20 +68,48 @@ export default function AdminReportsPage() {
       }
       setAllowed(true);
 
-      const { data } = await supabase
+      // §139-A11 — newest page only; older pages load via loadMoreReports().
+      const { data, count } = await supabase
         .from('reports')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(0, REPORTS_PAGE_SIZE - 1);
       if (data) {
         setReports(data);
         const states: Record<string, ActionState> = {};
         data.forEach((r: Report) => { states[r.id] = defaultActionState(); });
         setActionStates(states);
       }
+      if (typeof count === 'number') setReportsTotal(count);
       setLoading(false);
     };
     load();
   }, []);
+
+  // §139-A11 — next page of reports. Offsets can shift when new reports land
+  // mid-view, so the append de-dupes by id and registers fresh action states.
+  const loadMoreReports = async () => {
+    if (loadingMore) return;
+    const total = reportsTotal ?? reports.length;
+    if (reports.length >= total) return;
+    setLoadingMore(true);
+    const { data } = await supabase
+      .from('reports')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(reports.length, reports.length + REPORTS_PAGE_SIZE - 1);
+    if (data && data.length > 0) {
+      const known = new Set(reports.map(r => r.id));
+      const fresh = (data as Report[]).filter(r => !known.has(r.id));
+      setReports(rs => [...rs, ...fresh]);
+      setActionStates(prev => {
+        const next = { ...prev };
+        fresh.forEach(r => { if (!next[r.id]) next[r.id] = defaultActionState(); });
+        return next;
+      });
+    }
+    setLoadingMore(false);
+  };
 
   const patchAction = (id: string, patch: Partial<ActionState>) =>
     setActionStates(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }));
@@ -218,7 +254,7 @@ export default function AdminReportsPage() {
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '8px' }}><Flag size={20} strokeWidth={2} /> Reports</h1>
         <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', margin: '0 0 24px' }}>
-          {reports.filter(r => r.status === 'open').length} open &middot; {reports.length} total
+          {reports.filter(r => r.status === 'open').length} open &middot; {reportsTotal ?? reports.length} total
         </p>
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
@@ -400,6 +436,20 @@ export default function AdminReportsPage() {
                 </div>
               );
             })}
+            {reportsTotal !== null && reports.length < reportsTotal && (
+              <button
+                onClick={loadMoreReports}
+                disabled={loadingMore}
+                style={{
+                  alignSelf: 'center', marginTop: '8px', fontSize: '12px', fontWeight: 700,
+                  cursor: loadingMore ? 'default' : 'pointer',
+                  color: 'var(--text-secondary)', background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)', borderRadius: '20px', padding: '9px 18px',
+                }}
+              >
+                {loadingMore ? 'Loading…' : `Load older reports (${reports.length}/${reportsTotal})`}
+              </button>
+            )}
           </div>
         )}
       </div>
