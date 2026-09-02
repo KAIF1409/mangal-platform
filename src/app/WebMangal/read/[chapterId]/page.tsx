@@ -116,6 +116,16 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   const [commentSort, setCommentSort] = useState<'popular' | 'newest'>('popular');
   const [commentsVisibleCount, setCommentsVisibleCount] = useState<number>(COMMENT_PAGE_SIZE.webmangal);
   const commentLikeLockRef = useRef<Set<string>>(new Set());
+  // §139-D — this sort used to run TWICE per render (once for the visible
+  // list, once for the load-more button's visibility check), re-sorting the
+  // whole loaded comment set on every reader state change (scroll progress,
+  // reactions, replies…). One memo feeds both consumers.
+  const rankedTopLevel = useMemo(
+    () => commentSort === 'popular'
+      ? sortByScore(comments, c => c.likes, c => c.created_at, webnovelCommentScore)
+      : [...comments].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [comments, commentSort],
+  );
 
   // Step 5 — Replies
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -2206,10 +2216,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               // with a gentle long-tail decay; "Newest" is plain reverse-
               // chronological. Replies always stay chronological under
               // their parent regardless of this toggle — only the order of
-              // top-level comments changes.
-              const rankedTopLevel = commentSort === 'popular'
-                ? sortByScore(comments, c => c.likes, c => c.created_at, webnovelCommentScore)
-                : [...comments].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+              // top-level comments changes. (§139-D — the ranking itself is
+              // computed once per comments/sort change in the memo above.)
               const visibleTopLevel = rankedTopLevel.slice(0, commentsVisibleCount);
               return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -2349,11 +2357,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               </div>
               );
             })()}
-            {!commentsLoading && comments.length > 0 && (() => {
-              const rankedTopLevel = commentSort === 'popular'
-                ? sortByScore(comments, c => c.likes, c => c.created_at, webnovelCommentScore)
-                : comments;
-              return rankedTopLevel.length > commentsVisibleCount ? (
+            {!commentsLoading && comments.length > 0 && rankedTopLevel.length > commentsVisibleCount && (
                 <button
                   onClick={() => setCommentsVisibleCount(n => n + COMMENT_PAGE_SIZE.webmangal)}
                   style={{
@@ -2364,8 +2368,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 >
                   Load {Math.min(COMMENT_PAGE_SIZE.webmangal, rankedTopLevel.length - commentsVisibleCount)} more comments
                 </button>
-              ) : null;
-            })()}
+            )}
             {!commentsLoading && topLevelTotal > comments.length && (
               <button
                 onClick={loadOlderComments}

@@ -188,6 +188,17 @@ function KalpanaCircleInner() {
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [commentsVisibleCount, setCommentsVisibleCount] = useState<Record<string, number>>({});
   const commentLikeLockRef = useRef<Set<string>>(new Set());
+  // §139-D — the collapsed preview comments were re-sorted inside every post
+  // card's render body on EVERY feed state change (typing a comment, liking,
+  // opening a menu…). One memo recomputes the previews only when the comment
+  // data itself changes, no matter how many posts have loaded comment pages.
+  const previewCommentsByPost = useMemo(() => {
+    const map: Record<string, KComment[]> = {};
+    for (const [postId, list] of Object.entries(comments)) {
+      map[postId] = instagramPreviewComments(list, c => c.likes, c => c.created_at, 2);
+    }
+    return map;
+  }, [comments]);
 
   // Post card menu (Instagram-style "…") — Edit/Delete for your own posts,
   // Report for anyone else's. Founder-reported gap: none of this existed
@@ -1640,7 +1651,7 @@ function KalpanaCircleInner() {
                   const totalComments = commentTotals[post.id] ?? postComments.length;
                   const shown = isExpanded
                     ? postComments.slice(0, visibleCount)
-                    : instagramPreviewComments(postComments, c => c.likes, c => c.created_at, 2);
+                    : previewCommentsByPost[post.id] ?? [];
                   return (
                     <>
                       {!isExpanded && totalComments > shown.length && (
