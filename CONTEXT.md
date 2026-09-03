@@ -10150,3 +10150,135 @@ real traffic lands on `/` (`src/app/page.tsx`).
 **Stop-and-wait case: NOT triggered** — this isn't a "can't confirm a feature
 is real" situation, it's a local network gap in an otherwise clean, low-risk
 change; flagged transparently instead of silently claiming a gate passed.
+
+## §150 — The MANGAL Assistant: one floating AI chatbot widget on every route (2026-09-03)
+
+Founder brief: ONE robot-bubble widget (Intercom/Tidio/Chatwoot pattern) mounted
+globally — Guide & Help mode EVERYWHERE, plus Discovery/Recommendation mode on
+WebMangal and KaTube only, both live in the same chat window there. Round
+launcher bottom-right → chat panel, full-screen on mobile; rich catalog cards
+inside the chat; stateless backend; no server-side AI MANGAL pays for.
+
+### Phase 1 — audit findings (all re-verified this session, corrections included)
+
+- Started from the §149 tree: local was `a675fdc`, origin/main had moved to
+  `e8b418f` — fast-forwarded BEFORE building (so §150 sits on §149; no rebase
+  needed at push time, none collided).
+- Audit-file paths in the brief were `lib/ai/...` — real locations are
+  `src/app/lib/ai/{webllmEngine,byokStorage,editorAssist}.ts` and
+  `src/app/components/editor/useAiAssistEngine.ts`. The established AI-feature
+  shape: on-device WebGPU default (dynamic-imported singleton, model cascade),
+  BYOK fallback with AES-GCM-encrypted keys + non-extractable IndexedDB
+  CryptoKey, keys travel per-request in headers and are never stored server-side.
+- **Schema correction to the brief's table:** "series/books/songs `genre_tags`"
+  is wrong. Verified from migrations: only `books` has `genre_tags text[]`
+  (20260902090000); `series` and `songs` have a SINGLE `genre` text column;
+  `videos` has `is_short` (+ `category`, `views`, `likes`, `series_id`);
+  KaTube "channels" = `creator_profiles` (`user_id, username, avatar_url`).
+  Matching was built against these real columns.
+- Real vs NOT built (§147 list re-verified in code): Nova = 'coming soon' shell;
+  KaTube "Live" = studio tab label only (`KA_TUBE_TABS`); K Circle has NO
+  servers/roles (broadcast channels + DMs/groups + feed + watch-together +
+  Mangal of the Week only). The Guide KB includes three honesty entries that
+  SAY these don't exist when asked.
+- Fixed-UI z-index map for placement: ConsentBanner 9999 (bottom), cursor 9998,
+  modals 1000–1200, K Circle post-menu 999/1000, K Circle mobile bottom bar 100
+  (fixed bottom full-width), KaTube nav sticky 100, KaTube watch mini-player 200
+  (bottom 10px), shorts overlay 300, reader chrome ≤400, K Circle rail fixed
+  LEFT 72px z50. → Widget at z950: above all page chrome, below modals/consent;
+  launcher bottom-RIGHT (rail is left → no desktop collision).
+- Fresh baselines measured on the clean `e8b418f` tree (NOT the stale §147
+  numbers): lint 0 errors / **54 warnings** (§147 said 53 — §148/§149 added one);
+  tsc exit 0; OpenNext build exit 0; handler.mjs raw 8,182,144 B; wrangler
+  dry-run gzip 2,185.75 KiB vs 3,072 KiB ceiling.
+
+### Phase 2 — UI research (short, per brief)
+
+- Chatwoot docs URL 404'd; used the Vercel AI Chatbot repo (fetched) + the
+  standard Chatwoot/Intercom closed/open pattern. Copied+adapted:
+  closed = 56px round launcher bottom-right (18px desktop, 14px + safe-area
+  mobile) with `aria-expanded`; open = 380px × min(560px, 100dvh−140px) panel
+  bottom-right desktop, full-screen sheet ≤768px; assistant bubbles on
+  `var(--bg-input)` + border, user bubbles accent-tinted
+  `rgba(var(--accent-rgb),0.14)`, right-aligned; Vercel-style structured cards
+  rendered INSIDE the bot bubble (2-col grid desktop / 1-col mobile, cover
+  thumb + 2-line-clamped title + accent why-line, whole card = one Link);
+  `role="log"` + `aria-live="polite"`; Escape closes, focus swaps
+  launcher↔composer; keyboard avoidance via 100dvh-shaped panel + composer in
+  normal flow + scroll pinning.
+
+### Built vs reused
+
+- REUSED: `checkRateLimit`/`getClientIp` (lib/rateLimit.ts, Postgres sliding
+  window — same limiter as upload-avatar/upload-book-file); /api/recommendations'
+  pool-query SHAPE (`status='published'`, `order views desc`, capped limits);
+  log-scaled popularity prior; RecommendedForYou card conventions (cover,
+  NOVEL badge, accent genre color, min-48px targets); layout.tsx global-mount
+  precedent (ProductVisitTracker); `<style>`-block CSS convention
+  (KCircleShellStyle/FeaturesSection); token palette only.
+- BUILT NEW: `src/app/lib/ai/guideKnowledge.ts` (27-entry static Guide KB
+  grounded in §145/§147 FeaturesSection copy + 3 honesty entries;
+  `answerGuideQuery` phrase scorer; `getGuideSuggestions` per-context chips);
+  `src/app/lib/ai/chatDiscovery.ts` (isomorphic DEFAULT-rule intent router —
+  any genre/mood/recommend signal → Discovery, zero signals → Guide i.e.
+  ambiguous → Guide; freeform→structured extractor over the REAL columns;
+  refinement context "less romance"/"shorter"); `src/app/api/chat/discovery/
+  route.ts` (stateless POST, 20 req/60s/IP, series+books+songs /
+  videos+creator_profiles branches, genre+keyword+popularity scorer, ≤6
+  type-diversified cards, no-store); `src/app/components/shared/
+  MangalChatbot.tsx` (~600 lines, the ONE widget); one-line layout.tsx mount.
+- NOT duplicated: the §135 taste-vector scorer — different input (freeform
+  query vs reading history), stated in the route header.
+
+### Concurrency reasoning (what runs where, and why it's cheap)
+
+- Guide mode: 100% client-side from the static KB — zero network, zero server
+  cost at ANY concurrency.
+- Discovery mode: ONE stateless POST per user ask. The client sends the current
+  message + its own refinement context; the server stores NOTHING (no per-user
+  memory — survives Worker isolate churn by construction). Each request = 2–3
+  small indexed Postgres reads (top-300/200 published rows — the same reads
+  catalog pages already do) + in-memory scoring. Rate-limited 20/60s/IP via the
+  existing Postgres limiter, failing open like every other route.
+- No LLM anywhere; no MANGAL-owned AI spend; no BYOK needed for the widget.
+  **Stop-and-wait case: NOT triggered.**
+
+### Mobile check (320–768px, all four contexts — static verification on the built tree)
+
+- Launcher collision: PASS — mobile offset `calc(72px +
+  env(safe-area-inset-bottom))` clears K Circle's fixed bottom bar (z100),
+  KaTube watch mini-player (bottom 10px) and WebMangal navs. Known cosmetic:
+  editor toasts (right/bottom 18, z99) sit under the launcher when both visible.
+- Full-screen panel ≤768px: PASS (`.mchat-panel` inset 0 / radius 0 / 100%,
+  verified present in prerendered HTML).
+- Cards single-column, zero horizontal overflow: PASS (`.mchat-cards` 1fr
+  ≤768px; minWidth:0 + line-clamps/ellipsis).
+- Input above keyboard: PASS — `interactiveWidget: 'resizes-content'` added to
+  the existing viewport export (Android Chrome then behaves like iOS Safari;
+  benefits every bottom-anchored input, not just the widget) + safe-area
+  composer padding.
+- 48×48 targets: PASS (launcher 56, close/send 48×48, input 48h, chips ≥48h,
+  cards ≥60h).
+- prefers-reduced-motion: PASS — all open/close/message/typing animation inside
+  `(prefers-reduced-motion: no-preference)` blocks.
+
+### Hard gates (final tree, run in order)
+
+1. `npx tsc --noEmit` → exit 0.
+2. `npm run lint` → 0 errors / **54 warnings** = exactly the fresh baseline
+   measured in Phase 1; 0 warnings from the four new files.
+3. `npm run build` → exit 0; `/` and `/about` prerendered with exactly ONE
+   launcher instance each (mount-once check); `interactive-widget=
+   resizes-content` in the served viewport; no SSR/hydration errors.
+4. `npx opennextjs-cloudflare build` → exit 0. handler.mjs raw =
+   **8,205,232 B** (clean-tree baseline 8,182,144 B, **Δ +23,088 B** — one new
+   route + widget SSR payload; no new dependencies).
+   `wrangler deploy --dry-run` Total Upload 11,168.40 KiB / **gzip
+   2,154.36 KiB vs the 3,072 KiB free-plan ceiling (~918 KiB headroom)** —
+   under 3 MiB.
+5. Behavior smoke test: the two pure libs compiled standalone and exercised in
+   Node — 15/15 PASS (routing incl. "what should i read"→Discovery,
+   "how do I publish"→Guide; extraction incl. bare "shorts"→Shorts query and
+   "sad"→drama normalization; guide matching incl. the three honesty entries).
+
+

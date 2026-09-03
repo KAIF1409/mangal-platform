@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ConsentBanner from "./components/shared/ConsentBanner";
+import MangalChatbot from "./components/shared/MangalChatbot";
 import ProductVisitTracker from "./components/shared/ProductVisitTracker";
 
 const geistSans = Geist({
@@ -71,6 +72,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // §150 — Chrome Android's default (resizes-visual) keeps the layout
+  // viewport full-height when the soft keyboard opens, so fixed-bottom
+  // inputs (the MANGAL Assistant composer, K Circle chat input, comment
+  // boxes) end up behind the keyboard. resizes-content makes the layout
+  // viewport shrink instead — the same behavior iOS Safari has always
+  // had — so every bottom-anchored input in the app stays visible.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({
@@ -115,6 +123,10 @@ export default function RootLayout({
         <ProductVisitTracker />
         {children}
         <ConsentBanner />
+        {/* §150 — the ONE floating MANGAL Assistant, mounted once at the
+            shared root so it appears on every route. Reads the current route
+            itself (usePathname) to decide Guide-only vs Guide+Discovery. */}
+        <MangalChatbot />
       </body>
     </html>
   );
