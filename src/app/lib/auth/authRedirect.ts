@@ -8,7 +8,7 @@
 // Fix: every signInWithOAuth call always uses the exact same, single
 // allowlisted redirectTo (`${origin}/auth/callback`, no query string). If
 // the caller wants the user to land somewhere other than the default
-// (/WebMangal/home) afterwards, it stores that path in this cookie first.
+// (/WebMangal) afterwards, it stores that path in this cookie first.
 // /auth/callback reads it once, then clears it.
 
 const COOKIE_NAME = 'mangal_post_login_redirect';

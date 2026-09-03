@@ -28,10 +28,13 @@ import { cookies } from 'next/headers';
 import { POST_LOGIN_REDIRECT_COOKIE } from '../../lib/auth/authRedirect';
 
 function safeNextPath(raw: string | null | undefined): string {
-  if (!raw) return '/WebMangal/home';
+  // §152: the default post-login destination is /WebMangal (browse/front
+  // door), not /WebMangal/home — matching the founder's "no pages go to
+  // webmangal/home" directive; the feed stays reachable, just not default.
+  if (!raw) return '/WebMangal';
   // Must be an internal relative path: exactly one leading slash, no
   // scheme, no protocol-relative "//host" trick, no backslash trick.
-  if (!/^\/(?!\/|\\)/.test(raw)) return '/WebMangal/home';
+  if (!/^\/(?!\/|\\)/.test(raw)) return '/WebMangal';
   return raw;
 }
 

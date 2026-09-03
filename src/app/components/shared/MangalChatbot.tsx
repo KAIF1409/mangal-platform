@@ -55,6 +55,7 @@ import {
   routeIntent,
   type DiscoverySessionContext,
 } from '../../lib/ai/chatDiscovery';
+import { playNotificationSound } from '../../lib/sound/playNotificationSound';
 
 interface ChatCard {
   type: 'series' | 'book' | 'song' | 'video' | 'channel';
@@ -172,9 +173,21 @@ export default function MangalChatbot() {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, open, busy]);
 
-  const pushBot = useCallback((partial: Omit<ChatMessage, 'id' | 'role'>) => {
+  // §152 — every ASSISTANT reply lands through this single choke point, so it
+  // is also the single sound trigger: the shared §151 synth ding plays when a
+  // bot reply actually LANDS. Silent only for the cold-start greeting +
+  // suggestion chips (that render opens with the panel — it is not an
+  // "incoming" message). The user's own sends never pass through here (they
+  // go straight to setMessages as role:'user'), so own-message suppression is
+  // structural. No focused-tab suppression, deliberately: unlike the §151
+  // user-to-user surfaces, a chatbot reply is a direct response to a message
+  // the user just sent (ChatGPT-style answer ding), not an ambient push — the
+  // global §151 mute (NotificationBell's speaker icon) and its 400ms
+  // cross-tab cooldown still govern it, unchanged.
+  const pushBot = useCallback((partial: Omit<ChatMessage, 'id' | 'role'>, opts?: { silent?: boolean }) => {
     idRef.current += 1;
     setMessages((prev) => [...prev, { id: idRef.current, role: 'bot', ...partial }]);
+    if (!opts?.silent) playNotificationSound();
   }, []);
 
   // Cold-start greeting + suggestions, per current platform context.
@@ -187,7 +200,7 @@ export default function MangalChatbot() {
           ? 'Hi! I can answer questions about MANGAL\'s real features, or find you something to read/watch — describe a genre, a mood, or a story idea.'
           : 'Hi! I\'m the MANGAL Assistant — ask me anything about the platform\'s real, shipped features.',
       chips: getGuideSuggestions(platform),
-    });
+    }, { silent: true }); // §152 — cold-start render, not an incoming reply: no sound
   }, [open, platform, pushBot]);
 
   const answerAsGuide = useCallback(
@@ -226,7 +239,7 @@ export default function MangalChatbot() {
               ? 'Catalog recommendations live on WebMangal and KaTube — this K Circle page has Guide & Help only. Here\'s what I can answer here, or hop over to the reading/video products:'
               : 'Catalog recommendations live on WebMangal and KaTube. On the company pages I stick to Guide & Help questions about MANGAL itself:',
           chips: getGuideSuggestions(platform),
-          link: { href: '/WebMangal/home', label: 'Browse WebMangal' },
+          link: { href: '/WebMangal', label: 'Browse WebMangal' },
         });
         return;
       }

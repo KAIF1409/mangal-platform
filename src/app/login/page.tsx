@@ -440,7 +440,9 @@ export default function AuthPage() {
   };
 
   // Where to send the user after a successful login — read from
-  // /login?next=..., defaults to /WebMangal/home. ALSO checked against the
+  // /login?next=..., defaults to /WebMangal (§152: the platform front door /
+  // browse page; /WebMangal/home, the personalized feed, stays reachable but
+  // is no longer the default landing). ALSO checked against the
   // mangal_post_login_redirect cookie (authRedirect.ts) as a fallback —
   // this isn't just for the Google OAuth callback. Confirmed via debug
   // logging (11 Aug 2026, see app/katube/upload/page.tsx's comment): when
@@ -465,10 +467,10 @@ export default function AuthPage() {
   // return path. A lazy initializer has no such window: it's guaranteed to
   // have run before the button is even interactive.
   const [nextPath] = useState(() => {
-    if (typeof window === 'undefined') return '/WebMangal/home';
+    if (typeof window === 'undefined') return '/WebMangal';
     const raw = new URLSearchParams(window.location.search).get('next');
     const fromQuery = raw && /^\/(?!\/|\\)/.test(raw) ? raw : null;
-    return fromQuery ?? consumePostLoginRedirect() ?? '/WebMangal/home';
+    return fromQuery ?? consumePostLoginRedirect() ?? '/WebMangal';
   });
 
   // Surface errors that /auth/callback redirects back with (e.g. Google
@@ -713,7 +715,7 @@ export default function AuthPage() {
     // (root) with the code still attached — a second, separate bug from
     // the localhost one above, also confirmed 11 Aug 2026. `next` goes
     // through a short-lived cookie instead (see app/lib/authRedirect.ts).
-    if (nextPath && nextPath !== '/WebMangal/home') setPostLoginRedirect(nextPath);
+    if (nextPath && nextPath !== '/WebMangal') setPostLoginRedirect(nextPath);
     const callbackUrl = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callbackUrl } });
     if (error) { setError(error.message); setIsGoogleLoading(false); }

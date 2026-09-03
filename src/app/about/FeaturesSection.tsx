@@ -71,7 +71,7 @@ const PLATFORMS: PlatformBlock[] = [
     name: 'WebMangal',
     tagline: 'Comics, web novels, books and songs — free to read, free to publish.',
     icon: BookOpen,
-    href: '/WebMangal/home',
+    href: '/WebMangal',
     groups: [
       {
         label: 'For readers',

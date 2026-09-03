@@ -556,6 +556,31 @@ export default function LandingPage() {
           @media (max-width: 560px) {
             .mangal-about-side-img { display: none !important; }
           }
+
+          /* §152 — mobile hero fit. Two compounding problems on phones:
+             (1) 92vh is measured against the LARGEST possible viewport
+             (it ignores the URL bar), so the hero asked to be taller than the
+             actually-visible screen — compounding the cover-crop. svh caps it
+             to the small viewport (the plain-vh line stays as the fallback
+             for browsers without svh). Desktop (>768px) keeps the inline
+             92vh, byte-identical to before.
+             (2) cover on a portrait viewport shows only ~28% of the 16:9
+             art's width, so which slice you get IS the composition. The old
+             'center top' landed an arbitrary slice that cropped off both
+             flanking subjects. 70% frames the horseman + temple skyline
+             behind the centered copy with the caped warrior's face
+             right-of-center (chosen from the actual image content: archer
+             x≈20-40%, horseman+temples x≈45-60%, caped warrior x≈65-95%).
+             !important is required to beat the JSX inline styles. */
+          @media (max-width: 768px) {
+            #mangal-hero {
+              min-height: 92vh !important;
+              min-height: 92svh !important;
+            }
+            #mangal-hero .mangal-hero-bg {
+              background-position: 70% top !important;
+            }
+          }
         `}</style>
 
         {/* ── NAV ── */}
@@ -643,7 +668,7 @@ export default function LandingPage() {
                       </div>
                       <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userEmail}</div>
                     </div>
-                    <Link href="/WebMangal/home" data-cursor-hover="true" onClick={() => setProfileMenuOpen(false)} style={{
+                    <Link href="/WebMangal" data-cursor-hover="true" onClick={() => setProfileMenuOpen(false)} style={{
                       display: 'block', padding: '9px 10px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
                       color: 'var(--text-secondary)', textDecoration: 'none',
                     }}>Go to MANGAL Home</Link>
@@ -702,7 +727,7 @@ export default function LandingPage() {
             { label: 'Tube', href: '/katube', icon: '/katube-logo.png' },
             { label: 'Circle', href: '/kalpana-circle', icon: '/kcircle-logo.png' },
             ...(authChecked && userEmail
-              ? [{ label: 'Go to MANGAL Home', href: '/WebMangal/home' }]
+              ? [{ label: 'Go to MANGAL Home', href: '/WebMangal' }]
               : [{ label: 'Log in', href: '/login?next=%2F' }]),
           ].map(link => (
             <a key={link.label} href={link.href} onClick={() => setMobileMenuOpen(false)} style={{
@@ -731,7 +756,7 @@ export default function LandingPage() {
           textAlign: 'center', minHeight: '92vh',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <div style={{ position: 'absolute', inset: 0, zIndex: 0, backgroundImage: 'url(/hero-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center top', backgroundRepeat: 'no-repeat' }} />
+          <div className="mangal-hero-bg" style={{ position: 'absolute', inset: 0, zIndex: 0, backgroundImage: 'url(/hero-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center top', backgroundRepeat: 'no-repeat' }} />
           <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'linear-gradient(to bottom, rgba(7,7,10,0.72) 0%, rgba(7,7,10,0.38) 35%, rgba(7,7,10,0.38) 65%, rgba(7,7,10,0.88) 100%)', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'radial-gradient(ellipse 60% 40% at 50% 55%, rgba(217,119,6,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
           <ParticleField />

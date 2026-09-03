@@ -10451,3 +10451,143 @@ you're already looking at the exact conversation it landed in.
   Basic-auth URL, credential pulled from Windows Credential Manager via
   `git credential fill` into process env vars only — never written to any
   tracked file (no token env var existed in this session's environment).
+
+## §152 — Chatbot reply sound + /WebMangal/home demoted everywhere + mobile hero fit (2026-09-03)
+
+Three-founder-fix session: (1) the §151 sound brief explicitly listed the
+MANGAL Assistant widget, which §151 had deferred as "plain fetch, not
+realtime" — the reply-land ding was still missing there; (2) founder
+directive "no pages go to webmangal/home" — every link/default points at
+`/WebMangal` (browse/front door) instead; the feed page itself stays, just
+never a link target or default landing; (3) landing hero background renders
+hugely zoomed on phones ("bg showing big big, not correctly fit").
+
+### Phase 0 — origin moved mid-session (docs restructure); synced BEFORE building
+
+- origin/main advanced `141d6f6` → `b004b393` during planning. Verified
+  docs-only: `git diff 141d6f6 b004b393 -- src/ next.config.ts public/
+  supabase/` is EMPTY, so every audit below stayed valid. Fast-forwarded
+  before any edit (the worktree carried that session's uncommitted README/
+  CONTEXT drafts; the README draft mtime 17:21 pre-dates the 19:09 push, so
+  the pushed version is canonical — the stale draft was backed up to
+  `%TEMP%\mangal-wip-backup-20260903\`, never deleted, NOT restored over the
+  pushed file). §152 confirmed free (`§152` grep = 0 hits). New §N entries
+  live in THIS file from now on (CONTEXT.md is the distilled pointer file
+  since b004b393).
+
+### Phase 1 — chatbot reply ding (builds on §151, no second system)
+
+- Re-audit: `.channel(` over src/ still yields exactly the four §151 files —
+  zero new realtime surfaces since §151. WebMangal still has none (follow/
+  comment alerts arrive as `kcircle_notifications` rows → bell rings).
+- Wired MangalChatbot to the EXISTING §151 module: `playNotificationSound()`
+  called from `pushBot()`, the single choke point every assistant reply
+  passes through (guide answers, discovery results, rate-limit + error
+  messages). One trigger site, zero duplicated playback logic.
+- Suppression, per surface semantics: cold-start greeting + suggestion chips
+  pass `{ silent: true }` (a render that opens with the panel, not an
+  incoming message). User's own sends go straight to `setMessages` as
+  role:'user', never through pushBot → own-message suppression is structural.
+  NO focused-tab suppression here, deliberately (documented in-file): a
+  chatbot reply is a direct response to a message the user just sent
+  (ChatGPT-style answer ding), not an ambient push — the global §151 mute
+  (bell speaker icon, `mangal_notification_sound`) and 400ms cross-tab
+  cooldown still govern it unchanged.
+- Transient mistake caught by gate 1 and fixed before anything shipped: the
+  import insertion initially duplicated the chatDiscovery import block
+  (8 × TS2300 duplicate identifiers); collapsed to one block, gates
+  restarted from tsc.
+
+### Phase 2 — /WebMangal/home → /WebMangal: full inventory, judgment calls
+
+- Fresh UNANCHORED grep (the brief's quote-anchored list missed unquoted
+  comment mentions). Complete inventory and dispositions:
+  - Links CHANGED to `/WebMangal`: landing profile-menu "Go to MANGAL Home"
+    (`page.tsx:646`), landing mobile-nav array entry (`page.tsx:705`),
+    /about WebMangal ecosystem card (`FeaturesSection.tsx:74`), chatbot
+    Discovery fallback "Browse WebMangal" (`MangalChatbot.tsx`), /WebMangal/
+    tags "Back to WebMangal" (`tags/page.tsx:53`), guide answer "Open
+    WebMangal" (`lib/ai/guideKnowledge.ts:108`).
+  - Defaults CHANGED to `/WebMangal` (directive read literally; no concrete
+    breakage found — the browse page serves logged-in users and the feed
+    stays reachable): login `nextPath` SSR default + query/cookie fallback
+    (`login/page.tsx:470,473`), the cookie-set comparison literal
+    (`login/page.tsx:718` — must track the new default or the
+    set-cookie-only-when-non-default semantics break), OAuth callback
+    `safeNextPath` defaults ×2 (`auth/callback/route.ts:34,37`).
+  - KEPT with reasoning: `guideKnowledge.ts:130` "See your rails" stays on
+    `/WebMangal/home` — that link's entire purpose is the personalized
+    recommendation rails which exist ONLY on the feed (the exact "genuine
+    personalization feature" exception class). Explicit `?next=`/
+    `/WebMangal/home` deep links still land on the feed (validated path
+    passes through).
+  - Retargeted: `next.config.ts:192` legacy `/home` permanent redirect →
+    `/WebMangal` (a server redirect IS a "go to"; source path unchanged so
+    old bookmarks still resolve).
+  - Comment-only mentions left as history (no routing): auth/callback:52,
+    kalpana-circle:850, login:466; route-existence references left:
+    kalpana-circle:908, page.tsx:319. Comments updated where the default
+    was stated as CURRENT fact: `authRedirect.ts:11`,
+    `login/page.tsx:443-445`.
+- Verify: post-change `git grep WebMangal/home` over the repo → only the
+  deliberate keeps + docs history; over the BUILT output → 0 prerendered
+  `.next/server/app` HTML files contain `WebMangal/home` (all shipped links
+  resolve to `/WebMangal`); `/WebMangal/home` route itself untouched (feed
+  still reachable).
+
+### Phase 3 — landing hero mobile fit (CSS-only; desktop byte-identical)
+
+- Verified the diagnosis against the real image (`public/hero-bg.jpg`,
+  1672×941 ≈ 16:9, inspected visually): archer x≈20–40%, horseman + temple
+  skyline x≈45–60%, caped warrior x≈65–95%. `cover` + `center top` in a
+  portrait viewport displays only ~28% of the art's width → arbitrary
+  slice, both flanking subjects cropped off.
+- Fix, in the landing page's existing `<style>` block,
+  `@media (max-width: 768px)`, `!important` (required to beat the JSX
+  inline styles):
+  1. `#mangal-hero { min-height: 92vh !important; min-height: 92svh
+     !important; }` — plain vh resolves against the LARGEST viewport
+     (ignores the URL bar), so the hero demanded more height than a phone
+     can actually show, compounding the crop; svh caps it to the small
+     viewport (same category of fix as §150's `interactiveWidget` work);
+     the plain-vh line is the fallback for pre-svh browsers.
+  2. `#mangal-hero .mangal-hero-bg { background-position: 70% top
+     !important; }` (bg layer gained `className="mangal-hero-bg"`; the
+     inline desktop value `center top` is untouched) — 70% frames the
+     horseman + temple skyline behind the centered copy with the caped
+     warrior's face right-of-center.
+- Sanity-checked the rest of the hero at 320px, changed NOTHING else:
+  search form already `flexWrap`s (200px-min input + button wrap to a
+  centered second row inside 272px content width), scroll cue is
+  `clamp(64px,8vw,96px)` sitting inside the ≥60px bottom padding, h1
+  `clamp(32px…)` longest word ≈216px fits, no fixed-px widths in the
+  section. Desktop >768px: no rule applies (rendering byte-identical); the
+  GSAP scrollTrigger on `#mangal-hero` is position-based → unaffected.
+
+### Gates (literal output, this tree, all 3 phases combined)
+
+0. Fresh baselines BEFORE editing (clean `b004b393`): `npx tsc --noEmit`
+   exit **0**; `npm run lint` `✖ 54 problems (0 errors, 54 warnings)` exit
+   **0**; `npm run build` exit **0**; `.next/static/chunks` =
+   **11,141,858 B** (byte-identical to §151's record).
+1. `npx tsc --noEmit` → exit **0** (first run caught the duplicate-import
+   TS2300s above; fixed; restarted from gate 1 as required).
+2. `npm run lint` → `✖ 54 problems (0 errors, 54 warnings)`, exit **0** —
+   baseline exactly preserved, zero new warnings.
+3. `npm run build` → exit **0**; no SSR/hydration issues (the sound call
+   lives inside a 'use client' component's callback; the §151 module
+   touches `window`/`AudioContext` only inside guarded functions, never at
+   module top level).
+4. Bundle: 11,141,858 B → **11,134,607 B** = **−7,251 B** (chunk-hash
+   reshuffle; net smaller; no sound asset shipped — §151 synth reused).
+
+### Push notes
+
+- `git fetch origin main` re-checked immediately before committing: still
+  `b004b393`, local 0 ahead / 0 behind after the Phase-0 fast-forward — no
+  rebase needed, no §-number collision (§152 verified free pre-work).
+- Pushed with the repo's working form: `credential.helper=` disabled
+  inline, Basic-auth URL, credential resolved via `git credential fill`
+  (Windows Credential Manager) into process env only — never written to any
+  tracked file. `git ls-remote origin main` verified == local HEAD after
+  push.

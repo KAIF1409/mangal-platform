@@ -189,7 +189,7 @@ const nextConfig: NextConfig = {
       // bookmarks/shares working.
       {
         source: "/home",
-        destination: "/WebMangal/home",
+        destination: "/WebMangal",
         permanent: true,
       },
       // KaTube's creator-profile/channel-verify tab moved out of the

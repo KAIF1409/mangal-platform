@@ -174,11 +174,16 @@ Full phased build plan, schema design, and story walkthrough: `docs/SESSION_HIST
   and every browsing page)
 - Platform-wide notification sound (synthesized Web Audio tone, no asset
   file, near-zero bundle cost) with a mute toggle on the notification bell,
-  focused-tab suppression, and cross-tab/double-mount dedupe
+  focused-tab suppression, and cross-tab/double-mount dedupe — also played
+  when the MANGAL Assistant's reply lands in the chat (§152; the cold-start
+  greeting stays silent)
 
 ### Landing Page & Ecosystem Showcase
 - Framer Motion scroll/entrance animations + particle field, dark-by-default
 - Split-screen login redesign with hero video, mobile responsive
+- Mobile hero fit (§152): svh-based hero height + focal background-position
+  at ≤768px, so the 16:9 hero art frames its subject on phones instead of
+  over-zooming into an arbitrary cover-crop
 - Always-visible product-door descriptions (WebMangal/KaTube/K Circle) — fixed
   a hover-only visibility bug that hid copy from all touch/mobile visitors
 - Per-platform capability grid ("features section") on `/about`, reused on
@@ -189,6 +194,11 @@ Full phased build plan, schema design, and story walkthrough: `docs/SESSION_HIST
 ### Platform-wide Engineering
 - Repo restructure: flat `app/` → `src/app/`, `lib/`/`components/` split by
   domain, WebMangal-specific routes moved under `WebMangal/`
+- Post-login default destination is `/WebMangal` everywhere (§152) — links,
+  login/OAuth fallbacks, and the legacy `/home` redirect all point at the
+  browse/front door; `/WebMangal/home` remains the personalized feed but is
+  no longer a nav-link target or default landing (explicit `?next=` deep
+  links to it are still honored)
 - Site-wide mobile-compatibility sweep (bookmarks, history, rankings, tags,
   upload, library, and beyond) using a `mangal-*` BEM + `@media` convention
 - Performance/architecture hardening pass — pagination/infinite scroll,

@@ -105,7 +105,7 @@ export const GUIDE_ENTRIES: GuideEntry[] = [
     question: 'What is WebMangal?',
     answer:
       'WebMangal is where the reading happens: vertical-strip comics and paged novels share one reader with right-to-left support, fullscreen mode, adjustable background, and emoji reactions on every chapter.',
-    link: { href: '/WebMangal/home', label: 'Open WebMangal' },
+    link: { href: '/WebMangal', label: 'Open WebMangal' },
   },
   {
     id: 'books-pdf-epub',
