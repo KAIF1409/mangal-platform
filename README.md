@@ -1,140 +1,194 @@
-# MANGAL
+# MANGAL Ecosystem
+
+**WebMangal · KaTube · Kalpana Circle**
 
 **Live app:** [mangal-platform.mangak.workers.dev](https://mangal-platform.mangak.workers.dev/)
 
-MANGAL is an Indian platform built for people who love manga, comics, web
-novels, and anime — a place to read, watch, and hang out with a community that
-loves the same stuff.
+MANGAL is an Indian, zero-cost-infrastructure platform for people who love
+manga, comics, web novels, anime, and the communities built around them. It's
+three connected products sharing one account:
 
-It has **three parts** that work together:
+- **📚 WebMangal** — read manga, comics, web novels, Books, and Songs. Writers
+  and artists publish original chapters directly to readers, no publisher needed.
+- **🎬 KaTube** — a YouTube-style discovery feed for *original*, AI-generated
+  anime adaptations of WebMangal stories, made by the same creators who wrote
+  them. Never pirated or reposted anime.
+- **💬 Kalpana Circle** — the community layer. Instagram-style posts and
+  stories, Discord-style servers/channels/roles, DMs, group chats, and
+  Watch Together rooms.
 
-### 1. WebMangal — read manga, comics & novels
-The original MANGAL. Anyone can create an account and start reading manga,
-comics, and web novels for free. Writers and artists can also publish their
-own original work here — chapters, covers, updates — directly to readers,
-without needing a publisher.
+**For readers:** one account gets you a library, a video feed, and a
+community — all built around the same stories.
 
-### 2. KaTube — a video feed for AI-made anime
-A YouTube-style feed made specifically for **AI-generated anime videos**.
-The idea: a MANGAL creator who has written a series can use AI video tools to
-bring a scene from their own story to life as a short anime-style clip, then
-share it here. People browse and discover these videos the same way they'd
-scroll YouTube Shorts or Instagram Reels — except everything is home-grown,
-original content, not reposted or pirated anime.
+**For creators:** publish a story on WebMangal, adapt it into video on
+KaTube, and build a following on Kalpana Circle — three audiences from one
+piece of original work, with an AI writing/translation assistant helping at
+every step.
 
-### 3. Kalpana Circle — the community space
-"Kalpana" means *imagination* in Hindi. This is the social side of MANGAL —
-think Instagram and Discord mixed together. People can post, share
-disappearing stories (including a "Close Friends" mode so only chosen people
-can see certain stories), chat one-on-one or in groups, and follow their
-favourite creators. It's built as the reason people come back every day, not
-just when there's a new chapter or video to check out.
+> Full project context, architecture rationale, and session-by-session build
+> history: [`CONTEXT.md`](CONTEXT.md) and [`docs/SESSION_HISTORY.md`](docs/SESSION_HISTORY.md).
 
-**The idea connecting all three:** *MANGAL writes the story. KaTube brings it
-to life. Kalpana Circle is where the fans gather to talk about it.*
+---
 
-## Why it works
+## ✨ Feature Showcase
 
-- **Zero-cost, legally clean video model.** KaTube never hosts or stores any
-  video files itself — it only stores a link to the video and plays it
-  through YouTube's own player. That means no server/bandwidth costs even at
-  scale, and no copyright risk, because every video is original content made
-  by the creator who owns the story it's based on — never pirated or reposted
-  anime.
-- **One account, three products.** A reader on WebMangal is already a
-  potential viewer on KaTube and a potential community member on Kalpana
-  Circle. Each product feeds the other two instead of competing for the same
-  attention, which is rare — most platforms have to build an audience three
-  separate times.
-- **Creator-first, not platform-first.** Money and audience flow to the
-  creator (views/revenue on their own YouTube channel, followers on their own
-  profile) rather than being locked inside MANGAL. That makes it easy for
-  creators to join without giving anything up, which is how a platform grows
-  fast in its early days.
-- **Built for an underserved audience.** Indian manga/novel/anime fans
-  currently split their time across global apps (Webtoon, Tapas, YouTube,
-  Discord, Instagram) with no single home that understands the local
-  audience. MANGAL is positioned to be that home.
+- **📖 Immersive Reader** — 4 themes (Light/Sepia/Dark/Midnight OLED),
+  adjustable typography, scroll or paginated layout, manga RTL mode, and
+  reading progress that syncs across devices.
+- **🤖 BYOK AI Literary Assistant** — an in-browser writing assistant
+  (on-device WebGPU by default, your own API key as a cloud fallback) that
+  polishes prose without ever sending your key to our servers.
+- **🌐 Hinglish & Hindi Translation** — a dedicated AI translation mode,
+  separate from the writing-polish pass, with auto-direction between
+  English and Hindi.
+- **🖼️ Webtoon Storyboard Converter** — turn a chapter of prose into a
+  drag-and-drop comic-panel storyboard, exportable as JSON.
+- **📊 Mangal Studio Analytics** — a real analytics dashboard per creator:
+  reading time, audience geography, retention/drop-off by chapter, and video
+  performance.
+- **🎥 KaTube** — Shorts-style ranking, Watch Together sync-play rooms,
+  playlists, subscriptions, and channel analytics — all on top of
+  zero-cost YouTube-embedded video.
+- **🫂 Kalpana Circle** — Discord-style servers/channels/roles, realtime
+  chat with image attachments, stories with Close-Friends audience control,
+  and creator broadcast channels.
 
-## How it connects to the global market
+---
 
-The manga/webtoon/anime fan base is a genuinely global one — the same
-audience already exists in the US, Southeast Asia, Latin America, and Europe,
-not just India. MANGAL's model is built to travel beyond India for a few
-reasons:
+## 🛠️ Tech Stack & Prerequisites
 
-- **Anime and manga fandom has no borders.** The content categories (manga,
-  web novels, anime) already have massive global audiences on platforms like
-  Webtoon, Crunchyroll, and MyAnimeList — MANGAL is entering a proven market,
-  not creating a new one.
-- **The zero-cost video architecture scales globally without extra
-  infrastructure spend**, since KaTube rides on YouTube's global
-  infrastructure instead of MANGAL having to build or pay for its own
-  video-hosting/CDN as it expands to new countries.
-- **The three-in-one structure (read, watch, socialize) is a differentiator
-  internationally too** — most competitors are single-purpose (Webtoon only
-  reads, YouTube only watches, Discord only socializes). A platform that
-  does all three under one account is a stronger, stickier product anywhere
-  in the world, not just in India.
-- **India-first is a deliberate go-to-market strategy, not a ceiling** —
-  proving the model with a large, currently underserved home audience first,
-  then expanding outward once the product and community are proven, is the
-  same playbook platforms like Webtoon (Korea → global) and TikTok
-  (China → global) used.
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS 4, Framer Motion, GSAP |
+| Editor | Tiptap / ProseMirror |
+| AI | `@mlc-ai/web-llm` (on-device WebGPU inference) + BYOK cloud fallback |
+| Backend | Supabase (PostgreSQL, PostgREST, Auth, Realtime, Storage), Row-Level Security |
+| Payments | Direct-to-VPA UPI + Razorpay primitives |
+| Deployment | Cloudflare Workers via `@opennextjs/cloudflare` + Wrangler |
 
-## What's next
+**Prerequisites**
+- Node.js **20+**
+- npm (the lockfile is `package-lock.json`; pnpm/yarn are not tested against
+  this repo)
+- A Supabase project (for local development against your own database)
 
-- **Multi-language support.** Right now MANGAL runs in one language. Adding
-  support for multiple languages — Indian regional languages (Hindi, Tamil,
-  Telugu, Bengali, and more) as well as major international ones — is one of
-  the biggest planned steps. Language is one of the main walls that keeps a
-  platform local: a reader in Chennai, a reader in Tokyo, and a reader in
-  Mexico City can all enjoy the same story if it's not locked to one
-  language. This single change opens the platform to both underserved
-  Indian-language readers and international audiences at the same time.
-- **Reader-to-creator monetization** — tips and unlocking premium chapters,
-  so creators can earn directly from MANGAL, not just from YouTube views.
-- **Platform-side sponsorships on KaTube**, once there's enough viewer
-  traffic to make it worthwhile.
+---
 
-Both of the monetization steps above are intentionally gated behind
-audience growth first — grow readers and viewers, then turn on ways to earn.
-
-## Who it's for
-
-- **Readers** who want free, easy access to manga, comics, and novels made by
-  Indian creators.
-- **Writers and artists** who want a place to publish their work directly to
-  an audience.
-- **Anime fans** who want to discover original AI-made anime content and talk
-  about it with a community, instead of just watching pirated clips.
-
-## Development
+## 🚀 Quickstart & Local Development
 
 ```bash
+git clone https://github.com/KAIF1409/mangal-platform.git
+cd mangal-platform
 npm install
-cp .env.example .env.local   # fill in real values
+cp .env.example .env.local   # fill in your own values — see below
 npm run dev
 ```
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the pre-commit checks, and
-[`docs/REPO_STRUCTURE.md`](docs/REPO_STRUCTURE.md) for how the codebase is
-organized.
+The app runs at `http://localhost:3000`.
 
-## Deployment
-
-Hosted on **Cloudflare Workers** (via [OpenNext](https://opennext.js.org/cloudflare)),
-not Vercel.
+Other scripts:
 
 ```bash
-npm run preview   # opennextjs-cloudflare build + local preview
-npm run deploy     # opennextjs-cloudflare build + deploy to Cloudflare
+npm run build     # production build
+npm run start     # run the production build locally
+npm run lint       # eslint
+npm run preview    # opennextjs-cloudflare build + local Workers preview
+npm run deploy      # opennextjs-cloudflare build + wrangler deploy
 ```
 
-## Who built it
+---
 
-Built solo — design, backend, and frontend all handled by one person —
-by **Mohammed Kaif**, a B.Tech CSE student at PES University (Class of 2026).
+## 🔐 Environment Variables & BYOK Setup
 
-[LinkedIn](https://www.linkedin.com/in/mohammed-kaif-714a79242) ·
-[Email](mailto:kaifmohammed.work@gmail.com)
+Copy `.env.example` to `.env.local` and fill in your own values. Never
+commit `.env.local` — it's already `.gitignore`d.
+
+```bash
+# --- Supabase ---
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# --- App ---
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# --- Razorpay (optional — payments) ---
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
+
+# --- Direct UPI payments — no gateway account needed ---
+FOUNDER_UPI_ID=
+FOUNDER_UPI_NAME=
+NEXT_PUBLIC_ENABLE_GLOBAL_PAYMENTS=
+
+# --- Resend (transactional email) ---
+RESEND_API_KEY=
+
+# --- YouTube Data API (KaTube creator verification) ---
+YOUTUBE_API_KEY=
+
+# --- Cold storage encryption (DPDP compliance) ---
+COLD_STORAGE_ENCRYPTION_KEY=
+```
+
+### BYOK (Bring Your Own Key) for AI features
+
+The AI Writing Assistant and Translation tool default to **on-device
+inference** via WebGPU (`@mlc-ai/web-llm`) — nothing leaves your browser. If
+you'd rather use a cloud model, you can add your own API key (Gemini AI
+Studio or Groq) directly in the app's AI settings panel. That key is
+**encrypted and stored in your browser's `localStorage` only** — it is never
+sent to or persisted by the MANGAL backend.
+
+### Database schema changes
+
+Supabase schema changes in this project go through the **Supabase MCP
+connector** rather than raw `supabase db push` — the migration history has
+some deliberate drift documented in [`CONTEXT.md`](CONTEXT.md#4-known-issues--fixes-ledger).
+Read that section before touching `supabase/migrations/`.
+
+---
+
+## 📁 Project Directory Structure
+
+```
+mangal-platform/
+├── src/
+│   └── app/
+│       ├── WebMangal/          # Reader platform: books, songs, series, upload, search
+│       ├── katube/             # Video feed: watch, shorts, channel, dashboard, upload
+│       ├── kalpana-circle/     # Community: chat, stories, groups, watch-together
+│       ├── mangal-studio/      # Creator Studio (per-product: webmangal/, katube/)
+│       ├── dashboard/          # Unified creator dashboard (earnings, perks, tools…)
+│       ├── admin/              # Admin tools: reports, moderation, media migration
+│       ├── api/                # Route handlers (AI, payments, media, recommendations…)
+│       ├── components/         # Shared + product-specific React components
+│       ├── lib/                # Shared logic: ai/, auth/, compliance/, media/, payments/, sound/
+│       ├── login/, auth/       # Authentication flows
+│       └── about/, help/, …    # Static/marketing pages
+├── supabase/
+│   ├── migrations/             # SQL migrations (see drift note above before touching)
+│   └── functions/              # Edge functions (e.g. purge-cold-storage)
+├── public/                     # Static assets + runtime-loaded vendor bundles
+├── docs/
+│   └── SESSION_HISTORY.md      # Full chronological build log
+├── CONTEXT.md                  # Curated project context — read this first
+├── next.config.ts
+├── open-next.config.ts
+└── wrangler.jsonc               # Cloudflare Workers deployment config
+```
+
+---
+
+## 🤝 Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines. Before opening a PR,
+please read [`CONTEXT.md`](CONTEXT.md) — it covers standing conventions
+(mobile-check requirements, deploy gates, the bundle-size failure mode) that
+apply to every change.
+
+## 📄 License
+
+See repository settings / `LICENSE` if present; contact the maintainer for
+licensing questions.
