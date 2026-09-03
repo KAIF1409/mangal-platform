@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Search Results",
+  title: { absolute: "Search Results | MANGAL" },
   description:
     "Search manga, comics and web novels by title, genre, or creator on MANGAL.",
 };

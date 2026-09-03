@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { ArrowLeft } from 'lucide-react';
+import Navbar from '../../components/shared/Navbar';
+import Footer from '../../components/shared/Footer';
 
 interface TagWithCount {
   id: string;
@@ -41,6 +43,18 @@ export default function TagsIndexPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      <Navbar
+        variant="custom"
+        platformName="WebMangal"
+        logoSrc="/webmangal-logo.png"
+        href="/WebMangal"
+        subtitle="powered by MANGAL"
+        centerSlot={
+          <a href="/WebMangal" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+            <ArrowLeft size={14} /> Back to WebMangal
+          </a>
+        }
+      />
       {/* Mobile pass — page was already close to responsive (flexWrap tag
           pills, clamp() title) since it has no fixed-width nav; only the
           outer padding needed tightening on phones. */}
@@ -85,6 +99,7 @@ export default function TagsIndexPage() {
           </div>
         )}
       </div>
+      <Footer platformName="WebMangal" logoSize={28} />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Reading History",
+  title: { absolute: "Reading History | MANGAL" },
   description:
     "Your reading history and progress on MANGAL.",
 };

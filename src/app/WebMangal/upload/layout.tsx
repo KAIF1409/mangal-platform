@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Upload",
+  title: { absolute: "Upload | MANGAL" },
   description:
     "Publish a new chapter on MANGAL.",
 };

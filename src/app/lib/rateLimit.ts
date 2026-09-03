@@ -38,16 +38,25 @@ export async function checkRateLimit(
   maxEvents: number,
   windowSeconds: number
 ): Promise<boolean> {
-  const { data, error } = await supabaseAdmin.rpc('check_rate_limit', {
-    p_bucket_key: bucketKey,
-    p_max_events: maxEvents,
-    p_window_seconds: windowSeconds,
-  });
+  // QA fix (DEFECT-01 in docs/QA_REPORT.md): this function's contract says it
+  // "fails OPEN (returns true) if the rate-limit check itself errors", but the
+  // implementation only honored that for an rpc *error result* — a thrown
+  // error (e.g. malformed env URL) propagated out of the route instead.
+  try {
+    const { data, error } = await supabaseAdmin.rpc('check_rate_limit', {
+      p_bucket_key: bucketKey,
+      p_max_events: maxEvents,
+      p_window_seconds: windowSeconds,
+    });
 
-  if (error) {
-    console.error('[rateLimit] check failed, failing open:', error);
+    if (error) {
+      console.error('[rateLimit] check failed, failing open:', error);
+      return true;
+    }
+
+    return data === true;
+  } catch (err) {
+    console.error('[rateLimit] check threw, failing open:', err);
     return true;
   }
-
-  return data === true;
 }

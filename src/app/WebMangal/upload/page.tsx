@@ -9,6 +9,7 @@ import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { suggestTags } from '../../lib/tagSuggest';
 import dynamic from 'next/dynamic';
+import Navbar from '../../components/shared/Navbar';
 
 // §141 — client-only boundary; see dashboard/books/page.tsx for the full
 // note (WebMangalAiEditor pulls the 6 MB web-llm engine into the SSR graph
@@ -906,7 +907,20 @@ function UploadFlow() {
   // "***" appearing inline — see novelEditor.ts header comment for details.)
 
   return (
-    <main style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', padding: '40px 24px', }}>
+    <>
+      <Navbar
+        variant="custom"
+        platformName="WebMangal"
+        logoSrc="/webmangal-logo.png"
+        href="/WebMangal"
+        subtitle="powered by MANGAL"
+        centerSlot={
+          <a href="/WebMangal" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+            <ArrowLeft size={14} /> Back to WebMangal
+          </a>
+        }
+      />
+      <main style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', padding: '40px 24px', }}>
       {/* Mobile pass — biggest remaining page (1300+ lines), but the two-column
           Series Info step and toolbar rows already used flexWrap, so this only
           needed: outer/card padding tightened, the h1 given a mobile size (was
@@ -1459,5 +1473,6 @@ function UploadFlow() {
         )}
       </div>
     </main>
+    </>
   );
 }

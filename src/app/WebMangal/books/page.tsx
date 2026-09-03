@@ -13,7 +13,7 @@ import { supabase } from '../../lib/supabase';
 import type { BookRow } from '../../lib/database.types';
 import Navbar from '../../components/shared/Navbar';
 import Footer from '../../components/shared/Footer';
-import { BookOpen, FileText } from 'lucide-react';
+import { BookOpen, FileText, ArrowLeft } from 'lucide-react';
 
 // BookRow comes from lib/database.types.ts (shared books-module row shape).
 
@@ -63,7 +63,18 @@ export default function BooksCatalogPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
-      <Navbar />
+      <Navbar
+        variant="custom"
+        platformName="WebMangal"
+        logoSrc="/webmangal-logo.png"
+        href="/WebMangal"
+        subtitle="powered by MANGAL"
+        centerSlot={
+          <a href="/WebMangal" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+            <ArrowLeft size={14} /> Back to WebMangal
+          </a>
+        }
+      />
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '28px 20px 80px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
           <BookOpen size={26} color="var(--accent)" />

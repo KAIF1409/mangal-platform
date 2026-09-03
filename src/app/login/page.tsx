@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
+import MangalLogo from '../components/shared/MangalLogo';
 import {
   isMinor,
   isPlausibleDateOfBirth,
@@ -1084,7 +1085,7 @@ export default function AuthPage() {
       <div className="mangal-auth-left">
         <div className="mangal-auth-form-wrap">
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none', marginBottom: '32px' }}>
-            <LogoMark size={34} />
+            <MangalLogo size={34} />
             <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>MANGAL</span>
           </Link>
 

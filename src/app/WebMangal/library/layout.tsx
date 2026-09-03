@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Library",
+  title: { absolute: "Library | MANGAL" },
   description:
     "Series you follow on MANGAL.",
 };

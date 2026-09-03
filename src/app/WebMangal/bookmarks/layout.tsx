@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Bookmarks",
+  title: { absolute: "Bookmarks | MANGAL" },
   description:
     "Your saved manga, comics and web novels on MANGAL.",
 };
