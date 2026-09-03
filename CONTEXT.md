@@ -10054,5 +10054,5 @@ Same static method §145 used: grid 'repeat(auto-fill, minmax(min(100%,300px),1f
 1. `npx tsc --noEmit` -> exit 0.
 2. `npm run lint` -> 0 errors, 53 warnings = exact §145/§146 baseline; 0 from FeaturesSection.tsx/page.tsx.
 3. `npm run build` -> exit 0; /about prerendered STATIC; no SSR/hydration issues on the touched route.
-4. Bundle (handler.mjs): raw 3,032,970 B (~2.96 MiB); wrangler dry-run "Bytes Uploaded" 2,167 KiB gzipped vs 3,072 KiB ceiling (~905 KiB headroom). Under 3 MiB. No new animation dep.
-5. Prerendered HTML (.next/server/app/about.html): contains all three new titles; 0 feat-armed classes.
+4. Bundle (handler.mjs) raw = 8,106,406 B this session (§145 baseline 8,105,639 B, +767 B — two new icons + ~150 chars of about-page text; no new deps/animations/imports); `npx opennextjs-cloudflare build` exit 0; `wrangler deploy --dry-run` Total Upload 11,104.02 KiB / gzip 2,167.94 KiB vs the 3,072 KiB free-plan ceiling (~904 KiB headroom). Under 3 MiB. Per §145 convention the 3 MiB gate is the gzipped upload ceiling — satisfied.
+5. Prerendered HTML (.next/server/app/about.html): contains all three new titles "Recommended for you" / "AI writing assistant" / "Hinglish & Hindi translation"; 0 feat-armed classes (arming is client-only, no-JS default fully visible).
