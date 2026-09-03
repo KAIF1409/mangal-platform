@@ -10104,3 +10104,49 @@ degrades to "some data doesn't load" instead of a fully blank site.
 **Gates:** `npx tsc --noEmit` exit 0. `npm run lint` 0 errors / 54 warnings
 (53 baseline + 1 new intentional warning inside the `if (!supabaseUrl...)`
 block, itself harmless). `npm run build` exit 0, `/` prerendered static.
+
+## §149 — Reuse the /about features grid on the homepage (2026-09-03)
+
+> **Numbering note:** this was drafted locally as "§148" before discovering
+> `origin/main` had already moved to a real §148 (Supabase-client-crash /
+> error-boundary fix, commit `4368dd8`) while this session's clone was
+> stale. Renumbered to §149, rebased on top of §148 — no overlap in files
+> touched (that fix: `error.tsx`, `lib/supabase.ts`; this one: `page.tsx`,
+> `FeaturesSection.tsx` import only).
+
+**Why:** founder feedback — the §145/§147 per-platform feature grid was accurate
+but lived only on `/about`, a page first-time visitors basically never open;
+real traffic lands on `/` (`src/app/page.tsx`).
+
+**Fix (`src/app/page.tsx` only, `FeaturesSection.tsx` untouched):**
+- New `import FeaturesSection from './about/FeaturesSection'` and a new
+  "Everything Inside MANGAL" section, mounted directly under the existing
+  generic "Why Choose Mangal?" cards and above the Creator CTA.
+- The exact same component is imported, not copied/forked — `/about` and `/`
+  now render identical feature copy from one source, so they cannot drift out
+  of sync. `/about`'s own `<FeaturesSection />` usage was left in place
+  (harmless duplication for anyone who does land on the company page
+  directly); nothing else on `/about` or `/` was touched.
+- No new CSS tokens, no Tailwind, no new dependencies — the new section
+  reuses the same heading/subheading pattern already used by the "Why Choose
+  Mangal?" section immediately above it on the same page.
+
+**Gate results this session:**
+1. `npx tsc --noEmit` -> exit 0.
+2. `npm run lint` -> 0 errors, 53 warnings (exact §145/§146/§147 baseline).
+3. `npm run build` -> **could not be verified in this session's sandbox.**
+   Turbopack fails fetching `Geist`/`Geist Mono` from `fonts.googleapis.com`
+   (403 — that domain is outside this sandbox's network allowlist). Confirmed
+   this is pre-existing and unrelated to this change: `git stash` (reverting
+   to the untouched §147 tree) reproduces the identical font-fetch failure.
+   tsc + lint are clean and the diff is a single self-contained JSX
+   insertion of an already-shipped, already-gated component — low risk — but
+   gate 3/4 (build + bundle-size) are UNVERIFIED locally this session. Real
+   verification will come from GitHub Actions CI (tsc+lint, per
+   CONTRIBUTING.md) and from Cloudflare Workers Builds' own build step on
+   push, both of which have full internet access.
+4. Bundle size: not measured this session for the reason above.
+
+**Stop-and-wait case: NOT triggered** — this isn't a "can't confirm a feature
+is real" situation, it's a local network gap in an otherwise clean, low-risk
+change; flagged transparently instead of silently claiming a gate passed.

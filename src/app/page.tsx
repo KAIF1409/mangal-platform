@@ -9,6 +9,7 @@ import ThemeToggle from './components/shared/ThemeToggle';
 import MangalLogo from './components/shared/MangalLogo';
 import ParticleField from './components/shared/ParticleField';
 import CustomCursor from './components/shared/CustomCursor';
+import FeaturesSection from './about/FeaturesSection';
 import { supabase } from './lib/supabase';
 import { ScrollText, Flame, Smartphone, PenLine, X, Menu, Tag, Eye, BookOpen, Book, ArrowDown, ArrowRight } from 'lucide-react';
 
@@ -1042,6 +1043,25 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
+        </section>
+
+        {/* ── WHAT'S INSIDE — §149: the real per-platform feature grid, moved
+             here from /about. §145/§147 built this grid to be accurate
+             (nothing unbuilt claimed — no Nova, no K Circle servers/roles,
+             no chapter-synced audio), but it only lived on /about, a page
+             almost nobody visits — first-time traffic lands on this page.
+             Reusing the same component (not a copy) so /about and this
+             section can never drift out of sync with each other. ── */}
+        <section style={{ padding: '0 24px clamp(60px,8vw,100px)', maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 42px)', fontWeight: 900, margin: '0 0 12px', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+              Everything Inside MANGAL
+            </h2>
+            <p style={{ fontSize: 'clamp(13px, 1.8vw, 16px)', color: 'var(--text-tertiary)', margin: 0, maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
+              What each product actually does — reader tools, writer tools, and the community layer that connects them.
+            </p>
+          </div>
+          <FeaturesSection />
         </section>
 
         {/* ── CREATOR CTA ── */}
