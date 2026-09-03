@@ -1,9 +1,13 @@
 'use client';
 
-// ── /about features section (§145) ──────────────────────────────────────────
+// ── /about features section (§145, extended §147) ───────────────────────────
 // Per-platform capability grid for the company page. Copy is grounded in the
 // §145 Phase 0 audit of what is actually shipped (CONTEXT.md) — nothing here
-// describes an unbuilt feature (no Nova, no K Circle servers/roles, no Live).
+// describes an unbuilt feature (no Nova, no K Circle servers/roles, no Live,
+// no chapter-synced audio — §147). §147 extension: added the recommendations
+// card (verified against /api/recommendations + RecommendedForYou.tsx) and
+// split the single AI Writer card into assistant + translation cards so the
+// two §144 AI actions read separately; §145 copy otherwise untouched.
 //
 // Pattern (§145 Phase 1): 2-5 word title + one sentence per feature, grouped
 // by user segment (WebMangal reader/writer, KaTube viewer/creator) or by
@@ -20,8 +24,10 @@ import {
   BookOpen,
   Camera,
   Clapperboard,
+  Compass,
   FileText,
   Flame,
+  Languages,
   ListVideo,
   Megaphone,
   MessageCircle,
@@ -86,6 +92,11 @@ const PLATFORMS: PlatformBlock[] = [
             desc: 'Original songs published as block-by-block lyric sheets — verse, chorus, hook — tagged by genre and linked to the series they\u2019re based on.',
           },
           {
+            icon: Compass,
+            title: 'Recommended for you',
+            desc: 'Rails on the WebMangal home built from what you read and follow — “For You”, “Because you read…” and “Trending in your top genre.” New readers get trending picks instead.',
+          },
+          {
             icon: Bookmark,
             title: 'Your reading, tracked',
             desc: 'Bookmarks, reading history and a personal library, plus rankings and tags for finding the next series.',
@@ -98,8 +109,13 @@ const PLATFORMS: PlatformBlock[] = [
         items: [
           {
             icon: Sparkles,
-            title: 'AI Writer',
-            desc: 'Draft with autosave and word-count goals, then run Polish & Hinglish Convert or English ↔ Hindi AI Translation in batched passes — on-device by default, or with your own API key.',
+            title: 'AI writing assistant',
+            desc: 'Polish drafts in batched passes with autosave and word-count goals — runs on-device by default, or with your own API key, kept encrypted in your browser and never on our servers.',
+          },
+          {
+            icon: Languages,
+            title: 'Hinglish & Hindi translation',
+            desc: 'One click converts Hinglish to clean English, or translates English ↔ Hindi with the direction detected automatically.',
           },
           {
             icon: Tag,

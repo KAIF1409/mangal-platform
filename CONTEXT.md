@@ -10006,3 +10006,53 @@ deploy: `mangal-tilt-overlay` 0 occurrences, new gradient ×3 (one per door),
 each blurb `<p>` verified as a sibling of the title inside the bottom overlay
 — nothing opacity-hidden; descriptions render in the default state on desktop
 and mobile.
+
+
+## §147 — Landing-page features section: extend-only merge (2026-09-03)
+
+> **Numbering note:** the brief labelled this target "§144", but §145 already
+> noted §144 was consumed by the 2026-09-02 implementation log — so the previous
+> session's features showcase was logged as §145 (on `/about`) and its landing-
+> door fix as §146. This entry is §147, appended sequentially (does NOT overwrite
+> §144/§145).
+
+### Phase 0 — audit: feature-by-feature (confirmed-shipped vs not)
+
+| Brief item | Verdict | Verified against |
+|---|---|---|
+| Reader theme engine, typography, scroll/paginated, local progress | REAL | `src/app/components/books/BookReader.tsx` (§142): 4-theme engine (THEME_DESK/THEME_PAPER/THEME_INK light/sepia/dark/midnight), FONT_STACKS serif/sans/mono + 12–24px size + 1.2–2.0 line-height + narrow/normal/wide margins, ReadingMode paginated|scroll (PDF list vs epub flow:'scrolled-doc'), progress localStorage `book_reader_progress_<id>` + `book_reading_progress` DB upsert (signed-out OK); manga/novel reader reading_mode scroll|page, rtl, fullscreen, emoji reactions. §145 already covered all four — no copy needed. |
+| "Audio & Song Soundtrack synced with chapters" | NOT BUILT; conflation flagged | Searched all of `src` for `<audio`, `new Audio(`, `ambient`, `soundtrack`, `theme_song` — ZERO matches. Songs (`songs/[songId]/page.tsx`, §85) = `SongBlock[]` rendered as a block-by-block lyric sheet, genre tags, "based on" series/chapter link (linked_series_id/linked_chapter_id = textual attribution, not a synced soundtrack). No audio player exists. Brief's escape hatch applies (write copy for what Songs actually does) → §145's accurate card left unchanged. Stop-and-wait NOT triggered. |
+| AI Discovery / recommendations carousel | REAL (was missing from grid) | `src/app/api/recommendations/route.ts` (§135): cosine taste-vector scorer (0.55 genre + 0.20 author + 0.15 language + 0.10 popularity), rails For You / Because you read <seed> / Trending in <genre>, cold-start fallback, Cache-Control private. Rendered by `src/app/components/feed/RecommendedForYou.tsx` on WebMangal home (page.tsx:938). Added "Recommended for you" card. |
+| BYOK AI writing assistant | REAL | `mangal-studio/webmangal/write`, `useAiAssistEngine.ts` + `byokStorage.ts` + `editorAssist.ts` (AssistMode polish|hinglish|translate, on-device WebGPU default, BYOK fallback, keys encrypted in-browser only, never to disk/DB). §145 single dense card split into two. |
+| Hinglish translator | REAL (with above) | §144 explicit second AI action: mode=translate EN<->Hindi auto-direction; hinglish = Hinglish->English. |
+| Storyboard tool | REAL, already covered | `/mangal-studio/webmangal/convert` (§135): text->panel splitter + drag-drop + JSON/script export. Card unchanged. |
+| Studio analytics | REAL, already covered | `/mangal-studio/webmangal/analytics` (§126 port): reading-time, country, gender donut. Card unchanged. |
+| Ecosystem cards (WebMangal/KaTube/K Circle) | covered, left alone | §144 PRODUCTS array on /about/page.tsx + §145 platform tagline. Not duplicated. |
+
+### Phase 1 — existing template preserved (no replacement)
+
+- Tokens: only existing var(--bg-card/--border-color/--text-* /--accent) palette incl. #d97706/#b45309 (§145: no maroon in src). No new CSS vars.
+- Animations: IntersectionObserver reveal CSS + isomorphic useIsoLayoutEffect arm byte-identical; no Framer Motion/GSAP touched (both present, untouched). New cards inherit per-card transitionDelay stagger (Math.min(i,5)*60ms); For-readers 4->5, For-writers 5->6, still capped at 5.
+- Styles: new cards reuse existing cardStyle/gridStyle/openLinkStyle. No Tailwind.
+- Hero/hover/3D-tilt (/): untouched. Dark-mode palette unchanged.
+
+
+### Phase 2 — integrated feature showcase: extend vs leave-alone
+
+- Added (WebMangal -> For readers): "Recommended for you" card, grounded in /api/recommendations + RecommendedForYou.tsx.
+- Split (WebMangal -> For writers): §145 single dense "AI Writer" card -> "AI writing assistant" + "Hinglish & Hindi translation".
+- Imports added: Compass, Languages from lucide-react (confirmed exported).
+- Left byte-identical: Songs card, Books/PDF card, Manga & novel reader card, "Your reading, tracked", all KaTube + K Circle blocks, reveal CSS/JS, grid/card styles.
+- Net: 1 card added, 1 card split into 2 (For readers 4->5; For writers 5->6). No existing copy rewritten.
+
+### Phase 3 — mobile check (320-768px, scoped to this section)
+
+Same static method §145 used: grid 'repeat(auto-fill, minmax(min(100%,300px),1fr))' -> 320px/1col, 768px/2col; new text-only cards add no fixed widths. Reveal transform still single translateY(14px); grid children minWidth:0; platform header still flexWrap. 48x48px targets = the 3 "Open" links (minHeight:48px inline), unchanged; new cards non-interactive. prefers-reduced-motion still skips arming; cards visible.
+
+### Hard gates (final tree)
+
+1. `npx tsc --noEmit` -> exit 0.
+2. `npm run lint` -> 0 errors, 53 warnings = exact §145/§146 baseline; 0 from FeaturesSection.tsx/page.tsx.
+3. `npm run build` -> exit 0; /about prerendered STATIC; no SSR/hydration issues on the touched route.
+4. Bundle (handler.mjs): raw 3,032,970 B (~2.96 MiB); wrangler dry-run "Bytes Uploaded" 2,167 KiB gzipped vs 3,072 KiB ceiling (~905 KiB headroom). Under 3 MiB. No new animation dep.
+5. Prerendered HTML (.next/server/app/about.html): contains all three new titles; 0 feat-armed classes.
