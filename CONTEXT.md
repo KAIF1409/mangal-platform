@@ -10056,3 +10056,51 @@ Same static method §145 used: grid 'repeat(auto-fill, minmax(min(100%,300px),1f
 3. `npm run build` -> exit 0; /about prerendered STATIC; no SSR/hydration issues on the touched route.
 4. Bundle (handler.mjs) raw = 8,106,406 B this session (§145 baseline 8,105,639 B, +767 B — two new icons + ~150 chars of about-page text; no new deps/animations/imports); `npx opennextjs-cloudflare build` exit 0; `wrangler deploy --dry-run` Total Upload 11,104.02 KiB / gzip 2,167.94 KiB vs the 3,072 KiB free-plan ceiling (~904 KiB headroom). Under 3 MiB. Per §145 convention the 3 MiB gate is the gzipped upload ceiling — satisfied.
 5. Prerendered HTML (.next/server/app/about.html): contains all three new titles "Recommended for you" / "AI writing assistant" / "Hinglish & Hindi translation"; 0 feat-armed classes (arming is client-only, no-JS default fully visible).
+
+## §148 — Landing page fully blank ("crashed") + no site-wide error boundary (2026-09-03)
+
+Founder reported the landing page (https://mangal-platform.mangak.workers.dev/)
+"crashed" — KaTube door video not showing, multiple sections not rendering.
+
+**Root cause found:** `src/app/lib/supabase.ts` called
+`createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)`
+with both values forced non-null. `@supabase/ssr` throws synchronously
+("supabaseUrl is required.") if either is missing/blank — reproduced locally
+by building without them (`Error: supabaseUrl is required.` at
+`api/admin/payments/verify-upi/route.ts:17`, same client-construction
+pattern). This file is a top-level `export const`, imported by **88 files**,
+including `src/app/page.tsx` directly — so if `NEXT_PUBLIC_SUPABASE_URL` /
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` were not present when Cloudflare's
+Workers-Builds pipeline ran `next build` (these get inlined into the client
+JS bundle at BUILD time — a wrangler.jsonc `vars` entry or a dashboard
+runtime secret does NOT cover this, only a build-time variable does), the
+module throws on import and the entire client-side render for every page
+that pulls it in fails. There was also **no error.tsx anywhere in the app**,
+so Next had nothing to fall back to — the result is a fully blank page,
+matching "everything got crashed" / doors, video, and multiple sections all
+missing at once (they're all part of the one component tree that failed to
+mount, not independently broken).
+
+**Fix:**
+- `src/app/lib/supabase.ts`: no longer forces the env vars non-null. Missing
+  values now log one loud, specific `console.error` (naming the exact
+  Cloudflare Workers Builds setting to check) and fall back to obviously-fake
+  placeholder strings so `createBrowserClient` itself doesn't throw — the
+  page still renders in full; only the actual Supabase-backed calls
+  (trending series, tags, auth) fail quietly instead of taking the whole
+  page down with them.
+- `src/app/error.tsx` (new): site-wide error boundary — Next renders this
+  instead of a blank screen for any future uncaught client-render error,
+  with a "Try again" / "Go home" recovery path.
+
+**Action needed on the Cloudflare side (not fixable from code):** confirm
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set as
+**build-time** variables in Cloudflare dashboard → Workers Builds → Settings
+→ Build → Variables and secrets, not only as runtime vars/secrets. If they
+were already correct there, the blank-page symptom should not recur even
+without this code fix — but the code fix means a future misconfiguration
+degrades to "some data doesn't load" instead of a fully blank site.
+
+**Gates:** `npx tsc --noEmit` exit 0. `npm run lint` 0 errors / 54 warnings
+(53 baseline + 1 new intentional warning inside the `if (!supabaseUrl...)`
+block, itself harmless). `npm run build` exit 0, `/` prerendered static.
