@@ -15,6 +15,25 @@ function getKeys() {
   return { keyId, keySecret };
 }
 
+// crypto.timingSafeEqual THROWS a RangeError if the two buffers aren't the
+// same byte length, instead of returning false. Both callers below feed it
+// raw, attacker-controlled input (a client-supplied razorpay_signature, or
+// the public webhook's x-razorpay-signature header) with no length check —
+// so a short/garbage signature crashed the request (uncaught exception ->
+// opaque 500) instead of failing the check cleanly with a 400, on both an
+// authenticated route AND the public unauthenticated webhook endpoint.
+// This still runs the real timing-safe comparison whenever lengths match;
+// it only short-circuits (safely, not on secret-dependent data) when they
+// don't, which itself leaks no more than "this signature is the wrong
+// length" — no different from what timingSafeEqual's own crash already
+// revealed to an attacker via HTTP status/timing.
+function safeCompare(expectedHex: string, actualHex: string): boolean {
+  const expected = Buffer.from(expectedHex, 'utf8');
+  const actual = Buffer.from(actualHex, 'utf8');
+  if (expected.length !== actual.length) return false;
+  return crypto.timingSafeEqual(expected, actual);
+}
+
 let client: Razorpay | null = null;
 function getClient(): Razorpay | null {
   const keys = getKeys();
@@ -69,7 +88,7 @@ export function verifyPaymentSignature(params: {
     .update(`${params.orderId}|${params.paymentId}`)
     .digest('hex');
 
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(params.signature));
+  return safeCompare(expected, params.signature);
 }
 
 // Verifies a webhook payload's signature (different secret from the API
@@ -85,5 +104,5 @@ export function verifyWebhookSignature(rawBody: string, signature: string): bool
     .update(rawBody)
     .digest('hex');
 
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  return safeCompare(expected, signature);
 }
