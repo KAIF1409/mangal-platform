@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../../lib/auth/authRedirect';
+import { useNotificationSound } from '../../../../lib/sound/playNotificationSound';
 import {
   Check, ArrowLeft, MessageCircle, MessagesSquare, Paperclip,
   Zap, Lock, Globe, Plus, Link2, VolumeX, Volume2, X,
@@ -115,6 +116,9 @@ export default function FastTapWatchTogetherRoomPage() {
   const roomId = params.roomId as string;
 
   const [userId, setUserId] = useState<string | null>(null);
+  // §151 — shared notification-sound player for this room's chat channel
+  // (see the kcircle_messages INSERT handler below).
+  const { play } = useNotificationSound();
   const [room, setRoom] = useState<RoomInfo | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -426,6 +430,11 @@ export default function FastTapWatchTogetherRoomPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kcircle_messages', filter: `conversation_id=eq.${conversationId}` },
         async (payload) => {
           const row = payload.new as { id: string; sender_id: string; text: string | null; short_ref_id: string | null; created_at: string };
+          // §151 — sound for other people's messages landing in the room
+          // chat; skip my own sends (this channel is also how they echo
+          // back), and skip while the tab is focused (the room — chat panel
+          // included — is on screen). Hidden/background tabs still ding.
+          if (row.sender_id !== userId && document.hidden) play();
           const senderName = await resolveUsername(row.sender_id);
           setChatMessages(prev => (prev.some(m => m.id === row.id) ? prev : [...prev, { ...row, senderName }]));
           setTimeout(() => chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' }), 50);
@@ -437,7 +446,7 @@ export default function FastTapWatchTogetherRoomPage() {
         })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [chatThreadId, userId, resolveUsername]);
+  }, [chatThreadId, userId, resolveUsername, play]);
 
   // ── public comments for the current short ──
   useEffect(() => {

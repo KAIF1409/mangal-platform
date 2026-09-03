@@ -6,6 +6,7 @@ import Link from 'next/link';
 import ThemeToggle from '../../../../../components/shared/ThemeToggle';
 import { supabase } from '../../../../../lib/supabase';
 import { setPostLoginRedirect } from '../../../../../lib/auth/authRedirect';
+import { useNotificationSound } from '../../../../../lib/sound/playNotificationSound';
 import { Users, Lock, Globe, Check, Link2, Crown, MessageCircle, ArrowLeft } from 'lucide-react';
 
 // ── Sync-Play Watch Rooms ──
@@ -83,6 +84,9 @@ export default function WatchRoomPage() {
   const roomId = params.roomId as string;
 
   const [userId, setUserId] = useState<string | null>(null);
+  // §151 — shared notification-sound player for this room's chat channel
+  // (see the watch_room_messages INSERT handler below).
+  const { play } = useNotificationSound();
   const [room, setRoom] = useState<RoomInfo | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
@@ -204,6 +208,11 @@ export default function WatchRoomPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'watch_room_messages', filter: `room_id=eq.${room.id}` },
         async (payload) => {
           const row = payload.new as { id: string; sender_id: string; message_text: string; created_at: string };
+          // §151 — sound for other people's messages landing in the room
+          // chat; skip my own sends (this channel is also how they echo
+          // back), and skip while the tab is focused (the room is on
+          // screen). Hidden/background tabs still ding.
+          if (row.sender_id !== userId && document.hidden) play();
           const senderName = await resolveUsername(row.sender_id);
           setMessages(prev => (prev.some(m => m.id === row.id) ? prev : [...prev, { ...row, senderName }]));
           setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 50);
@@ -222,7 +231,7 @@ export default function WatchRoomPage() {
       .subscribe();
 
     return () => { cancelled = true; supabase.removeChannel(channel); };
-  }, [room, userId, resolveUsername]);
+  }, [room, userId, resolveUsername, play]);
 
   // ── YouTube IFrame API + playback sync channel ──
   useEffect(() => {

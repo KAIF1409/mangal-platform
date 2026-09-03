@@ -10282,3 +10282,165 @@ inside the chat; stateless backend; no server-side AI MANGAL pays for.
    "sad"→drama normalization; guide matching incl. the three honesty entries).
 
 
+
+## §151 — Notification sound for realtime messages/notifications, platform-wide (2026-09-03)
+
+Founder brief: realtime messages/notifications arrive completely silently —
+K Circle chat/DMs AND anywhere else that shows a realtime push. A short, subtle
+sound should play when a new message/notification actually LANDS
+(Discord/WhatsApp/Slack pattern), never on your own outgoing sends, never when
+you're already looking at the exact conversation it landed in.
+
+### Phase 1 — audit: every realtime surface on the platform (verified, not assumed)
+
+- Started from `ce4645b` (= `origin/main` at session start, §150 already
+  pushed). Re-fetched before pushing too — no movement, no rebase, no §-number
+  collision, so §151 it is.
+- `.channel(` grep over `src/` (build artifacts excluded) → exactly FOUR files
+  carry Supabase Realtime subscriptions, five message/notification-bearing
+  listeners among them:
+  1. `src/app/kalpana-circle/chat/page.tsx` — `kcircle-thread-${id}`: INSERTs
+     on `kcircle_messages` for the OPEN conversation. Critical pre-existing
+     fact: this channel is the single path a message reaches the UI —
+     `sendMessage()` does NO local append, so the sender's OWN message comes
+     back through this channel too (documented in the file since §139-A2).
+  2. Same file — `kcircle-inbox-${userId}`: UNFILTERED INSERTs on
+     `kcircle_messages` (preview re-sort for every visible conversation), plus
+     participants INSERT/DELETE and conversations UPDATE (no sound — see
+     below).
+  3. `src/app/components/shared/NotificationBell.tsx` — INSERTs on
+     `kcircle_notifications` (likes/comments/messages/group_adds/broadcasts/
+     watch invites — all actor-scoped inserts on MY recipient_id, never my own
+     action). This component is mounted on K Circle main page ×2 (mobile +
+     desktop nav), chat page, the K Circle rail via `Shell.tsx`, and KaTube
+     home — one INSERT fires MULTIPLE handlers on one machine. Double-mount
+     topic crash was already fixed pre-§151 via per-instance channel ids.
+  4. `src/app/kalpana-circle/watch-together/shorts/[roomId]/page.tsx` —
+     `watch-room-shorts-chat-${id}`: INSERTs on `kcircle_messages` for the
+     room's chat thread (again including the sender's own row — `sendChat()`
+     has no local append). Its members/presence/sync channels are NOT
+     message-bearing.
+  5. `src/app/katube/watch/[videoId]/room/[roomId]/page.tsx` —
+     `watch-room-db-${id}`: INSERTs on `watch_room_messages` (same own-row
+     echo) + members INSERT/DELETE. Sync broadcast channel is playback-only.
+- Checked for realtime where the brief suspected it, and found NONE:
+  WebMangal (comments, new-chapter-from-followed-author) has NO realtime
+  subscriptions anywhere — comments and library updates are plain fetches.
+  New-chapter follower alerts land as `kcircle_notifications` rows (via
+  `api/notify-followers`), so surface 3 already rings for them.
+- Audited and deliberately NOT wired (documented so nobody "finishes" them
+  later by accident): MangalChatbot (§150) is a plain `fetch()` AI
+  request/response, not user-to-user realtime; watch-room member
+  join/leave and playback-sync broadcast are presence, not messages
+  (watch_invite notifications already ring via surface 3); inbox-channel
+  participants INSERT (added-to-group) is unsoundable as-is because it fires
+  for your own group-creation actions too — the bell's `group_add`
+  notification covers the true case with actor attribution.
+- Sound infrastructure: NONE existed (`new Audio(`, `AudioContext`,
+  `useSound`, `.mp3/.wav/.ogg` — zero hits in `src/`, only false positives in
+  `public/pdf.worker.min.mjs` and a RIFF/WEBP magic-byte comment in the upload
+  routes). `public/` has no sounds folder convention (flat assets + `vendor/`
+  + `videos/` only). Notification-settings surface: none exists
+  (`kalpana-circle/settings` has no notification section).
+- Fresh baselines measured this session on the clean tree: tsc exit 0; lint
+  0 errors / **54 warnings**; build exit 0; `.next/static/chunks`
+  11,126,343 B (141 files).
+
+
+
+### Phase 2 — sound asset + shared player
+
+- Approach: **(a) Web Audio API synthesized tone, at runtime — no asset
+  file.** Reasons: zero bundle-size cost beyond the ~6 KB module, ZERO
+  licensing risk (nothing bundled to vet — the CC0 route requires proving
+  provenance for a binary we can't hear at review time), and a soft two-tone
+  sine ding sounds clean at the subtlety level wanted. `public/sounds/` stays
+  nonexistent on purpose.
+- ONE shared module: `src/app/lib/sound/playNotificationSound.ts`
+  (`'use client'`, matching `swrCache.ts` convention). Exports
+  `useNotificationSound()` → `{ play, muted, toggleMuted }`,
+  `playNotificationSound()`, `primeAudioUnlock()`,
+  `NOTIFICATION_SOUND_COOLDOWN_MS`. No page has its own playback logic.
+- The ding: A5 (880 Hz) + E6 (1318.51 Hz) sine partials, 8 ms linear attack,
+  exponential decay (~0.32 s), lowpass 4400 Hz, master gain 0.5 — ~0.4 s
+  total, quiet; Discord-subtle, not alarm-subtle.
+- Autoplay policy: lazy singleton `AudioContext`; `primeAudioUnlock()`
+  installs ONE-TIME document-level pointerdown/keydown/touchstart listeners
+  (module-level flag — N mounts never stack listeners) that resume the
+  context at first gesture. If an event lands pre-gesture, `play()` tries a
+  single `resume()`; if the browser refuses it BAILS SILENTLY — no console
+  errors on first load (the spec's explicit requirement). All audio paths are
+  try/caught; nothing throws into a React handler.
+- Own-message bug (the classic): handled at BOTH layers. Call sites check
+  `row.sender_id !== userId` (mandatory because surfaces 1/4/5 echo the
+  sender's own row back through the channel); the player ALSO refuses to play
+  twice within a 400 ms cooldown. The cooldown is stored in
+  `localStorage['mangal_notification_sound_at']` — which also dedupes ACROSS
+  TABS and across the bell's double mount. One incoming DM legitimately fires
+  THREE handlers on the recipient's machine (thread + inbox + notification
+  INSERT, the chat page sends the notification right after the message) —
+  collapsed into ONE ding; a genuinely second message >400 ms later still
+  sounds.
+- Focused-tab suppression (call-site layer, per surface — see Phase 3): open
+  thread / open room + `document.hidden === false` → silent (you're looking
+  at it); hidden/background tab → plays. Other-conversation messages and
+  notifications always play.
+- Mute toggle: no notification-settings page exists to extend, so per the
+  brief's allowance the bell itself now hosts a small always-visible
+  speaker icon (`lucide-react` `Volume2`/`VolumeX`, inline styles matching
+  the file's token usage) next to the bell trigger. Since NotificationBell is
+  the one shared component present on every sound-producing surface, ONE
+  toggle covers the whole platform. Persists as
+  `localStorage['mangal_notification_sound'] = 'off'`; synced across the
+  double mount via a `mangal-notification-sound-muted-changed` CustomEvent
+  and across tabs via the `storage` event. Mute state is read at play-time
+  from localStorage (single source of truth), not from component state.
+
+
+### Phase 3 — every audited surface wired
+
+1. K Circle chat open-thread channel — plays on other people's INSERTs only
+   when `document.hidden` (focused tab showing this exact thread stays
+   silent); deps gained `userId` + `play` (both stable; no channel churn).
+2. K Circle chat inbox channel — plays only for `sender_id !== userId` AND
+   `conversation_id !== activeIdRef.current` (a ref mirror of the open
+   thread, so the once-per-userId subscription doesn't tear down on every
+   thread switch). Non-open conversation → always plays, even focused.
+3. NotificationBell — plays on every notification INSERT regardless of
+   focus (a badge increment is easy to miss; not a conversation you're
+   "already in"); cooldown handles its double mount and the DM double-fire.
+   Hosts the mute icon.
+4. Shorts watch-together room chat — `sender_id` + `document.hidden` checks
+   (the room IS the conversation; focused = watching it live).
+5. KaTube watch-room chat — same checks as 4.
+- No initial-load sounds anywhere: all five handlers fire only on live
+  realtime INSERT events after `.subscribe()`; history fetches are untouched.
+  No new CSS/Tailwind — JS/audio-only plus two inline-styled icon states.
+
+### Phase 4 — gates (literal output, this tree)
+
+1. `npx tsc --noEmit` → exit **0** (re-run after the final edit).
+2. `npm run lint` → `✖ 54 problems (0 errors, 54 warnings)`, exit **0** —
+   baseline exactly preserved. (Transient mid-phase: the hook's mount-time
+   `setMuted(readMuted())` tripped `react-hooks/set-state-in-effect` as a NEW
+   error at 191:5; fixed with the codebase's established targeted
+   eslint-disable + justification pattern (same as the auth-fetch effects in
+   chat/page.tsx), then gates re-run from 1. No error was shipped.)
+3. `npm run build` → exit **0**; `✓ Compiled successfully in 28.6s`; no
+   SSR/hydration issues — the module touches `window`/`AudioContext` only
+   inside guarded functions, never at module top level, and the hook starts
+   `muted=false` on server AND first client render.
+4. Bundle: `.next/static/chunks` 11,126,343 B → **11,141,858 B** =
+   +15,515 B raw/minified (~0.14%) across the whole app — the sound module +
+   hook + two small lucide icons, spread across shared chunks; no sound file
+   shipped. Near-zero as predicted for the synth-beep approach.
+
+### Phase 5 — push notes
+
+- `git fetch origin main` re-checked before push: still `ce4645b`, 0/0
+  ahead/behind — §151 needed no renumbering (the §148/§149-style collision
+  pattern didn't recur this time).
+- Pushed with the repo's working form: `credential.helper=` disabled inline,
+  Basic-auth URL, credential pulled from Windows Credential Manager via
+  `git credential fill` into process env vars only — never written to any
+  tracked file (no token env var existed in this session's environment).

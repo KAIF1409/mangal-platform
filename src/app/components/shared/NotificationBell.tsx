@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Radio } from 'lucide-react';
+import { Bell, Radio, Volume2, VolumeX } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useCachedQuery } from '../../lib/swrCache';
+import { useNotificationSound } from '../../lib/sound/playNotificationSound';
 
 // ── K Circle notification bell — dropdown panel + unread badge ──
 // Backend: supabase/migrations/20260813120000_kcircle_notifications.sql
@@ -71,6 +72,13 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  // §151 — shared notification-sound player. Every realtime surface uses the
+  // same hook; the bell also hosts the always-visible mute toggle (small
+  // speaker icon next to the trigger) so muting is reachable from any page
+  // that can hear a sound. `play` no-ops when muted, within the 400ms
+  // cooldown (dedupes this bell's own double mount below), or before the
+  // browser has unlocked audio — see lib/sound/playNotificationSound.ts.
+  const { play, muted, toggleMuted } = useNotificationSound();
 
   // Unique per mounted instance (not just per user) — this component is
   // rendered twice at once on Kalpana Circle's main page (mobile nav +
@@ -112,10 +120,21 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
   useEffect(() => {
     if (!userId) return;
     const channel = supabase.channel(`kcircle-notifications-${userId}-${instanceId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kcircle_notifications', filter: `recipient_id=eq.${userId}` }, () => { void mutateItems(); })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kcircle_notifications', filter: `recipient_id=eq.${userId}` }, () => {
+        void mutateItems();
+        // §151 — a notification just landed for someone else's action
+        // (likes/comments/messages/broadcasts/watch invites are all
+        // actor-scoped inserts on my recipient_id, never my own). Play
+        // regardless of focus: unlike an open chat thread, a notification
+        // badge increment is easy to miss. The player's 400ms cooldown
+        // dedupes this against the chat channels (a DM fires both) and
+        // against this component's double mount on K Circle's main page.
+        play();
+      })
       .subscribe();
+
     return () => { supabase.removeChannel(channel); };
-  }, [userId, mutateItems, instanceId]);
+  }, [userId, mutateItems, instanceId, play]);
 
   useEffect(() => {
     if (!open) return;
@@ -145,7 +164,24 @@ export default function NotificationBell({ userId, iconSize = 19, color = 'var(-
   if (!userId) return null;
 
   return (
-    <div ref={panelRef} style={{ position: 'relative' }}>
+    <div ref={panelRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 7 }}>
+      {/* §151 — always-visible notification-sound mute toggle. Lives right
+          next to the bell (the surface that rings) so it's reachable from
+          every page that can hear a ding: K Circle main nav ×2, chat page,
+          the K Circle rail via Shell, and KaTube home. Inline styles only —
+          matches this file's existing token usage. */}
+      <button
+        onClick={toggleMuted}
+        aria-label={muted ? 'Unmute notification sound' : 'Mute notification sound'}
+        title={muted ? 'Notification sound: off — click to unmute' : 'Notification sound: on — click to mute'}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          color, display: 'flex', alignItems: 'center',
+          opacity: muted ? 0.5 : 0.85,
+        }}
+      >
+        {muted ? <VolumeX size={iconSize - 4} strokeWidth={2} /> : <Volume2 size={iconSize - 4} strokeWidth={2} />}
+      </button>
       <button onClick={openPanel} title="Notifications" style={{
         background: 'none', border: 'none', cursor: 'pointer', position: 'relative',
         color, display: 'flex', alignItems: 'center', padding: 0,

@@ -8,6 +8,7 @@ import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import NotificationBell from '../../components/shared/NotificationBell';
 import ThemeToggle from '../../components/shared/ThemeToggle';
+import { useNotificationSound } from '../../lib/sound/playNotificationSound';
 import { useKCircleTheme } from '../theme';
 import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import { Camera, X, Paperclip, ArrowLeft, ArrowRight, Lock } from 'lucide-react';
@@ -149,6 +150,17 @@ function KCircleChatPageInner() {
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState<{ user_id: string; username: string }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // §151 — shared notification-sound player (lib/sound/playNotificationSound).
+  // Both realtime channels below call play() on genuinely new incoming
+  // messages; `play` itself no-ops when muted / in cooldown / pre-unlock.
+  const { play } = useNotificationSound();
+  // §151 — ref mirror of the open thread's id so the inbox channel's INSERT
+  // handler (subscribed once per userId, deps deliberately exclude `active`)
+  // can tell "message for the thread I'm looking at" (owned by the
+  // kcircle-thread channel below) from "message for some other thread"
+  // without tearing the inbox channel down on every thread switch.
+  const activeIdRef = useRef<string | null>(null);
 
   // ── group settings: rename, add/remove member, leave ──
   const [showGroupSettings, setShowGroupSettings] = useState(false);
@@ -329,6 +341,7 @@ function KCircleChatPageInner() {
   /* eslint-disable react-hooks/set-state-in-effect -- initial history fetch when active thread changes */
   useEffect(() => {
     if (!active) return;
+    activeIdRef.current = active.id;
     loadMessages(active.id);
     const channel = supabase
       .channel(`kcircle-thread-${active.id}`)
@@ -339,11 +352,20 @@ function KCircleChatPageInner() {
           const row = payload.new as MessageRow;
           setMessages(prev => (prev.some(m => m.id === row.id) ? prev : [...prev, row]));
           setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 50);
+          // §151 — subtle sound for genuinely NEW incoming messages only.
+          // Own sends arrive through this same channel (sendMessage() has no
+          // local append), so the sender_id check is what keeps typing from
+          // dinging at yourself; the document.hidden check implements the
+          // "already looking at this exact thread" suppression — a focused
+          // tab showing this thread stays silent, a background/hidden tab
+          // still plays. The player's cooldown dedupes this against the
+          // inbox channel + NotificationBell, which fire for the same row.
+          if (row.sender_id !== userId && document.hidden) play();
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [active, loadMessages]);
+  }, [active, loadMessages, userId, play]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── inbox: live previews/ordering + new conversations, also Realtime ──
@@ -370,6 +392,13 @@ function KCircleChatPageInner() {
         (payload) => {
           const row = payload.new as MessageRow;
           const preview = row.text ?? (row.attachment_url ? 'Photo' : '');
+          // §151 — sound only for OTHER people's messages landing in a
+          // conversation that is NOT the open thread: you're not looking at
+          // those, so the ding is the only hint they arrived (Discord/Slack
+          // behavior). The open thread's own channel handles its case above,
+          // including the focused-tab suppression; own sends (this device or
+          // another) never ding.
+          if (row.sender_id !== userId && row.conversation_id !== activeIdRef.current) play();
           setConversations(prev => {
             if (!prev.some(c => c.id === row.conversation_id)) return prev;
             return prev
@@ -406,7 +435,7 @@ function KCircleChatPageInner() {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [userId, loadConversations]);
+  }, [userId, loadConversations, play]);
 
   // For group threads, resolve sender_id -> username so messages can be labeled.
   /* eslint-disable react-hooks/set-state-in-effect -- derived lookup for the active group thread */
