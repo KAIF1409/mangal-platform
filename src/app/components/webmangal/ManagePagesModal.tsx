@@ -90,12 +90,42 @@ export default function ManagePagesModal({
 
   // ── Save Order ─────────────────────────────────────────────────────────────
   // Bulk-update page_number for all pages in current order.
+  //
+  // BUG FIX: pages has a UNIQUE(chapter_id, page_number) constraint
+  // (pages_chapter_id_page_number_key — see supabase/migrations perf_indexes
+  // comment). The old code fired one UPDATE per page CONCURRENTLY via
+  // Promise.all, each setting page_number straight to its new final value.
+  // For a simple adjacent swap, page A's new number (i+2) was still held by
+  // page B until B's own concurrent update landed — whichever request the DB
+  // processed first collided with the constraint, so a save could fail
+  // outright or (in a bigger reorder) commit some rows and reject others,
+  // leaving pages partially renumbered with just an opaque error.
+  //
+  // Fix: write in two phases. Phase 1 moves every row to a temporary
+  // page_number far outside any realistic real range (no chapter has
+  // anywhere near a million pages), so no two rows — and no row's old vs.
+  // new value — can ever collide within that phase. Only once every row is
+  // safely off the 1..N range does phase 2 assign the real final numbers;
+  // by then nothing still holds a value in 1..N, so phase 2 can't collide
+  // either, regardless of which concurrent request the DB processes first.
+  // (A single transactional RPC would be more bulletproof still, but that
+  // needs a DB migration; this is the deployable-now fix.)
+  const TEMP_OFFSET = 1_000_000;
+
   const handleSaveOrder = async () => {
     setSaving(true);
     setError('');
     setSuccessMsg('');
 
     try {
+      await Promise.all(
+        pages.map((page, i) =>
+          supabase
+            .from('pages')
+            .update({ page_number: TEMP_OFFSET + i })
+            .eq('id', page.id)
+        )
+      );
       await Promise.all(
         pages.map((page, i) =>
           supabase
@@ -148,11 +178,21 @@ export default function ManagePagesModal({
       return;
     }
 
-    // Renumber remaining pages gaplessly
+    // Renumber remaining pages gaplessly. Same two-phase fix as
+    // handleSaveOrder above (temp offset, then real numbers) — deleting a
+    // page shifts every later page's number down by one, and firing all
+    // those UPDATEs concurrently races the same UNIQUE(chapter_id,
+    // page_number) constraint (e.g. old #5 -> #4 can land while old #4
+    // still holds #4, until #4's own concurrent update -> #3 completes).
     const remaining = pages
       .filter((p) => p.id !== page.id)
       .map((p, i) => ({ ...p, page_number: i + 1 }));
 
+    await Promise.all(
+      remaining.map((p, i) =>
+        supabase.from('pages').update({ page_number: TEMP_OFFSET + i }).eq('id', p.id)
+      )
+    );
     await Promise.all(
       remaining.map((p) =>
         supabase.from('pages').update({ page_number: p.page_number }).eq('id', p.id)

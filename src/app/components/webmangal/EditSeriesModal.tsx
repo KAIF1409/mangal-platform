@@ -174,18 +174,54 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
     // exist, then diff selected vs. currently-saved and insert/delete only
     // what changed. Non-fatal — a tag sync failure shouldn't block the save
     // the creator actually asked for.
+    //
+    // BUG FIX: `name` and `slug` are BOTH independently `unique` on the
+    // `tags` table (see supabase/migrations/20260809_tags_system.sql). The
+    // upsert below only dedupes on `name` (onConflict: 'name'), so two
+    // different-looking names that normalize to the same slug — "Sci-Fi"
+    // vs "Sci Fi" vs "SCI-FI" — used to hit the *separate* slug unique
+    // constraint on insert, which this upsert's onConflict target doesn't
+    // catch. That error was silently dropped (only `data` was destructured,
+    // never `error`), so the creator's typed tag just vanished with no
+    // feedback. Now: on any upsert failure, fall back to looking the tag up
+    // by its slug (the collision target) before giving up, and surface a
+    // warning — still non-fatal to the series save itself — if it truly
+    // can't be resolved.
     let finalSelectedIds = selectedTagIds;
     const trimmedNewTag = newTagName.trim();
+    let tagWarning = '';
     if (trimmedNewTag) {
       const slug = trimmedNewTag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const { data: createdTag } = await supabase
+      const { data: createdTag, error: tagUpsertError } = await supabase
         .from('tags')
         .upsert({ name: trimmedNewTag, slug }, { onConflict: 'name' })
         .select('id')
         .single();
-      if (createdTag) {
+
+      let resolvedTagId: string | null = createdTag?.id ?? null;
+
+      if (!resolvedTagId) {
+        // Either the upsert errored (most likely a slug collision with a
+        // differently-named existing tag) or returned nothing — look the
+        // tag up by slug so a same-meaning tag the creator typed still
+        // gets attached instead of silently disappearing.
+        const { data: existingBySlug } = await supabase
+          .from('tags')
+          .select('id')
+          .eq('slug', slug)
+          .maybeSingle();
+        resolvedTagId = existingBySlug?.id ?? null;
+
+        if (!resolvedTagId) {
+          tagWarning = tagUpsertError
+            ? `Couldn't add tag "${trimmedNewTag}": ${tagUpsertError.message}`
+            : `Couldn't add tag "${trimmedNewTag}".`;
+        }
+      }
+
+      if (resolvedTagId) {
         finalSelectedIds = new Set(selectedTagIds);
-        finalSelectedIds.add(createdTag.id);
+        finalSelectedIds.add(resolvedTagId);
       }
     }
 
@@ -202,6 +238,7 @@ export default function EditSeriesModal({ story, userId, onClose, onSaved }: Edi
       await supabase.from('series_tags').delete().eq('series_id', story.id).in('tag_id', toRemove);
     }
 
+    if (tagWarning) setError(tagWarning);
     setSaving(false);
     onSaved({ id: story.id, ...updates });
   };
