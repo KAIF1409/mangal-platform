@@ -9,7 +9,7 @@ import {
   CalendarClock, FileText, ArrowLeft, BookOpen, Sparkles, Wrench,
   Menu, Expand, Shrink, Lock, Unlock, Settings, X, ScrollText,
   MoveHorizontal, ChevronRight, ListOrdered, CornerDownRight,
-  Minus, Plus, Wifi, ThumbsUp, Bookmark,
+  Minus, Plus, Wifi, ThumbsUp, Bookmark, AlertTriangle,
 } from 'lucide-react';
 
 
@@ -60,6 +60,13 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // available (Safari, etc.) so we never under-serve users we can't measure.
   const [autoResolvedQuality, setAutoResolvedQuality] = useState<'low' | 'high'>('high');
   const [prefsLoaded, setPrefsLoaded] = useState(false);
+  // Pages whose image failed to load even after the transform→original
+  // fallback (deleted object, offline, network failure). Keyed by page id —
+  // render swaps the broken <img> for a tap-to-retry placeholder instead of
+  // the silent broken-image glyph. retryNonces force a remount (and a fresh
+  // request) when the reader taps retry.
+  const [failedPageIds, setFailedPageIds] = useState<Set<string>>(() => new Set());
+  const [retryNonces, setRetryNonces] = useState<Record<string, number>>({});
 
   // Step 21 — Novel reader state
   const [novelContent, setNovelContent] = useState<string | null>(null);
@@ -490,6 +497,10 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     setLoading(true);
     setCurrentPage(0);
     lastSavedPage.current = 0;
+    // Chapter nav resets failure/retry bookkeeping — a page that failed in
+    // chapter 12 says nothing about chapter 13's pages.
+    setFailedPageIds(new Set());
+    setRetryNonces({});
     loadChapter();
     // Chapter nav now goes through next/link (instant client-side transition,
     // no full page reload — see nav-link conversion below), so scroll position
@@ -1153,8 +1164,8 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // rendered as a friendly "couldn't load this page — tap to retry" tile;
   // retrying re-requests the same URL with a cache-busting param so a
   // transient failure (e.g. offline for a moment) can actually recover.
-  const [failedPageIds, setFailedPageIds] = useState<Set<string>>(new Set());
-  const [retryTokens, setRetryTokens] = useState<Record<string, number>>({});
+  // (State itself lives at the top of the component with the other reader
+  // state — failedPageIds/retryNonces — so chapter-nav can reset it.)
   const handleImageError = (
     e: React.SyntheticEvent<HTMLImageElement>,
     pageId: string,
@@ -1183,13 +1194,13 @@ function ReaderView({ chapterId }: { chapterId: string }) {
       next.delete(pageId);
       return next;
     });
-    setRetryTokens(prev => ({ ...prev, [pageId]: (prev[pageId] || 0) + 1 }));
+    setRetryNonces(prev => ({ ...prev, [pageId]: (prev[pageId] || 0) + 1 }));
   };
   // Cache-busting query param appended only on an explicit retry — normal
   // loads keep the plain, edge-cacheable /api/media URL (immutable + 1y
   // cache) untouched, so we don't defeat that caching on every render.
   const withRetryBust = (url: string, pageId: string): string => {
-    const token = retryTokens[pageId];
+    const token = retryNonces[pageId];
     if (!token) return url;
     return `${url}${url.includes('?') ? '&' : '?'}retry=${token}`;
   };
@@ -1210,7 +1221,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     };
     preload(currentPage + 1);
     preload(currentPage - 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on page/mode changes; preloading is fire-and-forget and doesn't need retryTokens/failedPageIds as trigger deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on page/mode changes; preloading is fire-and-forget and doesn't need retryNonces/failedPageIds as trigger deps
   }, [currentPage, effectiveMode, isNovel, pages, effectiveImageQuality]);
 
   if (loading) return (

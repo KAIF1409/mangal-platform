@@ -112,37 +112,63 @@ export default function ManagePagesModal({
   // needs a DB migration; this is the deployable-now fix.)
   const TEMP_OFFSET = 1_000_000;
 
+  // Runs the two-phase renumber (temp offset → final numbers) checking EVERY
+  // write result. supabase-js never throws — failures arrive as { error } on
+  // the resolved value — so the previous bare Promise.all + try/catch was
+  // dead code: an RLS block or network failure on every single write still
+  // fell through to "Order saved!", leaving the UI marked clean against a DB
+  // that still held the old order. Returns the first error message, or null
+  // when every write landed.
+  const applyTwoPhaseRenumber = async (
+    rows: { id: string; page_number: number }[]
+  ): Promise<string | null> => {
+    const phase1 = (await Promise.all(
+      rows.map((row, i) =>
+        supabase
+          .from('pages')
+          .update({ page_number: TEMP_OFFSET + i })
+          .eq('id', row.id)
+      )
+    )) as Array<{ error: { message: string } | null }>;
+    const phase1Error = phase1.find((result) => result?.error)?.error ?? null;
+    if (phase1Error) return phase1Error.message;
+
+    const phase2 = (await Promise.all(
+      rows.map((row) =>
+        supabase
+          .from('pages')
+          .update({ page_number: row.page_number })
+          .eq('id', row.id)
+      )
+    )) as Array<{ error: { message: string } | null }>;
+    const phase2Error = phase2.find((result) => result?.error)?.error ?? null;
+    if (phase2Error) return phase2Error.message;
+
+    return null;
+  };
+
   const handleSaveOrder = async () => {
     setSaving(true);
     setError('');
     setSuccessMsg('');
 
-    try {
-      await Promise.all(
-        pages.map((page, i) =>
-          supabase
-            .from('pages')
-            .update({ page_number: TEMP_OFFSET + i })
-            .eq('id', page.id)
-        )
-      );
-      await Promise.all(
-        pages.map((page, i) =>
-          supabase
-            .from('pages')
-            .update({ page_number: i + 1 })
-            .eq('id', page.id)
-        )
-      );
-      const reordered = pages.map((p, i) => ({ ...p, page_number: i + 1 }));
-      setPages(reordered);
-      setOriginalOrder(reordered.map((p) => p.id));
-      setSuccessMsg('Order saved!');
-    } catch (err) {
-      setError(`Failed to save order: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
+    const planned = pages.map((page, i) => ({ id: page.id, page_number: i + 1 }));
+    const errorMessage = await applyTwoPhaseRenumber(planned);
+
+    if (errorMessage) {
+      // Never mark the UI clean on a partial failure — resync from the DB
+      // (source of truth) so what's on screen is exactly what's stored.
+      setError(`Failed to save order: ${errorMessage} — reloaded the saved order.`);
+      await fetchPages();
       setSaving(false);
+      return;
     }
+
+    const reordered = pages.map((p, i) => ({ ...p, page_number: i + 1 }));
+    setPages(reordered);
+    setOriginalOrder(reordered.map((p) => p.id));
+    setSuccessMsg('Order saved!');
+    setSaving(false);
   };
 
   // ── Delete ─────────────────────────────────────────────────────────────────
@@ -188,23 +214,30 @@ export default function ManagePagesModal({
       .filter((p) => p.id !== page.id)
       .map((p, i) => ({ ...p, page_number: i + 1 }));
 
-    await Promise.all(
-      remaining.map((p, i) =>
-        supabase.from('pages').update({ page_number: TEMP_OFFSET + i }).eq('id', p.id)
-      )
+    // The DB row is gone at this point, so the parent's chapter page-count is
+    // already stale — report the new count before the renumbering below,
+    // success or failure alike.
+    onPagesChanged?.(chapterId, remaining.length);
+
+    const renumberError = await applyTwoPhaseRenumber(
+      remaining.map((p) => ({ id: p.id, page_number: p.page_number }))
     );
-    await Promise.all(
-      remaining.map((p) =>
-        supabase.from('pages').update({ page_number: p.page_number }).eq('id', p.id)
-      )
-    );
+
+    if (renumberError) {
+      // The delete itself succeeded; only the renumbering failed. Surface it
+      // and resync from the DB instead of pretending everything worked.
+      setError(`Page deleted, but renumbering failed: ${renumberError} — reloaded current pages.`);
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+      await fetchPages();
+      return;
+    }
 
     setPages(remaining);
     setOriginalOrder(remaining.map((p) => p.id));
     setDeletingId(null);
     setConfirmDeleteId(null);
     if (selectedPage?.id === page.id) setSelectedPage(null);
-    onPagesChanged?.(chapterId, remaining.length);
     setSuccessMsg(`Page deleted. ${remaining.length} page${remaining.length === 1 ? '' : 's'} remaining.`);
   };
 

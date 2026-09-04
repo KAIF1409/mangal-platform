@@ -81,7 +81,16 @@ export async function POST(req: NextRequest) {
 
   // Keyed by user, not IP - an unlimited free upload endpoint is a
   // storage-cost and abuse vector on its own even with valid auth.
-  const withinLimit = await checkRateLimit(rateLimitClient, `upload-media:${auth.userId}`, 30, 300);
+  //
+  // BULK-UPLOAD FIX: this was 30/300s, but a manga chapter is published by
+  // uploading its pages ONE PER REQUEST (the sequential loop in
+  // WebMangal/upload/page.tsx), and real chapters run 10-60 pages
+  // (ManagePagesModal's own scale comment). 30 per 5 minutes meant any
+  // chapter longer than 30 pages failed with 429 halfway through publish —
+  // an entirely legitimate use tripping the abuse guard. 120/5min still caps
+  // abuse (≈15MB/min sustained at the 15MB/file cap) while never blocking a
+  // single full chapter publish.
+  const withinLimit = await checkRateLimit(rateLimitClient, `upload-media:${auth.userId}`, 120, 300);
   if (!withinLimit) {
     return NextResponse.json({ error: 'Too many uploads. Please slow down.' }, { status: 429 });
   }

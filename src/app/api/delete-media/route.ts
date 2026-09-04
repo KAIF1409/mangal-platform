@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '../../lib/auth/authedServerClient';
 import { getMediaBucket } from '../../lib/media/r2';
+import { purgeMediaEdgeCache } from '../../lib/media/cachePurge';
 
 // Replaces client-side `supabase.storage.from(bucket).remove([...])`.
 // Ownership check: every key this app generates is prefixed
@@ -35,6 +36,17 @@ export async function POST(req: NextRequest) {
       { error: err instanceof Error ? err.message : 'Delete failed.' },
       { status: 500 }
     );
+  }
+
+  // CDN hygiene: /api/media serves R2 objects with a 1-year immutable
+  // edge-cache entry, so a deleted object would otherwise keep being served
+  // from the edge for up to a year. Purge the matching Cache API entries —
+  // best-effort (per-PoP only; see cachePurge.ts) and never fatal: the R2
+  // delete itself already succeeded.
+  try {
+    await purgeMediaEdgeCache(new URL(req.url).origin, owned);
+  } catch {
+    // ignore — purge is opportunistic
   }
 
   return NextResponse.json({ ok: true, deleted: owned.length });
