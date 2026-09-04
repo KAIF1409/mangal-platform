@@ -7,8 +7,9 @@ import Image from 'next/image';
 import { supabase } from '../../../lib/supabase';
 import { isDeveloperRole } from '../../../lib/auth/roles';
 import Link from 'next/link';
-import { Search, ArrowLeft, Flame, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText, PenLine, Coffee } from 'lucide-react';
+import { Search, ArrowLeft, Eye, Megaphone, AlertTriangle, Ban, BookOpen, ScrollText, PenLine, Coffee } from 'lucide-react';
 import VerifiedBadge from '../../../components/shared/VerifiedBadge';
+import MangalLogo from '../../../components/shared/MangalLogo';
 import TipJarModal from '../../../components/shared/TipJarModal';
 
 interface Series {
@@ -256,11 +257,7 @@ export default function CreatorProfilePage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '10px',
-            background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-          }}><Flame size={18} strokeWidth={2} color="#fff" /></div>
+          <MangalLogo size={36} />
           <span style={{ fontWeight: 900, fontSize: '20px', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>MANGAL</span>
         </Link>
         <Link href={backNav.href} style={{ fontSize: '12px', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}><ArrowLeft size={12} strokeWidth={2} /> {backNav.label}</Link>

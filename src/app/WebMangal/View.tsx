@@ -1101,7 +1101,12 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Music size={14} strokeWidth={2} color="#a78bfa" /> Songs ({songResults.length})
               </h3>
-              <button onClick={() => handleContentTypeToggle('songs')} style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <button
+                onClick={() => handleContentTypeToggle('songs')}
+                style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', transition: 'transform 0.15s, color 0.15s', display: 'inline-flex', alignItems: 'center' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#c4b5fd'; e.currentTarget.style.transform = 'scale(1.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.transform = 'scale(1)'; }}
+              >
                 See all songs →
               </button>
             </div>

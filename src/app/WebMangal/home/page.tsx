@@ -718,7 +718,12 @@ export default function HomePage() {
               <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Music size={18} strokeWidth={2} color="#a78bfa" /> Songs
               </h2>
-              <Link href="/WebMangal/songs" style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none' }}>
+              <Link
+                href="/WebMangal/songs"
+                style={{ fontSize: '12px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', transition: 'transform 0.15s, color 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#c4b5fd'; e.currentTarget.style.transform = 'scale(1.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.transform = 'scale(1)'; }}
+              >
                 Search &amp; filter all songs →
               </Link>
             </div>

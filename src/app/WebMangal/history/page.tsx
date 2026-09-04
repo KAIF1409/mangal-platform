@@ -5,11 +5,12 @@ import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
 import ThemeToggle from '../../components/shared/ThemeToggle';
+import MangalLogo from '../../components/shared/MangalLogo';
 
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { useCachedQuery } from '../../lib/swrCache';
 import {
-  Flame, Clock, Trash2, ScrollText, BookText, BookOpen, Heart, Play, X,
+  Clock, Trash2, ScrollText, BookText, BookOpen, Heart, Play, X,
 } from 'lucide-react';
 // Reading History — pulls from reading_progress table.
 // One row per reader+series (UNIQUE constraint), holds the last-read chapter + page.
@@ -261,7 +262,7 @@ export default function HistoryPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', flexShrink: 0 }}>
-            <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Flame size={15} /></div>
+            <MangalLogo size={30} />
             <span style={{ fontWeight: 900, fontSize: '17px', color: 'var(--text-primary)' }}>MANGAL</span>
           </Link>
           <span className="mangal-hist-crumb" style={{ color: 'var(--text-faint)' }}>›</span>
@@ -358,7 +359,10 @@ export default function HistoryPage() {
               style={{
                 padding: '9px 22px', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
                 cursor: 'pointer', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)',
+                transition: 'transform 0.15s, border-color 0.15s, color 0.15s',
               }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.borderColor = '#d97706'; e.currentTarget.style.color = '#d97706'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
             >
               Show All
             </button>
@@ -380,7 +384,7 @@ export default function HistoryPage() {
       {/* FOOTER */}
       <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '10px' }}>
-          <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Flame size={13} /></div>
+          <MangalLogo size={26} />
           <span style={{ fontWeight: 900, fontSize: '15px', color: 'var(--footer-text)' }}>MANGAL</span>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>Made with <Heart size={12} fill="currentColor" /> in India · Free to read, forever.</p>

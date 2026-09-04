@@ -416,7 +416,10 @@ export default function BookmarksPage() {
                 padding: '10px 24px', borderRadius: '10px',
                 background: 'linear-gradient(135deg, #f97316, #22c55e)',
                 color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+                transition: 'transform 0.15s, box-shadow 0.15s',
               }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 4px 18px rgba(249,115,22,0.4)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none'; }}
             >
               Show All
             </button>

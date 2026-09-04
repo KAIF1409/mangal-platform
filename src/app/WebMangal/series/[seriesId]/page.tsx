@@ -15,11 +15,12 @@ import { deleteMediaFiles } from '../../../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import Link from 'next/link';
 import ThemeToggle from '../../../components/shared/ThemeToggle';
+import MangalLogo from '../../../components/shared/MangalLogo';
 import {
   BookOpen, BookText, ScrollText, AlertCircle, ArrowLeft, CheckCircle2,
   Star, Play, RotateCcw, Zap, Bell, AlertTriangle, Trash2, MessageCircle,
   Library, ArrowDown, ArrowUp, Inbox, Clapperboard, Circle, Trophy,
-  Edit3, PenLine, ThumbsUp, Heart, ChevronRight, Eye, Pause, ChevronUp, Flame, Plus, Music,
+  Edit3, PenLine, ThumbsUp, Heart, ChevronRight, Eye, Pause, ChevronUp, Plus, Music,
 } from 'lucide-react';
 import SongCard from '../../../components/webmangal/SongCard';
 
@@ -1246,7 +1247,12 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
               <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
                 <MessageCircle size={14} /> Fan Theories &amp; Art
               </h2>
-              <a href={`/kalpana-circle?tag=${encodeURIComponent(series.title)}`} style={{ fontSize: '12.5px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none' }}>
+              <a
+                href={`/kalpana-circle?tag=${encodeURIComponent(series.title)}`}
+                style={{ fontSize: '12.5px', fontWeight: 700, color: '#a78bfa', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px', transition: 'transform 0.15s, color 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#c4b5fd'; e.currentTarget.style.transform = 'scale(1.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.transform = 'scale(1)'; }}
+              >
                 See all <ChevronRight size={12} />
               </a>
             </div>
@@ -1603,7 +1609,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
       {/* ── FOOTER ── */}
       <footer style={{ borderTop: '1px solid var(--footer-border)', background: 'var(--footer-bg)', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7f1d1d, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Flame size={14} fill="currentColor" /></div>
+          <MangalLogo size={28} />
           <span style={{ fontWeight: 900, fontSize: '16px', color: 'var(--footer-text)' }}>MANGAL</span>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--footer-text-muted)', margin: '0 0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>Made with <Heart size={12} fill="currentColor" /> in India · Free to read, forever.</p>
