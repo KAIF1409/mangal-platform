@@ -420,8 +420,17 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const fetchFileBuffer = useCallback(async (): Promise<{ buf: ArrayBuffer; truncated: boolean }> => {
     const headers: Record<string, string> = {};
     if (userId) {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+      // BUG FIX: getSession() can hang forever on a stale cross-tab auth
+      // lock (works in Incognito — no existing session/lock — but stalls
+      // the reader indefinitely in a normal browser with a live session).
+      // Time out and fall through unauthenticated rather than never
+      // resolving; the file route still degrades to the free preview for
+      // paid books instead of erroring outright.
+      const session = await Promise.race([
+        supabase.auth.getSession().then((r) => r.data.session),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+      ]).catch(() => null);
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
     }
     const res = await fetch(`/api/books/file/${book.id}`, { headers });
     if (!res.ok) throw new Error('Could not load the book file.');

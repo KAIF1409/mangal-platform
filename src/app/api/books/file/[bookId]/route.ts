@@ -135,12 +135,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ book
     });
   }
 
-  const body = await object.arrayBuffer();
-  return new Response(body, {
+  // Full access: stream straight from R2 instead of buffering the whole
+  // object into an ArrayBuffer first. `object.arrayBuffer()` forces the
+  // Worker to read the entire file into memory before the response can
+  // start sending a single byte — for a multi-MB book that's exactly what
+  // was showing up as the reader spinning on "Opening book…" and never
+  // finishing. `object.body` is already a ReadableStream; handing it
+  // straight to Response lets bytes flow to the client as R2 delivers them.
+  return new Response(object.body, {
     status: 200,
     headers: {
       'Content-Type': contentType,
-      'Content-Length': String(body.byteLength),
+      'Content-Length': String(object.size),
       // Paid files must never sit in a shared cache; free ones may.
       'Cache-Control': book.pricing_type === 'PAID' ? 'private, no-store' : 'public, max-age=3600',
       'X-Content-Type-Options': 'nosniff',

@@ -63,7 +63,19 @@ export default function BookReadPage({ params }: { params: Promise<{ bookId: str
 
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
+      // BUG FIX: supabase-js's getUser()/getSession() can hang indefinitely
+      // when a stale auth lock from a previous session/tab never released
+      // (a known @supabase/supabase-js Web Locks issue) — this is why the
+      // reader loaded fine in Incognito (no existing session, no lock to
+      // get stuck on) but hung on "Opening book…" forever in a normal
+      // browser with a live session. A 4s timeout falls back to treating
+      // the visitor as signed-out rather than stalling the whole page.
+      const u = await Promise.race([
+        supabase.auth.getUser(),
+        new Promise<{ data: { user: null } }>((resolve) =>
+          setTimeout(() => resolve({ data: { user: null } }), 4000)
+        ),
+      ]).then((r) => r.data).catch(() => ({ user: null }));
       setUser(u.user ?? null);
 
       const { data: b } = await supabase.from('books').select('*').eq('id', bookId).maybeSingle();
