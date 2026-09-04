@@ -119,6 +119,18 @@ function platformFromPath(pathname: string | null): ChatPlatformContext {
   return 'official';
 }
 
+// §150 follow-up — the floating launcher must never overlap the actual
+// reading surface (manga/novel chapter pages, book PDF/EPUB reader). Those
+// routes get full-bleed, distraction-free canvases; a chat bubble sitting
+// on top of the page looks broken there. Unmount the widget entirely
+// (not just hide the panel) on any reading route.
+function isReaderRoute(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (pathname.startsWith('/WebMangal/read')) return true; // manga/novel chapter reader
+  if (/^\/WebMangal\/books\/[^/]+\/read(\/|$)/.test(pathname)) return true; // book (PDF/EPUB) reader
+  return false;
+}
+
 function cardIcon(type: ChatCard['type']) {
   switch (type) {
     case 'song':
@@ -140,6 +152,7 @@ export default function MangalChatbot() {
   // because the react-hooks purity rule (Next 16 lint) flags synchronous
   // setState inside effects.
   const platform = platformFromPath(pathname);
+  const readerRoute = isReaderRoute(pathname);
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -306,6 +319,10 @@ export default function MangalChatbot() {
   }, []);
 
   const bothModes = platform === 'webmangal' || platform === 'katube';
+
+  // Reading surfaces (manga/novel chapters, book PDF/EPUB) are full-bleed
+  // and distraction-free — no floating launcher on top of them.
+  if (readerRoute) return null;
 
   return (
     <>
