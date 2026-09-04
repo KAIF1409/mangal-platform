@@ -46,7 +46,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, ArrowRight, Maximize, Minimize, Moon, MoonStar, Sun, Sunset,
-  Type, ZoomIn, ZoomOut, Lock, Loader2, X, AlertCircle, List, Eye, EyeOff,
+  Type, ZoomIn, ZoomOut, Lock, Loader2, X, AlertCircle, List, Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { openRazorpayCheckout } from '../../lib/payments/razorpayClient';
@@ -305,6 +305,12 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const [slideDir, setSlideDir] = useState<'next' | 'prev'>('next');
   const pageCacheRef = useRef<Map<string, string>>(new Map());
   const [, forceTick] = useState(0); // re-render when cache fills asynchronously
+  // Pages whose render hung/failed — surfaced as a tap-to-retry state
+  // instead of a spinner that never resolves (see getPageImage). Mirrored
+  // in a ref so the useCallback closure (deps: [pdfDoc, zoomIdx]) always
+  // reads/writes the current set rather than a stale one.
+  const [pageErrors, setPageErrors] = useState<Set<number>>(new Set());
+  const pageErrorsRef = useRef<Set<number>>(pageErrors);
 
   // ── EPUB state ────────────────────────────────────────────────────────
   const epubContainerRef = useRef<HTMLDivElement>(null);
@@ -504,32 +510,62 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     const hit = pageCacheRef.current.get(key);
     if (hit) return hit;
 
-    const page = await doc.getPage(n);
-    // Render sharp enough for the stage height, bounded so huge zooms don't
-    // blow up canvas memory.
-    const scale = Math.min(Math.max(1.1 * zoom, 0.7), 2.6);
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-    const url = canvas.toDataURL('image/jpeg', 0.88);
+    try {
+      const page = await doc.getPage(n);
+      // Render sharp enough for the stage height, bounded so huge zooms don't
+      // blow up canvas memory.
+      const scale = Math.min(Math.max(1.1 * zoom, 0.7), 2.6);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('2D canvas context unavailable.');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const renderTask = page.render({ canvasContext: ctx, viewport, canvas });
+      // BUG FIX: pdf.js's worker can go unresponsive mid-book (e.g. a
+      // heavy/corrupt page) WITHOUT the render promise ever resolving or
+      // rejecting — nothing throws, nothing times out on its own, so a
+      // page just spins forever with no way to recover or even know it
+      // failed. Race it against a hard timeout so a stuck render becomes
+      // a visible "tap to retry" instead of an infinite spinner.
+      await Promise.race([
+        renderTask.promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Page render timed out.')), 15000)),
+      ]);
+      const url = canvas.toDataURL('image/jpeg', 0.88);
 
-    // FIFO eviction — keep memory bounded across long books.
-    const cache = pageCacheRef.current;
-    cache.set(key, url);
-    while (cache.size > 28) {
-      const oldest = cache.keys().next().value;
-      if (oldest === undefined) break;
-      cache.delete(oldest);
+      // FIFO eviction — keep memory bounded across long books.
+      const cache = pageCacheRef.current;
+      cache.set(key, url);
+      while (cache.size > 28) {
+        const oldest = cache.keys().next().value;
+        if (oldest === undefined) break;
+        cache.delete(oldest);
+      }
+      if (pageErrorsRef.current.has(n)) {
+        pageErrorsRef.current.delete(n);
+        setPageErrors(new Set(pageErrorsRef.current));
+      }
+      forceTick((t) => t + 1);
+      return url;
+    } catch {
+      if (!pageErrorsRef.current.has(n)) {
+        pageErrorsRef.current.add(n);
+        setPageErrors(new Set(pageErrorsRef.current));
+      }
+      return null;
     }
-    forceTick((t) => t + 1);
-    return url;
   }, [pdfDoc, zoomIdx]);
+
+  // Retry a page the user tapped after it errored/timed out — clears the
+  // error flag first so a repeat failure re-surfaces the retry state.
+  const retryPageImage = useCallback((n: number) => {
+    pageErrorsRef.current.delete(n);
+    setPageErrors(new Set(pageErrorsRef.current));
+    void getPageImage(n);
+  }, [getPageImage]);
 
   // Pre-render the pages around the current position (paginated mode only —
   // continuous scroll lazy-renders via its own IntersectionObserver).
@@ -918,6 +954,29 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
       setBuyError(err instanceof Error ? err.message : 'Something went wrong.');
       setBuying(false);
     }
+  }
+
+  // Shared fallback for a page slot that hasn't rendered yet — spinner
+  // while pending, tap-to-retry once getPageImage has given up (see the
+  // render timeout in getPageImage).
+  function PagePending({ n, size, color }: { n: number; size: number; color: string }) {
+    if (pageErrors.has(n)) {
+      return (
+        <button
+          onClick={(e) => { e.stopPropagation(); retryPageImage(n); }}
+          aria-label={`Retry loading page ${n}`}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
+            padding: '10px 14px', borderRadius: '10px', border: 'none', background: 'transparent',
+            color, fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          <RefreshCw size={size} />
+          Tap to retry
+        </button>
+      );
+    }
+    return <Loader2 size={size} style={{ animation: 'book-reader-spin 0.9s linear infinite', color }} />;
   }
 
   // §141 — all three lock-screen buttons below open the same direct-UPI
@@ -1484,6 +1543,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: `${stagePad}px ${stagePad}px 32px` }}>
             {Array.from({ length: scrollPageCount }, (_, i) => i + 1).map((n) => {
               const img = imgFor(n);
+              const errored = pageErrors.has(n);
               return (
                 <div
                   key={n}
@@ -1499,7 +1559,21 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
                   {img
                     // eslint-disable-next-line @next/next/no-img-element -- dynamic client-rendered page bitmap (data: URL from pdf.js/epub.js, variable intrinsic size per page); next/image cannot optimize or take static dimensions for these, same justification as the vendored reader engines ignored in eslint.config.mjs.
                     ? <img src={img} alt={`Page ${n}`} style={{ width: '100%', height: 'auto', display: 'block', filter: paperFilter, transition: 'filter 0.25s' }} draggable={false} />
-                    : <Loader2 size={24} style={{ animation: 'book-reader-spin 0.9s linear infinite', color: 'var(--text-secondary)' }} />}
+                    : errored
+                      ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); retryPageImage(n); }}
+                          style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                            padding: '14px 18px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                            background: 'transparent', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                          }}
+                        >
+                          <RefreshCw size={18} />
+                          Page {n} didn&apos;t load — tap to retry
+                        </button>
+                      )
+                      : <Loader2 size={24} style={{ animation: 'book-reader-spin 0.9s linear infinite', color: 'var(--text-secondary)' }} />}
                 </div>
               );
             })}
@@ -1538,7 +1612,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
           >
             {imgFor(mobilePage)
               ? <img src={imgFor(mobilePage)!} alt={`Page ${mobilePage}`} style={pageImgStyle} draggable={false} />
-              : <Loader2 size={26} style={{ animation: 'book-reader-spin 0.9s linear infinite', color: 'var(--text-secondary)' }} />}
+              : <PagePending n={mobilePage} size={26} color="var(--text-secondary)" />}
           </div>
         ) : (
           /* Desktop: two-page spread with 3D flip */
@@ -1553,7 +1627,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
                 {curLeft !== null && (
                   imgFor(curLeft)
                     ? <img src={imgFor(curLeft)!} alt={`Page ${curLeft}`} style={pageImgStyle} draggable={false} />
-                    : <Loader2 size={22} style={{ animation: 'book-reader-spin 0.9s linear infinite', color: 'rgba(0,0,0,0.3)' }} />
+                    : <PagePending n={curLeft} size={22} color="rgba(0,0,0,0.3)" />
                 )}
                 {/* center spine shadow */}
                 <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '26px', background: 'linear-gradient(to left, rgba(0,0,0,0.18), transparent)', pointerEvents: 'none' }} />
@@ -1563,7 +1637,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
                 {curRight && curRight <= totalPages && (
                   imgFor(curRight)
                     ? <img src={imgFor(curRight)!} alt={`Page ${curRight}`} style={pageImgStyle} draggable={false} />
-                    : <Loader2 size={22} style={{ animation: 'book-reader-spin 0.9s linear infinite', color: 'rgba(0,0,0,0.3)' }} />
+                    : <PagePending n={curRight} size={22} color="rgba(0,0,0,0.3)" />
                 )}
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '26px', background: 'linear-gradient(to right, rgba(0,0,0,0.18), transparent)', pointerEvents: 'none' }} />
               </div>
