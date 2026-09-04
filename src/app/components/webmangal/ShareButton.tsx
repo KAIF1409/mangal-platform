@@ -126,11 +126,21 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
           background: 'var(--bg-card)', border: '1px solid var(--border-light)',
           color: 'var(--text-primary)', fontSize: '15px', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'transform 0.15s, background 0.15s',
         } : {
           padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
           background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)',
           color: '#22c55e', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: '6px',
+          transition: 'transform 0.15s, background 0.15s, border-color 0.15s',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'scale(1.06)';
+          if (!compact) { e.currentTarget.style.background = 'rgba(34,197,94,0.22)'; e.currentTarget.style.borderColor = 'rgba(34,197,94,0.5)'; }
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'scale(1)';
+          if (!compact) { e.currentTarget.style.background = 'rgba(34,197,94,0.12)'; e.currentTarget.style.borderColor = 'rgba(34,197,94,0.3)'; }
         }}
       >
         {compact ? <Share2 size={15} strokeWidth={2} /> : <><Share2 size={14} strokeWidth={2} /> Share</>}

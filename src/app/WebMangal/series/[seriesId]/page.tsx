@@ -1052,7 +1052,11 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
                   color: '#fff', textDecoration: 'none',
                   boxShadow: '0 4px 20px rgba(217,119,6,0.3)',
-                }}>
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.035)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(217,119,6,0.5)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(217,119,6,0.3)'; }}
+                >
                   <Play size={13} /> Continue Reading <ChevronRight size={13} /> Ch.{progressChapter.chapter_number}
                 </a>
               ) : firstChapter && (
@@ -1062,7 +1066,11 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   background: 'linear-gradient(135deg, #7f1d1d, #d97706)',
                   color: '#fff', textDecoration: 'none',
                   boxShadow: '0 4px 20px rgba(217,119,6,0.3)',
-                }}>
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.035)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(217,119,6,0.5)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(217,119,6,0.3)'; }}
+                >
                   <Play size={14} /> Start Reading
                 </a>
               )}
@@ -1072,7 +1080,11 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
                   background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
                   color: '#c3c7cf', textDecoration: 'none',
-                }}>
+                  transition: 'transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.035)'; e.currentTarget.style.background = 'rgba(255,255,255,0.14)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.16)'; e.currentTarget.style.color = '#c3c7cf'; }}
+                >
                   <RotateCcw size={13} /> Start From Beginning
                 </a>
               )}
@@ -1082,7 +1094,11 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
                   background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
                   color: '#c3c7cf', textDecoration: 'none',
-                }}>
+                  transition: 'transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.035)'; e.currentTarget.style.background = 'rgba(255,255,255,0.14)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.16)'; e.currentTarget.style.color = '#c3c7cf'; }}
+                >
                   <Zap size={13} /> Latest Chapter
                 </a>
               )}
@@ -1107,6 +1123,8 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                     transition: 'all 0.2s',
                     opacity: followLoading ? 0.7 : 1,
                   }}
+                  onMouseEnter={e => { if (!followLoading) e.currentTarget.style.transform = 'scale(1.035)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
                   {followLoading ? '...' : <><Bell size={13} /> {isFollowing ? 'Following' : 'Follow'}</>}
                 </button>
@@ -1121,7 +1139,11 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   background: 'linear-gradient(135deg, #f97316, #22c55e)',
                   color: '#fff', textDecoration: 'none',
                   boxShadow: '0 4px 20px rgba(34,197,94,0.25)',
-                }}>
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.035)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(34,197,94,0.45)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(34,197,94,0.25)'; }}
+                >
                   <Plus size={14} /> Add Chapter
                 </a>
               )}
@@ -1136,7 +1158,10 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                         padding: '12px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '13px',
                         background: '#7f1d1d', border: '1px solid #991b1b', color: '#fff',
                         cursor: deletingSeries ? 'wait' : 'pointer', opacity: deletingSeries ? 0.7 : 1,
+                        transition: 'transform 0.15s, background 0.15s',
                       }}
+                      onMouseEnter={e => { if (!deletingSeries) { e.currentTarget.style.transform = 'scale(1.035)'; e.currentTarget.style.background = '#991b1b'; } }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = '#7f1d1d'; }}
                     >
                       {deletingSeries ? 'Deleting...' : <><AlertTriangle size={13} /> Confirm Delete Series</>}
                     </button>
@@ -1146,7 +1171,10 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                       style={{
                         padding: '12px 16px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
                         background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)', color: '#c3c7cf', cursor: 'pointer',
+                        transition: 'transform 0.15s, background 0.15s, color 0.15s',
                       }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.035)'; e.currentTarget.style.background = 'rgba(255,255,255,0.14)'; e.currentTarget.style.color = '#fff'; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#c3c7cf'; }}
                     >
                       Cancel
                     </button>
@@ -1160,7 +1188,10 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                       padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
                       background: 'rgba(153,27,27,0.1)', border: '1px solid rgba(153,27,27,0.3)',
                       color: '#ef4444', cursor: 'pointer',
+                      transition: 'transform 0.15s, background 0.15s, border-color 0.15s',
                     }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.035)'; e.currentTarget.style.background = 'rgba(153,27,27,0.2)'; e.currentTarget.style.borderColor = 'rgba(153,27,27,0.5)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(153,27,27,0.1)'; e.currentTarget.style.borderColor = 'rgba(153,27,27,0.3)'; }}
                   >
                     <Trash2 size={13} /> Delete Series
                   </button>
@@ -1174,7 +1205,10 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
                   padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px',
                   background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)',
                   color: '#a78bfa', textDecoration: 'none',
+                  transition: 'transform 0.15s, background 0.15s, border-color 0.15s',
                 }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.035)'; e.currentTarget.style.background = 'rgba(124,58,237,0.2)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(124,58,237,0.1)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.3)'; }}
               >
                 <MessageCircle size={13} /> Discuss on Kalpana Circle
               </a>
