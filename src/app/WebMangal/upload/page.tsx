@@ -5,7 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { checkImageBatchQuality } from '../../lib/media/imageQuality';
-import { uploadMediaFile, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
+import { uploadMediaFile, deleteMediaFiles, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
+import { publishChapterPages } from '../../lib/webmangal/publishPages';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { suggestTags } from '../../lib/tagSuggest';
 import dynamic from 'next/dynamic';
@@ -613,26 +614,34 @@ function UploadFlow() {
 
     if (chapterError) { setError(chapterError.message); setLoading(false); return; }
 
-    for (let i = 0; i < pages.length; i++) {
-      const item = pages[i];
-      if (item.kind !== 'new') continue; // defensive — never true in create mode
-      let pageUrl: string;
-      try {
-        const { url } = await uploadMediaFile(item.file, MEDIA_FOLDERS.chapterPages);
-        pageUrl = url;
-      } catch (uploadError) {
-        setError(`Page ${i + 1}: ${uploadError instanceof Error ? uploadError.message : 'failed'}`);
-        setLoading(false);
-        return;
+    // Every item is kind:'new' here — create mode never loads existing pages.
+    // publishChapterPages uploads + inserts pages one at a time (page order
+    // preserved, no concurrent writes) and rolls back everything it wrote
+    // (pages, R2 objects, and the chapter row itself) if any page fails, so
+    // a mid-upload failure never leaves an orphaned partial chapter behind.
+    const publishResult = await publishChapterPages(
+      pages.filter((item) => item.kind === 'new').map((item) => item.file),
+      {
+        uploadFile: (file) => uploadMediaFile(file, MEDIA_FOLDERS.chapterPages),
+        insertPage: async (pageNumber, imageUrl) => {
+          const { data, error: pageError } = await supabase
+            .from('pages')
+            .insert({ chapter_id: chapter.id, page_number: pageNumber, image_url: imageUrl })
+            .select('id')
+            .single();
+          if (pageError || !data) return { error: pageError?.message || 'insert failed' };
+          return { id: data.id };
+        },
+        deletePagesByIds: async (pageIds) => { await supabase.from('pages').delete().in('id', pageIds); },
+        deleteFiles: async (paths) => { await deleteMediaFiles(paths); },
+        deleteChapter: async () => { await supabase.from('chapters').delete().eq('id', chapter.id); },
       }
+    );
 
-      const { error: pageError } = await supabase.from('pages').insert({
-        chapter_id: chapter.id,
-        page_number: i + 1,
-        image_url: pageUrl,
-      });
-
-      if (pageError) { setError(`Page ${i + 1} save: ${pageError.message}`); setLoading(false); return; }
+    if (!publishResult.success) {
+      setError(publishResult.error || 'Publishing failed.');
+      setLoading(false);
+      return;
     }
 
     await supabase.from('series').update({ status: 'published' }).eq('id', seriesId);
