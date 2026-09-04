@@ -15,6 +15,7 @@ import {
 
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import { webnovelCommentScore, sortByScore, COMMENT_PAGE_SIZE } from '../../../lib/commentRanking';
+import { getReaderImageSrc } from '../../../lib/media/readerImageSrc';
 type PageItem = { id: string; page_number: number; image_url: string };
 type SeriesInfo = { id: string; title: string; reading_mode: 'scroll' | 'page'; content_type: 'mangal' | 'novel'; reading_direction: 'ltr' | 'rtl' | null; cover_url?: string | null };
 type ChapterNav = { id: string; chapter_number: number; title: string };
@@ -1140,16 +1141,77 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // Supabase project (Pro plan or self-hosted imgproxy); if not enabled the
   // request 400s and onError below falls back to the original image.
   const effectiveImageQuality: 'low' | 'high' = imageQuality === 'auto' ? autoResolvedQuality : imageQuality;
-  const getImageSrc = (url: string): string => {
-    if (effectiveImageQuality !== 'low' || !url.includes('/object/public/')) return url;
-    const transformed = url.replace('/object/public/', '/render/image/public/');
-    return `${transformed}${transformed.includes('?') ? '&' : '?'}width=720&quality=65`;
-  };
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, originalUrl: string) => {
-    if (e.currentTarget.src !== originalUrl) {
-      e.currentTarget.src = originalUrl; // transform unsupported/failed — fall back to original
+  const getImageSrc = (url: string): string => getReaderImageSrc(url, effectiveImageQuality);
+
+  // BUG FIX — no offline/error fallback for failed image loads: previously
+  // onError only ever swapped a failed *transformed* URL back to the
+  // original once; if the original itself failed too (dropped connection,
+  // R2 hiccup, a genuinely missing object) the reader was left staring at
+  // the browser's native broken-image icon forever, with no way to recover
+  // short of reloading the whole page. Now a real load failure (after the
+  // one legitimate transform->original fallback) is tracked per page id and
+  // rendered as a friendly "couldn't load this page — tap to retry" tile;
+  // retrying re-requests the same URL with a cache-busting param so a
+  // transient failure (e.g. offline for a moment) can actually recover.
+  const [failedPageIds, setFailedPageIds] = useState<Set<string>>(new Set());
+  const [retryTokens, setRetryTokens] = useState<Record<string, number>>({});
+  const handleImageError = (
+    e: React.SyntheticEvent<HTMLImageElement>,
+    pageId: string,
+    originalUrl: string
+  ) => {
+    const triedFallback = e.currentTarget.dataset.fallbackTried === '1';
+    if (!triedFallback && e.currentTarget.src !== originalUrl) {
+      // Transform URL failed (unsupported/misconfigured) — try the original once.
+      e.currentTarget.dataset.fallbackTried = '1';
+      e.currentTarget.src = originalUrl;
+      return;
     }
+    // The original itself failed too — stop retry-looping the <img> tag and
+    // surface a real, recoverable error state instead.
+    setFailedPageIds(prev => {
+      if (prev.has(pageId)) return prev;
+      const next = new Set(prev);
+      next.add(pageId);
+      return next;
+    });
   };
+  const retryFailedPage = (pageId: string) => {
+    setFailedPageIds(prev => {
+      if (!prev.has(pageId)) return prev;
+      const next = new Set(prev);
+      next.delete(pageId);
+      return next;
+    });
+    setRetryTokens(prev => ({ ...prev, [pageId]: (prev[pageId] || 0) + 1 }));
+  };
+  // Cache-busting query param appended only on an explicit retry — normal
+  // loads keep the plain, edge-cacheable /api/media URL (immutable + 1y
+  // cache) untouched, so we don't defeat that caching on every render.
+  const withRetryBust = (url: string, pageId: string): string => {
+    const token = retryTokens[pageId];
+    if (!token) return url;
+    return `${url}${url.includes('?') ? '&' : '?'}retry=${token}`;
+  };
+
+  // BUG FIX — missing prefetch: turning the page in Page mode always did a
+  // cold fetch of the next image with no warning, so every page turn showed
+  // a blank/loading flash even on a fast connection. Preload the adjacent
+  // pages (next + previous) whenever the current page changes, using the
+  // reader's own resolved image-quality setting so the preload matches what
+  // will actually be requested.
+  useEffect(() => {
+    if (isNovel || effectiveMode !== 'page' || pages.length === 0) return;
+    const preload = (idx: number) => {
+      const page = pages[idx];
+      if (!page || failedPageIds.has(page.id)) return;
+      const img = new Image();
+      img.src = withRetryBust(getImageSrc(page.image_url), page.id);
+    };
+    preload(currentPage + 1);
+    preload(currentPage - 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on page/mode changes; preloading is fire-and-forget and doesn't need retryTokens/failedPageIds as trigger deps
+  }, [currentPage, effectiveMode, isNovel, pages, effectiveImageQuality]);
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', overflowX: 'hidden' }}>
@@ -1984,24 +2046,49 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                   next/image's fixed-dimension + remote-pattern config model doesn't fit
                   this case, hence the per-image eslint-disable below. */}
               {pages.map((page, idx) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={page.id}
-                  ref={el => { pageRefs.current[idx] = el; }}
-                  src={getImageSrc(page.image_url)}
-                  onError={(e) => handleImageError(e, page.image_url)}
-                  alt=""
-                  style={getImgStyle()}
-                  draggable={false}
-                  // Perf/UX fix: a chapter can have 30-50 stacked images — loading
-                  // all of them at once (previous behaviour) meant a slow, janky
-                  // first paint and every image popping/flashing in as it arrived.
-                  // Only eager-load the first 2 (above-the-fold on most screens);
-                  // the browser now lazy-loads the rest as the reader scrolls down,
-                  // which is standard practice on Webtoon/WebNovel-style readers.
-                  loading={idx < 2 ? 'eager' : 'lazy'}
-                  decoding="async"
-                />
+                failedPageIds.has(page.id) ? (
+                  <div
+                    key={page.id}
+                    ref={el => { pageRefs.current[idx] = el as unknown as HTMLImageElement | null; }}
+                    style={{
+                      width: '100%', minHeight: '260px', display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', gap: '10px',
+                      background: 'var(--bg-card)', border: '1px dashed var(--border-color)',
+                      color: 'var(--text-muted)', fontSize: '12px', padding: '24px',
+                    }}
+                  >
+                    <span>Page {idx + 1} couldn&apos;t load.</span>
+                    <button
+                      onClick={() => retryFailedPage(page.id)}
+                      style={{
+                        padding: '7px 16px', borderRadius: '8px', border: '1px solid var(--border-light)',
+                        background: 'var(--bg-input)', color: 'var(--text-secondary)',
+                        fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={page.id}
+                    ref={el => { pageRefs.current[idx] = el; }}
+                    src={withRetryBust(getImageSrc(page.image_url), page.id)}
+                    onError={(e) => handleImageError(e, page.id, page.image_url)}
+                    alt=""
+                    style={getImgStyle()}
+                    draggable={false}
+                    // Perf/UX fix: a chapter can have 30-50 stacked images — loading
+                    // all of them at once (previous behaviour) meant a slow, janky
+                    // first paint and every image popping/flashing in as it arrived.
+                    // Only eager-load the first 2 (above-the-fold on most screens);
+                    // the browser now lazy-loads the rest as the reader scrolls down,
+                    // which is standard practice on Webtoon/WebNovel-style readers.
+                    loading={idx < 2 ? 'eager' : 'lazy'}
+                    decoding="async"
+                  />
+                )
               ))}
             </div>
 
@@ -2043,16 +2130,36 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               maxWidth: isFullscreen ? 'none' : '600px',
               overflowX: fitMode === 'actual' ? 'auto' : 'visible',
             }}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- same reasoning as
-                  the scroll-mode image above: variable Supabase Storage URL, not a static asset */}
-              <img
-                src={getImageSrc(pages[currentPage].image_url)}
-                onError={(e) => handleImageError(e, pages[currentPage].image_url)}
-                alt=""
-                style={getImgStyle()}
-                draggable={false}
-                decoding="async"
-              />
+              {failedPageIds.has(pages[currentPage].id) ? (
+                <div style={{
+                  width: '100%', minHeight: '260px', display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: '10px',
+                  background: 'var(--bg-card)', border: '1px dashed var(--border-color)',
+                  color: 'var(--text-muted)', fontSize: '12px', padding: '24px',
+                }}>
+                  <span>Page {currentPage + 1} couldn&apos;t load.</span>
+                  <button
+                    onClick={() => retryFailedPage(pages[currentPage].id)}
+                    style={{
+                      padding: '7px 16px', borderRadius: '8px', border: '1px solid var(--border-light)',
+                      background: 'var(--bg-input)', color: 'var(--text-secondary)',
+                      fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- same reasoning as the scroll-mode image above: variable Supabase/R2-served URL, not a static asset
+                <img
+                  src={withRetryBust(getImageSrc(pages[currentPage].image_url), pages[currentPage].id)}
+                  onError={(e) => handleImageError(e, pages[currentPage].id, pages[currentPage].image_url)}
+                  alt=""
+                  style={getImgStyle()}
+                  draggable={false}
+                  decoding="async"
+                />
+              )}
             </div>
 
             {/* Page dots + nav */}
