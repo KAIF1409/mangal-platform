@@ -974,7 +974,10 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     Math.max(1, Math.round(scrollPct * (scrollPageCount - 1)) + 1),
     scrollPageCount || 1,
   );
-  const bottomBarVisible = !focusMode;
+  // Real browser fullscreen hides all chrome (top bar, bottom bar, thumb
+  // buttons) just like focus mode does — only the book stage stays visible
+  // until Esc / the exit pill takes them back out of fullscreen.
+  const bottomBarVisible = !focusMode && !isFullscreen;
 
   // ── §142 overlays: settings dock / TOC drawer / focus pill / thumb buttons ──
   function ReadingDock() {
@@ -1248,8 +1251,33 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     );
   }
 
+  function FullscreenExitPill() {
+    // Focus mode's own "Show controls" pill already covers this spot when
+    // both are active at once — don't stack two pills.
+    if (!isFullscreen || focusMode) return null;
+    return (
+      <button
+        onPointerDown={toggleFullscreen}
+        onClick={toggleFullscreen}
+        aria-label="Exit fullscreen"
+        style={{
+          position: 'fixed', bottom: 'calc(20px + env(safe-area-inset-bottom))', left: '50%',
+          transform: 'translateX(-50%)', zIndex: 80, display: 'flex', alignItems: 'center', gap: '7px',
+          minHeight: '52px', padding: '0 22px', borderRadius: '999px', cursor: 'pointer',
+          touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
+          border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(20,20,26,0.72)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          color: 'rgba(255,255,255,0.85)', fontSize: '12.5px', fontWeight: 800,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        }}
+      >
+        <Minimize size={15} /> Exit fullscreen
+      </button>
+    );
+  }
+
   function ThumbButtons() {
-    if (!isMobile || focusMode) return null;
+    if (!isMobile || focusMode || isFullscreen) return null;
     const thumb: React.CSSProperties = {
       position: 'fixed', bottom: 'calc(64px + env(safe-area-inset-bottom))', zIndex: 55,
       width: '52px', height: '52px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.14)',
@@ -1394,7 +1422,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   if (book.file_type === 'epub') {
     return (
       <div ref={rootRef} style={{ minHeight: '100vh', background: THEME_DESK[theme], display: 'flex', flexDirection: 'column' }}>
-        <ReaderTopBar />
+        {!isFullscreen && <ReaderTopBar />}
         {/* Margins control pads the reflowable area (desktop paginated only —
             epub.js scrolled-doc manages its own chrome-less flow on mobile). */}
         <div style={{ flex: 1, minHeight: 0, padding: !isMobile && readingMode === 'paginated' ? `0 ${stagePad}px` : 0 }}>
@@ -1422,6 +1450,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         <ReadingDock />
         <TocDrawer />
         <FocusPill />
+        <FullscreenExitPill />
         <ThumbButtons />
       </div>
     );
@@ -1442,7 +1471,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         @keyframes book-slide-prev { from { opacity: 0; transform: translateX(-36px); } to { opacity: 1; transform: translateX(0); } }
       `}</style>
 
-      <ReaderTopBar />
+      {!isFullscreen && <ReaderTopBar />}
 
       {/* Stage — paginated: spreads; continuous scroll: vertical page list */}
       {readingMode === 'scroll' ? (
@@ -1712,6 +1741,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
       <ReadingDock />
       <TocDrawer />
       <FocusPill />
+      <FullscreenExitPill />
       <ThumbButtons />
 
       {showBuyModal && book.price_paise && (
