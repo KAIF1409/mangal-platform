@@ -51,6 +51,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { openRazorpayCheckout } from '../../lib/payments/razorpayClient';
 import BookPurchaseModal from '../shared/BookPurchaseModal';
+import ShareButton from '../webmangal/ShareButton';
 
 export interface ReaderBookInfo {
   id: string;
@@ -625,6 +626,29 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pdfDoc, readingMode, scrollPageCount, zoomIdx]);
+
+  // BUG FIX: continuous-scroll pages were relying entirely on the
+  // IntersectionObserver above to ever call getPageImage() — if that
+  // observer doesn't fire for any reason (root element measured at zero
+  // height on the first layout pass, a timing race switching modes, older
+  // WebView IO quirks), NOTHING calls getPageImage() and every page just
+  // spins forever with no error to even retry from. Paginated mode never
+  // had this problem because it always calls getPageImage() directly for
+  // pages near the current position — mirror that same direct approach
+  // here as a belt-and-braces fallback so scroll mode gets pages on
+  // screen even if the observer never kicks in.
+  useEffect(() => {
+    if (!pdfDoc || readingMode !== 'scroll' || !scrollPageCount) return;
+    // Track actual scroll position (scrollPct), not mobilePage — mobilePage
+    // only follows the paginated-mode cursor and never updates while
+    // actually scrolling in continuous mode, so using it here would only
+    // ever prime the first few pages and go stale the moment the reader
+    // scrolls further into the book.
+    const center = Math.min(Math.max(1, Math.round(scrollPct * (scrollPageCount - 1)) + 1), scrollPageCount);
+    for (let p = Math.max(1, center - 2); p <= Math.min(scrollPageCount, center + 4); p++) {
+      void getPageImage(p);
+    }
+  }, [pdfDoc, readingMode, scrollPageCount, scrollPct, zoomIdx, getPageImage]);
 
   // rAF-throttled scroll handler — computes % + nearest page.
   const handlePdfScroll = useCallback(() => {
@@ -1470,6 +1494,11 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         >
           <ThemeIcon size={16} />
         </button>
+        <ShareButton
+          title={book.title}
+          url={typeof window !== 'undefined' ? `${window.location.origin}/WebMangal/books/${book.id}` : ''}
+          compact
+        />
         <button style={iconBtnStyle} title="Fullscreen" onClick={toggleFullscreen}>
           {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
         </button>
