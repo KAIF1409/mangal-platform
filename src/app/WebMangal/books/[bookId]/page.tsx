@@ -23,7 +23,7 @@ import { openRazorpayCheckout } from '../../../lib/payments/razorpayClient';
 import { GLOBAL_PAYMENTS_ENABLED } from '../../../lib/payments/featureFlags';
 import DirectUpiPay from '../../../components/shared/DirectUpiPay';
 import {
-  BookOpen, FileText, ArrowLeft, Loader2, Lock, PlayCircle,
+  BookOpen, ArrowLeft, Loader2, Lock, PlayCircle,
 } from 'lucide-react';
 
 // BookRow comes from lib/database.types.ts (shared books-module row shape).
@@ -210,10 +210,6 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: s
                     border: `1px solid ${book.pricing_type === 'PAID' ? 'rgba(var(--accent-rgb), 0.35)' : 'rgba(16,185,129,0.35)'}`,
                   }}>
                     {book.pricing_type === 'PAID' && book.price_paise ? formatPaise(book.price_paise) : 'Free'}
-                  </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                    <FileText size={13} /> {book.file_type.toUpperCase()}
-                    {book.file_size_bytes ? ` · ${(book.file_size_bytes / (1024 * 1024)).toFixed(1)} MB` : ''}
                   </span>
                   {book.category && (
                     <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{book.category}</span>

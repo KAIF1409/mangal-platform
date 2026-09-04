@@ -14,6 +14,27 @@ import { supabase } from '../../../../lib/supabase';
 import { type ReaderBookInfo } from '../../../../components/books/BookReader';
 import { BookOpen, Loader2 } from 'lucide-react';
 
+// BUG FIX: this page, the dynamic-import fallback below, and BookReader's
+// own internal loading screen used to each render a differently-colored
+// full-screen placeholder (var(--bg-primary), then '#0c0a09', then
+// THEME_DESK['light'] = '#e8e4da'), one after another as each stage
+// resolved. Visually that reads as the reader "loading twice" / flashing —
+// it's really three separate loading screens stacked in sequence. They
+// now all share the exact same background + spinner + copy so the
+// hand-off between stages (auth/access check → chunk load → file fetch)
+// is a single continuous spinner instead of a reload-looking flash.
+const READER_LOADING_BG = '#e8e4da';
+
+function ReaderLoadingScreen() {
+  return (
+    <div style={{ minHeight: '100vh', background: READER_LOADING_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+      <Loader2 size={30} style={{ animation: 'book-read-page-spin 0.9s linear infinite', color: '#57534e' }} />
+      <p style={{ fontSize: '13px', color: '#57534e' }}>Opening book…</p>
+      <style>{`@keyframes book-read-page-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
 // Loaded client-side only, on demand — see next.config.ts's
 // serverExternalPackages note for why (pdfjs-dist/epubjs are heavy,
 // browser-only libraries that were bloating the server bundle past
@@ -22,11 +43,7 @@ import { BookOpen, Loader2 } from 'lucide-react';
 // `window`/`document`/canvas, which they assume are always present.
 const BookReader = dynamic(() => import('../../../../components/books/BookReader'), {
   ssr: false,
-  loading: () => (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c0a09', color: '#a8a29e' }}>
-      <Loader2 size={22} className="animate-spin" />
-    </div>
-  ),
+  loading: () => <ReaderLoadingScreen />,
 });
 
 interface BookRow extends ReaderBookInfo {
@@ -95,11 +112,7 @@ export default function BookReadPage({ params }: { params: Promise<{ bookId: str
   }, [bookId]);
 
   if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'var(--text-tertiary)', fontSize: '14px' }}>Loading…</p>
-      </div>
-    );
+    return <ReaderLoadingScreen />;
   }
 
   if (notFound || !book) {

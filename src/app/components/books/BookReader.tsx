@@ -390,6 +390,17 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   }, []);
 
   async function toggleFullscreen() {
+    // BUG FIX: this used to target rootRef.current (the reader's own div),
+    // which the manga reader tried first and moved away from — arbitrary
+    // elements reject requestFullscreen far more often (notably iOS Safari,
+    // which doesn't support it on non-<video> elements at all), so the
+    // button silently did nothing on those browsers. document.documentElement
+    // is the same target the manga reader uses and is far more reliably
+    // accepted. We also set isFullscreen unconditionally instead of relying
+    // solely on the 'fullscreenchange' listener, so the button/icon always
+    // reflects the toggle even where the real Fullscreen API is unsupported
+    // or denied — matching the manga reader's fallback behavior.
+    const goingFullscreen = !isFullscreen;
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
@@ -399,9 +410,10 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         // never strand a reader in a chrome-less fullscreen. Focus mode can
         // still be entered afterwards deliberately via the eye button.
         setFocusMode(false);
-        await rootRef.current?.requestFullscreen();
+        await document.documentElement.requestFullscreen?.();
       }
-    } catch { /* denied — ignore */ }
+    } catch { /* denied/unsupported — fall through to state toggle below */ }
+    setIsFullscreen(goingFullscreen);
   }
 
   // ── file fetch (auth-aware) ───────────────────────────────────────────

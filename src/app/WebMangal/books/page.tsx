@@ -13,7 +13,7 @@ import { supabase } from '../../lib/supabase';
 import type { BookRow } from '../../lib/database.types';
 import Navbar from '../../components/shared/Navbar';
 import Footer from '../../components/shared/Footer';
-import { BookOpen, FileText, ArrowLeft } from 'lucide-react';
+import { BookOpen, ArrowLeft } from 'lucide-react';
 
 // BookRow comes from lib/database.types.ts (shared books-module row shape).
 
@@ -170,10 +170,11 @@ export default function BooksCatalogPage() {
                     <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
                       @{authorsById[book.author_id] ?? 'unknown'}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: 'var(--text-tertiary)' }}>
-                      <FileText size={11} /> {book.file_type.toUpperCase()}
-                      {book.category ? <span>· {book.category}</span> : null}
-                    </div>
+                    {book.category && (
+                      <div style={{ fontSize: '10.5px', color: 'var(--text-tertiary)' }}>
+                        {book.category}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>
