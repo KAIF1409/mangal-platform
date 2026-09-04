@@ -14,6 +14,7 @@ import Footer from '../components/shared/Footer';
 import CrossProductLinks from '../components/shared/CrossProductLinks';
 import SharedSeriesCard from '../components/webmangal/SeriesCard';
 import SongCard from '../components/webmangal/SongCard';
+import BookCard from '../components/webmangal/BookCard';
 import { hasCreatorAccess, isDeveloperRole } from '../lib/auth/roles';
 import {
   Trophy, Bell, Bookmark, Wrench, X, Menu, Search, Sparkles, BookOpen,
@@ -78,6 +79,20 @@ type ContentTypeFilter = 'all' | 'mangal' | 'novel' | 'books' | 'songs';
 const CONTENT_TYPE_STORAGE_KEY = 'mangal_content_type';
 
 // BookRow comes from lib/database.types.ts (shared books-module row shape).
+
+// Shape returned by the Songs fetch below — used to type the "All" tab's
+// unified combinedAllItems merge (see §153 note near that memo).
+interface SongListItem {
+  id: string;
+  title: string;
+  genre: string | null;
+  cover_url: string | null;
+  views: number;
+  block_count: number;
+  linked_series_title: string | null;
+  creator_id: string;
+  created_at: string;
+}
 
 function formatPaise(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
@@ -159,11 +174,11 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
     async () => {
       const { data } = await supabase
         .from('songs')
-        .select('id, title, genre, cover_url, views, blocks, creator_id, linked_series_id')
+        .select('id, title, genre, cover_url, views, blocks, creator_id, linked_series_id, created_at')
         .eq('status', 'published')
         .order('created_at', { ascending: false })
         .limit(200);
-      const rows = (data ?? []) as { id: string; title: string; genre: string | null; cover_url: string | null; views: number; blocks: unknown[]; creator_id: string; linked_series_id: string | null }[];
+      const rows = (data ?? []) as { id: string; title: string; genre: string | null; cover_url: string | null; views: number; blocks: unknown[]; creator_id: string; linked_series_id: string | null; created_at: string }[];
       if (rows.length === 0) return { songs: [], songUsernames: {} };
       const creatorIds = Array.from(new Set(rows.map(r => r.creator_id)));
       const linkedSeriesIds = Array.from(new Set(rows.map(r => r.linked_series_id).filter(Boolean))) as string[];
@@ -181,13 +196,14 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
           block_count: Array.isArray(r.blocks) ? r.blocks.length : 0,
           linked_series_title: r.linked_series_id ? seriesTitleMap[r.linked_series_id] ?? null : null,
           creator_id: r.creator_id,
+          created_at: r.created_at,
         })),
         songUsernames: usernameMap,
       };
     },
     'catalog',
   );
-  const songs = useMemo(() => songsData?.songs ?? [], [songsData]);
+  const songs = useMemo<SongListItem[]>(() => songsData?.songs ?? [], [songsData]);
   const songUsernames = useMemo(() => songsData?.songUsernames ?? {}, [songsData]);
 
   // Books — same shape as Songs above. Fetched unconditionally (both browse
@@ -430,6 +446,42 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, q, baseFilteredNoType, bookMatches, songResults]);
+
+  // §153 — "All" tab, browse route: merges series + books + songs into one
+  // unified, sorted feed so a newly published book (or song) actually shows
+  // up when a reader lands on /WebMangal instead of only being visible under
+  // its own Books/Songs tab. null outside browse+all so every other tab/route
+  // keeps its existing series-only (or type-only) rendering untouched.
+  type UnifiedEntry =
+    | { kind: 'series'; id: string; title: string; views: number; created_at: string; rating: number | null; data: Series }
+    | { kind: 'book'; id: string; title: string; views: number; created_at: string; data: BookRow }
+    | { kind: 'song'; id: string; title: string; views: number; created_at: string; data: SongListItem };
+
+  const combinedAllItems = useMemo<UnifiedEntry[] | null>(() => {
+    if (mode !== 'browse' || activeContentType !== 'all') return null;
+    const entries: UnifiedEntry[] = [
+      ...results.map((s): UnifiedEntry => ({ kind: 'series', id: `series-${s.id}`, title: s.title, views: s.views ?? 0, created_at: s.created_at, rating: s.avg_rating ?? null, data: s })),
+      ...books.map((b): UnifiedEntry => ({ kind: 'book', id: `book-${b.id}`, title: b.title, views: b.views ?? 0, created_at: b.created_at, data: b })),
+      ...songs.map((s): UnifiedEntry => ({ kind: 'song', id: `song-${s.id}`, title: s.title, views: s.views ?? 0, created_at: s.created_at, data: s })),
+    ];
+    const sorted = [...entries];
+    switch (sortBy) {
+      case 'views':
+        sorted.sort((a, b) => b.views - a.views);
+        break;
+      case 'az':
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'rating':
+        sorted.sort((a, b) => ((b.kind === 'series' ? b.rating ?? 0 : 0) - (a.kind === 'series' ? a.rating ?? 0 : 0)));
+        break;
+      case 'newest':
+      default:
+        sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+    }
+    return sorted;
+  }, [mode, activeContentType, results, books, songs, sortBy]);
 
   const filtersActive = activeContentType !== 'all' || genreFilter !== 'All' || languageFilter !== 'All' || statusFilter !== 'All' || sortBy !== 'newest';
   const createHref = isCreator ? '/dashboard' : user ? '/become-creator' : '/login';
@@ -1145,33 +1197,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>{activeBooks.length} books found</div>
               <div className="mangal-search-grid" style={{ display: 'grid', gap: '16px' }}>
                 {activeBooks.map(book => (
-                  <Link key={book.id} href={`/WebMangal/books/${book.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', height: '100%', transition: 'transform 0.15s, border-color 0.15s' }} className="books-catalog-card">
-                      <div style={{ position: 'relative', width: '100%', aspectRatio: '2 / 3', background: 'linear-gradient(135deg, rgba(var(--accent-rgb), 0.15), var(--bg-input))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {book.cover_image_url ? (
-                          <Image src={book.cover_image_url} alt={book.title} fill unoptimized style={{ objectFit: 'cover' }} />
-                        ) : (
-                          <BookOpen size={30} style={{ color: 'var(--text-faint)' }} />
-                        )}
-                        <span style={{
-                          position: 'absolute', top: '8px', left: '8px', padding: '3px 9px', borderRadius: '999px',
-                          fontSize: '10.5px', fontWeight: 800,
-                          background: book.pricing_type === 'PAID' ? 'rgba(var(--accent-rgb), 0.92)' : 'rgba(16,185,129,0.92)',
-                          color: '#fff',
-                        }}>
-                          {book.pricing_type === 'PAID' && book.price_paise ? formatPaise(book.price_paise) : 'FREE'}
-                        </span>
-                      </div>
-                      <div style={{ padding: '10px 12px 12px' }}>
-                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: '4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{book.title}</div>
-                        <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginBottom: '6px' }}>@{bookAuthors[book.author_id] ?? 'unknown'}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: 'var(--text-tertiary)' }}>
-                          <FileText size={11} /> {book.file_type.toUpperCase()}
-                          {book.category ? <span>· {book.category}</span> : null}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+                  <BookCard key={book.id} book={book} authorUsername={bookAuthors[book.author_id]} />
                 ))}
               </div>
             </>
@@ -1218,6 +1244,34 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               Search for a title, genre, or creator to get started.
             </div>
           </div>
+        ) : mode === 'browse' && activeContentType === 'all' ? (
+          /* §153 — "All" tab, browse route: unified series + books + songs
+             feed (see combinedAllItems above) so every published content
+             type actually shows up here, each tagged with its own type
+             badge (Mangal/Novel/Book/Song) via the per-kind card component. */
+          !combinedAllItems || combinedAllItems.length === 0 ? (
+            <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
+              <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Search size={32} /></div>
+              <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>No series match these filters.</div>
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                {combinedAllItems.length} results found
+              </div>
+              <div className="mangal-search-grid" style={{ display: 'grid', gap: '16px' }}>
+                {combinedAllItems.map(item => {
+                  if (item.kind === 'series') {
+                    return <SharedSeriesCard key={item.id} series={item.data} creatorUsername={creatorUsernames[item.data.creator_id]} />;
+                  }
+                  if (item.kind === 'book') {
+                    return <BookCard key={item.id} book={item.data} authorUsername={bookAuthors[item.data.author_id]} />;
+                  }
+                  return <SongCard key={item.id} song={item.data} creatorUsername={songUsernames[item.data.creator_id]} />;
+                })}
+              </div>
+            </>
+          )
         ) : results.length === 0 ? (
           /* §85 continued (4) — if songs matched even though series didn't,
              skip the series "no results" CTA entirely rather than showing
@@ -1254,7 +1308,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
           </>
         ) : (
           /* Browse route keeps the grid of tiles — this is regular
-             catalog-browsing, not a search-results view. */
+             catalog-browsing, not a search-results view (mangal/novel tabs). */
           <>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               {results.length} series found
