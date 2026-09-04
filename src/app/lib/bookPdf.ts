@@ -213,6 +213,23 @@ export async function generateBookPdfBlob(
 /** Wraps the generated PDF blob as a File, ready for the same upload path
  * used by a hand-picked file (`fd.append('file', file)`). */
 export function bookPdfBlobToFile(blob: Blob, title: string): File {
-  const safeName = (title || 'book').trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'book';
+  // BUG FIX: this used to strip everything outside [a-z0-9] before
+  // falling back to the generic "book" name. That's fine for Latin
+  // titles but WebMangal ships full Hindi localization (see lib/i18n.ts)
+  // and Write-mode authors very plausibly type Devanagari titles — those
+  // collapsed entirely to "book.pdf", and a MIXED title like
+  // "श्री राम कथा - भाग 1" collapsed to just "1.pdf" (misleadingly
+  // looking like a chapter/page number instead of the actual title).
+  // Fix: keep any Unicode letter/number/combining-mark (\p{L}/\p{N}/\p{M},
+  // via the /u flag) — \p{M} matters because Devanagari vowel signs
+  // (matras, e.g. "ी" in "की") are combining marks, not letters on their
+  // own, so without it they'd still get stripped one-by-one leaving a
+  // mangled "म-गल-क-कह-न" instead of "मंगल-की-कहानी".
+  const safeName =
+    (title || 'book')
+      .trim()
+      .replace(/[^\p{L}\p{N}\p{M}]+/gu, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase() || 'book';
   return new File([blob], `${safeName}.pdf`, { type: 'application/pdf' });
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, use } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
-import { parseChapterContent, estimateReadTime } from '../../../lib/novelEditor';
+import { parseChapterContent, estimateReadTime, computeNovelScrollProgress } from '../../../lib/novelEditor';
 import ThemeToggle from '../../../components/shared/ThemeToggle';
 import {
   CalendarClock, FileText, ArrowLeft, BookOpen, Sparkles, Wrench,
@@ -1032,13 +1032,26 @@ function ReaderView({ chapterId }: { chapterId: string }) {
     if (!isNovel || !containerRef.current) return;
     const el = containerRef.current;
     const onScroll = () => {
-      const scrollable = el.scrollHeight - el.clientHeight;
-      if (scrollable <= 0) return;
-      const pct = Math.round((el.scrollTop / scrollable) * 100);
+      const pct = computeNovelScrollProgress(el);
       setScrollPercent(pct);
       if (resumeApplied && userId && series && currentChapter) scheduleUpsert(pct);
     };
     el.addEventListener('scroll', onScroll, { passive: true });
+
+    // BUG FIX: onScroll (above) is the ONLY place novel reading progress
+    // ever got saved — but it only runs on an actual 'scroll' event. A
+    // chapter short enough to fit entirely within the viewport (no
+    // scrollbar, nothing to scroll) never fires one, so reading_progress
+    // was NEVER written for it: the reader could open it, read the whole
+    // thing, leave, and "Continue Reading" would still point at whatever
+    // came before — this chapter silently never counted as reached.
+    // computeNovelScrollProgress() itself now returns 100 for this case
+    // (see lib/novelEditor.ts), so just run the same logic once up front
+    // instead of waiting for a scroll event that will never come.
+    const pct = computeNovelScrollProgress(el);
+    setScrollPercent(pct);
+    if (pct === 100 && resumeApplied && userId && series && currentChapter) scheduleUpsert(pct);
+
     return () => el.removeEventListener('scroll', onScroll);
   }, [isNovel, userId, series, currentChapter, resumeApplied]);
   // (width / screen / actual) instead of a fixed width:100% + numeric zoom

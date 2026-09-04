@@ -64,11 +64,56 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
   const shareText = `Check out "${title}" on MANGAL — read free! ${url}`;
   const whatsappHref = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
+  const [copyFailed, setCopyFailed] = useState(false);
+
+  // BUG FIX: this used to call navigator.clipboard.writeText(url) directly
+  // with no guard. The Clipboard API is unavailable (navigator.clipboard
+  // is undefined, so even the property access throws synchronously) in a
+  // meaningful slice of real traffic for THIS exact button — WhatsApp's
+  // and Instagram's in-app browsers (Android WebViews) don't support it,
+  // and this menu's other option is literally "Share on WhatsApp". A
+  // failure here used to be a silent no-op (or an uncaught exception) —
+  // no "Copied!" confirmation and no indication anything went wrong. Now:
+  // fall back to the legacy execCommand('copy') path, and if that ALSO
+  // fails, show a visible "Couldn't copy" state instead of silence.
   function handleCopy() {
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    const legacyFallback = () => {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (ok) {
+          setCopied(true);
+          setCopyFailed(false);
+          setTimeout(() => setCopied(false), 2000);
+        } else {
+          setCopyFailed(true);
+          setTimeout(() => setCopyFailed(false), 3000);
+        }
+      } catch {
+        setCopyFailed(true);
+        setTimeout(() => setCopyFailed(false), 3000);
+      }
+    };
+
+    if (!navigator.clipboard?.writeText) {
+      legacyFallback();
+      return;
+    }
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        setCopied(true);
+        setCopyFailed(false);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(legacyFallback);
   }
 
   return (
@@ -117,11 +162,11 @@ export default function ShareButton({ title, url, compact = false }: ShareButton
             style={{
               display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
               padding: '12px 14px', fontSize: '13px', fontWeight: 600,
-              color: copied ? '#22c55e' : 'var(--text-primary)', background: 'transparent',
+              color: copyFailed ? '#ef4444' : copied ? '#22c55e' : 'var(--text-primary)', background: 'transparent',
               border: 'none', cursor: 'pointer', textAlign: 'left',
             }}
           >
-            {copied ? <Check size={16} strokeWidth={2} /> : <Link2 size={16} strokeWidth={2} />} {copied ? 'Copied!' : 'Copy Link'}
+            {copied ? <Check size={16} strokeWidth={2} /> : <Link2 size={16} strokeWidth={2} />} {copyFailed ? "Couldn't copy — try again" : copied ? 'Copied!' : 'Copy Link'}
           </button>
         </div>,
         document.body

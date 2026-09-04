@@ -187,6 +187,33 @@ export function renderNovelPreviewHtml(raw: string): string {
   return html.join('');
 }
 
+/**
+ * Novel-reader scroll progress, as a 0–100 percent.
+ *
+ * BUG FIX: the reader page used to compute this inline and bail out
+ * entirely (return, writing NOTHING) whenever the chapter's content fit
+ * the viewport with nothing to scroll (scrollHeight - clientHeight <= 0).
+ * Since the scroll listener is the ONLY place reading_progress ever got
+ * saved for novels, a short chapter — fully visible, fully read, zero
+ * scrolling needed — never got recorded at all: "Continue Reading" would
+ * silently strand a reader on whatever chapter came before it.
+ *
+ * Fixed behavior: a chapter with nothing to scroll is, by definition,
+ * already 100% visible — treat it as fully read immediately instead of
+ * silently skipping it. Extracted as a pure function (rather than left
+ * inline in the page component) specifically so this exact edge case has
+ * a direct, isolated regression test.
+ */
+export function computeNovelScrollProgress(el: {
+  scrollTop: number;
+  scrollHeight: number;
+  clientHeight: number;
+}): number {
+  const scrollable = el.scrollHeight - el.clientHeight;
+  if (scrollable <= 0) return 100;
+  return Math.round((el.scrollTop / scrollable) * 100);
+}
+
 // ---- Local draft autosave (per chapter slot) ----
 // Keeps an in-progress chapter safe from accidental tab close / refresh.
 // Keyed by seriesId + chapterNumber so multiple in-progress chapters don't
