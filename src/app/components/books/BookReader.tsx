@@ -391,8 +391,16 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
 
   async function toggleFullscreen() {
     try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await rootRef.current?.requestFullscreen();
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        // Controls must stay reachable in fullscreen: entering drops focus
+        // mode so the top/bottom bars (and the "Show controls" pill) can
+        // never strand a reader in a chrome-less fullscreen. Focus mode can
+        // still be entered afterwards deliberately via the eye button.
+        setFocusMode(false);
+        await rootRef.current?.requestFullscreen();
+      }
     } catch { /* denied — ignore */ }
   }
 
@@ -826,6 +834,15 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     if (dx < 0) goNext(); else goPrev();
   }
 
+  // Tap-anywhere restore: once focus mode hides all the chrome, a single tap
+  // on the page itself brings the controls back (native reader pattern) —
+  // this backs up the "Show controls" pill so focus mode can never strand a
+  // reader with no way out. In normal mode a tap does nothing: navigation
+  // stays with the buttons, swipe gestures, and arrow keys.
+  function handleStageTap() {
+    if (focusMode) setFocusMode(false);
+  }
+
   // ── purchase (inline, same pair as the detail page) ───────────────────
   async function handleBuy() {
     if (!userId) {
@@ -903,10 +920,15 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     return cache.get(`${n}@${zoom}`) ?? null;
   }
 
-  // Spread geometry: spread 0 = [1], spread k≥1 = [2k, 2k+1].
+  // Spread geometry: spread 0 = [cover — page 1 alone on the RIGHT, like a
+  // real book's closed cover], spread k≥1 = [2k, 2k+1]. curLeft is null at
+  // spread 0 so the left sheet intentionally stays blank there, while page 1
+  // itself shows on the right sheet — the old geometry parked page 1 on a
+  // sheet neither branch rendered, leaving spread 0 (the very first page)
+  // completely empty.
   const shownSpread = flip?.dir === 'next' ? spread + 1 : flip?.dir === 'prev' ? spread - 1 : spread;
-  const curLeft = shownSpread === 0 ? 1 : 2 * shownSpread;
-  const curRight = shownSpread === 0 ? null : 2 * shownSpread + 1;
+  const curLeft = shownSpread === 0 ? null : 2 * shownSpread;
+  const curRight = shownSpread === 0 ? 1 : 2 * shownSpread + 1;
   const flipFrontRight = spread === 0 ? 1 : 2 * spread + 1;       // next-flip front face
   const flipBackLeft = 2 * (spread + 1);                          // next-flip back face
   const flipFrontLeft = spread === 0 ? 1 : 2 * spread;            // prev-flip front face
@@ -1179,14 +1201,21 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
 
   function FocusPill() {
     if (!focusMode) return null;
+    // exitFocus fires on pointerdown AND click: pointerdown responds fastest
+    // on touch (no click-resolution wait), while click keeps keyboard and
+    // assistive-tech activation working. Both are idempotent — the second
+    // identical setFocusMode(false) is a React no-op.
+    const exitFocus = () => setFocusMode(false);
     return (
       <button
-        onClick={() => setFocusMode(false)}
+        onPointerDown={exitFocus}
+        onClick={exitFocus}
         aria-label="Exit focus mode"
         style={{
-          position: 'fixed', bottom: 'calc(16px + env(safe-area-inset-bottom))', left: '50%',
-          transform: 'translateX(-50%)', zIndex: 60, display: 'flex', alignItems: 'center', gap: '7px',
-          minHeight: '48px', padding: '0 18px', borderRadius: '999px', cursor: 'pointer',
+          position: 'fixed', bottom: 'calc(20px + env(safe-area-inset-bottom))', left: '50%',
+          transform: 'translateX(-50%)', zIndex: 80, display: 'flex', alignItems: 'center', gap: '7px',
+          minHeight: '52px', padding: '0 22px', borderRadius: '999px', cursor: 'pointer',
+          touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
           border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(20,20,26,0.72)',
           backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
           color: 'rgba(255,255,255,0.85)', fontSize: '12.5px', fontWeight: 800,
@@ -1399,6 +1428,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         <div
           ref={scrollContainerRef}
           onScroll={handlePdfScroll}
+          onClick={handleStageTap}
           style={{ flex: 1, minHeight: 0, position: 'relative', overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch' }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: `${stagePad}px ${stagePad}px 32px` }}>
@@ -1445,6 +1475,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? `${Math.max(4, Math.round(stagePad / 2))}px` : `${stagePad}px` }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
+        onClick={handleStageTap}
       >
         {isMobile ? (
           /* Mobile: single page */
@@ -1469,7 +1500,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
             }}>
               {/* Left sheet */}
               <div style={{ flex: 1, background: THEME_PAPER[theme], transition: 'background 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '6px 0 0 6px', position: 'relative' }}>
-                {shownSpread > 0 && (
+                {curLeft !== null && (
                   imgFor(curLeft)
                     ? <img src={imgFor(curLeft)!} alt={`Page ${curLeft}`} style={pageImgStyle} draggable={false} />
                     : <Loader2 size={22} style={{ animation: 'book-reader-spin 0.9s linear infinite', color: 'rgba(0,0,0,0.3)' }} />
@@ -1597,8 +1628,29 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
             </span>
           </div>
         ) : isMobile ? (
-          <div style={{ flex: 1, textAlign: 'center', fontSize: '12.5px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-            Page {paginatedCurrentPage}{totalPages ? ` of ${previewOnly ? Math.min(PREVIEW_PAGES, totalPages) : totalPages}` : ''}
+          /* Page-by-page slider on mobile too — parity with desktop. This used
+             to be a static "Page X of Y" label, which gave phones no way to
+             jump/skim to a page. maxMobilePage already handles the preview
+             cap, and the value is clamped so a stale counter can't scroll the
+             range input out of range mid-update. */
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <input
+              type="range"
+              min={1}
+              max={Math.max(1, maxMobilePage || 1)}
+              value={Math.min(Math.max(paginatedCurrentPage, 1), Math.max(1, maxMobilePage || 1))}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (!Number.isFinite(n) || n === mobilePage) return;
+                setSlideDir(n >= mobilePage ? 'next' : 'prev');
+                setMobilePage(n);
+              }}
+              aria-label="Go to page"
+              style={{ flex: 1, minWidth: 0, height: '44px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', minWidth: '64px', textAlign: 'center', flexShrink: 0 }}>
+              {paginatedCurrentPage}{totalPages ? ` / ${previewOnly ? Math.min(PREVIEW_PAGES, totalPages) : totalPages}` : ''}
+            </span>
           </div>
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1611,7 +1663,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
               style={{ flex: 1, height: '44px', accentColor: 'var(--accent)', cursor: 'pointer' }}
             />
             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', minWidth: '86px', textAlign: 'center' }}>
-              {curLeft}{curRight && curRight <= totalPages ? `–${curRight}` : ''} / {totalPages || '—'}
+              {curLeft ?? 1}{curRight > 1 && curRight <= totalPages ? `–${curRight}` : ''} / {totalPages || '—'}
             </span>
           </div>
         )}
