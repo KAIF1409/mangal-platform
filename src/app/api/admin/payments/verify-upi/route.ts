@@ -51,6 +51,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, alreadyCaptured: true });
   }
 
+  // FIX: only a row the payer has actually self-reported as paid
+  // ('pending_manual_verification', set when they tap "I've paid" on the
+  // UPI intent) is eligible to be captured here. Without this guard, a
+  // mistyped/wrong paymentId sitting in 'created' (or 'authorized',
+  // 'failed', 'refunded') — i.e. the payer never even claimed to pay, or
+  // the row is already resolved some other way — could still be flipped
+  // to 'captured' and granted, handing out access nobody paid for.
+  if (row.status !== 'pending_manual_verification') {
+    return NextResponse.json(
+      { error: `Payment is in '${row.status}' status, not awaiting manual verification. Refusing to capture.` },
+      { status: 409 }
+    );
+  }
+
   const { error: updateError } = await supabaseAdmin
     .from('payments')
     .update({ status: 'captured' })

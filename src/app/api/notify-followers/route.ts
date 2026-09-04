@@ -14,9 +14,12 @@
 //      one per follower (not per platform user), which is both correct at
 //      any scale and never fetches unrelated users' emails into memory.
 //   3. No idempotency — a double-click or client retry would re-blast the
-//      same chapter's emails. FIX: best-effort check-and-set on
-//      chapters.notified_at (skips gracefully if that column doesn't
-//      exist yet — see migration note below).
+//      same chapter's emails. FIX: atomic check-and-set on
+//      chapters.notified_at via a conditional `UPDATE ... WHERE
+//      notified_at IS NULL`, claimed BEFORE sending — this closes a race
+//      where two concurrent calls could both read notified_at as null
+//      before either wrote it. Skips gracefully if that column doesn't
+//      exist yet — see migration note below.
 //
 // Optional migration for the idempotency guard:
 //   ALTER TABLE chapters ADD COLUMN IF NOT EXISTS notified_at timestamptz;
@@ -93,10 +96,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Chapter not found for this series' }, { status: 404 });
     }
 
-    // FIX: idempotency guard — if this chapter was already notified about,
-    // don't send again. Soft-fails (proceeds normally) if the optional
+    // FIX (idempotency, made atomic): a plain read-then-later-write of
+    // notified_at is a check-then-set race — two concurrent calls (a
+    // double-click on "Publish", or a client retry) can both read it as
+    // null before either has written it, and both go on to email every
+    // follower, so every follower gets double-emailed. Instead we CLAIM
+    // the notification slot up front with a conditional UPDATE ... WHERE
+    // notified_at IS NULL: Postgres serializes concurrent UPDATEs on the
+    // same row, so only one caller's update can match the IS NULL
+    // condition and get a row back — that caller proceeds, every other
+    // concurrent (or later, retried) caller sees zero rows updated and
+    // skips. Soft-fails (proceeds without the guard) if the optional
     // notified_at column doesn't exist yet, so this never breaks the route.
-    if ('notified_at' in chapter && chapter.notified_at) {
+    const { data: claimed, error: claimError } = await serviceClient
+      .from('chapters')
+      .update({ notified_at: new Date().toISOString() })
+      .eq('id', chapterId)
+      .is('notified_at', null)
+      .select('id');
+
+    if (claimError) {
+      console.warn('[notify-followers] could not claim notified_at lock (column may not exist yet):', claimError.message);
+    } else if (!claimed || claimed.length === 0) {
+      // Someone else already claimed it (or it's genuinely already sent).
       return NextResponse.json({ sent: 0, skipped: 0, note: 'Already notified for this chapter' });
     }
 
@@ -156,12 +178,8 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // Best-effort: mark this chapter as notified so a retry doesn't re-blast.
-    try {
-      await serviceClient.from('chapters').update({ notified_at: new Date().toISOString() }).eq('id', chapterId);
-    } catch (markErr) {
-      console.warn('[notify-followers] could not set notified_at (column may not exist yet):', markErr);
-    }
+    // notified_at was already claimed atomically before the send loop above
+    // (or the column doesn't exist, in which case there's nothing to write).
 
     console.log(`[notify-followers] series=${seriesId} ch=${chapterNumber}: sent=${sent} skipped=${skipped}`);
     return NextResponse.json({ sent, skipped });

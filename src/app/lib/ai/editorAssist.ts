@@ -134,10 +134,39 @@ export function splitIntoPageBatches(text: string): string[] {
     }
   };
 
+  // Word-level last resort: a "sentence" (per the punctuation split below)
+  // with no internal sentence punctuation at all can itself blow past the
+  // budget — e.g. one giant no-period paste. Slice it on raw whitespace so a
+  // block never exceeds TARGET_BATCH_CHARS / MAX_BATCH_WORDS. Completed
+  // slices go straight to `blocks`; the trailing remainder is returned so
+  // the caller can keep combining it with whatever text follows.
+  const pushWordSlices = (text: string): string => {
+    let wpiece = '';
+    for (const word of text.split(/\s+/).filter(Boolean)) {
+      if (
+        countWords(wpiece) + 1 > MAX_BATCH_WORDS ||
+        wpiece.length + word.length + 1 > TARGET_BATCH_CHARS
+      ) {
+        if (wpiece.trim()) blocks.push(wpiece.trim());
+        wpiece = '';
+      }
+      wpiece += (wpiece ? ' ' : '') + word;
+    }
+    return wpiece;
+  };
+
   const pushHardSplitParagraph = (paragraph: string) => {
     // Sentence-boundary first pass.
     let piece = '';
     for (const sentence of paragraph.split(/(?<=[.!?…。]["')\]]?)\s+/)) {
+      // A single "sentence" that alone exceeds the budget (no punctuation to
+      // split on) can't be handled by the piece-accumulation logic below —
+      // fall back to word slicing instead of ever emitting an oversized block.
+      if (countWords(sentence) > MAX_BATCH_WORDS || sentence.length > TARGET_BATCH_CHARS) {
+        if (piece.trim()) blocks.push(piece.trim());
+        piece = pushWordSlices(sentence);
+        continue;
+      }
       if (
         currentWords + countWords(piece) + countWords(sentence) > MAX_BATCH_WORDS ||
         currentChars + piece.length + sentence.length + 1 > TARGET_BATCH_CHARS
