@@ -603,9 +603,9 @@ export default function DashboardBooksPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
-      <Navbar />
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '28px 20px 80px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
+      <Navbar href="/WebMangal" />
+      <div style={{ flex: 1, maxWidth: '960px', margin: '0 auto', padding: '28px 20px 80px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <BookOpen size={26} color="var(--accent)" />

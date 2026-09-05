@@ -155,10 +155,10 @@ export default function EarningsPage() {
     scope === 'all' ? ['webmangal', 'katube', 'kcircle'] : [scope];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
+      <div style={{ flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
         <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
           <BarChart3 size={12} strokeWidth={2.5} /> EARNINGS & PERFORMANCE
         </div>

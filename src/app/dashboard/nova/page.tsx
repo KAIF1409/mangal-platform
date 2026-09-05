@@ -77,10 +77,10 @@ export default function NovaPage() {
   }, [scope]);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
 
-      <div style={{ maxWidth: '760px', margin: '0 auto', padding: '40px 24px' }}>
+      <div style={{ flex: 1, maxWidth: '760px', margin: '0 auto', padding: '40px 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <div style={{
             width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 14px',
