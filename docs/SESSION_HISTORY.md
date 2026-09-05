@@ -10591,3 +10591,117 @@ hugely zoomed on phones ("bg showing big big, not correctly fit").
   (Windows Credential Manager) into process env only — never written to any
   tracked file. `git ls-remote origin main` verified == local HEAD after
   push.
+
+## §153 — Three-finding fix round: batch-splitter word fallback · notify-followers race · UPI capture guard (2026-09-05)
+
+Founder handed over three findings from an audit round already completed
+(sentence-level cause identified per finding); this session implemented and
+verified all three, no new investigation needed.
+
+### A) `lib/ai/editorAssist.ts` — `splitIntoPageBatches` hard-split had no word-level fallback
+
+The sentence-boundary regex splits a paragraph into "sentences"; when a
+paragraph has NO sentence punctuation at all (one giant no-period paste),
+the regex yields exactly one "sentence" equal to the whole paragraph, which
+the existing piece-accumulation logic could only ever emit whole — never
+actually sliced — so a 39,999-char blob sailed straight past the 22k
+soft target and the 24k hard `MAX_ASSIST_CHARS` server cap, hitting the
+server with a payload it rejects as "Selection too large" (the exact
+failure the splitter exists to prevent). The module's own docstring already
+claimed a "falling back to raw word slices" behavior that the code didn't
+actually implement.
+
+Fix: added `pushWordSlices()`, a raw-whitespace slicer bounded by the same
+`MAX_BATCH_WORDS` / `TARGET_BATCH_CHARS` budgets used everywhere else in the
+splitter. `pushHardSplitParagraph` now checks, per sentence-regex piece,
+whether that piece ALONE exceeds budget (i.e. it has no internal
+punctuation to split on) and routes only that piece through
+`pushWordSlices` — every other paragraph shape (including a paragraph with
+multiple long-but-punctuated sentences) is untouched, so this is additive,
+not a rewrite of the working path.
+
+Verified with an isolated reproduction harness (copied the two functions
+into a standalone `.ts`, no project build needed, so no risk of the
+sandbox's fixture/env state leaking into the result):
+- 39,999-char no-punctuation blob → 2 blocks, both ≤ `TARGET_BATCH_CHARS`,
+  content fully reconstructed (`blocks.join(' ').length === 39999`).
+- 50-paragraph normal punctuated text (regression) → unchanged, 1 block.
+- Mixed doc (normal paragraph + the giant blob + normal paragraph) →
+  3 blocks, all under cap — confirms the fallback doesn't leak into or
+  disturb neighboring normal paragraphs.
+
+### B) `api/notify-followers/route.ts` — non-atomic `notified_at` check-then-set race
+
+The idempotency guard read `chapter.notified_at` early (right after
+confirming the chapter belongs to the series) but only wrote it back at the
+very end, AFTER the entire follower-email send loop. Two concurrent POSTs
+(double-click "Publish" in the UI, or a client-side retry on a slow
+response) both read `notified_at` as null before either request's write
+landed, so both ran the full send loop — every follower got double-emailed
+for the same chapter.
+
+Fix: replaced the read-early/write-late pair with a single atomic claim
+performed BEFORE the send loop: `UPDATE chapters SET notified_at = now()
+WHERE id = :chapterId AND notified_at IS NULL RETURNING id`. Postgres
+serializes concurrent `UPDATE`s against the same row, so of any number of
+concurrent callers, only one's conditional `WHERE notified_at IS NULL` can
+still be true when its update actually executes — that caller gets a row
+back and proceeds to send; every other concurrent (or later-retried) caller
+gets zero rows back and returns the existing "already notified" response
+without touching the email/follower-fetch path at all. Soft-fails
+unchanged: if the optional `notified_at` column doesn't exist yet, the
+`UPDATE` errors, is logged, and the route proceeds without the guard
+(matches the original documented behavior for pre-migration deployments).
+
+### C) `api/admin/payments/verify-upi/route.ts` — missing status guard on manual capture
+
+The route only special-cased `status === 'captured'` (no-op, already done)
+before unconditionally flipping the row to `'captured'` and calling
+`applyPaymentGrant`. Nothing stopped a row still sitting in `'created'`
+(order created, payer never even opened the UPI app) — or `'authorized'`,
+`'failed'`, `'refunded'` — from being captured by a mistyped `paymentId`.
+Admin/developer-role-gated so low severity in practice, but cheap and
+correct to close: per the `20260901120000_direct_upi_payments.sql` status
+check constraint (`created | authorized | captured | failed | refunded |
+pending_manual_verification`), only `'pending_manual_verification'` means
+the payer has self-reported paying (`paid_reported_at` set via "I've paid").
+Fix: added an explicit guard requiring `row.status ===
+'pending_manual_verification'`; anything else returns `409` untouched,
+before the update/grant ever runs.
+
+### Verification (gates, this round)
+
+- `npx tsc --noEmit` over the full current tree (post-pull, post-`npm
+  install`) → exit **0**, zero errors anywhere, including the three edited
+  files.
+- `npm run lint` → **2 errors, pre-existing, NOT from this round's edits** —
+  both in `src/__tests__/components/{SeriesCard,SongCard}.test.tsx`
+  (`react-hooks/rules-of-hooks` on a `useRouter()` call inside a plain
+  helper named `router`, not a component/hook) — confirmed via
+  `git log -1 -- <file>`, last touched by a concurrent session's §153 QA-
+  suite commit unrelated to these fixes; warning count otherwise unchanged
+  in shape (image-optimization + unused-var warnings across pre-existing
+  files, none in the three edited files).
+- `npm run build` — **could NOT be run to completion in this sandbox**:
+  Turbopack's `next/font/google` step needs to fetch Geist/Geist Mono from
+  `fonts.googleapis.com`, which isn't reachable from this sandbox's egress
+  allowlist (403). This is a sandbox network limitation, not a regression —
+  logged honestly here rather than claimed as a passing gate. Founder should
+  run `npm run build` (or check the next Vercel deploy) to get the real
+  gate 3/4 signal; the `tsc`+isolated-repro coverage above is what's
+  actually been verified from this environment.
+- Concurrent-push note: origin/main advanced from `e116132` (this round's
+  base) to `6d2665a` — ten commits from other session(s) — while this fix
+  was in flight (books-reader hardening, WebMangal All-tab BookCard, a
+  QA/test suite). `git merge-base --is-ancestor` confirmed this round's
+  commit (`c7d89b5`) is a clean ancestor of the new `origin/main` (no
+  rebase/force-push needed); pulled to sync the local tree before writing
+  this entry.
+
+### Ruled out this round (per founder's audit, no code changes)
+
+UPI request-code/verify-OTP flow (not cross-user exploitable),
+`grantPayment` double-grant path (already idempotent), `create-upi-intent`,
+and the codex character-list "reordering on edit" (matches the intended
+`updated_at DESC` sort, not a bug).
+

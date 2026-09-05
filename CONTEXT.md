@@ -277,6 +277,18 @@ also had no branch for `song`/`kcircle_post` targets, causing wrong-table
 deletes. Needs an idempotent constraint rebuild adding `'song'`, plus the
 admin-page union/table-map/owner-lookup updates (tracked in `docs/SESSION_HISTORY.md` §143).
 
+### Three-finding fix round — batch-splitter, notification race, UPI capture guard (§153, fixed)
+`editorAssist.ts`'s page-batch splitter had no actual word-level fallback
+for a paragraph with zero sentence punctuation (a giant no-period paste
+sailed past the 22k/24k budgets); `notify-followers`'s `notified_at`
+idempotency guard was a non-atomic read-early/write-late race that could
+double-email every follower on a double-click or retry; the UPI manual-
+capture route had no guard against capturing a payment still in `'created'`
+status. All three fixed and verified (`tsc` clean, isolated repro for the
+splitter). `npm run build` could not be run to completion in the fix
+sandbox (no egress to `fonts.googleapis.com` for `next/font`) — full detail
+and gate results: `docs/SESSION_HISTORY.md` §153.
+
 ---
 
 ## 5. Active Roadmap & Pending Tasks
