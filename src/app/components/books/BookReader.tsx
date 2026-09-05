@@ -1468,25 +1468,16 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   // ── top bar (shared by both engines) ──────────────────────────────────
   function ReaderTopBar() {
     const ThemeIcon = THEME_ICONS[theme];
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px',
-        borderBottom: '1px solid var(--border-color)', background: 'var(--nav-bg)',
-        backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 30,
-      }}>
-        <Link href={`/WebMangal/books/${book.id}`} style={{ ...iconBtnStyle, textDecoration: 'none' }} title="Close reader">
-          <ArrowLeft size={17} />
-        </Link>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {book.title}
-          </div>
-          {previewOnly && (
-            <span style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Free preview · {PREVIEW_PAGES} pages
-            </span>
-          )}
-        </div>
+    // BUG FIX: the icon row had grown to 8 buttons (TOC, settings, focus,
+    // theme, share, tip, fullscreen) on top of back+title all sharing one
+    // row. On a phone-width screen that squeezed the title's flex space
+    // down to almost nothing — hence it rendering as just "E…" in the
+    // screenshot. On mobile, split into two rows: title always gets the
+    // full width on its own row, icons wrap to a second (horizontally
+    // scrollable, so it never itself squeezes anything) row below. Desktop
+    // keeps the original single row since there's width to spare there.
+    const toolbar = (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: isMobile ? 'auto' : 'visible', flexShrink: 0 }}>
         {/* TOC / page directory */}
         <button style={iconBtnStyle} title="Contents" aria-label="Open contents" onClick={() => { setDockOpen(false); setTocOpen(true); }}>
           <List size={16} />
@@ -1537,6 +1528,50 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         <button style={iconBtnStyle} title="Fullscreen" onClick={toggleFullscreen}>
           {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
         </button>
+      </div>
+    );
+
+    const titleBlock = (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {book.title}
+        </div>
+        {previewOnly && (
+          <span style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Free preview · {PREVIEW_PAGES} pages
+          </span>
+        )}
+      </div>
+    );
+
+    if (isMobile) {
+      return (
+        <div style={{
+          borderBottom: '1px solid var(--border-color)', background: 'var(--nav-bg)',
+          backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 30,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px 6px' }}>
+            <Link href={`/WebMangal/books/${book.id}`} style={{ ...iconBtnStyle, textDecoration: 'none', flexShrink: 0 }} title="Close reader">
+              <ArrowLeft size={17} />
+            </Link>
+            {titleBlock}
+          </div>
+          <div style={{ padding: '0 14px 10px' }}>{toolbar}</div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px',
+        borderBottom: '1px solid var(--border-color)', background: 'var(--nav-bg)',
+        backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 30,
+      }}>
+        <Link href={`/WebMangal/books/${book.id}`} style={{ ...iconBtnStyle, textDecoration: 'none' }} title="Close reader">
+          <ArrowLeft size={17} />
+        </Link>
+        {titleBlock}
+        {toolbar}
       </div>
     );
   }
