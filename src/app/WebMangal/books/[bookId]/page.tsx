@@ -18,6 +18,7 @@ import { supabase } from '../../../lib/supabase';
 import type { BookRow } from '../../../lib/database.types';
 import Navbar from '../../../components/shared/Navbar';
 import Footer from '../../../components/shared/Footer';
+import ShareButton from '../../../components/webmangal/ShareButton';
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import { openRazorpayCheckout } from '../../../lib/payments/razorpayClient';
 import { GLOBAL_PAYMENTS_ENABLED } from '../../../lib/payments/featureFlags';
@@ -214,6 +215,15 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: s
                   {book.category && (
                     <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{book.category}</span>
                   )}
+                  {book.is_mature && (
+                    <span style={{
+                      padding: '4px 11px', borderRadius: '999px', fontSize: '11px', fontWeight: 800,
+                      background: 'rgba(225,29,72,0.12)', color: '#e11d48', border: '1px solid rgba(225,29,72,0.35)',
+                      letterSpacing: '0.03em',
+                    }}>
+                      18+
+                    </span>
+                  )}
                 </div>
 
                 {book.description && (
@@ -224,72 +234,80 @@ export default function BookDetailPage({ params }: { params: Promise<{ bookId: s
 
                 {/* CTA */}
                 <div style={{ marginTop: '24px' }}>
-                  {hasAccess ? (
-                    <Link
-                      href={`/WebMangal/books/${book.id}/read`}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '9px',
-                        padding: '13px 26px', borderRadius: '10px', textDecoration: 'none',
-                        background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: '15px',
-                      }}
-                    >
-                      <PlayCircle size={19} /> Read now
-                    </Link>
-                  ) : pendingConfirmation ? (
-                    <p style={{ fontSize: '13px', color: '#d97706', fontWeight: 700 }}>
-                      Payment noted — pending confirmation. Access unlocks once it&apos;s reconciled.
-                    </p>
-                  ) : showUpiFlow ? (
-                    <div style={{ maxWidth: '380px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '16px' }}>
-                      <DirectUpiPay
-                        amountPaise={book.price_paise ?? 0}
-                        purpose="book_purchase"
-                        purposeRefId={book.id}
-                        description={`Buy "${book.title}"`}
-                        onPending={() => { setPendingConfirmation(true); setShowUpiFlow(false); }}
-                      />
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => {
-                          if (!user) {
-                            setPostLoginRedirect(window.location.pathname);
-                            window.location.href = '/login';
-                            return;
-                          }
-                          setShowUpiFlow(true);
-                        }}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    {hasAccess ? (
+                      <Link
+                        href={`/WebMangal/books/${book.id}/read`}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: '9px',
-                          padding: '13px 26px', borderRadius: '10px', cursor: 'pointer',
-                          border: 'none', background: 'var(--accent)', color: '#fff',
-                          fontWeight: 800, fontSize: '15px',
+                          padding: '13px 26px', borderRadius: '10px', textDecoration: 'none',
+                          background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: '15px',
                         }}
                       >
-                        <Lock size={16} /> Buy {book.price_paise ? formatPaise(book.price_paise) : ''} via UPI
-                      </button>
-                      <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '10px', lineHeight: 1.6, maxWidth: '420px' }}>
-                        Includes a free preview of the first pages in the reader. Pays directly by UPI — confirmation
-                        may take a little while since it isn&apos;t processed by a payment gateway yet.
+                        <PlayCircle size={19} /> Read now
+                      </Link>
+                    ) : pendingConfirmation ? (
+                      <p style={{ fontSize: '13px', color: '#d97706', fontWeight: 700, margin: 0 }}>
+                        Payment noted — pending confirmation. Access unlocks once it&apos;s reconciled.
                       </p>
-                      {GLOBAL_PAYMENTS_ENABLED && (
+                    ) : showUpiFlow ? (
+                      <div style={{ maxWidth: '380px', width: '100%', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '16px' }}>
+                        <DirectUpiPay
+                          amountPaise={book.price_paise ?? 0}
+                          purpose="book_purchase"
+                          purposeRefId={book.id}
+                          description={`Buy "${book.title}"`}
+                          onPending={() => { setPendingConfirmation(true); setShowUpiFlow(false); }}
+                        />
+                      </div>
+                    ) : (
+                      <div>
                         <button
-                          onClick={handleBuy}
-                          disabled={buying}
+                          onClick={() => {
+                            if (!user) {
+                              setPostLoginRedirect(window.location.pathname);
+                              window.location.href = '/login';
+                              return;
+                            }
+                            setShowUpiFlow(true);
+                          }}
                           style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '9px', marginTop: '10px',
-                            padding: '13px 26px', borderRadius: '10px', cursor: buying ? 'wait' : 'pointer',
-                            border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)',
-                            fontWeight: 800, fontSize: '15px', opacity: buying ? 0.75 : 1,
+                            display: 'inline-flex', alignItems: 'center', gap: '9px',
+                            padding: '13px 26px', borderRadius: '10px', cursor: 'pointer',
+                            border: 'none', background: 'var(--accent)', color: '#fff',
+                            fontWeight: 800, fontSize: '15px',
                           }}
                         >
-                          {buying ? <Loader2 size={17} className="book-spin" /> : <Lock size={16} />}
-                          {buying ? 'Opening checkout…' : `Buy ${book.price_paise ? formatPaise(book.price_paise) : ''} via Card/Netbanking`}
+                          <Lock size={16} /> Buy {book.price_paise ? formatPaise(book.price_paise) : ''} via UPI
                         </button>
-                      )}
-                    </>
-                  )}
+                        <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '10px', lineHeight: 1.6, maxWidth: '420px' }}>
+                          Includes a free preview of the first pages in the reader. Pays directly by UPI — confirmation
+                          may take a little while since it isn&apos;t processed by a payment gateway yet.
+                        </p>
+                        {GLOBAL_PAYMENTS_ENABLED && (
+                          <button
+                            onClick={handleBuy}
+                            disabled={buying}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '9px', marginTop: '10px',
+                              padding: '13px 26px', borderRadius: '10px', cursor: buying ? 'wait' : 'pointer',
+                              border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)',
+                              fontWeight: 800, fontSize: '15px', opacity: buying ? 0.75 : 1,
+                            }}
+                          >
+                            {buying ? <Loader2 size={17} className="book-spin" /> : <Lock size={16} />}
+                            {buying ? 'Opening checkout…' : `Buy ${book.price_paise ? formatPaise(book.price_paise) : ''} via Card/Netbanking`}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {/* Founder-reported gap: books had no share option at all
+                        on the detail page (series/reader pages already do,
+                        via the same shared ShareButton). Shown regardless of
+                        purchase state — sharing a paid book's page is exactly
+                        how a reader gets someone else to go buy it. */}
+                    <ShareButton title={book.title} url={typeof window !== 'undefined' ? window.location.href : ''} />
+                  </div>
                   {buyError && (
                     <p style={{ color: '#ef4444', fontSize: '13px', fontWeight: 600, marginTop: '10px' }}>{buyError}</p>
                   )}

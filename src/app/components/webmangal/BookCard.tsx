@@ -3,9 +3,12 @@
 // §153 — Books discovery card. Same visual shell as SeriesCard/SongCard
 // (cover + bottom scrim chip + title/meta row) so Books reads as a first-class
 // content type in the unified "All" tab on /WebMangal instead of a bolted-on
-// extra. The bottom scrim carries the book-specific "Book" tag (with the
-// PDF/EPUB format chip next to it) so each kind is clearly labelled in the
-// mixed feed, and the price chip stays top-left like the old inline card.
+// extra. The bottom scrim carries the "Book" content-type tag; the second
+// chip slot (matching SeriesCard's reading-mode chip) shows an 18+ warning
+// when the book is flagged mature — genuinely useful to a reader before they
+// tap in, unlike a PDF/EPUB file-format label which was there before (founder
+// call: drop the format tag, it told the reader nothing they needed and the
+// file type is invisible to them anyway once they hit "Read now").
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -17,11 +20,11 @@ export interface BookCardData {
   id: string;
   title: string;
   cover_image_url?: string | null;
-  file_type?: 'pdf' | 'epub';
   pricing_type?: 'FREE' | 'PAID';
   price_paise?: number | null;
   category?: string | null;
   views?: number;
+  is_mature?: boolean | null;
 }
 
 function formatPaise(paise: number): string {
@@ -92,12 +95,13 @@ export default function BookCard({
                 <BookOpen size={9} strokeWidth={2} /> Book
               </span>
             </span>
-            {book.file_type && (
+            {book.is_mature && (
               <span style={{
-                fontSize: '9px', fontWeight: 700, color: '#d1d5db',
-                background: 'rgba(0,0,0,0.6)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
+                fontSize: '9px', fontWeight: 800, color: '#fff',
+                background: 'rgba(225,29,72,0.92)', padding: '2px 6px', borderRadius: '4px',
+                letterSpacing: '0.03em',
               }}>
-                {book.file_type}
+                18+
               </span>
             )}
           </div>

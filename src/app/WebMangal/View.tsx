@@ -215,7 +215,7 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
     async () => {
       const { data } = await supabase
         .from('books')
-        .select('id, title, cover_image_url, file_type, pricing_type, price_paise, category, author_id, views, created_at')
+        .select('id, title, cover_image_url, file_type, pricing_type, price_paise, category, author_id, views, created_at, is_mature')
         .eq('status', 'published')
         .order('created_at', { ascending: false })
         .limit(200);
