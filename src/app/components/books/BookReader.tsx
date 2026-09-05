@@ -338,9 +338,14 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         if (p.marginSize === 'narrow' || p.marginSize === 'normal' || p.marginSize === 'wide') setMarginSize(p.marginSize);
       }
     } catch { /* corrupted prefs — defaults */ }
+    // Continuous scroll is retired (had a rendering bug where pages could
+    // get stuck spinning forever) — ignore any 'scroll' value a reader
+    // still has saved from before, so they don't get dropped back into the
+    // broken mode. Only 'paginated' is ever applied now.
     try {
       const m = localStorage.getItem(READING_MODE_KEY);
-      if (m === 'paginated' || m === 'scroll') setReadingMode(m);
+      if (m === 'paginated') setReadingMode(m);
+      else if (m === 'scroll') localStorage.setItem(READING_MODE_KEY, 'paginated');
     } catch { /* private mode */ }
   }, []);
 
@@ -1140,12 +1145,12 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
             })}
           </div>
 
-          {/* Reading mode */}
-          <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: '6px' }}>Layout</div>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-            <button style={seg(readingMode === 'paginated')} onClick={() => applyReadingMode('paginated')}>Pages</button>
-            <button style={seg(readingMode === 'scroll')} onClick={() => applyReadingMode('scroll')}>Continuous scroll</button>
-          </div>
+          {/* Layout toggle removed — continuous scroll had a rendering bug
+              (pages could get stuck spinning forever) and Pages mode covers
+              this reader's needs fine on its own. applyReadingMode/readingMode
+              are kept internally (forced to 'paginated', see the mount effect
+              below) rather than ripped out, since PDF pagination math and
+              persisted-progress handling both key off readingMode. */}
 
           {/* Typography — meaningful for reflowable EPUB text */}
           {book.file_type === 'epub' ? (
