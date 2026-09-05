@@ -458,11 +458,23 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
     | { kind: 'song'; id: string; title: string; views: number; created_at: string; data: SongListItem };
 
   const combinedAllItems = useMemo<UnifiedEntry[] | null>(() => {
-    if (mode !== 'browse' || activeContentType !== 'all') return null;
+    if (activeContentType !== 'all') return null;
+    // BUG FIX: search mode's "All" tab used to fall through to the
+    // series-only `results` check below, which never even looked at
+    // bookMatches/songResults — a book like "Eternal Love" would come
+    // back "No results found" even though it exists and is findable
+    // from the Books tab on this very page. Reuse this same unified
+    // merge for search mode too, just built from the search-filtered
+    // sets (overlayResults/bookMatches/songResults) instead of the
+    // browse-filtered ones.
+    if (mode === 'search' && !q) return null; // "haven't searched yet" — handled earlier in the render chain
+    const seriesList = mode === 'search' ? overlayResults : results;
+    const bookList = mode === 'search' ? bookMatches : books;
+    const songList = mode === 'search' ? songResults : songs;
     const entries: UnifiedEntry[] = [
-      ...results.map((s): UnifiedEntry => ({ kind: 'series', id: `series-${s.id}`, title: s.title, views: s.views ?? 0, created_at: s.created_at, rating: s.avg_rating ?? null, data: s })),
-      ...books.map((b): UnifiedEntry => ({ kind: 'book', id: `book-${b.id}`, title: b.title, views: b.views ?? 0, created_at: b.created_at, data: b })),
-      ...songs.map((s): UnifiedEntry => ({ kind: 'song', id: `song-${s.id}`, title: s.title, views: s.views ?? 0, created_at: s.created_at, data: s })),
+      ...seriesList.map((s): UnifiedEntry => ({ kind: 'series', id: `series-${s.id}`, title: s.title, views: s.views ?? 0, created_at: s.created_at, rating: s.avg_rating ?? null, data: s })),
+      ...bookList.map((b): UnifiedEntry => ({ kind: 'book', id: `book-${b.id}`, title: b.title, views: b.views ?? 0, created_at: b.created_at, data: b })),
+      ...songList.map((s): UnifiedEntry => ({ kind: 'song', id: `song-${s.id}`, title: s.title, views: s.views ?? 0, created_at: s.created_at, data: s })),
     ];
     const sorted = [...entries];
     switch (sortBy) {
@@ -481,7 +493,8 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
         break;
     }
     return sorted;
-  }, [mode, activeContentType, results, books, songs, sortBy]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, activeContentType, q, results, overlayResults, bookMatches, songResults, books, songs, sortBy]);
 
   const filtersActive = activeContentType !== 'all' || genreFilter !== 'All' || languageFilter !== 'All' || statusFilter !== 'All' || sortBy !== 'newest';
   const createHref = isCreator ? '/dashboard' : user ? '/become-creator' : '/login';
@@ -576,6 +589,52 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               background: 'linear-gradient(135deg, #f97316, #22c55e)',
               padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.02em',
             }}>+ ADD</span>
+          </div>
+        </div>
+      </Link>
+    );
+  };
+
+  const renderBookResultCard = (b: BookRow, onNavigate?: () => void) => {
+    const username = bookAuthors[b.author_id];
+    return (
+      <Link
+        key={`book-${b.id}`}
+        href={`/WebMangal/books/${b.id}`}
+        onClick={onNavigate}
+        style={{
+          display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px',
+          textDecoration: 'none', color: 'var(--text-primary)',
+          borderBottom: '1px solid var(--border-color)',
+        }}
+      >
+        <div style={{ width: '68px', height: '92px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-card)', position: 'relative' }}>
+          {b.cover_image_url && (
+            <Image src={b.cover_image_url} alt={b.title} fill sizes="68px" style={{ objectFit: 'cover' }} />
+          )}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {b.category && (
+            <div style={{ marginBottom: '4px' }}>
+              <span style={{
+                fontSize: '11px', fontWeight: 700, color: '#d97706',
+                background: 'rgba(217,119,6,0.12)', border: '1px solid rgba(217,119,6,0.25)',
+                borderRadius: '4px', padding: '2px 6px',
+              }}>#{b.category}</span>
+            </div>
+          )}
+          <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+            {b.title}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <span style={{ fontSize: '11.5px', color: 'var(--text-faint)' }}>
+              {username ? `@${username}` : 'MANGAL'} · BOOK
+            </span>
+            <span style={{
+              flexShrink: 0, fontSize: '11px', fontWeight: 800, color: '#fff',
+              background: b.pricing_type === 'FREE' ? '#059669' : 'linear-gradient(135deg, #f97316, #22c55e)',
+              padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.02em',
+            }}>{b.pricing_type === 'FREE' ? 'FREE' : 'BOOK'}</span>
           </div>
         </div>
       </Link>
@@ -916,12 +975,21 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
                 Start typing to search series, genres, or creators…
               </div>
-            ) : overlayResults.length === 0 ? (
+            ) : overlayResults.length === 0 && bookMatches.length === 0 && songResults.length === 0 ? (
               <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
                 No results found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.
               </div>
             ) : (
-              overlayResults.slice(0, 30).map(s => renderResultCard(s, () => setMobileSearchOpen(false)))
+              <>
+                {overlayResults.slice(0, 30).map(s => renderResultCard(s, () => setMobileSearchOpen(false)))}
+                {/* BUG FIX: this overlay's "as you type" preview only ever
+                    checked series matches — a book like "Eternal Love" would
+                    hit "No results found" here even though it exists and is
+                    findable from the Books tab lower on this same page. Books
+                    (and songs) now show inline here too instead of being
+                    silently excluded from the live preview. */}
+                {bookMatches.slice(0, 10).map(b => renderBookResultCard(b, () => setMobileSearchOpen(false)))}
+              </>
             )}
           </div>
         </div>
@@ -1244,15 +1312,21 @@ function BrowseSearchViewInner({ mode }: { mode: 'browse' | 'search' }) {
               Search for a title, genre, or creator to get started.
             </div>
           </div>
-        ) : mode === 'browse' && activeContentType === 'all' ? (
-          /* §153 — "All" tab, browse route: unified series + books + songs
-             feed (see combinedAllItems above) so every published content
-             type actually shows up here, each tagged with its own type
-             badge (Mangal/Novel/Book/Song) via the per-kind card component. */
+        ) : activeContentType === 'all' ? (
+          /* §153 — "All" tab: unified series + books + songs feed (see
+             combinedAllItems above) so every published content type
+             actually shows up here, each tagged with its own type badge
+             (Mangal/Novel/Book/Song) via the per-kind card component. Now
+             shared by both browse and search modes (see the bug-fix note
+             on combinedAllItems). */
           !combinedAllItems || combinedAllItems.length === 0 ? (
             <div style={{ padding: '80px 0', textAlign: 'center', color: 'var(--text-faint)' }}>
               <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Search size={32} /></div>
-              <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>No series match these filters.</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-tertiary)', marginBottom: '6px' }}>
+                {mode === 'search' && query.trim()
+                  ? <>No results found for &ldquo;<span style={{ color: '#d97706' }}>{query.trim()}</span>&rdquo;.</>
+                  : 'No series match these filters.'}
+              </div>
             </div>
           ) : (
             <>
