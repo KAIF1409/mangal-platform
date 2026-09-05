@@ -305,6 +305,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const [flip, setFlip] = useState<{ dir: 'next' | 'prev' } | null>(null);
   const [slideDir, setSlideDir] = useState<'next' | 'prev'>('next');
   const pageCacheRef = useRef<Map<string, string>>(new Map());
+  const pageRenderPromisesRef = useRef<Map<string, Promise<string | null>>>(new Map());
   const [, forceTick] = useState(0); // re-render when cache fills asynchronously
   // Pages whose render hung/failed — surfaced as a tap-to-retry state
   // instead of a spinner that never resolves (see getPageImage). Mirrored
@@ -510,54 +511,62 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     const key = `${n}@${zoom}`;
     const hit = pageCacheRef.current.get(key);
     if (hit) return hit;
+    const pending = pageRenderPromisesRef.current.get(key);
+    if (pending) return pending;
 
-    try {
-      const page = await doc.getPage(n);
-      // Render sharp enough for the stage height, bounded so huge zooms don't
-      // blow up canvas memory.
-      const scale = Math.min(Math.max(1.1 * zoom, 0.7), 2.6);
-      const viewport = page.getViewport({ scale });
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('2D canvas context unavailable.');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      const renderTask = page.render({ canvasContext: ctx, viewport, canvas });
-      // BUG FIX: pdf.js's worker can go unresponsive mid-book (e.g. a
-      // heavy/corrupt page) WITHOUT the render promise ever resolving or
-      // rejecting — nothing throws, nothing times out on its own, so a
-      // page just spins forever with no way to recover or even know it
-      // failed. Race it against a hard timeout so a stuck render becomes
-      // a visible "tap to retry" instead of an infinite spinner.
-      await Promise.race([
-        renderTask.promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Page render timed out.')), 15000)),
-      ]);
-      const url = canvas.toDataURL('image/jpeg', 0.88);
+    const renderPromise = (async () => {
+      try {
+        const page = await doc.getPage(n);
+        // Render sharp enough for the stage height, bounded so huge zooms don't
+        // blow up canvas memory.
+        const scale = Math.min(Math.max(1.1 * zoom, 0.7), 2.6);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('2D canvas context unavailable.');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const renderTask = page.render({ canvasContext: ctx, viewport, canvas });
+        // BUG FIX: pdf.js's worker can go unresponsive mid-book (e.g. a
+        // heavy/corrupt page) WITHOUT the render promise ever resolving or
+        // rejecting — nothing throws, nothing times out on its own, so a
+        // page just spins forever with no way to recover or even know it
+        // failed. Race it against a hard timeout so a stuck render becomes
+        // a visible "tap to retry" instead of an infinite spinner.
+        await Promise.race([
+          renderTask.promise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Page render timed out.')), 15000)),
+        ]);
+        const url = canvas.toDataURL('image/jpeg', 0.88);
 
-      // FIFO eviction — keep memory bounded across long books.
-      const cache = pageCacheRef.current;
-      cache.set(key, url);
-      while (cache.size > 28) {
-        const oldest = cache.keys().next().value;
-        if (oldest === undefined) break;
-        cache.delete(oldest);
+        // FIFO eviction — keep memory bounded across long books.
+        const cache = pageCacheRef.current;
+        cache.set(key, url);
+        while (cache.size > 28) {
+          const oldest = cache.keys().next().value;
+          if (oldest === undefined) break;
+          cache.delete(oldest);
+        }
+        if (pageErrorsRef.current.has(n)) {
+          pageErrorsRef.current.delete(n);
+          setPageErrors(new Set(pageErrorsRef.current));
+        }
+        forceTick((t) => t + 1);
+        return url;
+      } catch {
+        if (!pageErrorsRef.current.has(n)) {
+          pageErrorsRef.current.add(n);
+          setPageErrors(new Set(pageErrorsRef.current));
+        }
+        return null;
+      } finally {
+        pageRenderPromisesRef.current.delete(key);
       }
-      if (pageErrorsRef.current.has(n)) {
-        pageErrorsRef.current.delete(n);
-        setPageErrors(new Set(pageErrorsRef.current));
-      }
-      forceTick((t) => t + 1);
-      return url;
-    } catch {
-      if (!pageErrorsRef.current.has(n)) {
-        pageErrorsRef.current.add(n);
-        setPageErrors(new Set(pageErrorsRef.current));
-      }
-      return null;
-    }
+    })();
+    pageRenderPromisesRef.current.set(key, renderPromise);
+    return renderPromise;
   }, [pdfDoc, zoomIdx]);
 
   // Retry a page the user tapped after it errored/timed out — clears the
@@ -619,8 +628,12 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
       { root: rootEl, rootMargin: '900px 0px' },
     );
     ioRef.current = io;
-    rootEl.querySelectorAll<HTMLElement>('[data-page]').forEach((el) => io.observe(el));
+    const frame = requestAnimationFrame(() => {
+      if (ioRef.current !== io) return;
+      rootEl.querySelectorAll<HTMLElement>('[data-page]').forEach((el) => io.observe(el));
+    });
     return () => {
+      cancelAnimationFrame(frame);
       io.disconnect();
       if (ioRef.current === io) ioRef.current = null;
     };
@@ -645,7 +658,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
     // ever prime the first few pages and go stale the moment the reader
     // scrolls further into the book.
     const center = Math.min(Math.max(1, Math.round(scrollPct * (scrollPageCount - 1)) + 1), scrollPageCount);
-    for (let p = Math.max(1, center - 2); p <= Math.min(scrollPageCount, center + 4); p++) {
+    for (let p = Math.max(1, center - 1); p <= Math.min(scrollPageCount, center + 2); p++) {
       void getPageImage(p);
     }
   }, [pdfDoc, readingMode, scrollPageCount, scrollPct, zoomIdx, getPageImage]);
