@@ -48,7 +48,6 @@ const BookReader = dynamic(() => import('../../../../components/books/BookReader
 
 interface BookRow extends ReaderBookInfo {
   status: 'draft' | 'published';
-  author_id: string;
 }
 
 export default function BookReadPage({ params }: { params: Promise<{ bookId: string }> }) {
@@ -80,7 +79,24 @@ export default function BookReadPage({ params }: { params: Promise<{ bookId: str
 
       const { data: b } = await supabase.from('books').select('*').eq('id', bookId).maybeSingle();
       if (!b) { setNotFound(true); setLoading(false); return; }
-      const bookRow = b as BookRow;
+      let bookRow = b as BookRow;
+
+      // Resolve a display label for the "buy the author a coffee" tip
+      // button — their creator @username if they have one, else their
+      // profile name, else a generic fallback so the button still works.
+      let authorLabel = 'the author';
+      if (bookRow.author_id) {
+        const { data: cp } = await supabase
+          .from('creator_profiles').select('username').eq('user_id', bookRow.author_id).maybeSingle();
+        if (cp?.username) {
+          authorLabel = `@${cp.username}`;
+        } else {
+          const { data: prof } = await supabase
+            .from('profiles').select('full_name').eq('id', bookRow.author_id).maybeSingle();
+          if (prof?.full_name) authorLabel = prof.full_name;
+        }
+      }
+      bookRow = { ...bookRow, author_label: authorLabel };
       setBook(bookRow);
 
       // Access decision — mirrors the gated file route.

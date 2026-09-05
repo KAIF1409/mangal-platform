@@ -46,12 +46,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, ArrowRight, Maximize, Minimize, Moon, MoonStar, Sun, Sunset,
-  Type, ZoomIn, ZoomOut, Lock, Loader2, X, AlertCircle, List, Eye, EyeOff, RefreshCw,
+  Type, ZoomIn, ZoomOut, Lock, Loader2, X, AlertCircle, List, Eye, EyeOff, RefreshCw, Coffee,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { openRazorpayCheckout } from '../../lib/payments/razorpayClient';
 import BookPurchaseModal from '../shared/BookPurchaseModal';
 import ShareButton from '../webmangal/ShareButton';
+import TipJarModal from '../shared/TipJarModal';
 
 export interface ReaderBookInfo {
   id: string;
@@ -60,6 +61,8 @@ export interface ReaderBookInfo {
   pricing_type: 'FREE' | 'PAID';
   price_paise: number | null;
   cover_image_url: string | null;
+  author_id: string | null;
+  author_label: string; // "@username" if the author has a creator profile, else their name, else "the author"
 }
 
 interface Props {
@@ -269,6 +272,7 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState<string | null>(null);
   const [showBuyModal, setShowBuyModal] = useState(false);
+  const [showTipModal, setShowTipModal] = useState(false);
   const [purchasePending, setPurchasePending] = useState(false);
   const [access, setAccess] = useState(hasAccess);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -1517,6 +1521,19 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
           url={typeof window !== 'undefined' ? `${window.location.origin}/WebMangal/books/${book.id}` : ''}
           compact
         />
+        {book.author_id && userId !== book.author_id && (
+          <button
+            style={iconBtnStyle}
+            title={`Buy ${book.author_label} a coffee`}
+            aria-label={`Buy ${book.author_label} a coffee`}
+            onClick={() => {
+              if (!userId) { window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`; return; }
+              setShowTipModal(true);
+            }}
+          >
+            <Coffee size={16} />
+          </button>
+        )}
         <button style={iconBtnStyle} title="Fullscreen" onClick={toggleFullscreen}>
           {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
         </button>
@@ -1558,6 +1575,13 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
         <FocusPill />
         <FullscreenExitPill />
         <ThumbButtons />
+        {showTipModal && book.author_id && (
+          <TipJarModal
+            recipientUserId={book.author_id}
+            recipientLabel={book.author_label}
+            onClose={() => setShowTipModal(false)}
+          />
+        )}
       </div>
     );
   }
@@ -1874,6 +1898,13 @@ export default function BookReader({ book, hasAccess, userId, initialProgress }:
           onPending={() => { setPurchasePending(true); setShowBuyModal(false); }}
           onRazorpayBuy={() => { setShowBuyModal(false); handleBuy(); }}
           razorpayBuying={buying}
+        />
+      )}
+      {showTipModal && book.author_id && (
+        <TipJarModal
+          recipientUserId={book.author_id}
+          recipientLabel={book.author_label}
+          onClose={() => setShowTipModal(false)}
         />
       )}
     </div>
