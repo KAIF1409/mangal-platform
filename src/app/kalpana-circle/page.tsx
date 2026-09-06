@@ -14,6 +14,7 @@ import CrossProductLinks from '../components/shared/CrossProductLinks';
 import { supabase } from '../lib/supabase';
 import { uploadMediaFile, MEDIA_FOLDERS } from '../lib/media/uploadClient';
 import { setPostLoginRedirect } from '../lib/auth/authRedirect';
+import { isDeveloperRole } from '../lib/auth/roles';
 import { instagramPreviewComments, COMMENT_PAGE_SIZE } from '../lib/commentRanking';
 import { formatViews } from '../lib/format';
 import {
@@ -151,6 +152,9 @@ function KalpanaCircleInner() {
   const searchParams = useSearchParams();
   const tagFilter = searchParams.get('tag'); // set when arriving via a series page's "Discuss on Kalpana Circle" link
   const [userId, setUserId] = useState<string | null>(null);
+  // Posting/story-upload still gated to developer accounts while K Circle
+  // is otherwise open to browse — see submitPost/uploadStory below.
+  const [isDeveloper, setIsDeveloper] = useState(false);
   const [myUsername, setMyUsername] = useState<string | null>(null);
   const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
 
@@ -264,6 +268,12 @@ function KalpanaCircleInner() {
   }, []);
 
   /* eslint-disable react-hooks/set-state-in-effect -- data fetch on userId change, same pattern as katube/upload */
+  useEffect(() => {
+    if (!userId) { setIsDeveloper(false); return; }
+    supabase.from('profiles').select('role').eq('id', userId).single()
+      .then(({ data }) => setIsDeveloper(isDeveloperRole(data?.role)));
+  }, [userId]);
+
   useEffect(() => {
     if (!userId) { setMyUsername(null); setMyAvatarUrl(null); return; }
     supabase.from('creator_profiles').select('username, avatar_url').eq('user_id', userId).maybeSingle()
@@ -448,6 +458,7 @@ function KalpanaCircleInner() {
 
   const submitPost = async () => {
     if (!userId) { setPostError('Log in to post.'); return; }
+    if (!isDeveloper) { setPostError('Posting is coming soon — K Circle is still being built out.'); return; }
     if (!draft.trim() && !composerImages.length) { setPostError('Write something or add a photo first.'); return; }
     const cleanOptions = postType === 'poll' ? pollOptions.map(o => o.trim()).filter(Boolean) : [];
     if (postType === 'poll' && cleanOptions.length < 2) { setPostError('A poll needs at least 2 options.'); return; }
@@ -762,11 +773,12 @@ function KalpanaCircleInner() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!userId) { setPostLoginRedirect('/kalpana-circle'); router.push('/login?next=/kalpana-circle'); return; }
+    if (!isDeveloper) { e.target.value = ''; alert('Adding stories is coming soon — K Circle is still being built out.'); return; }
     setPendingStoryFile(file);
   };
 
   const uploadStory = async (closeFriendsOnly: boolean) => {
-    if (!pendingStoryFile || !userId) return;
+    if (!pendingStoryFile || !userId || !isDeveloper) return;
     setPostingStory(true);
     const file = pendingStoryFile;
     let imageUrl: string;

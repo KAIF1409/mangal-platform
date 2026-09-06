@@ -8,6 +8,7 @@ import { uploadAvatarImage } from '../../lib/media/uploadClient';
 import { compressAvatarImage } from '../../lib/media/compressAvatarImage';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import ThemeToggle from '../../components/shared/ThemeToggle';
+import ComingSoonGate from '../../components/shared/ComingSoonGate';
 import { useKCircleTheme } from '../theme';
 import { KCircleShellStyle, KCircleRail } from '../components/Shell';
 import {
@@ -67,7 +68,19 @@ interface ToastState {
   id: number;
 }
 
+// Whole-route K Circle gate is gone (browsing is open), but setting up /
+// editing a profile is still an unfinished/unmoderated write-path — so
+// this page stays behind the same developer-only ComingSoonGate the old
+// layout used.
 export default function KCircleSettingsPage() {
+  return (
+    <ComingSoonGate label="K Circle Profile">
+      <KCircleSettingsPageInner />
+    </ComingSoonGate>
+  );
+}
+
+function KCircleSettingsPageInner() {
   const router = useRouter();
   const { setIsLight, themeVars, dataTheme } = useKCircleTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);

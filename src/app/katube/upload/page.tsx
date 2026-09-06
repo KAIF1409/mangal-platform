@@ -9,6 +9,7 @@ import MangalLogo from '../../components/shared/MangalLogo';
 import { supabase } from '../../lib/supabase';
 import { setPostLoginRedirect } from '../../lib/auth/authRedirect';
 import { CheckCircle2, Zap, Megaphone, ArrowLeft, ArrowRight } from 'lucide-react';
+import ComingSoonGate from '../../components/shared/ComingSoonGate';
 
 const CATEGORY_OPTIONS = ['Action', 'Mythology', 'Horror', 'Slice of Life', 'Fantasy', 'Dark Fantasy', 'Supernatural', 'Science Fiction', 'Trailers'];
 const AI_TOOL_OPTIONS = ['Sora', 'Kling', 'Runway', 'Pika', 'Hailuo', 'Veo', 'Other'];
@@ -67,7 +68,18 @@ function extractYoutubeId(input: string): string | null {
   return null;
 }
 
+// The whole-route KaTube gate is gone (browsing is open), but uploading is
+// still an unfinished/unmoderated write-path — so this one page stays
+// behind the same developer-only ComingSoonGate the old layout used.
 export default function KaTubeUploadPage() {
+  return (
+    <ComingSoonGate label="KaTube Upload">
+      <KaTubeUploadPageInner />
+    </ComingSoonGate>
+  );
+}
+
+function KaTubeUploadPageInner() {
   const router = useRouter();
 
   // Forced-dark-by-default with a light option — same pattern as the home
