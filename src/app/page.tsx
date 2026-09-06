@@ -527,13 +527,21 @@ export default function LandingPage() {
             .mangal-landing-brand-text { display: none; }
           }
 
-          /* Outlined double-stroke hero title, à la reference site's h1::before trick */
+          /* Outlined double-stroke hero title, à la reference site's h1::before trick.
+             §156 fix: this used to offset via top/left: -4px with no width set, so
+             the pseudo-element (shrink-to-fit, absolute) anchored to the h1's left
+             edge instead of matching the real (centered) text — on any h1 wider than
+             its text, that put the two strokes tens of pixels apart instead of a
+             subtle few-px offset. inset: 0 makes the pseudo-element's box exactly
+             match the h1's, inheriting the same centering, and the offset now comes
+             from transform (a paint-only shift) instead of a layout position. */
           .mangal-outline-title { position: relative; }
           .mangal-outline-title::before {
             content: attr(data-text);
-            position: absolute; top: -4px; left: -4px; z-index: -1;
+            position: absolute; inset: 0; z-index: -1;
             color: transparent;
             -webkit-text-stroke: 2px rgba(217,119,6,0.55);
+            transform: translate(-4px, -4px);
           }
 
           /* Infinite marquee — two duplicated tracks sitting side by side,
