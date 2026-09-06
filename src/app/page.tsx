@@ -25,17 +25,20 @@ import { ScrollText, Flame, Smartphone, PenLine, X, Menu, Tag, Eye, BookOpen, Bo
 // *position* (scrub), since that's what it's built for and Framer's
 // whileInView is one-shot by comparison.
 
-interface Series {
+// Unified shape for anything the homepage Trending/Start-Reading sections
+// can show — WebMangal's `series` (manga/novel) rows and `books`
+// (interactive books) rows have different column names, so both get
+// normalized into this on fetch. `href` is computed per-source so each
+// card links to the right route without the render code needing to know
+// which table an item came from.
+interface ShowcaseItem {
   id: string;
   title: string;
-  synopsis: string;
   genre: string | null;
-  language: string | null;
   cover_url: string | null;
-  reading_mode: 'scroll' | 'page';
-  content_type: 'mangal' | 'novel';
-  status: 'draft' | 'published';
+  content_type: 'mangal' | 'novel' | 'book';
   views: number;
+  href: string;
 }
 
 interface TagWithCount {
@@ -261,7 +264,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 
 export default function LandingPage() {
   const router = useRouter();
-  const [showcaseItems, setShowcaseItems] = useState<Series[]>([]);
+  const [showcaseItems, setShowcaseItems] = useState<ShowcaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [scrolled, setScrolled] = useState(false);
@@ -328,28 +331,45 @@ export default function LandingPage() {
 
   useEffect(() => {
     const loadShowcase = async () => {
-      const { data: trendingRows } = await supabase.rpc('trending_series', { days_back: 7, result_limit: 18 });
-      if (trendingRows && trendingRows.length >= 4) {
-        const ids = trendingRows.map((r: { series_id: string }) => r.series_id);
-        const { data: ts } = await supabase
+      // §155 — this used to only ever query `series`, so anything uploaded
+      // as a `books` row (interactive books) could never appear here no
+      // matter how many views it had. Now: fetch both, normalize into
+      // ShowcaseItem, and rank so nothing published goes unlisted —
+      // 7-day trending series lead (existing behavior), then everything
+      // else (remaining series + all books) sorted by views descending so
+      // a zero-view upload still gets a slot but a higher-view one still
+      // ranks above it, per the founder's ask.
+      const [{ data: seriesRows }, { data: bookRows }, { data: trendingRows }] = await Promise.all([
+        supabase
           .from('series')
-          .select('id, title, synopsis, genre, language, cover_url, reading_mode, content_type, status, views')
-          .in('id', ids)
-          .eq('status', 'published');
-        if (ts) {
-          const order = new Map<string, number>(ids.map((id: string, i: number) => [id, i]));
-          setShowcaseItems([...ts].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)));
-          setLoading(false);
-          return;
-        }
+          .select('id, title, genre, cover_url, content_type, views')
+          .eq('status', 'published'),
+        supabase
+          .from('books')
+          .select('id, title, category, cover_image_url, views')
+          .eq('status', 'published'),
+        supabase.rpc('trending_series', { days_back: 7, result_limit: 18 }),
+      ]);
+
+      const seriesItems: ShowcaseItem[] = (seriesRows ?? []).map((s) => ({
+        id: s.id, title: s.title, genre: s.genre, cover_url: s.cover_url,
+        content_type: s.content_type as 'mangal' | 'novel', views: s.views ?? 0,
+        href: `/WebMangal/series/${s.id}`,
+      }));
+      const bookItems: ShowcaseItem[] = (bookRows ?? []).map((b) => ({
+        id: b.id, title: b.title, genre: b.category, cover_url: b.cover_image_url,
+        content_type: 'book', views: b.views ?? 0,
+        href: `/WebMangal/books/${b.id}`,
+      }));
+
+      const remaining = new Map<string, ShowcaseItem>([...seriesItems, ...bookItems].map((item) => [item.id, item]));
+      const ordered: ShowcaseItem[] = [];
+      for (const row of (trendingRows ?? []) as { series_id: string }[]) {
+        const item = remaining.get(row.series_id);
+        if (item) { ordered.push(item); remaining.delete(item.id); }
       }
-      const { data } = await supabase
-        .from('series')
-        .select('id, title, synopsis, genre, language, cover_url, reading_mode, content_type, status, views')
-        .eq('status', 'published')
-        .order('views', { ascending: false })
-        .limit(18);
-      if (data) setShowcaseItems(data);
+      const rest = Array.from(remaining.values()).sort((a, b) => b.views - a.views);
+      setShowcaseItems([...ordered, ...rest].slice(0, 18));
       setLoading(false);
     };
     loadShowcase();
@@ -1032,7 +1052,7 @@ export default function LandingPage() {
             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
               {showcaseItems.slice(0, 4).map(s => (
                 <a
-                  key={s.id} href={`/WebMangal/series/${s.id}`} data-cursor-hover="true"
+                  key={s.id} href={s.href} data-cursor-hover="true"
                   className="mangal-elem"
                   style={{
                     position: 'relative', width: '220px', height: '300px', borderRadius: '18px', overflow: 'hidden',
@@ -1173,10 +1193,10 @@ export default function LandingPage() {
 
 
 /* ── SHOWCASE CARD ── */
-function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
+function ShowcaseCard({ series, rank }: { series: ShowcaseItem; rank?: number }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <a href={`/WebMangal/series/${series.id}`} data-cursor-hover="true" style={{ textDecoration: 'none' }}
+    <a href={series.href} data-cursor-hover="true" style={{ textDecoration: 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}>
       <div style={{
@@ -1205,11 +1225,11 @@ function ShowcaseCard({ series, rank }: { series: Series; rank?: number }) {
           }}>
             <span style={{
               fontSize: '8px', fontWeight: 700, color: '#fff',
-              background: series.content_type === 'novel' ? 'rgba(109,40,217,0.9)' : 'rgba(127,29,29,0.9)',
+              background: series.content_type === 'novel' ? 'rgba(109,40,217,0.9)' : series.content_type === 'book' ? 'rgba(15,118,110,0.9)' : 'rgba(127,29,29,0.9)',
               padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase',
               display: 'inline-flex', alignItems: 'center', gap: '3px',
             }}>
-              {series.content_type === 'novel' ? <><Book size={9} /> Novel</> : <><BookOpen size={9} /> Mangal</>}
+              {series.content_type === 'novel' ? <><Book size={9} /> Novel</> : series.content_type === 'book' ? <><Book size={9} /> Book</> : <><BookOpen size={9} /> Mangal</>}
             </span>
           </div>
         </div>
