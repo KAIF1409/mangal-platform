@@ -79,6 +79,7 @@ export default function BooksCatalogPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
           <BookOpen size={26} color="var(--accent)" />
           <h1 style={{ fontSize: '26px', fontWeight: 900, margin: 0, color: 'var(--text-primary)' }}>Books</h1>
+          <Link href="/WebMangal/books/library" style={{ marginLeft: 'auto', color: 'var(--text-primary)', padding: '12px' }}>My Book Library →</Link>
         </div>
         <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.5 }}>
           Standalone reads from MANGAL creators — novels, novellas and collections you can read right here,
