@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useRouter } from 'next/navigation';
+import { useRouter as getMockRouter } from 'next/navigation';
 import SongCard, { type SongCardData } from '@/app/components/webmangal/SongCard';
 
 const song: SongCardData = {
@@ -12,7 +12,7 @@ const song: SongCardData = {
   linked_series_title: 'Aryavarta Rising',
 };
 
-const router = () => useRouter() as unknown as { push: ReturnType<typeof vi.fn> };
+const router = () => getMockRouter() as unknown as { push: ReturnType<typeof vi.fn> };
 
 beforeEach(() => {
   router().push.mockClear();

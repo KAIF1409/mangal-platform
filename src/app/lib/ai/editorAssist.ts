@@ -142,15 +142,32 @@ export function splitIntoPageBatches(text: string): string[] {
   // the caller can keep combining it with whatever text follows.
   const pushWordSlices = (text: string): string => {
     let wpiece = '';
-    for (const word of text.split(/\s+/).filter(Boolean)) {
+    let pieceWords = 0;
+    for (let word of text.split(/\s+/).filter(Boolean)) {
+      // No whitespace at all (e.g. CJK, long URLs, or emoji) still needs a
+      // transport-safe cap. Avoid cutting a UTF-16 surrogate pair in half.
+      if (word.length > TARGET_BATCH_CHARS) {
+        if (wpiece) blocks.push(wpiece);
+        wpiece = '';
+        pieceWords = 0;
+        while (word.length > TARGET_BATCH_CHARS) {
+          let end = TARGET_BATCH_CHARS;
+          const last = word.charCodeAt(end - 1);
+          if (last >= 0xd800 && last <= 0xdbff) end--;
+          blocks.push(word.slice(0, end));
+          word = word.slice(end);
+        }
+      }
       if (
-        countWords(wpiece) + 1 > MAX_BATCH_WORDS ||
+        pieceWords + 1 > MAX_BATCH_WORDS ||
         wpiece.length + word.length + 1 > TARGET_BATCH_CHARS
       ) {
         if (wpiece.trim()) blocks.push(wpiece.trim());
         wpiece = '';
+        pieceWords = 0;
       }
       wpiece += (wpiece ? ' ' : '') + word;
+      pieceWords++;
     }
     return wpiece;
   };

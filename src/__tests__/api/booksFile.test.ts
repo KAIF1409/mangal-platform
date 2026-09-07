@@ -49,7 +49,11 @@ function makeDb({ book = null, role = null, purchased = false }: DbOpts = {}) {
   return { from: (t: string) => chain(t) };
 }
 
-const makeObject = () => ({ arrayBuffer: async () => bytes(FULL_BYTES) });
+const makeObject = (length = FULL_BYTES) => ({
+  body: new Response(bytes(length)).body,
+  size: FULL_BYTES,
+  arrayBuffer: vi.fn(async () => bytes(length)),
+});
 
 const BUCKET = { get: vi.fn() };
 
@@ -104,6 +108,7 @@ describe('GET /api/books/file/[bookId] — paid-content access boundary', () => 
     expect(res.headers.get('Content-Disposition')).toContain('.pdf');
     expect((await res.arrayBuffer()).byteLength).toBe(FULL_BYTES);
     expect(res.headers.get('X-Book-Preview')).toBeNull();
+    expect(BUCKET.get).toHaveBeenCalledWith(freeBook.file_url, undefined);
   });
 
   it('serves a PAID book to anonymous readers as a TRUNCATED 1MB preview, never cached', async () => {
@@ -114,7 +119,12 @@ describe('GET /api/books/file/[bookId] — paid-content access boundary', () => 
     expect(res.status).toBe(200);
     expect(res.headers.get('X-Book-Preview')).toBe('1');
     expect(res.headers.get('X-Book-Total-Size')).toBe(String(FULL_BYTES));
+    expect(BUCKET.get).toHaveBeenCalledWith(freeBook.file_url, { range: { offset: 0, length: 1024 * 1024 } });
     expect(Number(res.headers.get('Content-Length'))).toBeLessThanOrEqual(1024 * 1024);
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+    expect((await res.arrayBuffer()).byteLength).toBe(1024 * 1024);
+  });
+});
 
 describe('GET /api/books/file/[bookId] — signed-in access matrix', () => {
   const paidBook = { ...freeBook, pricing_type: 'PAID', price_paise: 4900 };
@@ -184,13 +194,23 @@ describe('GET /api/books/file/[bookId] — signed-in access matrix', () => {
     const res = await call(BOOK_ID, 'token-a');
     expect(res.headers.get('Cache-Control')).toBe('private, no-store');
   });
-});
 
+  it('never publicly caches an author-only FREE draft', async () => {
+    signIn('author-1', makeDb({ book: { ...freeBook, status: 'draft' } }));
+    const res = await call(BOOK_ID, 'token-a');
     expect(res.headers.get('Cache-Control')).toBe('private, no-store');
-    expect((await res.arrayBuffer()).byteLength).toBe(1024 * 1024);
+    expect((await res.arrayBuffer()).byteLength).toBe(FULL_BYTES);
+  });
+
+  it('streams full files without buffering them first', async () => {
+    const object = makeObject();
+    BUCKET.get.mockResolvedValue(object);
+    anonDbRef.current = makeDb({ book: freeBook });
+    const res = await call(BOOK_ID);
+    expect((await res.arrayBuffer()).byteLength).toBe(FULL_BYTES);
+    expect(object.arrayBuffer).not.toHaveBeenCalled();
   });
 });
-
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -200,5 +220,5 @@ beforeEach(() => {
   authedServerClient.requireUser.mockResolvedValue(null);
   authedServerClient.getUserScopedClient.mockImplementation(() => currentScopedDb ?? makeDb({}));
   r2.getMediaBucket.mockReturnValue(BUCKET);
-  BUCKET.get.mockResolvedValue(makeObject());
+  BUCKET.get.mockImplementation(async (_key: string, options?: { range: { length: number } }) => makeObject(options?.range.length));
 });

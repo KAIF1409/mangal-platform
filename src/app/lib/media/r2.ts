@@ -16,7 +16,7 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 // Minimal shape of the subset of the R2Bucket API this app uses — avoids
 // pulling in @cloudflare/workers-types project-wide just for this one file.
 export interface R2Bucket {
-  get(key: string): Promise<R2ObjectBody | null>;
+  get(key: string, options?: { range: { offset: number; length: number } }): Promise<R2ObjectBody | null>;
   put(key: string, value: ArrayBuffer | ArrayBufferView | ReadableStream | Blob, options?: {
     httpMetadata?: { contentType?: string };
   }): Promise<unknown>;
@@ -29,7 +29,7 @@ export interface R2ObjectBody {
   size: number;
   etag: string;
   // Present on the real R2ObjectBody — used by the gated books file route,
-  // which buffers the object to enforce the preview byte cap.
+  // which reads only a bounded R2 range for previews.
   arrayBuffer(): Promise<ArrayBuffer>;
 }
 

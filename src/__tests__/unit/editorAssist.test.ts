@@ -4,6 +4,8 @@ import {
   AI_PROVIDER_HEADER,
   ASSIST_MODE_LABELS,
   MAX_ASSIST_CHARS,
+  MAX_BATCH_WORDS,
+  TARGET_BATCH_CHARS,
   MIN_POLISH_CHARS,
   MIN_POLISH_WORDS,
   buildSystemPrompt,
@@ -79,15 +81,25 @@ describe('splitIntoPageBatches — §133 over-length splitter', () => {
     }
   });
 
-  it('documents DEFECT-02: an unpunctuated blob is NOT word-sliced', () => {
-    // The module comment promises a "raw word slices" fallback for a monster
-    // paragraph with no sentence-ending punctuation; the implementation only
-    // splits on sentences, so one giant "sentence" passes through unsliced
-    // and can exceed the batch budget (see docs/QA_REPORT.md, DEFECT-02).
-    // Pinned deliberately — fixing the fallback should flip this test.
+  it('word-slices an oversized sentence without losing text', () => {
     const monster = `${words(6000)}.`;
     const blocks = splitIntoPageBatches(monster);
-    expect(blocks).toHaveLength(1);
+    expect(blocks.length).toBeGreaterThan(1);
+    expect(blocks.join(' ')).toBe(monster);
+    for (const block of blocks) {
+      expect(block.length).toBeLessThanOrEqual(TARGET_BATCH_CHARS);
+      expect(block.split(/\s+/).length).toBeLessThanOrEqual(MAX_BATCH_WORDS);
+    }
+  });
+
+  it('caps a single oversized token without losing characters or splitting emoji', () => {
+    const monster = '😀'.repeat(TARGET_BATCH_CHARS + 1);
+    const blocks = splitIntoPageBatches(monster);
+    expect(blocks.join('')).toBe(monster);
+    for (const block of blocks) {
+      expect(block.length).toBeLessThanOrEqual(TARGET_BATCH_CHARS);
+      expect(block).not.toMatch(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/);
+    }
   });
 });
 

@@ -54,6 +54,20 @@ describe('POST /api/log-view — server-side view counter (SECURITY DEFINER rpc)
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it('prefers Cloudflare country over a stale Vercel header', async () => {
+    rpc.mockResolvedValue({ error: null });
+    const POST = await importRoute();
+    await POST(req({ seriesId: 's' }, { 'cf-ipcountry': 'IN', 'x-vercel-ip-country': 'US' }));
+    expect(rpc).toHaveBeenCalledWith('increment_series_views', { series_id_input: 's', country_input: 'IN' });
+  });
+
+  it.each(['XX', 'T1', 'invalid'])('does not store Cloudflare unknown code %s as a country', async country => {
+    rpc.mockResolvedValue({ error: null });
+    const POST = await importRoute();
+    await POST(req({ seriesId: 's' }, { 'cf-ipcountry': country }));
+    expect(rpc).toHaveBeenCalledWith('increment_series_views', { series_id_input: 's', country_input: null });
+  });
+
   it('500s when the rpc errors (surfaced verbatim for debugging)', async () => {
     rpc.mockResolvedValue({ error: { message: 'function not found' } });
     const POST = await importRoute();

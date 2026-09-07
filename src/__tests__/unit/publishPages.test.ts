@@ -113,6 +113,15 @@ describe('publishChapterPages — BUG FIX: rollback on partial failure', () => {
     expect(result.error).not.toMatch(/cleanup also failed/);
   });
 
+  it('rolls back storage and the chapter when the DB promise rejects', async () => {
+    const deps = makeHappyDeps({ insertPage: vi.fn(async () => { throw new Error('connection lost'); }) });
+    const result = await publishChapterPages([makeFile('a.jpg')], deps);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('connection lost');
+    expect(deps.deleteFiles).toHaveBeenCalledWith(['pages/a.jpg']);
+    expect(deps.deleteChapter).toHaveBeenCalledTimes(1);
+  });
+
   it('does not attempt any upload/insert for an empty page list, and never rolls back', async () => {
     const deps = makeHappyDeps();
     const result = await publishChapterPages([], deps);

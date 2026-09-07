@@ -12,14 +12,23 @@ export async function POST(req: NextRequest) {
   const auth = await requireUser(req);
   if (!auth) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-  let body: { paths?: string[] };
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const paths = (body.paths || []).filter((p): p is string => typeof p === 'string' && p.length > 0);
+  if (!body || typeof body !== 'object' || !('paths' in body) || !Array.isArray(body.paths) ||
+      !body.paths.every((p: unknown): p is string => typeof p === 'string' && p.length > 0)) {
+    return NextResponse.json({ error: 'paths must be an array of non-empty strings.' }, { status: 400 });
+  }
+  // R2 delete accepts at most 1,000 keys per call. Bound before deduplication
+  // so a repeated-key payload cannot bypass the request limit.
+  if (body.paths.length > 1000) {
+    return NextResponse.json({ error: 'Too many files — 1000 max per request.' }, { status: 400 });
+  }
+  const paths = [...new Set<string>(body.paths)];
   if (paths.length === 0) return NextResponse.json({ ok: true, deleted: 0 });
 
   const filename = (key: string) => key.split('/').pop() || '';

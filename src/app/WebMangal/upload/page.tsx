@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { checkImageBatchQuality } from '../../lib/media/imageQuality';
 import { uploadMediaFile, deleteMediaFiles, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { publishChapterPages } from '../../lib/webmangal/publishPages';
+import { toLocalDateTimeInput } from '../../lib/webmangal/schedule';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { suggestTags } from '../../lib/tagSuggest';
 import dynamic from 'next/dynamic';
@@ -226,9 +227,8 @@ function UploadFlow() {
       setAuthorNoteBefore(chapter.author_note_before || '');
       setAuthorNoteAfter(chapter.author_note_after || '');
       setIsDraftChapter(!!chapter.is_draft);
-      // scheduled_at comes back as an ISO string from Postgres — trim to the
-      // "YYYY-MM-DDTHH:mm" shape a <input type="datetime-local"> expects.
-      setScheduledAt(chapter.scheduled_at ? String(chapter.scheduled_at).slice(0, 16) : '');
+      // Preserve the instant when editing in IST (or any other timezone).
+      setScheduledAt(toLocalDateTimeInput(chapter.scheduled_at));
       setTagsInput(Array.isArray(chapter.tags) ? chapter.tags.join(', ') : '');
 
       if (chapter.content) {

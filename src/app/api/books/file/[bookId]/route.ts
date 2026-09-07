@@ -105,7 +105,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ book
 
   let object;
   try {
-    object = await getMediaBucket().get(key);
+    object = await getMediaBucket().get(key, hasFullAccess ? undefined : {
+      range: { offset: 0, length: PREVIEW_MAX_BYTES },
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Storage lookup failed.' },
@@ -118,7 +120,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ book
   const safeTitle = String(book.title ?? 'book').replace(/[^\x20-\x7e]/g, '').replace(/"/g, '');
 
   if (!hasFullAccess) {
-    // Truncated preview — read the head of the object and stop there.
+    // R2 returns only the requested head, not the full document. Keep the
+    // slice as defense in depth; object.size is the total stored file size.
     const full = await object.arrayBuffer();
     const sliced = full.slice(0, Math.min(full.byteLength, PREVIEW_MAX_BYTES));
     return new Response(sliced, {
@@ -127,7 +130,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ book
         'Content-Type': contentType,
         'Content-Length': String(sliced.byteLength),
         'X-Book-Preview': '1',
-        'X-Book-Total-Size': String(full.byteLength),
+        'X-Book-Total-Size': String(object.size),
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',
         ...(safeTitle ? { 'Content-Disposition': `inline; filename="${safeTitle}.${book.file_type}"` } : {}),
@@ -148,7 +151,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ book
       'Content-Type': contentType,
       'Content-Length': String(object.size),
       // Paid files must never sit in a shared cache; free ones may.
-      'Cache-Control': book.pricing_type === 'PAID' ? 'private, no-store' : 'public, max-age=3600',
+      'Cache-Control': book.pricing_type === 'PAID' || book.status !== 'published' ? 'private, no-store' : 'public, max-age=3600',
       'X-Content-Type-Options': 'nosniff',
       ...(safeTitle ? { 'Content-Disposition': `inline; filename="${safeTitle}.${book.file_type}"` } : {}),
     },

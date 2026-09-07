@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useRouter } from 'next/navigation';
+import { useRouter as getMockRouter } from 'next/navigation';
 import SeriesCard, { type SeriesCardData } from '@/app/components/webmangal/SeriesCard';
 
 const base: SeriesCardData = {
@@ -14,7 +14,7 @@ const base: SeriesCardData = {
   chapter_count: 12,
 };
 
-const router = () => useRouter() as unknown as { push: ReturnType<typeof vi.fn> };
+const router = () => getMockRouter() as unknown as { push: ReturnType<typeof vi.fn> };
 
 beforeEach(() => {
   router().push.mockClear();

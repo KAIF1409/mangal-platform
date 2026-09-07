@@ -84,7 +84,12 @@ export async function publishChapterPages(
     }
     uploadedPaths.push(uploaded.path);
 
-    const inserted = await deps.insertPage(i + 1, uploaded.url);
+    let inserted: InsertPageResult;
+    try {
+      inserted = await deps.insertPage(i + 1, uploaded.url);
+    } catch (error) {
+      inserted = { error: error instanceof Error ? error.message : 'Page save failed.' };
+    }
     if ('error' in inserted) {
       await rollback();
       return {

@@ -1,0 +1,162 @@
+{
+  "before": [
+    {
+      "mobile": false,
+      "results": [
+        {
+          "path": "/",
+          "finalPath": "/",
+          "lcp": 1644,
+          "cls": 0.0015510951331286435,
+          "longTaskMs": 45,
+          "ttfb": 22.399999976158142,
+          "jsBytes": 293336,
+          "horizontalOverflow": false,
+          "errors": []
+        },
+        {
+          "path": "/WebMangal",
+          "finalPath": "/WebMangal",
+          "lcp": 380,
+          "cls": 0.050806661522633745,
+          "longTaskMs": 0,
+          "ttfb": 24.100000023841858,
+          "jsBytes": 320683,
+          "horizontalOverflow": false,
+          "errors": []
+        },
+        {
+          "path": "/mangal-studio/webmangal",
+          "finalPath": "/login",
+          "lcp": 284,
+          "cls": 0,
+          "longTaskMs": 0,
+          "ttfb": 38.10000002384186,
+          "jsBytes": 309194,
+          "horizontalOverflow": false,
+          "errors": []
+        }
+      ],
+      "readerMeasured": false
+    },
+    {
+      "mobile": true,
+      "results": [
+        {
+          "path": "/",
+          "finalPath": "/",
+          "lcp": 9056,
+          "cls": 0.011701635767267668,
+          "longTaskMs": 1530,
+          "ttfb": 11.199999988079071,
+          "jsBytes": 293336,
+          "horizontalOverflow": false,
+          "errors": []
+        },
+        {
+          "path": "/WebMangal",
+          "finalPath": "/WebMangal",
+          "lcp": 2556,
+          "cls": 0.24064048508820887,
+          "longTaskMs": 108,
+          "ttfb": 4.900000035762787,
+          "jsBytes": 258702,
+          "horizontalOverflow": false,
+          "errors": []
+        },
+        {
+          "path": "/mangal-studio/webmangal",
+          "finalPath": "/login",
+          "lcp": 824,
+          "cls": 0,
+          "longTaskMs": 83,
+          "ttfb": 3.399999976158142,
+          "jsBytes": 309194,
+          "horizontalOverflow": false,
+          "errors": []
+        }
+      ],
+      "readerMeasured": false
+    }
+  ],
+  "after": [
+    {
+      "mobile": false,
+      "results": [
+        {
+          "path": "/",
+          "finalPath": "/",
+          "lcp": 1660,
+          "cls": 0.0015521875368387772,
+          "longTaskMs": 66,
+          "ttfb": 26,
+          "jsBytes": 293336,
+          "horizontalOverflow": false,
+          "errors": []
+        },
+        {
+          "path": "/WebMangal",
+          "finalPath": "/WebMangal",
+          "lcp": 296,
+          "cls": 0.077565920781893,
+          "longTaskMs": 0,
+          "ttfb": 23.099999964237213,
+          "jsBytes": 320683,
+          "horizontalOverflow": false,
+          "errors": []
+        },
+        {
+          "path": "/mangal-studio/webmangal",
+          "finalPath": "/login",
+          "lcp": 336,
+          "cls": 0,
+          "longTaskMs": 0,
+          "ttfb": 54.19999998807907,
+          "jsBytes": 309194,
+          "horizontalOverflow": false,
+          "errors": []
+        }
+      ],
+      "readerMeasured": false
+    },
+    {
+      "mobile": true,
+      "results": [
+        {
+          "path": "/",
+          "finalPath": "/",
+          "lcp": 5336,
+          "cls": 0.011770299532565701,
+          "longTaskMs": 662,
+          "ttfb": 6.5,
+          "jsBytes": 293336,
+          "horizontalOverflow": false,
+          "errors": []
+        },
+        {
+          "path": "/WebMangal",
+          "finalPath": "/WebMangal",
+          "lcp": 2944,
+          "cls": 0.24064048508820887,
+          "longTaskMs": 295,
+          "ttfb": 5.699999988079071,
+          "jsBytes": 258702,
+          "horizontalOverflow": false,
+          "errors": []
+        },
+        {
+          "path": "/mangal-studio/webmangal",
+          "finalPath": "/login",
+          "lcp": 1168,
+          "cls": 0,
+          "longTaskMs": 171,
+          "ttfb": 3.700000047683716,
+          "jsBytes": 309194,
+          "horizontalOverflow": false,
+          "errors": []
+        }
+      ],
+      "readerMeasured": false
+    }
+  ]
+}

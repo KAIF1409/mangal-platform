@@ -21,15 +21,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
   const { path } = await params;
   const key = path.join('/');
 
+  // This guard MUST precede cache lookup: legacy cached documents must not
+  // bypass the purchase/visibility checks in /api/books/file/[bookId].
+  if (key === 'books/files' || key.startsWith('books/files/')) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   // `caches.default` is a Cloudflare Workers runtime extension not present
   // in the standard DOM `CacheStorage` type — same reasoning as the
   // hand-rolled R2Bucket interface in r2.ts, avoids a project-wide
   // @cloudflare/workers-types dependency for one call site.
-  const cache = (caches as unknown as { default: Cache }).default;
+  const cache = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default;
   const cacheKey = new Request(req.url, req);
 
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached;
+  try {
+    const cached = await cache?.match(cacheKey);
+    if (cached) return cached;
+  } catch {
+    // Cache is an optimization, never an availability dependency.
+  }
 
   let object;
   try {
@@ -66,7 +76,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
 
   try {
     const { ctx } = getCloudflareContext();
-    ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    if (cache) ctx.waitUntil(cache.put(cacheKey, response.clone()).catch(() => undefined));
   } catch {
     // Non-fatal — just means this response won't be edge-cached this
     // time (e.g. running outside the deployed Worker). Reader still
