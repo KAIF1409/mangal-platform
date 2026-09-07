@@ -100,14 +100,30 @@ to the RPC execute grant for curation tooling.
 - New tests cover progress selection/clamping, schedule privacy filtering,
   immutable reorder, RPC validation/conflicts, guest state, resume, queue
   add/remove/drag/button reorder, save failure, and missing-service behavior.
-- `supabase/tests/book_library.sql` is a rollback-only staging test for anonymous,
-  owner, other-reader, draft/scheduled visibility, direct-write denial, duplicate
-  queues, null elements, and stale revisions. **Not executed:** no local PostgreSQL/Docker or
-  disposable authenticated staging environment is available. Existing auth
-  triggers may require fixture adaptation when reconciled in staging.
-- Before release: execute the SQL test in disposable staging; use two real
-  sessions to exercise simultaneous revision conflicts; test authenticated
-  reload/sign-out/account switch and touch reordering on devices. Curate vibe
-  assignments and review account restriction enforcement from the launch audit.
+
+### Database application (2026-09-07, live linked project)
+
+- Project `rfxlavwzhpnbhwoumaha` (mangal-platform), via
+  `npx supabase db query --linked` as `postgres`.
+- Pre-flight: neither new table existed; `books.publish_at` present;
+  `auth.uid()` present; one non-internal trigger on `auth.users`.
+- `20260907120000_book_library.sql` **applied — exit 0**. Additive/idempotent;
+  no existing table, policy, or payment surface was touched.
+- Post-verify: `save_book_reading_queue` is `security definer` with execute
+  granted only to `postgres`, `authenticated`, `service_role` (PUBLIC/anon
+  revoked); unauthenticated RPC smoke test raised the auth guard as designed.
+- `supabase/tests/book_library.sql` **executed against the live project —
+  exit 0** (rollback-only): anonymous denial, owner save + revision advance,
+  stale-revision conflict, draft/scheduled add denial, null-element and
+  duplicate rejection, direct client-write denial, and other-reader isolation
+  all passed. Final row counts confirm full rollback: queues 0, vibes 0,
+  test books 0. No fixture rows remain.
+- `book_vibes` is intentionally empty until vibes are curated (service role);
+  Mood Matcher shows "no books for this vibe yet" until then. This is expected,
+  not a defect.
+- Remaining before feature release: exercise simultaneous saves from two real
+  sessions (conflict UX), authenticated reload/sign-out/account switch, touch
+  reordering on real devices, and curate vibe assignments. Account-restriction
+  review from the launch audit still applies.
 - Launch remains **NO-GO** for the authorization/payment/recovery blockers in
   `AUDIT.md`. This feature increment does not supersede that decision.
