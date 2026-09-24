@@ -9,6 +9,7 @@ import { uploadMediaFile, deleteMediaFiles, MEDIA_FOLDERS } from '../../lib/medi
 import { publishChapterPages } from '../../lib/webmangal/publishPages';
 import { pdfToPages, PDF_TO_PAGES_DEPS } from '../../lib/webmangal/pdfToPages';
 import { toLocalDateTimeInput } from '../../lib/webmangal/schedule';
+import { seriesWriteBlockReason } from '../../lib/auth/roles';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { suggestTags } from '../../lib/tagSuggest';
 import dynamic from 'next/dynamic';
@@ -65,6 +66,20 @@ const MIN_PAGES_PER_CHAPTER = 5;
 // Step 21 — minimum words per novel chapter (mirrors the manga page-count
 // floor conceptually, but novels are measured in words, not pages)
 const MIN_WORDS_PER_CHAPTER = 300;
+
+// PostgREST reports EVERY row-level-security refusal with the same wording —
+// `new row violates row-level security policy for table "chapters"` — which is
+// accurate but tells a creator nothing about the cause. In practice the two
+// causes here are "signed in as an account that doesn't own this series" and
+// "the DB policy and the app's developer/creator gate have drifted apart", so
+// say that instead. Any other error (constraint violation, network, 5xx) is
+// passed through untouched — those messages are already specific.
+function describeWriteError(message: string): string {
+  if (/row-level security/i.test(message)) {
+    return 'The database refused this write (row-level security): this series isn’t owned by the account you’re signed in as. Sign in with the account that created the series (“Creator” on it), or have an admin grant this account developer write access.';
+  }
+  return message;
+}
 
 export default function CreatorUploadPage() {
   return (
@@ -151,6 +166,11 @@ function UploadFlow() {
   const [pdfProgress, setPdfProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  // Pre-flight permission check for the "adding a chapter to an existing
+  // series" path (?seriesId=...). Empty string = allowed. Non-empty = the
+  // reason this viewer can't write to that series, rendered as a banner so
+  // they find out on arrival instead of after converting/uploading pages.
+  const [writeBlock, setWriteBlock] = useState('');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -199,6 +219,51 @@ function UploadFlow() {
     supabase.from('chapters').select('chapter_number').eq('series_id', existingSeriesId)
       .order('chapter_number', { ascending: false }).limit(1)
       .then(({ data }) => { if (data && data[0]) setChapterNumber(data[0].chapter_number + 1); });
+  }, [existingSeriesId]);
+
+  // Permission pre-flight — see `writeBlock` above. Mirrors the series page's
+  // "+ Add Chapter" gate (canManageSeries(role, isOwner)) so a viewer who
+  // can't write to this series is told WHY on arrival, instead of getting the
+  // raw PostgREST "new row violates row-level security policy for table
+  // chapters" after picking pages (or after a 100-page PDF conversion). The
+  // database enforces the same rule server-side; this is UX, not the boundary.
+  useEffect(() => {
+    if (!existingSeriesId) return;
+    let cancelled = false;
+
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
+
+      // Signed out — a published series and its chapters stay world-readable,
+      // so the page still renders normally and only the writes get refused.
+      if (!user) {
+        setWriteBlock(seriesWriteBlockReason(null, false, false));
+        return;
+      }
+
+      const { data: seriesRow } = await supabase
+        .from('series').select('creator_id').eq('id', existingSeriesId).maybeSingle();
+      if (cancelled) return;
+
+      // An unreadable series is someone else's DRAFT (the series SELECT policy
+      // only exposes published series, plus your own), so creator_id can't be
+      // compared — say so rather than blaming ownership.
+      if (!seriesRow) {
+        setWriteBlock('This series could not be loaded. If it is still a draft, only the account that created it can add chapters to it.');
+        return;
+      }
+
+      const { data: profileRow } = await supabase
+        .from('profiles').select('role').eq('id', user.id).maybeSingle();
+      if (cancelled) return;
+
+      setWriteBlock(
+        seriesWriteBlockReason(profileRow?.role, seriesRow.creator_id === user.id, true)
+      );
+    })();
+
+    return () => { cancelled = true; };
   }, [existingSeriesId]);
 
   // Edit mode — load the existing chapter's own fields (these override the
@@ -548,6 +613,12 @@ function UploadFlow() {
       setError(`A chapter needs at least ${MIN_PAGES_PER_CHAPTER} pages to publish — you have ${totalMangaPageCount}.`);
       return;
     }
+    // Pre-flight refusals — the DB rejects these anyway, with a far less
+    // useful message (see describeWriteError), and only after every page has
+    // been uploaded. Checked live-ish: `writeBlock` is resolved by the
+    // pre-flight effect, `userId` by auth.getUser() on mount.
+    if (!userId) { setError('Your session has expired — please log in again before publishing.'); return; }
+    if (writeBlock) { setError(writeBlock); return; }
     setLoading(true); setError(''); setMessage('');
 
     // ---- EDIT MODE: update the existing chapter row instead of inserting a new one ----
@@ -560,7 +631,7 @@ function UploadFlow() {
         })
         .eq('id', editChapterId);
 
-      if (updateError) { setError(updateError.message); setLoading(false); return; }
+      if (updateError) { setError(describeWriteError(updateError.message)); setLoading(false); return; }
 
       // Delete any pages the creator removed during this edit. Explicit
       // delete (not relying on a possible ON DELETE CASCADE) since we're
@@ -676,7 +747,7 @@ function UploadFlow() {
       .select()
       .single();
 
-    if (chapterError) { setError(chapterError.message); setLoading(false); return; }
+    if (chapterError) { setError(describeWriteError(chapterError.message)); setLoading(false); return; }
 
     // Every item is kind:'new' here — create mode never loads existing pages.
     // publishChapterPages uploads + inserts pages one at a time (page order
@@ -766,6 +837,8 @@ function UploadFlow() {
   // are allowed to be unfinished. Needs chapters.is_draft.
   const handleSaveNovelDraft = async () => {
     if (!seriesId) { setError('Create the series first!'); return; }
+    if (!userId) { setError('Your session has expired — please log in again before saving.'); return; }
+    if (writeBlock) { setError(writeBlock); return; }
     setSavingDraft(true); setError(''); setMessage('');
 
     const wordCount = countWords(novelContent);
@@ -773,7 +846,7 @@ function UploadFlow() {
 
     if (isEditMode && editChapterId) {
       const { error: updateError } = await supabase.from('chapters').update(fields).eq('id', editChapterId);
-      if (updateError) { setError(updateError.message); setSavingDraft(false); return; }
+      if (updateError) { setError(describeWriteError(updateError.message)); setSavingDraft(false); return; }
       setIsDraftChapter(true);
       setMessage(`Draft saved — ${wordCount} words. Still unpublished.`);
       setSavingDraft(false);
@@ -786,7 +859,7 @@ function UploadFlow() {
       .select()
       .single();
 
-    if (chapterError) { setError(chapterError.message); setSavingDraft(false); return; }
+    if (chapterError) { setError(describeWriteError(chapterError.message)); setSavingDraft(false); return; }
 
     // Move into edit mode pointing at this draft row so the next Save Draft
     // (or Publish) updates it instead of creating a duplicate chapter.
@@ -801,6 +874,8 @@ function UploadFlow() {
       setError(`A chapter needs at least ${MIN_WORDS_PER_CHAPTER} words to publish — you have ${wordCount}.`);
       return;
     }
+    if (!userId) { setError('Your session has expired — please log in again before publishing.'); return; }
+    if (writeBlock) { setError(writeBlock); return; }
 
     setLoading(true); setError(''); setMessage('');
 
@@ -819,7 +894,7 @@ function UploadFlow() {
         .update(fields)
         .eq('id', editChapterId);
 
-      if (updateError) { setError(updateError.message); setLoading(false); return; }
+      if (updateError) { setError(describeWriteError(updateError.message)); setLoading(false); return; }
 
       clearDraft(seriesId, chapterNumber);
       setMessage(isFutureSchedule
@@ -837,7 +912,7 @@ function UploadFlow() {
       .select()
       .single();
 
-    if (chapterError) { setError(chapterError.message); setLoading(false); return; }
+    if (chapterError) { setError(describeWriteError(chapterError.message)); setLoading(false); return; }
 
     await supabase.from('series').update({ status: 'published' }).eq('id', seriesId);
 
@@ -1044,6 +1119,11 @@ function UploadFlow() {
         {!editLoading && (
         <>
         {error && <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '12px', marginBottom: '16px' }}>{error}</div>}
+        {/* Blocked-write banner — amber (a permission gate), not red (a
+            failure). Shown as soon as the pre-flight check resolves, so the
+            creator knows before picking pages that this series isn't
+            writable from the account they're signed in as. */}
+        {writeBlock && <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)', color: '#f59e0b', fontSize: '12px', marginBottom: '16px' }}>{writeBlock}</div>}
         {message && !justPublishedChapterId && <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '12px', marginBottom: '16px' }}>{message}</div>}
 
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '32px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }} className="mangal-upload-card">
