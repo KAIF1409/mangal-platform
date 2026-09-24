@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { checkImageBatchQuality } from '../../lib/media/imageQuality';
 import { uploadMediaFile, deleteMediaFiles, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
+import { guessNextChapterNumber, describeWriteError } from '../../lib/webmangal/chapterNumber';
 import { publishChapterPages } from '../../lib/webmangal/publishPages';
 import { pdfToPages, PDF_TO_PAGES_DEPS } from '../../lib/webmangal/pdfToPages';
 import { toLocalDateTimeInput } from '../../lib/webmangal/schedule';
@@ -66,22 +67,6 @@ const MIN_PAGES_PER_CHAPTER = 5;
 // Step 21 — minimum words per novel chapter (mirrors the manga page-count
 // floor conceptually, but novels are measured in words, not pages)
 const MIN_WORDS_PER_CHAPTER = 300;
-
-// PostgREST reports EVERY row-level-security refusal with the same wording —
-// `new row violates row-level security policy for table "chapters"` — which is
-// accurate but tells a creator nothing about the cause. The one cause this
-// flow can hit (the ownership rule the DB enforces, mirrored by
-// seriesWriteBlockReason in lib/auth/roles.ts) is being signed in as an
-// account that isn't the series' creator_id, so say that instead — there is no
-// developer/admin bypass to point at, by design. Any other error (constraint
-// violation, network, 5xx) is passed through untouched — those messages are
-// already specific.
-function describeWriteError(message: string): string {
-  if (/row-level security/i.test(message)) {
-    return 'The database refused this write (row-level security): this series belongs to a different account than the one you’re signed in as. Only the account that created a series can add or edit its chapters — log in with that account to publish here.';
-  }
-  return message;
-}
 
 export default function CreatorUploadPage() {
   return (
@@ -204,7 +189,8 @@ function UploadFlow() {
   };
 
   // If arriving with an existing seriesId (from "+ Chapter" on dashboard),
-  // load the series title + content_type for display and figure out the next chapter number
+  // load the series title + content_type for display, and — CREATE flow only —
+  // prefill the next chapter number.
   useEffect(() => {
     if (!existingSeriesId) return;
 
@@ -218,10 +204,33 @@ function UploadFlow() {
         }
       });
 
+    // BUG FIX (2026-09-24) — this "guess the next chapter number" query used
+    // to run whenever a seriesId was present, EDIT MODE INCLUDED, racing the
+    // edit-load effect below for ownership of `chapterNumber`. Whichever
+    // effect's round trip finished last won, and because that one awaits the
+    // chapter row *and then* its pages while this is a single fast SELECT,
+    // this one frequently won on a slow connection and silently replaced the
+    // number of the chapter actually being edited. Saving then wrote that
+    // wrong number, which collided with another chapter's number under
+    // chapters_series_id_chapter_number_key (UNIQUE (series_id,
+    // chapter_number)) — the UPDATE was refused before the title or a single
+    // page change was saved, which the creator saw as "Edit is completely
+    // broken, images gone, title won't save". A "next chapter number" only
+    // exists in the CREATE flow, so in edit mode this must not run at all.
+    // guessNextChapterNumber() refuses to guess there too, so the invariant is
+    // pinned by a unit test instead of only living here.
+    if (isEditMode) return;
+
     supabase.from('chapters').select('chapter_number').eq('series_id', existingSeriesId)
       .order('chapter_number', { ascending: false }).limit(1)
-      .then(({ data }) => { if (data && data[0]) setChapterNumber(data[0].chapter_number + 1); });
-  }, [existingSeriesId]);
+      .then(({ data }) => {
+        const guess = guessNextChapterNumber({
+          isEditMode,
+          latestChapterNumber: data?.[0]?.chapter_number ?? null,
+        });
+        if (guess !== null) setChapterNumber(guess);
+      });
+  }, [existingSeriesId, isEditMode]);
 
   // Permission pre-flight — see `writeBlock` above. Mirrors the series page's
   // "+ Add Chapter" gate (canManageSeries(role, isOwner), ownership-only) so a
@@ -269,9 +278,12 @@ function UploadFlow() {
     return () => { cancelled = true; };
   }, [existingSeriesId]);
 
-  // Edit mode — load the existing chapter's own fields (these override the
-  // "next chapter number" guess above, since we're editing a specific one,
-  // not creating a new one). Runs once editChapterId is known.
+  // Edit mode — load the existing chapter's own fields, the chapter number
+  // included. In this mode this effect is the ONLY writer of `chapterNumber`:
+  // the "next chapter number" guess above returns early (see its comment) —
+  // the two used to race, and when the guess won, Save collided with another
+  // chapter's number and nothing at all was written. Runs once editChapterId
+  // is known.
   useEffect(() => {
     if (!editChapterId) return;
     let cancelled = false;
