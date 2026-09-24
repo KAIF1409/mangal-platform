@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { checkImageBatchQuality } from '../../lib/media/imageQuality';
 import { uploadMediaFile, deleteMediaFiles, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { publishChapterPages } from '../../lib/webmangal/publishPages';
+import { pdfToPages, PDF_TO_PAGES_DEPS } from '../../lib/webmangal/pdfToPages';
 import { toLocalDateTimeInput } from '../../lib/webmangal/schedule';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { suggestTags } from '../../lib/tagSuggest';
@@ -145,6 +146,9 @@ function UploadFlow() {
 
   const [loading, setLoading] = useState(false);
   const [checkingQuality, setCheckingQuality] = useState(false);
+  // "Upload via PDF" — browser-side conversion progress for the manga step.
+  const [processingPdf, setProcessingPdf] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
@@ -441,6 +445,66 @@ function UploadFlow() {
     setCheckingQuality(false);
     // Allow re-selecting the same file again later if needed
     e.target.value = '';
+  };
+
+  // "Upload via PDF" — converts every PDF page into a normal image File in
+  // the browser, then pushes it through the SAME quality gate and unified
+  // `pages` list as hand-picked images. Nothing downstream changes: reorder,
+  // remove, min-page count, and publish all treat PDF pages identically.
+  // Conversion is atomic — if any page fails, nothing is added.
+  const handlePdfSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pdfFile = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!pdfFile) return;
+    if (checkingQuality || processingPdf || loading) return;
+
+    setError('');
+    setMessage('');
+    setProcessingPdf(true);
+    setPdfProgress({ done: 0, total: 0 });
+
+    // try/finally guarantees the button can never be left stuck on
+    // "Converting PDF…" — not even if the quality gate itself throws.
+    try {
+      const converted = await pdfToPages(pdfFile, PDF_TO_PAGES_DEPS, {
+        onProgress: (done, total) => setPdfProgress({ done, total }),
+      });
+
+      if (!converted.success || !converted.files) {
+        setError(converted.error || 'The PDF could not be converted.');
+        return;
+      }
+
+      // Same blur + resolution gate as the image path, so a PDF can't be used
+      // to sneak low-quality pages past the check images already have.
+      setCheckingQuality(true);
+      const { results, failedFiles } = await checkImageBatchQuality(converted.files);
+      setCheckingQuality(false);
+
+      const acceptedFiles = converted.files.filter((_, i) => results[i].passed);
+      const newItems: PageItem[] = acceptedFiles.map((file) => ({
+        kind: 'new' as const,
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+      setPages((prev) => [...prev, ...newItems]);
+
+      if (failedFiles.length > 0) {
+        const reasons = converted.files
+          .map((f, i) => (results[i].passed ? null : `page ${i + 1} ("${f.name}") — ${results[i].reason}`))
+          .filter(Boolean)
+          .join('  •  ');
+        setError(`${failedFiles.length} page(s) rejected for low quality: ${reasons}`);
+      } else {
+        setMessage(`Added ${acceptedFiles.length} page(s) from your PDF — reorder them below if needed.`);
+      }
+    } catch {
+      setError('The PDF could not be converted. Please try again.');
+    } finally {
+      setCheckingQuality(false);
+      setProcessingPdf(false);
+      setPdfProgress(null);
+    }
   };
 
   // Removing a page works the same regardless of whether it's an existing
@@ -1197,11 +1261,33 @@ function UploadFlow() {
                 <>
                   <div>
                     <label style={labelStyle}>Comic Pages (order will be kept as shown)</label>
-                    <label style={{ display: 'block', padding: '24px', textAlign: 'center' as const, border: '2px dashed var(--border-light)', borderRadius: '12px', cursor: checkingQuality ? 'wait' : 'pointer', color: 'var(--text-tertiary)', fontSize: '12px' }}>
-                      {checkingQuality ? <><Search size={13} style={{ verticalAlign: 'middle' }} /> Checking image quality...</> : <><Upload size={13} style={{ verticalAlign: 'middle' }} /> Click to select pages (multiple images, in order)</>}
-                      <input type="file" accept="image/*" multiple onChange={handleFileSelect} disabled={checkingQuality} style={{ display: 'none' }} />
+                    <label style={{ display: 'block', padding: '24px', textAlign: 'center' as const, border: '2px dashed var(--border-light)', borderRadius: '12px', cursor: checkingQuality || processingPdf ? 'wait' : 'pointer', color: 'var(--text-tertiary)', fontSize: '12px' }}>
+                      {checkingQuality ? <><Search size={13} style={{ verticalAlign: 'middle' }} /> Checking image quality...</> : processingPdf ? <><Search size={13} style={{ verticalAlign: 'middle' }} /> Converting PDF...</> : <><Upload size={13} style={{ verticalAlign: 'middle' }} /> Click to select pages (multiple images, in order)</>}
+                      <input type="file" accept="image/*" multiple onChange={handleFileSelect} disabled={checkingQuality || processingPdf} style={{ display: 'none' }} />
                     </label>
                   </div>
+
+                  {/* Upload via PDF — converts each PDF page into a normal page
+                      image in the browser (pdf.js loads from /vendor at runtime,
+                      never bundled), then runs it through the same quality gate
+                      and unified page list as hand-picked images. */}
+                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '11px', border: '1px solid var(--border-light)', borderRadius: '8px', cursor: checkingQuality || processingPdf || loading ? 'wait' : 'pointer', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>
+                    {processingPdf
+                      ? <><Search size={13} style={{ verticalAlign: 'middle' }} /> Converting PDF… {pdfProgress && pdfProgress.total > 0 ? `${pdfProgress.done}/${pdfProgress.total}` : ''}</>
+                      : <><FileText size={13} style={{ verticalAlign: 'middle' }} /> Upload via PDF instead</>}
+                    <input type="file" accept=".pdf,application/pdf" onChange={handlePdfSelect} disabled={checkingQuality || processingPdf || loading} style={{ display: 'none' }} />
+                  </label>
+                  {processingPdf ? (
+                    <div role="status" aria-live="polite" style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '-4px' }}>
+                      Rendering page {pdfProgress?.done ?? 0} of {pdfProgress?.total || '…'} — pages are added once the whole PDF has converted.
+                    </div>
+                  ) : (
+                    !checkingQuality && (
+                      <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '-4px' }}>
+                        Have a finished chapter as a PDF? Every page is converted automatically.
+                      </div>
+                    )
+                  )}
 
                   {/* Sprint 2: minimum-pages progress indicator — counts existing
                       (kept) pages + newly added pages together in edit mode */}
