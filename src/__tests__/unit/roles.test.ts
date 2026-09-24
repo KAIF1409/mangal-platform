@@ -17,9 +17,12 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  canManageContent,
   canManageSeries,
+  contentWriteBlockReason,
   hasCreatorAccess,
   isDeveloperRole,
+  ownsContent,
   ownsSeries,
   seriesWriteBlockReason,
 } from '@/app/lib/auth/roles';
@@ -147,6 +150,89 @@ describe('seriesWriteBlockReason', () => {
     ];
     for (const [role, isOwner] of cases) {
       expect(seriesWriteBlockReason(role, isOwner, true) === '').toBe(canManageSeries(role, isOwner));
+    }
+  });
+});
+
+// Generic, content-type-agnostic versions — for books, songs, videos, and
+// anything added later. ownsSeries/canManageSeries/seriesWriteBlockReason
+// above are thin wrappers around these three, so this is really the same
+// contract tested from the general-purpose entry point.
+describe('ownsContent', () => {
+  it('is true only when the viewer is the owner column value', () => {
+    expect(ownsContent('u-1', 'u-1')).toBe(true);
+  });
+
+  it('is false for every other account, developer accounts included', () => {
+    expect(ownsContent('dev-account', 'u-1')).toBe(false);
+    expect(ownsContent('creator-2', 'u-1')).toBe(false);
+  });
+
+  it('is false for a signed-out viewer or content with no owner set', () => {
+    expect(ownsContent(null, 'u-1')).toBe(false);
+    expect(ownsContent(undefined, 'u-1')).toBe(false);
+    expect(ownsContent('u-1', null)).toBe(false);
+    expect(ownsContent('u-1', undefined)).toBe(false);
+  });
+
+  it('agrees with ownsSeries for the same inputs (series is just one content type)', () => {
+    expect(ownsContent('u-1', 'u-1')).toBe(ownsSeries('u-1', 'u-1'));
+    expect(ownsContent('dev', 'u-1')).toBe(ownsSeries('dev', 'u-1'));
+  });
+});
+
+describe('canManageContent', () => {
+  it('lets a creator manage content they own', () => {
+    expect(canManageContent('creator', true)).toBe(true);
+  });
+
+  it('does NOT let a developer manage content it does not own', () => {
+    // Same rule as canManageSeries, for any content type — books, songs,
+    // videos, or whatever gets added next.
+    expect(canManageContent('developer', false)).toBe(false);
+  });
+
+  it('still lets a developer manage content it created itself', () => {
+    expect(canManageContent('developer', true)).toBe(true);
+  });
+
+  it('never lets a reader manage content, even content they own', () => {
+    expect(canManageContent('reader', true)).toBe(false);
+    expect(canManageContent(null, true)).toBe(false);
+  });
+});
+
+describe('contentWriteBlockReason', () => {
+  it('allows the owner (empty reason)', () => {
+    expect(contentWriteBlockReason('creator', true, true, 'book')).toBe('');
+  });
+
+  it('blocks a developer on content it does not own and names the content type', () => {
+    const reason = contentWriteBlockReason('developer', false, true, 'song');
+    expect(reason).toMatch(/different creator account/i);
+    expect(reason).toMatch(/song/i);
+    expect(reason).not.toMatch(/row-level security/i);
+  });
+
+  it('asks a signed-out viewer to log back in, before any ownership check', () => {
+    const reason = contentWriteBlockReason(null, false, false, 'video');
+    expect(reason).toMatch(/session has expired/i);
+    expect(reason).toMatch(/video/i);
+  });
+
+  it('defaults the content noun to "content" when none is given', () => {
+    expect(contentWriteBlockReason('creator', false, true)).toMatch(/this content belongs/i);
+  });
+
+  it('agrees with canManageContent for every role/ownership combination', () => {
+    const cases: Array<[Parameters<typeof canManageContent>[0], boolean]> = [
+      ['creator', true], ['creator', false],
+      ['developer', true], ['developer', false],
+      ['reader', true], ['reader', false],
+      [null, true], [null, false],
+    ];
+    for (const [role, isOwner] of cases) {
+      expect(contentWriteBlockReason(role, isOwner, true, 'book') === '').toBe(canManageContent(role, isOwner));
     }
   });
 });
