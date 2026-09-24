@@ -7,6 +7,13 @@ import { supabase } from '../../lib/supabase';
 import { checkImageBatchQuality } from '../../lib/media/imageQuality';
 import { uploadMediaFile, deleteMediaFiles, MEDIA_FOLDERS } from '../../lib/media/uploadClient';
 import { guessNextChapterNumber, describeWriteError } from '../../lib/webmangal/chapterNumber';
+import {
+  buildChapterMetadataFields,
+  chapterEditSignature,
+  isFutureSchedule,
+  type ChapterMetadataInput,
+} from '../../lib/webmangal/chapterFields';
+import { resolveMediaUrl } from '../../lib/media/mediaUrl';
 import { publishChapterPages } from '../../lib/webmangal/publishPages';
 import { pdfToPages, PDF_TO_PAGES_DEPS } from '../../lib/webmangal/pdfToPages';
 import { toLocalDateTimeInput } from '../../lib/webmangal/schedule';
@@ -158,6 +165,86 @@ function UploadFlow() {
   // reason this viewer can't write to that series, rendered as a banner so
   // they find out on arrival instead of after converting/uploading pages.
   const [writeBlock, setWriteBlock] = useState('');
+
+  // ---- Edit Chapter: the chapter-row form state in ONE object ------------
+  // Every metadata column this screen can change, in the shape the shared
+  // builder expects (lib/webmangal/chapterFields.ts). BOTH save paths — the
+  // comic one and the novel one — build their payload from this, which is the
+  // fix for a comic chapter edit silently losing data: the comic UPDATE used
+  // to list only `chapter_number` and `title`, so an author's note (or tags,
+  // or a schedule) could be loaded into the form, edited, saved, and never
+  // written. The novel path had its own field builder and did write them —
+  // two builders is exactly how the two drifted apart.
+  const chapterMetadataInput = useMemo<ChapterMetadataInput>(() => ({
+    chapterNumber,
+    title: chapterTitle,
+    authorNoteBefore,
+    authorNoteAfter,
+    isDraft: isDraftChapter,
+    scheduledAt,
+    tagsInput,
+  }), [chapterNumber, chapterTitle, authorNoteBefore, authorNoteAfter, isDraftChapter, scheduledAt, tagsInput]);
+
+  // ---- Edit Chapter: unsaved-changes guard -------------------------------
+  // A stable fingerprint of everything this screen can change — the metadata
+  // fields plus page identity/order — compared against what was last loaded
+  // from (or written to) the DB. Standard editor behaviour on every platform
+  // with a chapter editor (Webtoon, Wattpad, Tapas, Ream all warn before
+  // unpublished edits are lost): leaving mid-edit asks first, and there is a
+  // visible "unsaved changes" marker instead of a silent no-op.
+  const pagesSignature = pages
+    .map((item) => (item.kind === 'existing' ? `e:${item.id}` : `n:${item.file.name}:${item.file.size}`))
+    .join('|');
+  const currentEditSignature = chapterEditSignature({
+    fields: chapterMetadataInput,
+    pagesKey: pagesSignature,
+  });
+  // null until the DB load finishes, so a half-populated form never reads as
+  // "edited".
+  const savedEditSignatureRef = useRef<string | null>(null);
+  // Set immediately before a deliberate navigation (Discard, or the redirect
+  // after a successful save) so the browser doesn't ask about changes the
+  // creator just chose to commit or throw away.
+  const suppressUnloadWarningRef = useRef(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    setHasUnsavedChanges(
+      savedEditSignatureRef.current !== null && currentEditSignature !== savedEditSignatureRef.current
+    );
+  }, [isEditMode, currentEditSignature]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      if (suppressUnloadWarningRef.current) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [hasUnsavedChanges]);
+
+  // Throw this edit away and reload the chapter as it is actually stored.
+  const discardChanges = () => {
+    suppressUnloadWarningRef.current = true;
+    window.location.reload();
+  };
+
+  // Called after a successful write, so the redirect that follows is treated
+  // as "saved", not "about to lose unsaved work". `fieldsOverride` lets a
+  // caller state the values the DB now holds when they differ from the form
+  // state at that instant (e.g. a draft save just flipped is_draft) — without
+  // it, a successful save could immediately re-flag itself as dirty.
+  const markEditSaved = (fieldsOverride?: Partial<ChapterMetadataInput>) => {
+    savedEditSignatureRef.current = chapterEditSignature({
+      fields: { ...chapterMetadataInput, ...fieldsOverride },
+      pagesKey: pagesSignature,
+    });
+    setHasUnsavedChanges(false);
+    suppressUnloadWarningRef.current = true;
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -315,6 +402,11 @@ function UploadFlow() {
       setScheduledAt(toLocalDateTimeInput(chapter.scheduled_at));
       setTagsInput(Array.isArray(chapter.tags) ? chapter.tags.join(', ') : '');
 
+      // Fingerprint baseline for the unsaved-changes guard, collected while
+      // the row is unpacked (the state setters above are async, so the form
+      // values cannot be read straight back out yet).
+      let loadedPagesKey = '';
+
       if (chapter.content) {
         // Novel chapter — text lives on the chapter row itself
         setNovelContent(chapter.content);
@@ -334,8 +426,24 @@ function UploadFlow() {
           setEditLoadError('Chapter loaded, but its pages could not be loaded.');
         } else if (pageRows) {
           setPages(pageRows.map(p => ({ kind: 'existing' as const, id: p.id, image_url: p.image_url })));
+          loadedPagesKey = pageRows.map(p => `e:${p.id}`).join('|');
         }
       }
+
+      // Nothing counts as an edit until the creator actually changes something.
+      savedEditSignatureRef.current = chapterEditSignature({
+        fields: {
+          chapterNumber: chapter.chapter_number,
+          title: chapter.title || '',
+          authorNoteBefore: chapter.author_note_before || '',
+          authorNoteAfter: chapter.author_note_after || '',
+          isDraft: !!chapter.is_draft,
+          scheduledAt: toLocalDateTimeInput(chapter.scheduled_at),
+          tagsInput: Array.isArray(chapter.tags) ? chapter.tags.join(', ') : '',
+        },
+        pagesKey: loadedPagesKey,
+      });
+      setHasUnsavedChanges(false);
 
       setEditLoading(false);
     };
@@ -491,42 +599,14 @@ function UploadFlow() {
   };
 
   // ---- File selection for comic pages ----
-  // Every selected file is run through the quality gate (blur + min
-  // resolution) before it's ever added to the page list. Files that
-  // fail are NOT added — the creator sees exactly which file failed
-  // and why, and can re-select a better version. New files are appended
-  // to the end of the unified `pages` list by default — the creator can
-  // then use the move buttons to slot them anywhere (start/middle/end).
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    setError('');
-    setCheckingQuality(true);
-
-    const { results, failedFiles } = await checkImageBatchQuality(files);
-
-    const acceptedFiles = files.filter((_, i) => results[i].passed);
-    const newItems: PageItem[] = acceptedFiles.map((file) => ({
-      kind: 'new' as const,
-      file,
-      preview: URL.createObjectURL(file),
-    }));
-    setPages((prev) => [...prev, ...newItems]);
-
-    if (failedFiles.length > 0) {
-      const reasons = files
-        .map((f, i) => (results[i].passed ? null : `"${f.name}" — ${results[i].reason}`))
-        .filter(Boolean)
-        .join('  •  ');
-      setError(`${failedFiles.length} image(s) rejected for low quality: ${reasons}`);
-    }
-
-    setCheckingQuality(false);
-    // Allow re-selecting the same file again later if needed
-    e.target.value = '';
-  };
-
+  // The image-picker path is gone: manga chapters are uploaded as a single
+  // PDF (handlePdfSelect below), which is the chapter the creator already
+  // has. Converting it in the browser fixes the whole class of problems the
+  // multi-image path could not: pages can't arrive out of order, a chapter
+  // can't be half-selected by mistake, and abandoned attempts no longer
+  // scatter orphaned objects through the media bucket. Every page still goes
+  // through the same blur + resolution quality gate afterwards.
+  //
   // "Upload via PDF" — converts every PDF page into a normal image File in
   // the browser, then pushes it through the SAME quality gate and unified
   // `pages` list as hand-picked images. Nothing downstream changes: reorder,
@@ -621,10 +701,14 @@ function UploadFlow() {
   const totalMangaPageCount = pages.length;
 
   // ---- STEP 2: Create Chapter + Upload Pages (or, in edit mode, SAVE an existing one) ----
-  const handlePublishChapter = async () => {
+  // `draftMode` is the comic counterpart of the novel branch's "Save Draft":
+  // the minimum-page rule is a PUBLISHING rule, so a half-assembled chapter
+  // can be saved with is_draft = true and stay invisible to readers, instead
+  // of the creator being stuck holding pages in an open tab.
+  const handlePublishChapter = async (draftMode = false) => {
     if (!seriesId) { setError('Create the series first!'); return; }
     if (totalMangaPageCount === 0) { setError('Upload at least one page!'); return; }
-    if (totalMangaPageCount < MIN_PAGES_PER_CHAPTER) {
+    if (!draftMode && totalMangaPageCount < MIN_PAGES_PER_CHAPTER) {
       setError(`A chapter needs at least ${MIN_PAGES_PER_CHAPTER} pages to publish — you have ${totalMangaPageCount}.`);
       return;
     }
@@ -636,14 +720,27 @@ function UploadFlow() {
     if (writeBlock) { setError(writeBlock); return; }
     setLoading(true); setError(''); setMessage('');
 
+    // What this chapter's draft flag becomes: an explicit "Save Draft" always
+    // drafts, and a future-scheduled chapter is stored as a draft so it stays
+    // hidden until its time (the rule the novel branch already used).
+    const nextIsDraft = draftMode || isFutureSchedule(chapterMetadataInput.scheduledAt);
+
     // ---- EDIT MODE: update the existing chapter row instead of inserting a new one ----
     if (isEditMode && editChapterId) {
+      // BUG FIX — this update used to write `chapter_number` and `title` only.
+      // Every other column the Edit screen loads into the form (author notes,
+      // tags, draft flag, schedule) was silently dropped, so an author could
+      // type a note, see it in the box, save, and lose it. All chapter-row
+      // metadata now comes from the one shared builder. Like the novel path,
+      // a future-scheduled chapter is stored as a draft so it stays hidden
+      // until its time.
+      const metadata = buildChapterMetadataFields({
+        ...chapterMetadataInput,
+        isDraft: nextIsDraft,
+      });
       const { error: updateError } = await supabase
         .from('chapters')
-        .update({
-          chapter_number: chapterNumber,
-          title: chapterTitle.trim() || `Chapter ${chapterNumber}`,
-        })
+        .update(metadata)
         .eq('id', editChapterId);
 
       if (updateError) { setError(describeWriteError(updateError.message)); setLoading(false); return; }
@@ -738,10 +835,23 @@ function UploadFlow() {
         .from('pages').select('id, page_number, image_url')
         .eq('chapter_id', editChapterId).order('page_number', { ascending: true });
       if (refreshedPages) {
-        setPages(refreshedPages.map(p => ({ kind: 'existing' as const, id: p.id, image_url: p.image_url })));
+        // resolveMediaUrl: a stored page URL is absolute and names the origin
+        // it was uploaded from. Editing from any other origin (preview
+        // deploy, custom domain replacing workers.dev, localhost) therefore
+        // rendered every saved page as a broken box, which is exactly what
+        // "my pages are gone, I have to upload the PDF again" looks like.
+        // Rewriting it at render time fixes that without migrating a row.
+        setPages(refreshedPages.map(p => ({ kind: 'existing' as const, id: p.id, image_url: resolveMediaUrl(p.image_url) })));
       }
 
-      setMessage(`Chapter ${chapterNumber} updated! Taking you back...`);
+      // Mirror the written draft flag into the form so the "Saved as draft"
+      // badge tells the truth, then record the baseline from what the DB now
+      // holds.
+      setIsDraftChapter(nextIsDraft);
+      markEditSaved({ isDraft: nextIsDraft });
+      setMessage(draftMode
+        ? `Draft saved — Chapter ${chapterNumber} is not visible to readers yet.`
+        : `Chapter ${chapterNumber} updated! Taking you back...`);
       setLoading(false);
       // Hard navigation (not Next.js client-side routing) so the series page
       // re-fetches fresh data on load instead of potentially serving a
@@ -756,8 +866,13 @@ function UploadFlow() {
       .from('chapters')
       .insert({
         series_id: seriesId,
-        chapter_number: chapterNumber,
-        title: chapterTitle.trim() || `Chapter ${chapterNumber}`,
+        // Same shared builder as the edit path, so a brand-new comic chapter
+        // carries its author notes / tags / schedule too instead of being
+        // created with two columns and then "completed" by a buggy edit.
+        ...buildChapterMetadataFields({
+          ...chapterMetadataInput,
+          isDraft: nextIsDraft,
+        }),
       })
       .select()
       .single();
@@ -794,27 +909,34 @@ function UploadFlow() {
       return;
     }
 
-    await supabase.from('series').update({ status: 'published' }).eq('id', seriesId);
+    // A draft must not publish the series or ping followers — otherwise
+    // saving an unfinished chapter would announce it to everyone who follows
+    // the series while the chapter itself stays hidden.
+    if (!draftMode) {
+      await supabase.from('series').update({ status: 'published' }).eq('id', seriesId);
 
-    // Step 25 — Notify followers about the new chapter.
-    // Fire-and-forget: we don't await or block publish on this.
-    // If it fails, the chapter is still live — notifications are best-effort.
-    const { data: notifySessionData } = await supabase.auth.getSession();
-    fetch('/api/notify-followers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${notifySessionData.session?.access_token}`,
-      },
-      body: JSON.stringify({
-        seriesId,
-        chapterId: chapter.id,
-        chapterNumber,
-        chapterTitle: chapterTitle.trim() || `Chapter ${chapterNumber}`,
-      }),
-    }).catch((err) => console.warn('[upload] notify-followers failed silently:', err));
+      // Step 25 — Notify followers about the new chapter.
+      // Fire-and-forget: we don't await or block publish on this.
+      // If it fails, the chapter is still live — notifications are best-effort.
+      const { data: notifySessionData } = await supabase.auth.getSession();
+      fetch('/api/notify-followers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${notifySessionData.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          seriesId,
+          chapterId: chapter.id,
+          chapterNumber,
+          chapterTitle: chapterTitle.trim() || `Chapter ${chapterNumber}`,
+        }),
+      }).catch((err) => console.warn('[upload] notify-followers failed silently:', err));
+    }
 
-    setMessage(`Chapter ${chapterNumber} is live! ${pages.length} pages published.`);
+    setMessage(draftMode
+      ? `Draft saved — ${pages.length} page(s) stored. Publish whenever it's ready.`
+      : `Chapter ${chapterNumber} is live! ${pages.length} pages published.`);
     setJustPublishedChapterId(chapter.id);
     setPages([]);
     setLoading(false);
@@ -834,18 +956,14 @@ function UploadFlow() {
   // Shared field-builder for novel chapter writes — keeps publish and
   // draft-save from drifting out of sync on which columns they touch.
   const buildNovelChapterFields = (wordCount: number, draftFlag: boolean) => ({
-    chapter_number: chapterNumber,
-    title: chapterTitle.trim() || `Chapter ${chapterNumber}`,
+    // Chapter-row metadata comes from the ONE shared builder the comic path
+    // now uses too (lib/webmangal/chapterFields.ts); this branch keeps only
+    // what is genuinely novel-specific. Two hand-rolled copies of the same
+    // column list is what allowed the comic path to fall behind and drop
+    // author notes / tags / draft / schedule on save.
+    ...buildChapterMetadataFields({ ...chapterMetadataInput, isDraft: draftFlag }),
     content: novelContent,
     word_count: wordCount,
-    author_note_before: authorNoteBefore.trim() || null,
-    author_note_after: authorNoteAfter.trim() || null,
-    is_draft: draftFlag,
-    // datetime-local gives "YYYY-MM-DDTHH:mm" in the user's local time;
-    // Date() parses that as local time, then toISOString() converts to UTC
-    // for storage. Empty input -> no schedule.
-    scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-    tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
   });
 
   // Save without publishing — bypasses the word-count minimum since drafts
@@ -863,6 +981,7 @@ function UploadFlow() {
       const { error: updateError } = await supabase.from('chapters').update(fields).eq('id', editChapterId);
       if (updateError) { setError(describeWriteError(updateError.message)); setSavingDraft(false); return; }
       setIsDraftChapter(true);
+      markEditSaved({ isDraft: true });
       setMessage(`Draft saved — ${wordCount} words. Still unpublished.`);
       setSavingDraft(false);
       return;
@@ -894,8 +1013,11 @@ function UploadFlow() {
 
     setLoading(true); setError(''); setMessage('');
 
-    const isFutureSchedule = !!scheduledAt && new Date(scheduledAt).getTime() > Date.now();
-    const fields = buildNovelChapterFields(wordCount, isFutureSchedule);
+    // Renamed so it no longer shadows the imported helper of the same name;
+    // both now share lib/webmangal/chapterFields' single definition of "is
+    // this a real future schedule?" instead of a hand-rolled Date compare.
+    const isScheduledAhead = isFutureSchedule(scheduledAt);
+    const fields = buildNovelChapterFields(wordCount, isScheduledAhead);
     // Note: scheduling relies on whatever query loads chapters for readers
     // respecting `is_draft = false` (and, if you want strict scheduling,
     // `scheduled_at IS NULL OR scheduled_at <= now()`). This file only
@@ -912,7 +1034,8 @@ function UploadFlow() {
       if (updateError) { setError(describeWriteError(updateError.message)); setLoading(false); return; }
 
       clearDraft(seriesId, chapterNumber);
-      setMessage(isFutureSchedule
+      markEditSaved({ isDraft: isScheduledAhead });
+      setMessage(isScheduledAhead
         ? `Chapter ${chapterNumber} scheduled for ${new Date(scheduledAt).toLocaleString()}. Taking you back...`
         : `Chapter ${chapterNumber} updated! ${wordCount} words. Taking you back...`);
       setLoading(false);
@@ -936,7 +1059,7 @@ function UploadFlow() {
     // Step 25 — Notify followers (same fire-and-forget pattern as manga path above)
     // Skipped for future-scheduled chapters — followers shouldn't be pinged
     // about a chapter that isn't actually live yet.
-    if (!isFutureSchedule) {
+    if (!isScheduledAhead) {
       const { data: notifySessionData } = await supabase.auth.getSession();
       fetch('/api/notify-followers', {
         method: 'POST',
@@ -953,7 +1076,7 @@ function UploadFlow() {
       }).catch((err) => console.warn('[upload] notify-followers failed silently:', err));
     }
 
-    setMessage(isFutureSchedule
+    setMessage(isScheduledAhead
       ? `Chapter ${chapterNumber} scheduled for ${new Date(scheduledAt).toLocaleString()}.`
       : `Chapter ${chapterNumber} is live! ${wordCount} words published.`);
     setJustPublishedChapterId(chapter.id);
@@ -1069,6 +1192,87 @@ function UploadFlow() {
   // regex chain here that broke on repeated "#", runs of "*****", and
   // "***" appearing inline — see novelEditor.ts header comment for details.)
 
+  // ---- Shared chapter-metadata fields (comic AND novel) -------------------
+  // These blocks used to exist only inside the novel branch, which meant a
+  // comic creator had no way to add an author's note, tags or a schedule to a
+  // chapter at all. On every platform with a chapter editor those are
+  // per-chapter fields, not a prose-only feature, so they render for both
+  // content types now — and the shared builder
+  // (lib/webmangal/chapterFields.ts) is what actually persists them.
+  const chapterAuthorNoteBeforeField = (
+    <div>
+      <label style={labelStyle}>Author&apos;s Note — Before Chapter (optional)</label>
+      <WebMangalAiEditor
+        feature="author-note"
+        ariaLabel="Author's note before chapter"
+        placeholder="e.g. Sorry for the late update! Thanks for 1k reads"
+        value={authorNoteBefore}
+        onChange={setAuthorNoteBefore}
+        rows={2}
+        style={{ ...inputStyle, resize: 'vertical' as const, fontSize: '12px' }}
+      />
+    </div>
+  );
+
+  const chapterAuthorNoteAfterField = (
+    <div>
+      <label style={labelStyle}>Author&apos;s Note — After Chapter (optional)</label>
+      <WebMangalAiEditor
+        feature="author-note"
+        ariaLabel="Author's note after chapter"
+        placeholder="e.g. Next chapter drops Friday. Comment your theories!"
+        value={authorNoteAfter}
+        onChange={setAuthorNoteAfter}
+        rows={2}
+        style={{ ...inputStyle, resize: 'vertical' as const, fontSize: '12px' }}
+      />
+    </div>
+  );
+
+  // Status, not an input: shown whenever the row currently saved is a draft.
+  const chapterDraftBadge = isDraftChapter ? (
+    <div style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', borderRadius: '8px', padding: '8px 12px' }}>
+      <FileText size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Saved as draft — not visible to readers yet. Publish when ready.
+    </div>
+  ) : null;
+
+  const chapterTagsAndScheduleFields = (
+    <div style={{ display: 'flex', gap: '12px' }}>
+      {/* Tags / content warnings. Optional; needs chapters.tags (text[]) */}
+      <div style={{ flex: 1 }}>
+        <label style={labelStyle}>Tags (comma separated)</label>
+        <input
+          type="text"
+          placeholder="e.g. slow-burn, violence-warning"
+          value={tagsInput}
+          onChange={(e) => setTagsInput(e.target.value)}
+          style={inputStyle}
+        />
+      </div>
+      {/* Scheduled publish. Optional; needs chapters.scheduled_at */}
+      <div style={{ flex: 1 }}>
+        <label style={labelStyle}>Schedule For Later (optional)</label>
+        <input
+          type="datetime-local"
+          value={scheduledAt}
+          onChange={(e) => setScheduledAt(e.target.value)}
+          style={{ ...inputStyle, colorScheme: 'dark' as const }}
+        />
+      </div>
+    </div>
+  );
+
+  // Everything a chapter can change besides its pages, in one place, used by
+  // both branches so they cannot drift apart again.
+  const chapterMetadataEditor = (
+    <>
+      {chapterAuthorNoteBeforeField}
+      {chapterAuthorNoteAfterField}
+      {chapterTagsAndScheduleFields}
+      {chapterDraftBadge}
+    </>
+  );
+
   return (
     <>
       <Navbar
@@ -1140,6 +1344,23 @@ function UploadFlow() {
             writable from the account they're signed in as. */}
         {writeBlock && <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)', color: '#f59e0b', fontSize: '12px', marginBottom: '16px' }}>{writeBlock}</div>}
         {message && !justPublishedChapterId && <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontSize: '12px', marginBottom: '16px' }}>{message}</div>}
+        {/* Unsaved-changes notice for the Edit Chapter screen: the form is
+            tracked against what the DB last held, so this appears the moment
+            anything changes and disappears once it is saved (the browser also
+            warns before the tab is closed). "Discard Changes" reloads the
+            chapter exactly as stored — the escape hatch every editor has. */}
+        {isEditMode && hasUnsavedChanges && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderRadius: '8px', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.35)', color: '#f59e0b', fontSize: '12px', marginBottom: '16px' }}>
+            <span>Unsaved changes — these edits aren&apos;t saved yet.</span>
+            <button
+              type="button"
+              onClick={discardChanges}
+              style={{ background: 'none', border: '1px solid rgba(245,158,11,0.5)', borderRadius: '6px', color: '#f59e0b', fontSize: '11px', fontWeight: 700, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+            >
+              Discard Changes
+            </button>
+          </div>
+        )}
 
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '32px', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }} className="mangal-upload-card">
 
@@ -1354,24 +1575,27 @@ function UploadFlow() {
 
               {contentType === 'mangal' && (
                 <>
+                  {/* Chapters are uploaded as a PDF and nothing else. The old
+                      hand-picked-images path is gone on purpose: one PDF is
+                      the chapter the creator already has, so a single
+                      selection can't arrive out of order or half-finished, and
+                      the bucket isn't left holding dozens of orphaned uploads
+                      from abandoned attempts. pdf.js converts each PDF page
+                      into a normal page image in the browser (loaded from
+                      /vendor at runtime, never bundled) and the result goes
+                      through the same quality gate and the same unified page
+                      list as before, so nothing downstream changed. */}
                   <div>
-                    <label style={labelStyle}>Comic Pages (order will be kept as shown)</label>
-                    <label style={{ display: 'block', padding: '24px', textAlign: 'center' as const, border: '2px dashed var(--border-light)', borderRadius: '12px', cursor: checkingQuality || processingPdf ? 'wait' : 'pointer', color: 'var(--text-tertiary)', fontSize: '12px' }}>
-                      {checkingQuality ? <><Search size={13} style={{ verticalAlign: 'middle' }} /> Checking image quality...</> : processingPdf ? <><Search size={13} style={{ verticalAlign: 'middle' }} /> Converting PDF...</> : <><Upload size={13} style={{ verticalAlign: 'middle' }} /> Click to select pages (multiple images, in order)</>}
-                      <input type="file" accept="image/*" multiple onChange={handleFileSelect} disabled={checkingQuality || processingPdf} style={{ display: 'none' }} />
+                    <label style={labelStyle}>Comic Pages — upload the chapter as a PDF (order is kept as shown)</label>
+                    <label style={{ display: 'block', padding: '24px', textAlign: 'center' as const, border: '2px dashed var(--border-light)', borderRadius: '12px', cursor: processingPdf || loading ? 'wait' : 'pointer', color: 'var(--text-tertiary)', fontSize: '12px' }}>
+                      {processingPdf
+                        ? <><FileText size={13} style={{ verticalAlign: 'middle' }} /> Converting PDF… {pdfProgress && pdfProgress.total > 0 ? `${pdfProgress.done}/${pdfProgress.total}` : ''}</>
+                        : checkingQuality
+                        ? <><Search size={13} style={{ verticalAlign: 'middle' }} /> Checking page quality…</>
+                        : <><Upload size={13} style={{ verticalAlign: 'middle' }} /> Click to select your chapter PDF</>}
+                      <input type="file" accept=".pdf,application/pdf" onChange={handlePdfSelect} disabled={processingPdf || checkingQuality || loading} style={{ display: 'none' }} />
                     </label>
                   </div>
-
-                  {/* Upload via PDF — converts each PDF page into a normal page
-                      image in the browser (pdf.js loads from /vendor at runtime,
-                      never bundled), then runs it through the same quality gate
-                      and unified page list as hand-picked images. */}
-                  <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '11px', border: '1px solid var(--border-light)', borderRadius: '8px', cursor: checkingQuality || processingPdf || loading ? 'wait' : 'pointer', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>
-                    {processingPdf
-                      ? <><Search size={13} style={{ verticalAlign: 'middle' }} /> Converting PDF… {pdfProgress && pdfProgress.total > 0 ? `${pdfProgress.done}/${pdfProgress.total}` : ''}</>
-                      : <><FileText size={13} style={{ verticalAlign: 'middle' }} /> Upload via PDF instead</>}
-                    <input type="file" accept=".pdf,application/pdf" onChange={handlePdfSelect} disabled={checkingQuality || processingPdf || loading} style={{ display: 'none' }} />
-                  </label>
                   {processingPdf ? (
                     <div role="status" aria-live="polite" style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '-4px' }}>
                       Rendering page {pdfProgress?.done ?? 0} of {pdfProgress?.total || '…'} — pages are added once the whole PDF has converted.
@@ -1379,7 +1603,7 @@ function UploadFlow() {
                   ) : (
                     !checkingQuality && (
                       <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '-4px' }}>
-                        Have a finished chapter as a PDF? Every page is converted automatically.
+                        Every PDF page becomes a chapter page automatically. Editing later? Upload the next PDF — the pages already saved stay exactly as they are.
                       </div>
                     )
                   )}
@@ -1417,7 +1641,7 @@ function UploadFlow() {
                       {pages.map((item, i) => (
                         <div key={item.kind === 'existing' ? item.id : `new-${i}`} style={{ position: 'relative' as const, border: `1px solid ${item.kind === 'new' ? 'rgba(217,119,6,0.4)' : 'var(--border-light)'}`, borderRadius: '8px', overflow: 'hidden', height: '120px' }}>
                           <Image
-                            src={item.kind === 'existing' ? item.image_url : item.preview}
+                            src={item.kind === 'existing' ? resolveMediaUrl(item.image_url) : item.preview}
                             alt={`Page ${i + 1}`}
                             fill
                             sizes="100px"
@@ -1438,26 +1662,55 @@ function UploadFlow() {
                     </div>
                   )}
 
-                  <button
-                    onClick={handlePublishChapter}
-                    disabled={loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER}
-                    style={{
-                      width: '100%', padding: '14px',
-                      background: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316 0%, #22c55e 100%)',
-                      border: '1px solid #ea580c', borderRadius: '12px',
-                      color: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'var(--text-tertiary)' : '#fff',
-                      fontSize: '13px', fontWeight: 700,
-                      cursor: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {loading
-                      ? (isEditMode ? 'Saving...' : 'Uploading...')
-                      : totalMangaPageCount < MIN_PAGES_PER_CHAPTER
-                      ? <><Lock size={13} style={{ verticalAlign: 'middle' }} /> Need {MIN_PAGES_PER_CHAPTER - totalMangaPageCount} more page(s) to publish</>
-                      : isEditMode
-                      ? <><Save size={13} style={{ verticalAlign: 'middle' }} /> Save Changes ({totalMangaPageCount} pages)</>
-                      : <><Rocket size={13} style={{ verticalAlign: 'middle' }} /> Publish Live ({totalMangaPageCount} pages)</>}
-                  </button>
+                  {/* Author's note / tags / schedule / draft status — the
+                      same fields the novel branch shows, now available to
+                      comic chapters too (and, more importantly, actually
+                      written by the shared builder on save). */}
+                  {chapterMetadataEditor}
+
+                  {/* Save row. "Save Draft" gives comics the parity the novel
+                      branch always had: the 5-page minimum is a PUBLISHING
+                      rule, so a chapter still being assembled can be stored
+                      as a draft instead of living only in this tab. Note the
+                      explicit () => calls: passing the handler directly would
+                      hand it the click event as the `draftMode` argument. */}
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={() => handlePublishChapter(true)}
+                      disabled={loading || checkingQuality || processingPdf || totalMangaPageCount === 0}
+                      style={{
+                        flex: 1, padding: '14px',
+                        background: 'var(--bg-input)', border: '1px solid var(--border-light)', borderRadius: '12px',
+                        color: (loading || totalMangaPageCount === 0) ? 'var(--text-muted)' : 'var(--text-secondary)',
+                        fontSize: '13px', fontWeight: 700,
+                        cursor: (loading || totalMangaPageCount === 0) ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {loading ? 'Saving...' : <><FileText size={13} style={{ verticalAlign: 'middle' }} /> Save Draft</>}
+                    </button>
+                    <button
+                      onClick={() => handlePublishChapter(false)}
+                      disabled={loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER}
+                      style={{
+                        flex: 2, padding: '14px',
+                        background: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'var(--border-color)' : 'linear-gradient(135deg, #f97316 0%, #22c55e 100%)',
+                        border: '1px solid #ea580c', borderRadius: '12px',
+                        color: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'var(--text-tertiary)' : '#fff',
+                        fontSize: '13px', fontWeight: 700,
+                        cursor: (loading || totalMangaPageCount < MIN_PAGES_PER_CHAPTER) ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {loading
+                        ? (isEditMode ? 'Saving...' : 'Uploading...')
+                        : totalMangaPageCount < MIN_PAGES_PER_CHAPTER
+                        ? <><Lock size={13} style={{ verticalAlign: 'middle' }} /> Need {MIN_PAGES_PER_CHAPTER - totalMangaPageCount} more page(s) to publish</>
+                        : isFutureSchedule(scheduledAt)
+                        ? <><CalendarClock size={13} style={{ verticalAlign: 'middle' }} /> Schedule Chapter ({totalMangaPageCount} pages)</>
+                        : isEditMode
+                        ? <><Save size={13} style={{ verticalAlign: 'middle' }} /> Save Changes ({totalMangaPageCount} pages)</>
+                        : <><Rocket size={13} style={{ verticalAlign: 'middle' }} /> Publish Live ({totalMangaPageCount} pages)</>}
+                    </button>
+                  </div>
                 </>
               )}
 
@@ -1465,18 +1718,7 @@ function UploadFlow() {
               {contentType === 'novel' && (
                 <>
                   {/* Author's Note — before chapter. Optional; needs chapters.author_note_before */}
-                  <div>
-                    <label style={labelStyle}>Author&apos;s Note — Before Chapter (optional)</label>
-                    <WebMangalAiEditor
-                      feature="author-note"
-                      ariaLabel="Author's note before chapter"
-                      placeholder="e.g. Sorry for the late update! Thanks for 1k reads"
-                      value={authorNoteBefore}
-                      onChange={setAuthorNoteBefore}
-                      rows={2}
-                      style={{ ...inputStyle, resize: 'vertical' as const, fontSize: '12px' }}
-                    />
-                  </div>
+                  {chapterAuthorNoteBeforeField}
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -1568,49 +1810,12 @@ function UploadFlow() {
                     </p>
                   )}
 
-                  {isDraftChapter && (
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', borderRadius: '8px', padding: '8px 12px' }}>
-                      <FileText size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Saved as draft — not visible to readers yet. Publish when ready.
-                    </div>
-                  )}
+                  {chapterDraftBadge}
 
                   {/* Author's Note — after chapter. Optional; needs chapters.author_note_after */}
-                  <div>
-                    <label style={labelStyle}>Author&apos;s Note — After Chapter (optional)</label>
-                    <WebMangalAiEditor
-                      feature="author-note"
-                      ariaLabel="Author's note after chapter"
-                      placeholder="e.g. Next chapter drops Friday. Comment your theories!"
-                      value={authorNoteAfter}
-                      onChange={setAuthorNoteAfter}
-                      rows={2}
-                      style={{ ...inputStyle, resize: 'vertical' as const, fontSize: '12px' }}
-                    />
-                  </div>
+                  {chapterAuthorNoteAfterField}
 
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    {/* Tags / content warnings. Optional; needs chapters.tags (text[]) */}
-                    <div style={{ flex: 1 }}>
-                      <label style={labelStyle}>Tags (comma separated)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. slow-burn, violence-warning"
-                        value={tagsInput}
-                        onChange={(e) => setTagsInput(e.target.value)}
-                        style={inputStyle}
-                      />
-                    </div>
-                    {/* Scheduled publish. Optional; needs chapters.scheduled_at */}
-                    <div style={{ flex: 1 }}>
-                      <label style={labelStyle}>Schedule For Later (optional)</label>
-                      <input
-                        type="datetime-local"
-                        value={scheduledAt}
-                        onChange={(e) => setScheduledAt(e.target.value)}
-                        style={{ ...inputStyle, colorScheme: 'dark' as const }}
-                      />
-                    </div>
-                  </div>
+                  {chapterTagsAndScheduleFields}
 
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button

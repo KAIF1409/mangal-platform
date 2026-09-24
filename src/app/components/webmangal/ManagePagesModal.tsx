@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { supabase } from '../../lib/supabase';
 import { deleteMediaFiles } from '../../lib/media/uploadClient';
+import { resolveMediaUrl, mediaPathFromUrl } from '../../lib/media/mediaUrl';
 import { Save, X, Check, ArrowLeft, ArrowRight, Trash2, Inbox, AlertTriangle } from 'lucide-react';
 
 interface PageRow {
@@ -179,17 +180,19 @@ export default function ManagePagesModal({
     setDeletingId(page.id);
     setError('');
 
-    // Extract the R2 key from the served URL — everything after /api/media/
+    // Extract the R2 key from the served URL — see lib/media/mediaUrl.ts.
+    // This used to be `new URL(page.image_url)`, which THROWS on a relative
+    // URL (and on a URL whose origin no longer exists the old parse silently
+    // returned the wrong key); the throw was swallowed by the catch below, so
+    // the stored object was quietly left orphaned. mediaPathFromUrl covers
+    // absolute, stale-origin and relative forms.
     try {
-      const urlObj = new URL(page.image_url);
-      const storagePath = decodeURIComponent(
-        urlObj.pathname.split('/api/media/')[1] || ''
-      );
+      const storagePath = mediaPathFromUrl(page.image_url);
       if (storagePath) {
         await deleteMediaFiles([storagePath]);
       }
     } catch {
-      // Storage removal failed or path parse failed — continue to DB delete
+      // Storage removal failed — continue to the DB delete regardless
     }
 
     const { error: deleteError } = await supabase
@@ -434,7 +437,7 @@ export default function ManagePagesModal({
                       {/* Page image */}
                       <div style={{ position: 'relative', width: '100%', height: '140px' }}>
                         <Image
-                          src={page.image_url}
+                          src={resolveMediaUrl(page.image_url)}
                           alt={`Page ${page.page_number}`}
                           fill
                           sizes="140px"
@@ -563,7 +566,7 @@ export default function ManagePagesModal({
                     </span>
                   </div>
                   <Image
-                    src={selectedPage.image_url}
+                    src={resolveMediaUrl(selectedPage.image_url)}
                     alt="Preview"
                     width={800}
                     height={1200}

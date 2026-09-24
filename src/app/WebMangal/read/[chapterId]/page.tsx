@@ -16,6 +16,9 @@ import {
 import { setPostLoginRedirect } from '../../../lib/auth/authRedirect';
 import { webnovelCommentScore, sortByScore, COMMENT_PAGE_SIZE } from '../../../lib/commentRanking';
 import { getReaderImageSrc } from '../../../lib/media/readerImageSrc';
+import { resolveMediaUrl } from '../../../lib/media/mediaUrl';
+import { ownsSeries } from '../../../lib/auth/roles';
+import { evaluateReadGate, shouldRecordRead } from '../../../lib/webmangal/readGate';
 type PageItem = { id: string; page_number: number; image_url: string };
 type SeriesInfo = { id: string; title: string; reading_mode: 'scroll' | 'page'; content_type: 'mangal' | 'novel'; reading_direction: 'ltr' | 'rtl' | null; cover_url?: string | null };
 type ChapterNav = { id: string; chapter_number: number; title: string };
@@ -387,13 +390,20 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         // exactly like a stranger would. Computed once, fresh (not from the
         // outer userId state, to avoid a race where this runs before the
         // auth-lookup effect finishes), and reused by both gates below.
-        const s0 = Array.isArray(chapter.series) ? chapter.series[0] : chapter.series;
+        //
+        // `ownsSeries` is the same ownership test every write path uses (see
+        // the library header): ownership, never role — so a developer account
+        // is NOT exempt from the free tier on somebody else's series.
+        const seriesRow = Array.isArray(chapter.series) ? chapter.series[0] : chapter.series;
         const { data: authData } = await supabase.auth.getUser();
-        const isOwner = !!authData.user && !!s0 && (s0 as { creator_id: string }).creator_id === authData.user.id;
+        const isSeriesOwner = ownsSeries(
+          authData.user?.id,
+          (seriesRow as { creator_id?: string } | null)?.creator_id
+        );
 
         const isFutureScheduled = !!chapter.scheduled_at && new Date(chapter.scheduled_at).getTime() > Date.now();
         if (chapter.is_draft || isFutureScheduled) {
-          if (!isOwner) {
+          if (!isSeriesOwner) {
             setChapterUnavailable(chapter.is_draft ? 'draft' : 'scheduled');
             setUnavailableUntil(chapter.scheduled_at ?? null);
             if (!silent) setLoading(false);
@@ -406,45 +416,44 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         }
         setChapterUnavailable(null);
 
-        // Step 26 — Read Gate: Check free tier limits (2 chapters/series, 3 series max).
-        // Skipped entirely for the series' own author — see isOwner above.
+        // Step 26 — Read Gate: 2 chapters per series, 3 series max — for
+        // READERS. The decision itself is the pure, unit-tested evaluator in
+        // lib/webmangal/readGate.ts (see readGate.test.ts).
+        //
+        // BUG FIX (2026-09-24): this block used to count localStorage reads
+        // with no ownership check at all, so a series' OWN CREATOR was stopped
+        // on chapter 3 of their own work and shown the upgrade wall. An author
+        // is never gated, and reading their own series never spends free-tier
+        // budget (shouldRecordRead) — those limits exist for other people's
+        // work.
         const seriesId = chapter.series_id;
         const alreadyRead = isChapterAlreadyRead(chapterId);
-        
-        if (!isOwner && !alreadyRead) {
-          // Only count new chapters for gate purposes
-          const chaptersInSeries = countChaptersInSeries(seriesId);
-          const totalSeriesRead = countUniqueSeries();
-          const willHaveReadInSeries = chaptersInSeries + 1;
-          const willHaveSeriesRead = totalSeriesRead + (chaptersInSeries === 0 ? 1 : 0); // +1 if new series
-          
-          // Check limits
-          if (willHaveSeriesRead > 3) {
-            // 3 series limit reached
-            setReadGate({ gated: true, reason: 'series_limit' });
-            setChaptersReadThisSeries(chaptersInSeries);
-            setUniqueSeriesRead(totalSeriesRead);
-            if (!silent) setLoading(false);
-            return;
-          }
-          
-          if (willHaveReadInSeries > 2) {
-            // 2 chapters per series limit reached
-            setReadGate({ gated: true, reason: 'chapter_limit' });
-            setChaptersReadThisSeries(chaptersInSeries);
-            setUniqueSeriesRead(totalSeriesRead);
-            if (!silent) setLoading(false);
-            return;
-          }
-          
-          // Gate passed — record this read for next time
+        const chaptersInSeries = countChaptersInSeries(seriesId);
+        const totalSeriesRead = countUniqueSeries();
+
+        const gate = evaluateReadGate({
+          isOwner: isSeriesOwner,
+          alreadyRead,
+          chaptersReadInSeries: chaptersInSeries,
+          uniqueSeriesRead: totalSeriesRead,
+        });
+
+        if (gate.gated) {
+          setReadGate({ gated: true, reason: gate.reason });
+          setChaptersReadThisSeries(chaptersInSeries);
+          setUniqueSeriesRead(totalSeriesRead);
+          if (!silent) setLoading(false);
+          return;
+        }
+
+        // Gate passed — remember this read so re-opening the chapter is free.
+        if (shouldRecordRead({ isOwner: isSeriesOwner, alreadyRead })) {
           recordChapterRead(chapterId, seriesId);
         }
-        
+
         setReadGate({ gated: false, reason: null });
         setCurrentChapter({ id: chapter.id, chapter_number: chapter.chapter_number, title: chapter.title });
-        const s = Array.isArray(chapter.series) ? chapter.series[0] : chapter.series;
-        if (s) setSeries(s as SeriesInfo);
+        if (seriesRow) setSeries(seriesRow as SeriesInfo);
 
         // Novel: store text content; Manga: content/word_count stay null/0
         if (chapter.content) {
@@ -1158,7 +1167,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
   // Supabase project (Pro plan or self-hosted imgproxy); if not enabled the
   // request 400s and onError below falls back to the original image.
   const effectiveImageQuality: 'low' | 'high' = imageQuality === 'auto' ? autoResolvedQuality : imageQuality;
-  const getImageSrc = (url: string): string => getReaderImageSrc(url, effectiveImageQuality);
+  const getImageSrc = (url: string): string => getReaderImageSrc(resolveMediaUrl(url), effectiveImageQuality);
 
   // BUG FIX — no offline/error fallback for failed image loads: previously
   // onError only ever swapped a failed *transformed* URL back to the
