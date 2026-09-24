@@ -379,15 +379,20 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         .single();
 
       if (chapter) {
-        // Gate: drafts and not-yet-due scheduled chapters aren't readable
-        // via direct link — unless the viewer owns the series (creator
-        // preview). Fetched fresh here (not from outer userId state) to
-        // avoid a race where this runs before the auth-lookup effect finishes.
+        // The series' own author is never gated on their own series — not
+        // by the draft/scheduled check below, and not by the free-tier Read
+        // Gate. BUG FIX: the Read Gate (Step 26) used to run unconditionally
+        // for every viewer, author included, so writing a chapter and then
+        // reading past #2 of your OWN series hit "3 series / 2 chapters"
+        // exactly like a stranger would. Computed once, fresh (not from the
+        // outer userId state, to avoid a race where this runs before the
+        // auth-lookup effect finishes), and reused by both gates below.
+        const s0 = Array.isArray(chapter.series) ? chapter.series[0] : chapter.series;
+        const { data: authData } = await supabase.auth.getUser();
+        const isOwner = !!authData.user && !!s0 && (s0 as { creator_id: string }).creator_id === authData.user.id;
+
         const isFutureScheduled = !!chapter.scheduled_at && new Date(chapter.scheduled_at).getTime() > Date.now();
         if (chapter.is_draft || isFutureScheduled) {
-          const s0 = Array.isArray(chapter.series) ? chapter.series[0] : chapter.series;
-          const { data: authData } = await supabase.auth.getUser();
-          const isOwner = !!authData.user && !!s0 && (s0 as { creator_id: string }).creator_id === authData.user.id;
           if (!isOwner) {
             setChapterUnavailable(chapter.is_draft ? 'draft' : 'scheduled');
             setUnavailableUntil(chapter.scheduled_at ?? null);
@@ -401,11 +406,12 @@ function ReaderView({ chapterId }: { chapterId: string }) {
         }
         setChapterUnavailable(null);
 
-        // Step 26 — Read Gate: Check free tier limits (2 chapters/series, 3 series max)
+        // Step 26 — Read Gate: Check free tier limits (2 chapters/series, 3 series max).
+        // Skipped entirely for the series' own author — see isOwner above.
         const seriesId = chapter.series_id;
         const alreadyRead = isChapterAlreadyRead(chapterId);
         
-        if (!alreadyRead) {
+        if (!isOwner && !alreadyRead) {
           // Only count new chapters for gate purposes
           const chaptersInSeries = countChaptersInSeries(seriesId);
           const totalSeriesRead = countUniqueSeries();
@@ -1346,14 +1352,14 @@ function ReaderView({ chapterId }: { chapterId: string }) {
           
           {/* Title */}
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
-            {readGate.reason === 'chapter_limit' ? 'Aur Padh Liye?' : 'Kahaniyaan Khatm?'}
+            {readGate.reason === 'chapter_limit' ? 'Read Enough For Now?' : 'Out Of Free Stories?'}
           </h1>
           
           {/* Subtitle */}
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6 }}>
             {readGate.reason === 'chapter_limit' 
-              ? `Tum ne is kahani ke ${chaptersReadThisSeries} chapters padh liye! Unlimited padhne ke liye upgrade karo.`
-              : `Tum ne ${uniqueSeriesRead} kahaniyaan padh li. ${uniqueSeriesRead > 0 ? 'Saari kahaniyaan khojne ke liye' : 'Aur kahaniyaan padne ke liye'} upgrade karo.`
+              ? `You've read ${chaptersReadThisSeries} chapters of this story! Upgrade for unlimited reading.`
+              : `You've read ${uniqueSeriesRead} stories. Upgrade to ${uniqueSeriesRead > 0 ? 'explore every story' : 'keep reading more stories'}.`
             }
           </p>
           
@@ -1365,7 +1371,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 <div style={{ fontSize: '18px', fontWeight: 700, color: '#d97706' }}>2 Chapter/Series</div>
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tumhare Paas</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>You&apos;ve Read</div>
                 <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{chaptersReadThisSeries} Chapter</div>
               </div>
             </div>
@@ -1389,7 +1395,7 @@ function ReaderView({ chapterId }: { chapterId: string }) {
               onMouseEnter={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #ea580c, #16a34a)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, #f97316, #22c55e)')}
             >
-              <Sparkles size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Unlimited Unlock Karo
+              <Sparkles size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Unlock Unlimited Reading
             </button>
             
             <button
@@ -1400,13 +1406,13 @@ function ReaderView({ chapterId }: { chapterId: string }) {
                 cursor: 'pointer', width: '100%',
               }}
             >
-              <ArrowLeft size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Wapas Jao
+              <ArrowLeft size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Go Back
             </button>
           </div>
           
           {/* Footer text */}
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '24px', lineHeight: 1.5 }}>
-            Unlimited reading, unlimited creativity. Sabhi creators ko support karo!
+            Unlimited reading, unlimited creativity. Support all our creators!
           </p>
         </div>
       </div>
