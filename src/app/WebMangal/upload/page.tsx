@@ -1313,7 +1313,7 @@ function UploadFlow() {
           Mangal Engine V1.0
         </span>
         <h1 className="mangal-upload-title" style={{ fontSize: '36px', fontWeight: 900, color: 'var(--text-primary)', margin: '16px 0 4px' }}>
-          {step === 'series' ? 'Start a New Story' : isEditMode ? 'Edit Chapter' : justPublishedChapterId ? 'Chapter Published' : contentType === 'novel' ? 'Write Chapter' : 'Upload Pages'}
+          {step === 'series' ? 'Start a New Story' : isEditMode ? 'Edit Chapter' : justPublishedChapterId ? (isDraftChapter ? 'Draft Saved' : 'Chapter Published') : contentType === 'novel' ? 'Write Chapter' : 'Upload Pages'}
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', marginBottom: '32px' }}>
           {step === 'series'
@@ -1535,7 +1535,9 @@ function UploadFlow() {
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '14px', textAlign: 'center' as const, padding: '12px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'center' }}><PartyPopper size={40} /></div>
               <p style={{ fontSize: '14px', color: '#d1d5db', margin: 0 }}>
-                Chapter {chapterNumber} is published! What would you like to do next?
+                {isDraftChapter
+                  ? `Draft saved. Chapter ${chapterNumber} stays hidden until you publish it.`
+                  : `Chapter ${chapterNumber} is published! What would you like to do next?`}
               </p>
 
               <a href={`/WebMangal/read/${justPublishedChapterId}`} target="_blank" rel="noopener noreferrer" style={{
