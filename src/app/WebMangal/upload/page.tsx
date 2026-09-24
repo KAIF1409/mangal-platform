@@ -9,7 +9,7 @@ import { uploadMediaFile, deleteMediaFiles, MEDIA_FOLDERS } from '../../lib/medi
 import { publishChapterPages } from '../../lib/webmangal/publishPages';
 import { pdfToPages, PDF_TO_PAGES_DEPS } from '../../lib/webmangal/pdfToPages';
 import { toLocalDateTimeInput } from '../../lib/webmangal/schedule';
-import { seriesWriteBlockReason } from '../../lib/auth/roles';
+import { ownsSeries, seriesWriteBlockReason } from '../../lib/auth/roles';
 import { countWords, estimateReadTime, saveDraft, loadDraft, clearDraft, renderNovelPreviewHtml } from '../../lib/novelEditor';
 import { suggestTags } from '../../lib/tagSuggest';
 import dynamic from 'next/dynamic';
@@ -69,14 +69,16 @@ const MIN_WORDS_PER_CHAPTER = 300;
 
 // PostgREST reports EVERY row-level-security refusal with the same wording —
 // `new row violates row-level security policy for table "chapters"` — which is
-// accurate but tells a creator nothing about the cause. In practice the two
-// causes here are "signed in as an account that doesn't own this series" and
-// "the DB policy and the app's developer/creator gate have drifted apart", so
-// say that instead. Any other error (constraint violation, network, 5xx) is
-// passed through untouched — those messages are already specific.
+// accurate but tells a creator nothing about the cause. The one cause this
+// flow can hit (the ownership rule the DB enforces, mirrored by
+// seriesWriteBlockReason in lib/auth/roles.ts) is being signed in as an
+// account that isn't the series' creator_id, so say that instead — there is no
+// developer/admin bypass to point at, by design. Any other error (constraint
+// violation, network, 5xx) is passed through untouched — those messages are
+// already specific.
 function describeWriteError(message: string): string {
   if (/row-level security/i.test(message)) {
-    return 'The database refused this write (row-level security): this series isn’t owned by the account you’re signed in as. Sign in with the account that created the series (“Creator” on it), or have an admin grant this account developer write access.';
+    return 'The database refused this write (row-level security): this series belongs to a different account than the one you’re signed in as. Only the account that created a series can add or edit its chapters — log in with that account to publish here.';
   }
   return message;
 }
@@ -222,11 +224,12 @@ function UploadFlow() {
   }, [existingSeriesId]);
 
   // Permission pre-flight — see `writeBlock` above. Mirrors the series page's
-  // "+ Add Chapter" gate (canManageSeries(role, isOwner)) so a viewer who
-  // can't write to this series is told WHY on arrival, instead of getting the
-  // raw PostgREST "new row violates row-level security policy for table
-  // chapters" after picking pages (or after a 100-page PDF conversion). The
-  // database enforces the same rule server-side; this is UX, not the boundary.
+  // "+ Add Chapter" gate (canManageSeries(role, isOwner), ownership-only) so a
+  // viewer who can't write to this series is told WHY on arrival, instead of
+  // getting the raw PostgREST "new row violates row-level security policy for
+  // table chapters" after picking pages (or after a 100-page PDF conversion).
+  // The database enforces the same ownership rule server-side; this is UX, not
+  // the boundary.
   useEffect(() => {
     if (!existingSeriesId) return;
     let cancelled = false;
@@ -259,7 +262,7 @@ function UploadFlow() {
       if (cancelled) return;
 
       setWriteBlock(
-        seriesWriteBlockReason(profileRow?.role, seriesRow.creator_id === user.id, true)
+        seriesWriteBlockReason(profileRow?.role, ownsSeries(user.id, seriesRow.creator_id), true)
       );
     })();
 

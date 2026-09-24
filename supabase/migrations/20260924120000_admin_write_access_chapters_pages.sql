@@ -1,6 +1,24 @@
 -- FIX — a developer account could not publish a chapter to a series it does
 -- not own: "new row violates row-level security policy for table chapters".
 --
+-- STATUS: SUPERSEDED — do not apply this on top of a fresh database.
+--
+-- The policies this file adds (developer INSERT/UPDATE on chapters, pages and
+-- series) were removed again by
+-- 20260924130000_owner_only_series_authoring.sql, after the app-side permission
+-- model was corrected instead of the database: authorship belongs to the
+-- account in series.creator_id for EVERY role, developer accounts included
+-- (canManageSeries() in src/app/lib/auth/roles.ts). The live ownership policies
+-- were already the correct, stricter truth — the bug was that the UI/roles
+-- layer was looser than them, so a non-owner was offered "+ Add Chapter" for a
+-- write Postgres refuses.
+--
+-- This file is kept as migration history (it records what the schema looked
+-- like and why the developer overrides existed). If it WAS applied to a
+-- database, run 20260924130000 there to drop those policies; if it never was,
+-- that migration is a no-op.
+
+--
 -- The app's own permission model is explicit that a developer account gets
 -- full creator powers EVERYWHERE, not only on its own content
 -- (src/app/lib/auth/roles.ts):

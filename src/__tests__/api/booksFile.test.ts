@@ -143,7 +143,7 @@ describe('GET /api/books/file/[bookId] — signed-in access matrix', () => {
     expect(res.headers.get('X-Book-Preview')).toBeNull();
   });
 
-  it('gives a developer-role account full access (canManageSeries parity)', async () => {
+  it('gives a developer-role account full access (admin content-access override)', async () => {
     const db = makeDb({ book: paidBook, role: 'developer' });
     signIn('dev-1', db);
     const res = await call(BOOK_ID, 'token-d');

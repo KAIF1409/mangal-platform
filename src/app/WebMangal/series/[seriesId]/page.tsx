@@ -8,7 +8,7 @@ import type { User } from '@supabase/supabase-js';
 import ProfileMenu from '../../../components/shared/ProfileMenu';
 import ReportButton from '../../../components/webmangal/ReportButton';
 import ShareButton from '../../../components/webmangal/ShareButton';
-import { canManageSeries, isDeveloperRole } from '../../../lib/auth/roles';
+import { canManageSeries, hasCreatorAccess, isDeveloperRole, ownsSeries } from '../../../lib/auth/roles';
 import { REVIEW_PAGE_SIZE } from '../../../lib/commentRanking';
 import { estimateReadTime } from '../../../lib/novelEditor';
 import { deleteMediaFiles } from '../../../lib/media/uploadClient';
@@ -63,13 +63,25 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  // Authoring rights for THIS series — owner-only, i.e.
+  // canManageSeries(role, series.creator_id === me). Gates "+ Add Chapter",
+  // chapter Edit/Delete, the series delete button, the draft-chapter filter
+  // and the quest controls. Deliberately NOT "is this account a creator":
+  // a creator (or developer) looking at someone else's series is a reader
+  // here and must not be offered authorship controls.
   const [isCreator, setIsCreator] = useState(false);
+  // Account-level role, for ProfileMenu's badge + links only (Dashboard,
+  // Create New Series, admin Reports). Never gates authoring on this page.
+  const [isCreatorAccount, setIsCreatorAccount] = useState(false);
   const [isDeveloper, setIsDeveloper] = useState(false);
-  // Bug fix: whole-series delete was only reachable from the owner's own
-  // Dashboard (query scoped to creator_id === current user), so a developer
-  // account had no direct way to remove someone else's series — the only
-  // path was Report -> Admin Reports -> Remove. This button gives
-  // developers (and the owning creator) a direct delete right here.
+  // Whole-series delete is for the series' own author (creator_id = auth.uid()).
+  // It used to be handed to a developer account too, which is exactly the bug
+  // this file was fixed for: a support account could see "+ Add Chapter",
+  // Edit/Delete chapter and Delete series on someone else's published work,
+  // and the DB then refused the write (owner-only RLS) or, worse, allowed the
+  // delete. Authorship belongs to the account in series.creator_id — admin
+  // moderation of a series is a separate concern (Admin Reports -> Remove),
+  // not a creator-page control.
   const [confirmDeleteSeries, setConfirmDeleteSeries] = useState(false);
   const [deletingSeries, setDeletingSeries] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -177,12 +189,11 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
   const [pickBusy, setPickBusy] = useState<string | null>(null); // submission_id currently being picked
 
   // Whether unpublished (draft / not-yet-scheduled) chapters should be
-  // included when fetching the chapter list — true only for the series
-  // owner/developer. Kept as a ref (in sync with the `isCreator` state,
-  // set below) because it's read from closures created before the auth
-  // check resolves and from a focus/visibility listener with a `[seriesId]`-
-  // only dependency array, both of which would otherwise capture a stale
-  // `false` via a normal state read.
+  // included when fetching the chapter list — true only for the series owner.
+  // Kept as a ref (in sync with the `isCreator` state, set below) because it's
+  // read from closures created before the auth check resolves and from a
+  // focus/visibility listener with a `[seriesId]`-only dependency array, both
+  // of which would otherwise capture a stale `false` via a normal state read.
   const canManageRef = useRef(false);
 
   // Pulled out of the main load() below so it can also be called on its own
@@ -408,10 +419,16 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
           supabase.from('review_helpful_votes').select('rating_id').eq('voter_id', u.user!.id),
         ]);
 
-        const owns = !!(s && u.user!.id === s.creator_id);
+        // Authoring gate: is THIS viewer the series' creator_id? Role only
+        // decides whether they hold the creator toolset at all — ownership
+        // decides whether those tools may be pointed at this series (see
+        // lib/auth/roles.ts). Postgres enforces the same thing, so a
+        // non-owner must never be shown the controls.
+        const owns = ownsSeries(u.user!.id, s?.creator_id);
         const canManage = canManageSeries(profileRes.data?.role, owns);
         setIsCreator(canManage);
         canManageRef.current = canManage;
+        setIsCreatorAccount(hasCreatorAccess(profileRes.data?.role));
         setIsDeveloper(isDeveloperRole(profileRes.data?.role));
         setIsFollowing(!!followRes.data);
         if (progRes.data) setProgress(progRes.data);
@@ -869,7 +886,7 @@ function SeriesDetailPage({ seriesId }: { seriesId: string }) {
             </a>
           )}
           {user ? (
-            <ProfileMenu user={user} isCreator={isCreator} isDeveloper={isDeveloper} />
+            <ProfileMenu user={user} isCreator={isCreatorAccount} isDeveloper={isDeveloper} />
           ) : (
             <a href={`/login?next=${encodeURIComponent(pathname)}`} style={{ padding: '7px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, background: 'linear-gradient(135deg, #f97316, #22c55e)', color: '#fff', textDecoration: 'none', whiteSpace: 'nowrap' }}>Log in</a>
           )}

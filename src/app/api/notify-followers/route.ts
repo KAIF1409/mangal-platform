@@ -70,17 +70,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Series not found' }, { status: 404 });
     }
 
-    // FIX: the core ownership check — only the series' own creator (or a
-    // developer/admin account) can trigger a notification blast for it.
+    // The core ownership check — only the series' own author may email its
+    // followers. Ownership is the rule for EVERY role: this used to also let a
+    // developer-role account fire a notification blast for a chapter it didn't
+    // write, which is authorship-by-another-name — the same bug class as the
+    // "+ Add Chapter" gate on the series page (see lib/auth/roles.ts).
     if (series.creator_id !== callerId) {
-      const { data: callerProfile } = await serviceClient
-        .from('profiles')
-        .select('role')
-        .eq('id', callerId)
-        .single();
-      if (callerProfile?.role !== 'developer') {
-        return NextResponse.json({ error: 'Not authorized to notify followers for this series' }, { status: 403 });
-      }
+      return NextResponse.json({ error: 'Not authorized to notify followers for this series' }, { status: 403 });
     }
 
     // FIX: confirm the chapter actually belongs to this series (prevents
